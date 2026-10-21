@@ -336,11 +336,41 @@ def check_reply_layouts(c: Check) -> None:
               "reply layout: reply.length unit definition")
 
 
+
+def check_reply_formula_vectors(c: Check) -> None:
+    """Exercise boundary values for every documented variable reply/request formula."""
+    pad4 = lambda n: (n + 3) & ~3
+    words4 = lambda n: (n + 3) // 4
+    record_size = lambda name_length: 32 + pad4(name_length)
+    memory_reply_words = lambda type_count, heap_count: 4 + 2 * type_count + 4 * heap_count
+
+    for n, expected in [(0, 0), (1, 4), (3, 4), (4, 4), (5, 8)]:
+        c.require(pad4(n) == expected, f"pad4({n}) must be {expected}")
+        c.require(words4(n) == expected // 4, f"ceil({n}/4) must be {expected // 4}")
+    for n, expected in [(0, 32), (1, 36), (4, 36), (5, 40)]:
+        c.require(record_size(n) == expected,
+                  f"PHYSICALDEVICEINFO name length {n} must yield {expected}-byte record")
+    for count, expected in [(0, 0), (1, 3), (4, 12)]:
+        c.require(3 * count == expected,
+                  f"QUEUEFAMILYINFO count {count} must yield reply.length {expected}")
+    for types, heaps, expected in [(0, 0, 4), (1, 1, 10), (32, 16, 132)]:
+        c.require(memory_reply_words(types, heaps) == expected,
+                  f"memory reply counts ({types}, {heaps}) must yield reply.length {expected}")
+    for n, expected in [(1, 1), (3, 1), (4, 1), (5, 2)]:
+        c.require(words4(n) == expected, f"variable byte payload {n} must use {expected} reply word(s)")
+        c.require(28 + pad4(n) == 28 + expected * 4,
+                  f"WriteBuffer {n}-byte payload must yield {28 + expected * 4}-byte request")
+    for count, expected in [(1, 40), (2, 52), (16, 220)]:
+        c.require(28 + 12 * count == expected,
+                  f"WaitSemaphores count {count} must yield {expected}-byte request")
+
+
 def main() -> int:
     c = Check()
     check_events(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
+    check_reply_formula_vectors(c)
     if c.errors:
         print(f"wire-layout check FAILED: {len(c.errors)} of {c.checks} checks failed", file=sys.stderr)
         for error in c.errors:
