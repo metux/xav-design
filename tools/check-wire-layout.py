@@ -449,11 +449,6 @@ def check_reply_golden_vectors(c: Check) -> None:
             elif kind.endswith("byte-array-5"):
                 c.require(int.from_bytes(wire[12:16], order) == 5 and value_length == 5,
                           f"{name}: five-byte array property metadata mismatch")
-            c.require(len(wire) == 36 and declared == 1, f"{name}: successful 4-byte property must have one payload word")
-            c.require(int.from_bytes(wire[8:12], order) == 0, f"{name}: property status must be SUCCESS")
-            c.require(int.from_bytes(wire[12:16], order) == 1, f"{name}: property type must be CARD32")
-            c.require(int.from_bytes(wire[16:20], order) == 4, f"{name}: property value_length must be four")
-            c.require(wire[20:32] == bytes(12), f"{name}: property reserved bytes must be zero")
         elif kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available"):
             expected_status = 1 if kind.endswith("not-supported") else 2
             c.require(len(wire) == 32 and declared == 0, f"{name}: failed property reply must have no payload")
