@@ -34,7 +34,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 
 - Exakte Request-Längen, Counts und Padding
 - `EnumeratePhysicalDevices` ist ein 8-Byte-Reply-Request; `DestroyDevice` ist ein 12-Byte-Void-Request
-- `CreateDevice`-Länge entspricht exakt den drei geordneten variablen Record-Arrays; mindestens eine Queue-Family-Anforderung ist erforderlich; Queue-Prioritäten müssen endlich und in [0,1] liegen; `CreateDevice` und `CreateDefaultDevice` senden bei Erfolg keinen Reply
+- `CreateDevice`-Länge entspricht exakt den drei geordneten variablen Record-Arrays; mindestens eine Queue-Family-Anforderung ist erforderlich; Queue-Prioritäten müssen endlich und in [0,1] liegen; unbekannte Feature-IDs, `enabled != 1`, doppelte Features/Extensions und syntaktisch ungültige Extension-Namen ergeben `BadValue`; registrierte, aber nicht unterstützte Features sowie unbekannte oder nicht unterstützte syntaktisch gültige Extensions ergeben `BadMatch`; jeder Fehler lässt die Create-XID unangelegt; `CreateDevice` und `CreateDefaultDevice` senden bei Erfolg keinen Reply
 - `GetPhysicalDeviceMemoryProperties` liefert Memory-Type-/Heap-Indizes, die über die Lebensdauer der Physical-Device-XID stabil bleiben
 - `CreateBuffer` weist `usage_flags = 0` und unbekannte Usage-Bits mit `BadValue` ab
 - `CreateDescriptorPool`, `AllocateDescriptorSets` und `FreeDescriptorSets` weisen Count null mit `BadValue` ab
