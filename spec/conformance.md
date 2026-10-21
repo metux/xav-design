@@ -183,3 +183,9 @@ Der Wire-Layout-Check muss alle elf als `Reply` registrierten Requests abdecken:
 Zusätzlich zu festen Reply-Feldern prüft er jetzt die variablen Record- und Payload-Verträge: `PHYSICALDEVICEINFO`-Records einschließlich Namenslänge und Padding, `QUEUEFAMILYINFO`-Records, `MEMORYTYPEINFO`/`MEMORYHEAPINFO`-Größen und -Counts, Property-Werte, `ReadBuffer`-Payloads sowie den variablen Request-/Reply-Vertrag von `WriteBuffer` und `WaitSemaphores`. Der Check ist absichtlich eine normative Text-Konsistenzprüfung; er führt keine Server- oder Vulkan-Operation aus.
 
 Die Formeltests enthalten zusätzlich Grenzwertvektoren für Byte-Padding und Reply-Wörter bei Payload-Längen 0, 1, 3, 4 und 5; für `PHYSICALDEVICEINFO`-Namenslängen 0, 1, 4 und 5; für leere und nichtleere Queue-Family-Arrays; sowie für Memory-Type-/Heap-Counts einschließlich der v0.1-Maxima 32/16. Für `WriteBuffer` und `WaitSemaphores` werden variable Request-Längen ebenfalls anhand konkreter Count-/Payload-Vektoren geprüft.
+
+## Golden-Wire-Testvektoren
+
+`tests/wire-vectors.json` enthält konkrete Request-Bytes für `CreateBuffer`, `WriteBuffer` und `ReadBuffer`, jeweils in Little- und Big-Endian-Byteordnung. Die Fixtures prüfen den 8-Byte-Request-Header, das Null-`data`-Feld, den Subopcode am Offset 4, die vierbytebasierte Request-Länge, die festen Feldlayouts sowie Null-Padding eines dreibyteigen `WriteBuffer`-Payloads. Der Major-Opcode `0x90` ist nur ein Fixture-Wert; im Betrieb wird er vom X-Server zugewiesen.
+
+Mit `python3 -m unittest discover -s tests -p 'test_*.py' -v` werden die Golden-Bytes gegen einen kleinen Referenz-Encoder geprüft. Der Referenz-Encoder ist kein XAverius-Client und keine Serverimplementierung: Die Tests belegen die Konsistenz der Vektoren und der abgedeckten Wire-Regeln, nicht die Interoperabilität. Sobald ein Client- oder Server-Encoder existiert, muss derselbe Vektorsatz direkt gegen dessen erzeugte beziehungsweise geparste Bytes laufen.
