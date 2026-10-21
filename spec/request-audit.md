@@ -20,14 +20,14 @@ An outdated sentence in `DECISIONS.md` incorrectly included Fence and Semaphore 
 
 These are not silently treated as defined requests or settled protocol behavior:
 
-1. Event-selection requests are not included in the 39-request inventory because their wire layouts are not specified. Existing event definitions do not imply a request opcode.
+1. `SelectEvents` is included as subopcode 40; its wire layout and scope semantics are defined in `events.md`. The server-assigned XGE event base remains open.
 2. Numeric registries for feature IDs, device extensions, and property identifiers remain incomplete. Descriptor types, shader stages, device types, queue flags, command entries, event types, and XAverius error offsets already have dedicated registries; their v0.1 support definitions still need cross-checking against every use.
-3. The exact v0.1 supported feature/extension set, `memory_properties_flags`, timeout/scheduling boundaries, final Vulkan wait-stage mapping, and behavior when event delivery is impossible remain open as listed in [open issues](open-issues.md).
+3. The exact v0.1 supported feature/extension set, `memory_properties_flags`, timeout/scheduling boundaries, final Vulkan wait-stage mapping, and final XGE event-base discovery/registration remain open as listed in [open issues](open-issues.md).
 4. This audit does not establish full Vulkan-spec conformance, implementation feasibility, or final v0.1 freeze.
 
 ## Subopcode allocation policy
 
-The 39 requests in the central registry are assigned explicit values 1 through 39 in the reviewed registry order. Value 0 is reserved and MUST NOT identify a request. These numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. Event-selection requests receive values only after their layouts are specified; they must use unused values and do not cause existing assignments to move. The numeric assignments are recorded in the central registry in a separate change after this audit record.
+The 40 requests in the central registry are assigned explicit values 1 through 40. Value 0 is reserved and MUST NOT identify a request. These numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` uses the next unused value, 40; assignments 1 through 39 were not changed.
 
 
 ## Second systematic pass: findings
