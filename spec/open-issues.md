@@ -15,5 +15,4 @@ The following questions were open in the consolidated draft and remain open. Mov
 11. Timeout boundaries and scheduling guarantees.
 12. Ownership for future X11 resource-sharing mechanisms.
 13. Wire representation of Physical Device UUID and Driver UUID.
-14. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
-15. Final Vulkan stage mapping and valid wait-stage masks.
+14. Final Vulkan stage mapping and valid wait-stage masks.
