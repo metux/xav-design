@@ -118,3 +118,10 @@ The static checker now requires exact inventory coverage of all eleven Reply req
 A further inventory scan found that `SelectEvents` had its error behavior defined in the event chapter but was missing from the central error-mapping chapter. Added its exact-length, XGE-negotiation, scope/mask, XID, ownership, and atomic-preservation mapping. The conformance checklist now also has explicit cases for `AllocateMemory`, `CreatePipelineLayout`, `CreateSemaphore`, and `CreateFence`, which were previously represented only indirectly.
 
 The static wire-layout checker now requires every centrally registered request to be named in both the error guidance and conformance checklist. This is a presence/drift check, not a proof that each listed rule is exhaustive; request-specific semantics remain defined by the chapters and the central error mapping.
+
+
+## Numeric registry integrity follow-up — 2026-10-21
+
+The static checker now verifies uniqueness and expected current ranges for the 40 request subopcodes, seven event-type IDs, contiguous error offsets, four command-entry IDs, the descriptor-type assignments, five physical-device types, five queue-flag bits/masks, the v0.1 compute shader-stage bit, and the eight physical-property type IDs. It also checks that the v0.1 optional feature-ID and device-extension registries remain explicitly empty. The request, event, and error checks detect duplicate names/values and missing assignments; other registries are checked against their current v0.1 supported assignments.
+
+These are drift guards for the current documented ABI. They do not make unassigned values valid, and they do not claim runtime interoperability.
