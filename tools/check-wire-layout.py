@@ -183,10 +183,39 @@ def check_reply_matrix(c: Check) -> None:
         c.require(re.search(pattern, combined, re.I | re.S) is not None, f"reply ABI: missing invariant: {label}")
 
 
+def check_reply_layouts(c: Check) -> None:
+    devices = read("spec/devices.md")
+    memory = read("spec/memory-buffers.md")
+    sync = read("spec/synchronization.md")
+    wire = read("spec/wire-protocol.md")
+    checks = [
+        (devices, r"\\| 8 \\| CARD32 \\| `status` \\|", "GetPhysicalDeviceProperty status at reply offset 8"),
+        (devices, r"\\| 12 \\| CARD32 \\| `property_type` \\|", "property_type at offset 12"),
+        (devices, r"\\| 16 \\| CARD32 \\| `value_length` in Bytes \\|", "value_length at offset 16"),
+        (devices, r"\\| 20–31 \\| BYTE\\[12\\] \\| reserviert, null \\|", "property reply reserved bytes 20–31"),
+        (devices, r"reply\\.length = ceil\\(value_length / 4\\)", "property reply length formula"),
+        (devices, r"reply\\.length = 3 \\* queue_family_count", "queue-family reply length formula"),
+        (memory, r"\\| 8 \\| CARD64 \\| `size` \\|", "buffer-memory-requirements size at offset 8"),
+        (memory, r"\\| 16 \\| CARD64 \\| `alignment` \\|", "buffer-memory-requirements alignment at offset 16"),
+        (memory, r"\\| 24 \\| CARD32 \\| `memory_type_bits` \\|", "buffer-memory-requirements memory type bits at offset 24"),
+        (memory, r"reply\\.length = 4 \\+ 2 \\* memory_type_count \\+ 4 \\* memory_heap_count", "memory-properties reply length formula"),
+        (sync, r"Byte 0: standardmäßiges X11-Reply", "GetFenceStatus standard response_type byte"),
+        (sync, r"Byte 1: Fence-Status", "GetFenceStatus status byte"),
+        (sync, r"Offsets 2–3: standardmäßige X11-Reply-Sequenznummer", "GetFenceStatus sequence field"),
+        (sync, r"Offsets 4–7: standardmäßiges `reply\\.length = 0`", "GetFenceStatus zero reply.length"),
+        (sync, r"Offsets 8–31: XAverius-reserviert, null", "GetFenceStatus reserved bytes"),
+        (sync, r"Offset 8 enthält einen `CARD32 status`; Offsets 12–31 sind null und `reply\\.length = 0`", "WaitForFence status and reserved fields"),
+        (wire, r"Replies verwenden den Standard-X11-Reply-Header von 32 Bytes", "standard 32-byte X11 reply header"),
+        (wire, r"`reply\\.length` gibt die Anzahl der Vierbyteeinheiten nach diesem Header an", "reply.length unit definition"),
+    ]
+    for source, pattern, label in checks:
+        c.require(re.search(pattern, source, re.I) is not None, f"reply layout: missing or changed: {label}")
+
 def main() -> int:
     c = Check()
     check_events(c)
     check_reply_matrix(c)
+    check_reply_layouts(c)
     if c.errors:
         print(f"wire-layout check FAILED: {len(c.errors)} of {c.checks} checks failed", file=sys.stderr)
         for error in c.errors:
