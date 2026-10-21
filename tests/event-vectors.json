@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "description": "Golden XGE event bytes for XAverius event layouts. Extension opcode and sequence are fixed fixture values.",
+  "vectors": [
+    {
+      "name": "ASYNC_ERROR-little-golden",
+      "event": "ASYNC_ERROR",
+      "event_type": 0,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 60,
+      "xge_length": 7,
+      "fields": {
+        "device_xid": 16909060,
+        "error_code": 17,
+        "origin": 2,
+        "submission_token": "72623859790382856",
+        "resource_xid": 2695938256,
+        "reserved": 0
+      },
+      "wire_hex": "23903412070000000000000000000000000000000000000000000000000000000403020111000000020000000807060504030201d0c0b0a000000000"
+    },
+    {
+      "name": "ASYNC_ERROR-big-golden",
+      "event": "ASYNC_ERROR",
+      "event_type": 0,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 60,
+      "xge_length": 7,
+      "fields": {
+        "device_xid": 16909060,
+        "error_code": 17,
+        "origin": 2,
+        "submission_token": "72623859790382856",
+        "resource_xid": 2695938256,
+        "reserved": 0
+      },
+      "wire_hex": "23901234000000070000000000000000000000000000000000000000000000000102030400000011000000020102030405060708a0b0c0d000000000"
+    },
+    {
+      "name": "DEVICE_LOST-little-golden",
+      "event": "DEVICE_LOST",
+      "event_type": 1,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "reason_code": 3,
+        "device_generation": "72623859790382856"
+      },
+      "wire_hex": "239034120400000001000000000000000000000000000000000000000000000004030201030000000807060504030201"
+    },
+    {
+      "name": "DEVICE_LOST-big-golden",
+      "event": "DEVICE_LOST",
+      "event_type": 1,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "reason_code": 3,
+        "device_generation": "72623859790382856"
+      },
+      "wire_hex": "239012340000000400010000000000000000000000000000000000000000000001020304000000030102030405060708"
+    },
+    {
+      "name": "DEVICE_STATUS_CHANGED-little-golden",
+      "event": "DEVICE_STATUS_CHANGED",
+      "event_type": 2,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "physical_device_xid": 2695938256,
+        "new_status": 2,
+        "reason_code": 1,
+        "reserved": 0
+      },
+      "wire_hex": "2390341204000000020000000000000000000000000000000000000000000000d0c0b0a0020000000100000000000000"
+    },
+    {
+      "name": "DEVICE_STATUS_CHANGED-big-golden",
+      "event": "DEVICE_STATUS_CHANGED",
+      "event_type": 2,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "physical_device_xid": 2695938256,
+        "new_status": 2,
+        "reason_code": 1,
+        "reserved": 0
+      },
+      "wire_hex": "2390123400000004000200000000000000000000000000000000000000000000a0b0c0d0000000020000000100000000"
+    },
+    {
+      "name": "DEVICE_MEMORY_PRESSURE-little-golden",
+      "event": "DEVICE_MEMORY_PRESSURE",
+      "event_type": 3,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "heap_index": 4294967295,
+        "pressure_level": 3,
+        "reserved": 0
+      },
+      "wire_hex": "239034120400000003000000000000000000000000000000000000000000000004030201ffffffff0300000000000000"
+    },
+    {
+      "name": "DEVICE_MEMORY_PRESSURE-big-golden",
+      "event": "DEVICE_MEMORY_PRESSURE",
+      "event_type": 3,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "heap_index": 4294967295,
+        "pressure_level": 3,
+        "reserved": 0
+      },
+      "wire_hex": "239012340000000400030000000000000000000000000000000000000000000001020304ffffffff0000000300000000"
+    },
+    {
+      "name": "DEVICE_IDLE-little-golden",
+      "event": "DEVICE_IDLE",
+      "event_type": 4,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "idle_reason": 2,
+        "device_generation": "72623859790382856"
+      },
+      "wire_hex": "239034120400000004000000000000000000000000000000000000000000000004030201020000000807060504030201"
+    },
+    {
+      "name": "DEVICE_IDLE-big-golden",
+      "event": "DEVICE_IDLE",
+      "event_type": 4,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 48,
+      "xge_length": 4,
+      "fields": {
+        "device_xid": 16909060,
+        "idle_reason": 2,
+        "device_generation": "72623859790382856"
+      },
+      "wire_hex": "239012340000000400040000000000000000000000000000000000000000000001020304000000020102030405060708"
+    },
+    {
+      "name": "SUBMISSION_COMPLETE-little-golden",
+      "event": "SUBMISSION_COMPLETE",
+      "event_type": 5,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 56,
+      "xge_length": 6,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "reserved": 0,
+        "submission_token": "72623859790382856"
+      },
+      "wire_hex": "2390341206000000050000000000000000000000000000000000000000000000040302010100000002000000000000000807060504030201"
+    },
+    {
+      "name": "SUBMISSION_COMPLETE-big-golden",
+      "event": "SUBMISSION_COMPLETE",
+      "event_type": 5,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 56,
+      "xge_length": 6,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "reserved": 0,
+        "submission_token": "72623859790382856"
+      },
+      "wire_hex": "2390123400000006000500000000000000000000000000000000000000000000010203040000000100000002000000000102030405060708"
+    },
+    {
+      "name": "SUBMISSION_FAILED-little-golden",
+      "event": "SUBMISSION_FAILED",
+      "event_type": 6,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 56,
+      "xge_length": 6,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "failure_class": 1,
+        "submission_token": "72623859790382856"
+      },
+      "wire_hex": "2390341206000000060000000000000000000000000000000000000000000000040302010100000002000000010000000807060504030201"
+    },
+    {
+      "name": "SUBMISSION_FAILED-big-golden",
+      "event": "SUBMISSION_FAILED",
+      "event_type": 6,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 56,
+      "xge_length": 6,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "failure_class": 1,
+        "submission_token": "72623859790382856"
+      },
+      "wire_hex": "2390123400000006000600000000000000000000000000000000000000000000010203040000000100000002000000010102030405060708"
+    }
+  ]
+}
