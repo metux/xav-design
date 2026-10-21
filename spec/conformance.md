@@ -142,3 +142,13 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Extension-name syntax tests include mixed-case extension suffixes (for example `VK_EXT_shaderObject`) and preserve the exact spelling; the syntax check must not incorrectly require the suffix to be lowercase.
 - `spec/errors.md` is checked against all 40 assigned request subopcodes: every request uses the common framing/XID/ownership/atomicity rules where applicable, with request-specific length, value, state, backend, and synchronous-versus-asynchronous outcomes taking precedence when explicitly defined.
 - Error precedence tests verify malformed length/record structure before field validation, field validation before XID resolution, and XID/type/ownership validation before state/backend checks; no rejected Void request leaves a partial resource or state change.
+
+## Queue-Reihenfolge und Fortschritt
+
+- Submissions derselben Queue werden in der Annahmereihenfolge eingereiht; unabhängige Arbeit darf sich überlappen.
+- Zwischen verschiedenen Queues besteht ohne explizite Synchronisation keine zugesicherte Reihenfolge oder Memory-Visibility.
+- Queueübergreifende Abhängigkeiten werden mit Semaphore-Signal und -Wait hergestellt. Erforderliche Memory-Dependencies werden separat nach Vulkan-Regeln geprüft.
+- Fence-Waits und Host-Semaphore-Waits beobachten Zustände, erzeugen aber selbst keine Queue-seitige Abhängigkeit.
+- Ein Host-Signal kann einen Queue-Wait auf denselben Semaphore-Wert freigeben, ordnet aber keine unverbundene GPU-Arbeit.
+- Submission-Tokens und Event-Sequence-Nummern sind keine Ordnungswerte.
+- Für unabhängige Queues sind weder Fairness noch eine feste maximale Scheduling-Latenz zugesichert.
