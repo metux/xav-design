@@ -126,7 +126,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 56)
+        self.assertEqual(len(self.vectors), 60)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -230,6 +230,24 @@ class GoldenReplyVectorTests(unittest.TestCase):
                 self.assertEqual(wire[32:32 + size], value)
                 self.assertEqual(wire[32 + size:], bytes(padded - size))
                 self.assertEqual(int.from_bytes(wire[4:8], order), padded // 4)
+
+    def test_registered_uuid_and_workgroup_size_property_shapes(self):
+        uuid = bytes.fromhex("00112233445566778899aabbccddeeff")
+        for order in ("little", "big"):
+            uuid_kind = "GetPhysicalDeviceProperty-success-byte-array-16"
+            uuid_vector = next(v for v in self.vectors if v["event"] == uuid_kind and v["byte_order"] == order)
+            uuid_wire = bytes.fromhex(uuid_vector["wire_hex"])
+            self.assertEqual(int.from_bytes(uuid_wire[12:16], order), 5)
+            self.assertEqual(int.from_bytes(uuid_wire[16:20], order), 16)
+            self.assertEqual(uuid_wire[32:48], uuid)
+            self.assertEqual(int.from_bytes(uuid_wire[4:8], order), 4)
+            array_kind = "GetPhysicalDeviceProperty-success-card32-array-3"
+            array_vector = next(v for v in self.vectors if v["event"] == array_kind and v["byte_order"] == order)
+            array_wire = bytes.fromhex(array_vector["wire_hex"])
+            self.assertEqual(int.from_bytes(array_wire[12:16], order), 6)
+            self.assertEqual(int.from_bytes(array_wire[16:20], order), 12)
+            self.assertEqual([int.from_bytes(array_wire[i:i+4], order) for i in (32, 36, 40)], [64, 32, 16])
+            self.assertEqual(int.from_bytes(array_wire[4:8], order), 3)
 
     def test_property_reply_fields_and_failure_encoding(self):
         for vector in self.vectors:
