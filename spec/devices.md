@@ -101,6 +101,8 @@ Die Bits von `queue_flags` sind in der [Queue-Flag-Registry](../registries/queue
 
 ## `CreateDevice`
 
+Vor der Erzeugung muss diese Verbindung XGE 1.0 oder neuer erfolgreich über `GEQueryVersion` ausgehandelt haben, damit der Server spaeter auftretende lange XAverius-Events sicher zustellen kann. Andernfalls wird `BadMatch` gemeldet und die Ziel-XID bleibt unangelegt.
+
 Request:
 
 | Offset | Typ | Feld |
@@ -159,6 +161,8 @@ Die Gesamtlänge beträgt `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_
 Ist das ausgewählte Physical Device nicht verfügbar, wird `DEVICE_UNAVAILABLE` als X11-Fehler gemeldet. Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
 
 ## `CreateDefaultDevice`
+
+Vor der Erzeugung muss diese Verbindung XGE 1.0 oder neuer erfolgreich über `GEQueryVersion` ausgehandelt haben. Andernfalls wird `BadMatch` gemeldet und die Ziel-XID bleibt unangelegt.
 
 Request:
 
