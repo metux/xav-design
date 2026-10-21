@@ -110,7 +110,7 @@ CARD16 entry_length; /* 32-bit words, including header and padding */
 
 Maximale Entry-Größe: 65535 Wörter beziehungsweise 262140 Bytes. Jeder Entry muss vollständig in einen X11-Request passen.
 
-Command-IDs werden zentral registriert und entsprechen den unterstützten `vkCmd*`-Operationen.
+Command-IDs sind in der [Command-Entry-Registry](../registries/command-entries.md) numerisch festgelegt. Sie sind XAverius-Wire-IDs und dürfen nicht als native Vulkan-Command-IDs interpretiert werden.
 
 ## 7.5 Unterstützte Command-Entries
 
