@@ -69,7 +69,7 @@ Rechecked all 39 registered requests against their defining chapter, request kin
 - Filled in missing error mappings for invalid queue counts, duplicate queue-family records, duplicate descriptor-pool size types, duplicate descriptor writes, duplicate submission synchronization entries, and duplicate wait semaphore IDs.
 - Extended conformance checks for the new reply formulas, statuses, Create-XID rules, and duplicate-entry handling.
 
-The request registry still contains 39 unique assignments (1–39); no existing subopcode was changed. This pass does not resolve the open feature/extension set, property/Atom registry, event-selection wire layouts, wait-stage mapping, or timeout/scheduling semantics. The protocol remains a working draft and `master` was not changed.
+At the time of this second audit, the request registry contained 39 assignments (1–39); the later `SelectEvents` addition assigned subopcode 40 without changing earlier values. The registry, property/Atom definitions, event-selection layouts, and wait-stage mapping have since been addressed in follow-up commits. Timeout/scheduling semantics and backend conformance remain open. The protocol remains a working draft and `master` was not changed.
 
 
 ## Event selection contract — 2026-10-21
