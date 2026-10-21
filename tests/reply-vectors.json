@@ -334,7 +334,7 @@
     },
     {
       "name": "GetFenceStatus-unsignaled-little",
-      "event": "GetFenceStatus-unsignaled",
+      "event": "GetFenceStatus",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -345,7 +345,7 @@
     },
     {
       "name": "GetFenceStatus-pending-little",
-      "event": "GetFenceStatus-pending",
+      "event": "GetFenceStatus",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 1,
@@ -356,7 +356,7 @@
     },
     {
       "name": "GetFenceStatus-failed-little",
-      "event": "GetFenceStatus-failed",
+      "event": "GetFenceStatus",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 3,
@@ -367,36 +367,36 @@
     },
     {
       "name": "WaitForFence-timeout-little",
-      "event": "WaitForFence-timeout",
+      "event": "WaitForFence",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "01000000",
-      "total_bytes": 36,
-      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000001000000"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000010000000000000000000000000000000000000000000000"
     },
     {
       "name": "WaitForFence-execution-failed-little",
-      "event": "WaitForFence-execution-failed",
+      "event": "WaitForFence",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "02000000",
-      "total_bytes": 36,
-      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000002000000"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000020000000000000000000000000000000000000000000000"
     },
     {
       "name": "WaitForFence-device-lost-little",
-      "event": "WaitForFence-device-lost",
+      "event": "WaitForFence",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "03000000",
-      "total_bytes": 36,
-      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000003000000"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000030000000000000000000000000000000000000000000000"
     },
     {
       "name": "WaitSemaphores-success-little",
@@ -404,10 +404,10 @@
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "00000000",
-      "total_bytes": 36,
-      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000000000000000000000000000000000000000000000000000"
     },
     {
       "name": "ReadBuffer-1-bytes-little",
@@ -455,7 +455,7 @@
     },
     {
       "name": "GetFenceStatus-unsignaled-big",
-      "event": "GetFenceStatus-unsignaled",
+      "event": "GetFenceStatus",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
@@ -466,7 +466,7 @@
     },
     {
       "name": "GetFenceStatus-pending-big",
-      "event": "GetFenceStatus-pending",
+      "event": "GetFenceStatus",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 1,
@@ -477,7 +477,7 @@
     },
     {
       "name": "GetFenceStatus-failed-big",
-      "event": "GetFenceStatus-failed",
+      "event": "GetFenceStatus",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 3,
@@ -488,36 +488,36 @@
     },
     {
       "name": "WaitForFence-timeout-big",
-      "event": "WaitForFence-timeout",
+      "event": "WaitForFence",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "00000001",
-      "total_bytes": 36,
-      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000001"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000010000000000000000000000000000000000000000"
     },
     {
       "name": "WaitForFence-execution-failed-big",
-      "event": "WaitForFence-execution-failed",
+      "event": "WaitForFence",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "00000002",
-      "total_bytes": 36,
-      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000002"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000020000000000000000000000000000000000000000"
     },
     {
       "name": "WaitForFence-device-lost-big",
-      "event": "WaitForFence-device-lost",
+      "event": "WaitForFence",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "00000003",
-      "total_bytes": 36,
-      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000003"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000030000000000000000000000000000000000000000"
     },
     {
       "name": "WaitSemaphores-success-big",
@@ -525,10 +525,10 @@
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
-      "reply_length": 1,
-      "payload_hex": "00000000",
-      "total_bytes": 36,
-      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000000"
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000000000000000000000000000000000000000000000"
     },
     {
       "name": "ReadBuffer-1-bytes-big",
