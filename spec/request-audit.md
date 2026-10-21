@@ -111,3 +111,10 @@ The repository now contains `tools/check-wire-layout.py`, wired into `.github/wo
 ## Expanded Reply ABI checker — 2026-10-21
 
 The static checker now requires exact inventory coverage of all eleven Reply requests in the central registry and checks each against its defining chapter. Coverage includes fixed header/field/status contracts; `PHYSICALDEVICEINFO` variable record size, name length and padding; 12-byte `QUEUEFAMILYINFO` records; memory type/heap record sizes and count bounds; variable physical-property and `ReadBuffer` payload formulas; and the request/response completion contracts of `WriteBuffer` and `WaitSemaphores`. The GitHub Actions run on checker commit `03188b2904cb540b2107008e1e72e462b9b29ae6` passed 606 checks, including explicit boundary vectors for padding, record lengths, empty arrays, and maximum memory counts. This remains static Markdown validation and not live server interoperability.
+
+
+## Error/conformance coverage follow-up — 2026-10-21
+
+A further inventory scan found that `SelectEvents` had its error behavior defined in the event chapter but was missing from the central error-mapping chapter. Added its exact-length, XGE-negotiation, scope/mask, XID, ownership, and atomic-preservation mapping. The conformance checklist now also has explicit cases for `AllocateMemory`, `CreatePipelineLayout`, `CreateSemaphore`, and `CreateFence`, which were previously represented only indirectly.
+
+The static wire-layout checker now requires every centrally registered request to be named in both the error guidance and conformance checklist. This is a presence/drift check, not a proof that each listed rule is exhaustive; request-specific semantics remain defined by the chapters and the central error mapping.
