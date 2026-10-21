@@ -60,6 +60,9 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fence- und Semaphore-Zustände sowie Timeouts
 - Descriptor-Update/Freigabe während Pending-Use
 - Ressourcenzerstörung bei internen Referenzen
+- `DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, Pipeline, Fence und Semaphore; es weist Device, Pools, Command Buffer, Descriptor Set und Memory mit `BadMatch` ab
+- `DestroyResource` hat exakt 12 Bytes und inferiert Device/Ownership aus der Ressource; fremde Ownership und abgewiesene Recording-/Pending-Zustände ändern keine XID oder Referenz
+- Erfolgreiches `DestroyResource` invalidiert die öffentliche XID sofort, erhält interne Objekte aber bis zum Ende notwendiger Referenzen und Backend-Zugriffe
 - Destroy einer von einem `RECORDING`-Command-Buffer referenzierten Ressource wird atomar abgewiesen.
 - Destroy einer von einem nicht-pending `EXECUTABLE`-Command-Buffer referenzierten Ressource invalidiert diesen Command Buffer.
 - `DestroyCommandPool`, `DestroyDescriptorPool` und `FreeDescriptorSets` werden bei verbotener Pending-/Recording-Referenz atomar abgewiesen; erfolgreiche Kaskaden invalidieren alle betroffenen XIDs.
