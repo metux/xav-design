@@ -23,6 +23,9 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 ## Central registries
 
 - [Request subopcode registry](../registries/request-subopcodes.md) — inventory and stable numeric assignments for currently defined requests.
+- [Feature-ID registry](../registries/feature-ids.md) and [device-extension registry](../registries/device-extensions.md) — the v0.1 optional sets are intentionally empty.
+- [Physical-device property registry](../registries/physical-device-properties.md) — canonical Atom names, property types, value formats, and availability rules.
+- [Command-buffer entry registry](../registries/command-entries.md) — numeric IDs and support status for v0.1 command entries.
 
 ## Editorial conventions
 
