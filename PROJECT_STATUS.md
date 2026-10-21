@@ -21,7 +21,7 @@
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
 - Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
-- Complete the v0.1 feature/extension support set and property/Atom registry when their semantics are specified.
+- Cross-check the newly registered v0.1 feature/extension/property sets against error mappings and conformance cases.
 - Finish the final ABI review of request-specific error coverage and reply layouts; keep adding conformance cases with each protocol decision.
 
 ## End-to-end compute-path audit — 2026-10-21
@@ -33,7 +33,7 @@ The audit found no request-length arithmetic contradiction in the reviewed concr
 - A submission always has one internal terminal outcome; delivery of its completion/failure event depends on event selection and the connection remaining alive.
 - In v0.1, `ReadBuffer` waits for all previously accepted submissions on the same logical device and relevant prior writes to the requested range. A prior failed submission must not be treated as successful; read data is not guaranteed correct if failed work could have modified that range.
 
-The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially event registration/layouts, complete error mapping, and final wait-stage masks.
+The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially complete error mapping and final wait-stage masks.
 
 This is an internal consistency and compute-workflow audit, not a claim of full Vulkan-spec conformance or a frozen v0.1 wire protocol.
 
@@ -55,7 +55,7 @@ The working draft now defines the `ShaderModuleData` chunk layout and `CREATE`/`
 
 ## Request catalogue and wire-contract audit — 2026-10-21
 
-The current 39-request inventory was cross-checked against the defining chapters for request kind, fixed/formula-based lengths, common framing, and request-specific error rules. An outdated `DestroyResource` scope statement in `DECISIONS.md` was corrected: Fence and Semaphore require their dedicated destroy requests. The audit record is [spec/request-audit.md](spec/request-audit.md). Event-selection request layouts and several semantic/numeric registries remain open. The 39 currently defined requests now have stable subopcode assignments; this does not freeze v0.1.
+The current 40-request inventory was cross-checked against the defining chapters for request kind, fixed/formula-based lengths, common framing, and request-specific error rules. An outdated `DestroyResource` scope statement in `DECISIONS.md` was corrected: Fence and Semaphore require their dedicated destroy requests. The audit record is [spec/request-audit.md](spec/request-audit.md). Event selection is now registered as subopcode 40. Feature/extension and property registries have since been defined for the v0.1 baseline. The 40 currently defined requests now have stable subopcode assignments; this does not freeze v0.1.
 
 
 ## Second systematic request-contract audit — 2026-10-21
@@ -80,3 +80,8 @@ Defined `SelectEvents` as a 32-byte Void request assigned subopcode 40. It atomi
 ## XGE long-event prerequisite — 2026-10-21
 
 The event chapter now requires successful per-connection `GEQueryVersion` negotiation of XGE 1.0 before `CreateDevice`, `CreateDefaultDevice`, or `SelectEvents`. The server rejects these requests with `BadMatch` until negotiation succeeds, preserving target XIDs and prior event selections. This addresses the XGE rule that a server must not send long events to clients unless it knows they support XGE. Conformance cases cover rejection before negotiation and event framing after negotiation.
+
+
+## Feature, extension and physical-device property registries — 2026-10-21
+
+The v0.1 optional feature-ID and device-extension sets are explicitly empty: the compute baseline requires no optional feature requests or device extensions. Unknown feature IDs therefore produce `BadValue`; syntactically valid but unregistered extension names produce `BadMatch`. Four physical-device properties are registered by canonical Atom name, while numeric Atom IDs remain assigned by the X server. UUID properties use 16 raw bytes; compute work-group limits use `CARD32` and a three-element `CARD32_ARRAY`. Registered-but-unavailable values are distinguished from unknown properties. See the three new registry files and the updated device-discovery chapter.
