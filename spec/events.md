@@ -153,4 +153,4 @@ Alle anderen Bits sind reserviert und müssen abgewiesen werden. `event_mask = 0
 
 Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert. Das ändert nicht den internen terminalen Ausgang der Submission. Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.
 
-Die Event-Type-IDs und event-lokalen Werte sind in der [Event-Registry](../registries/event-types.md) registriert. Das serverseitige XGE-Event-Base wird bei der Extension-Initialisierung zugewiesen und ist kein XAverius-konstanter Wire-Wert.
+Die Event-Type-IDs und event-lokalen Werte sind in der [Event-Registry](../registries/event-types.md) registriert. XGE verwendet den Core-Eventcode GenericEvent (35). Ein XAverius-Event wird durch den XAverius-Major-Opcode im XGE-Feld extension und die registrierte Event-Type-ID im Feld evtype identifiziert. Der Major-Opcode wird ueber die normale X11-Extension-Abfrage ermittelt; es gibt kein separates XAverius-XGE-Event-Base.
