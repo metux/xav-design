@@ -8,10 +8,15 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   byte orders. Fixture values for the extension opcode and event sequence are
   deliberately fixed test values; real connections supply their negotiated
   extension opcode and current sequence number.
+- `reply-vectors.json` covers fixed fence/semaphore replies, padded ReadBuffer
+  data, empty and populated physical-device enumeration, and queue-family
+  enumeration in both byte orders.
 - `test_wire_vectors.py` checks request encoding, declared lengths, padding,
   and malformed request framing.
 - `test_event_vectors.py` checks XGE header and payload encoding, total size,
   event IDs, reserved bytes, and malformed raw event framing.
+- `test_reply_vectors.py` checks standard reply framing, fixed reply fields,
+  variable payload lengths, record boundaries, padding, and malformed headers.
 
 Run all fixture tests from the repository root:
 
