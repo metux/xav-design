@@ -101,7 +101,6 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 ### Ressourcenzerstörung und Memory-Freigabe
 
 - `DestroyDescriptorPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein enthaltenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird; die Ablehnung ist atomar.
-- `FreeMemory`: `BadMatch`, solange ein Buffer an die Allokation gebunden ist; `INVALID_SYNCHRONIZATION_STATE`, solange angenommene Arbeit auf die Allokation zugreift; bei Ablehnung bleibt die Memory-XID live.
 
 - Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
 - Destroy eines pending Command Buffers, Descriptor Sets, Buffers, einer Pipeline oder eines Pipeline Layouts: `INVALID_SYNCHRONIZATION_STATE`.
