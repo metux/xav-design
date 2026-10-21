@@ -14,13 +14,12 @@ The following questions were open in the consolidated draft and remain open. Mov
 10. Semantics of `memory_properties_flags`.
 11. Error representation for unsupported device features and extensions in `CreateDevice`.
 12. Exact pending signal/wait rules for binary semaphores.
-14. Exact completion/failure event delivery rules.
-15. Timeout boundaries and scheduling guarantees.
-16. Device destruction behavior when asynchronous teardown fails.
-17. Ownership for future X11 resource-sharing mechanisms.
-18. Wire representation of Physical Device UUID and Driver UUID.
-19. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
-20. Final Vulkan stage mapping and valid wait-stage masks.
-21. Complete normative definition of the central resource state machine.
-22. Audit remaining Vulkan lifetime rules, especially destruction of pending fences/semaphores, Device Loss, DescriptorPool cascade destruction, and all indirect references not covered by the normative Command-Buffer invalidation rule.
-23. Define the complete request-specific error mapping, including how core X11 errors and XAverius errors are selected for every invalid-resource and wrong-type case.
+13. Exact completion/failure event delivery rules.
+14. Timeout boundaries and scheduling guarantees.
+15. Device destruction behavior when asynchronous teardown fails.
+16. Ownership for future X11 resource-sharing mechanisms.
+17. Wire representation of Physical Device UUID and Driver UUID.
+18. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
+19. Final Vulkan stage mapping and valid wait-stage masks.
+20. Complete normative definition of the central resource state machine.
+21. Audit remaining Vulkan lifetime rules, especially destruction of pending fences/semaphores, Device Loss, DescriptorPool cascade destruction, and all indirect references not covered by the normative Command-Buffer invalidation rule.
