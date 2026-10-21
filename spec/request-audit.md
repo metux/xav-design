@@ -6,7 +6,7 @@ This audit compares the currently defined request inventory in [the central requ
 
 ## Inventory result
 
-- The registry contains 39 currently defined requests.
+- The registry contains 40 currently defined requests.
 - Every registered request has a defining specification chapter.
 - The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for the 39 registered requests.
 - The common X11 framing rules specify an 8-byte request header, four-byte request-length units, zero padding, no BIG-REQUESTS in v0.1, and standard 32-byte X11 replies/errors.
@@ -90,12 +90,17 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 37 | `ResetFence` | Void | 16 |
 | 38 | `DestroyFence` | Void | 16 |
 | 39 | `DestroyResource` | Void | 12 |
+| 40 | `SelectEvents` | Void | 32 |
 
 Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
 
 ## Cross-chapter consistency results
 
-- **Request kind:** all 39 inventory kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
+- **Request kind:** all 40 inventory kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
 - **Reply lengths:** discovery reply formulas and property status values are now explicit; fixed replies use `reply.length = 0` when all data fits in the standard 32-byte reply header. Variable data begins at byte 32 and `reply.length` counts four-byte units after that header.
 - **Descriptor/stage values:** v0.1 supports `STORAGE_BUFFER = 1` only and the XAverius stage bit `COMPUTE = 0x00000001`; examples must not substitute native Vulkan enum names.
-- **Error mapping:** the central error chapter governs XID liveness, live-type mismatch, ownership, Atom validation, Create-XID choice, validation order, and atomic rejection. Request-specific tables define the specialized state and backend failures. A final ABI review is still required for full implementation readiness; this matrix does not close feature/extension, property-registry, timeout, or event-selection decisions.
+- **Error mapping:** the central error chapter governs XID liveness, live-type mismatch, ownership, Atom validation, Create-XID choice, validation order, and atomic rejection. Request-specific tables define the specialized state and backend failures. A final ABI review is still required for full implementation readiness; this matrix does not close feature/extension, property-registry, timeout, or event delivery and XGE-base decisions.
+
+## Event-selection request addition — 2026-10-21
+
+`SelectEvents` is now defined as a 32-byte Void request at subopcode 40. The request atomically replaces the selection for one connection, device, or queue scope; masks are scope-specific and `ASYNC_ERROR`/`DEVICE_LOST` are unmaskable. Conformance coverage was added. This adds one request without changing assignments 1–39.
