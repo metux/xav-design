@@ -53,90 +53,9 @@ Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig. Dieselbe Semaphore 
 
 `QueueSubmit` ist ein Void-Request.
 
-## Semaphoren erstellen
+## Semaphore references
 
-`CreateSemaphore` hat 28 Bytes:
-
-- Offset 8: Device-XID
-- Offset 12: Semaphore-XID
-- Offset 16: `CARD32 semaphore_type`
-- Offset 20: `CARD64 initial_value`
-
-Typen:
-
-- `BINARY = 0`
-- `TIMELINE = 1`
-
-Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled.
-
-## Binary-Semaphoren
-
-Binary-Semaphoren folgen den Vulkan-Signal-/Wait-Regeln.
-
-- Ein Signal darf nicht mehrere konkurrierende Waits erfüllen.
-- Host-Counter-Abfragen, Host-Waits und Host-Signals sind für Binary-Semaphoren ungültig.
-- Pending Signal-/Wait-Zustände müssen atomar validiert werden.
-- Ein Signal und ein Wait müssen nach den geltenden Vulkan-Regeln zusammenpassen.
-
-Die vollständigen Regeln für noch ausstehende Signal-/Wait-Operationen sind noch zu präzisieren.
-
-## Timeline-Semaphoren
-
-Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
-
-- Ein Wait ist erfüllt, sobald der Counter mindestens den angeforderten Wert erreicht.
-- Ein Wait darf eingereiht werden, bevor das Signal eingereiht wurde, das ihn erfüllt.
-- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein.
-- Mehrere Signal-Entries derselben Timeline-Semaphore in einem einzelnen `QueueSubmit` sind in v0.1 nicht erlaubt.
-
-## `GetSemaphoreCounterValue`
-
-Request: 16 Bytes; Device-XID bei Offset 8, Semaphore-XID bei Offset 12.
-
-Nur für Timeline-Semaphoren.
-
-Reply:
-
-- Offset 8: `CARD64 counter_value`
-- Offset 16–31: reserviert, null
-- Reply-Payload-Länge: null
-
-## `WaitSemaphores`
-
-Fester Request-Header: 28 Bytes.
-
-- Offset 8: Device-XID
-- Offset 12: `CARD32 semaphore_count`
-- Offset 16: `CARD32 wait_mode`
-- Offset 20: `CARD64 timeout_ns`
-- Offset 28: Array aus 12-Byte-Entries
-
-Jeder Entry enthält Semaphore-XID und `CARD64 wait_value`.
-
-Wait-Modi:
-
-- `WAIT_ANY = 0`
-- `WAIT_ALL = 1`
-
-Die Anzahl muss mindestens 1 sein. Alle Semaphoren müssen Timeline-Semaphoren desselben Devices sein; doppelte XIDs sind unzulässig.
-
-Timeout:
-
-- 0: nicht blockierend
-- `UINT64_MAX`: unendlich
-- sonst: Nanosekunden
-
-Der Reply enthält bei Offset 8 den Status `SUCCESS = 0` oder `TIMEOUT = 1`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
-
-## `SignalSemaphore`
-
-Request: 24 Bytes.
-
-- Offset 8: Device-XID
-- Offset 12: Semaphore-XID
-- Offset 16: `CARD64 signal_value`
-
-Nur Timeline-Semaphoren sind erlaubt. Der Signalwert muss größer als der aktuelle Wert und mit allen ausstehenden Signalen konsistent sein. Prüfung und Signaloperation sind atomar.
+The semaphore types and host-side semaphore operations used by `QueueSubmit` are specified in [Synchronization objects](synchronization.md). The `QueueSubmit` request retains its wait and signal arrays as described above.
 
 # Ordering- und Synchronisationsgarantien
 

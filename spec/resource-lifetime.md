@@ -1,4 +1,6 @@
-## Client-Ressourcen
+# Resource lifetime and ownership
+
+## Client resources
 
 Client-erzeugte XAverius-Ressourcen verwenden gültige, vom Client allokierbare XIDs.
 
