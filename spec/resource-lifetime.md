@@ -102,6 +102,19 @@ Die interne Bereinigung muss sicher und unabhängig von der öffentlichen XID-Ve
 
 Nach Device Loss müssen betroffene Operationen als fehlgeschlagen behandelt werden. Der Server darf nicht so tun, als sei GPU-Arbeit erfolgreich abgeschlossen worden.
 
+## Device Loss und terminale Bereinigung
+
+Wird ein logisches Device als verloren erkannt, gilt für alle darauf angenommenen, noch nicht terminalen Submissions:
+
+- Jede Submission endet als fehlgeschlagen mit Status `DEVICE_LOST`; sie darf nicht als erfolgreich abgeschlossen gemeldet werden.
+- Zugehörige Fences wechseln nach `FAILED`, nicht nach `SIGNALED`.
+- Betroffene Command Buffer wechseln nach Ende ihrer Pending-Phase nach `INVALID` und sind nicht erneut einreichbar.
+- Interne Ressourcenreferenzen bleiben so lange erhalten, wie der Backend-Treiber oder die Serverbereinigung noch auf sie zugreifen kann. Ihre Freigabe darf nicht von einer GPU-Completion abhängen, die nach Device Loss nicht mehr eintreten kann.
+
+Öffentliche Ressourcen-XIDs dürfen bei Device-Zerstörung oder der dazugehörigen Kaskadenbereinigung invalidiert werden, auch wenn normale Pending-Use-Zerstörungen sonst abgewiesen würden. Diese Sonderregel gilt nur für die Device-weite Bereinigung; sie darf keine erfolgreiche Completion vortäuschen. Der Server muss den Backend-Zustand sicher abbauen und darf interne Ressourcen erst freigeben, wenn kein Backend-Zugriff mehr möglich ist.
+
+Nach erkanntem Device Loss schlagen Requests, die weitere Vulkan-Arbeit erfordern, mit `DEVICE_LOST` fehl. Requests zur Statusabfrage und zur logischen Bereinigung dürfen weiterhin verarbeitet werden, soweit ihr jeweiliger Vertrag dies zulässt. Der genaue Fehlerpfad für fehlgeschlagene Backend-Teardown-Schritte bleibt ein offener Implementierungsaspekt.
+
 ## Command Buffer und Descriptor Sets
 
 Ein pending Command Buffer darf in v0.1 nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden.
