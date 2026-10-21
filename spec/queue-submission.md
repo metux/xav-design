@@ -1,4 +1,4 @@
-# Queue Submission und Synchronisation
+# Queue submission and ordering
 
 ## Queue-Adressierung
 
