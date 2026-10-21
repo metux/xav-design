@@ -13,8 +13,7 @@ The following questions were open in the consolidated draft and remain open. Mov
 9. Error representation for unsupported device features and extensions in `CreateDevice`.
 10. Final wire layouts for submission completion/failure events and behavior when event delivery is impossible.
 11. Timeout boundaries and scheduling guarantees.
-12. Device destruction behavior when asynchronous teardown fails.
-13. Ownership for future X11 resource-sharing mechanisms.
-14. Wire representation of Physical Device UUID and Driver UUID.
-15. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
-16. Final Vulkan stage mapping and valid wait-stage masks.
+12. Ownership for future X11 resource-sharing mechanisms.
+13. Wire representation of Physical Device UUID and Driver UUID.
+14. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
+15. Final Vulkan stage mapping and valid wait-stage masks.
