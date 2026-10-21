@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import struct
 import unittest
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,19 +35,11 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
     expected_lengths = {0: 60, 1: 48, 2: 48, 3: 48, 4: 48, 5: 56, 6: 56}
     if len(wire) != expected_lengths[event_type]:
         raise ValueError("event total length does not match event type")
-    value_rules = {
-        0: ((40, (0, 1, 2, 3, 4, 5, 6)),),
-        1: ((36, (0, 1, 2, 3, 4, 5)),),
-        2: ((36, (0, 1, 2)),),
-        3: ((40, (0, 1, 2, 3)),),
-        4: ((36, (0, 1, 2)),),
-        6: ((44, (0, 1)),),
-    }
-    for offset, allowed in value_rules.get(event_type, ()):
+    if event_type in EVENT_VALUE_RANGES:
+        offset, allowed = EVENT_VALUE_RANGES[event_type]
         if int.from_bytes(wire[offset:offset + 4], byte_order) not in allowed:
             raise ValueError("event-local value is outside its registered range")
-    reserved_offsets = {0: (56,), 2: (44,), 3: (44,), 5: (44,)}
-    for offset in reserved_offsets.get(event_type, ()):
+    for offset in EVENT_RESERVED_OFFSETS.get(event_type, ()):
         if wire[offset:offset + 4] != bytes(4):
             raise ValueError("reserved event field must be zero")
 
@@ -80,9 +73,9 @@ def encode_event(vector: dict) -> bytes:
         struct.pack_into(endian + fmt, data, offset, int(value))
     if len(data) != total:
         raise ValueError("event fields exceed declared total length")
-    if any(data[10:32]):
-        raise ValueError("XGE reserved header bytes must be zero")
-    return bytes(data)
+    wire = bytes(data)
+    validate_event_wire(wire, order)
+    return wire
 
 
 EVENT_IDS = {
@@ -90,6 +83,17 @@ EVENT_IDS = {
     "DEVICE_MEMORY_PRESSURE": 3, "DEVICE_IDLE": 4,
     "SUBMISSION_COMPLETE": 5, "SUBMISSION_FAILED": 6,
 }
+EVENT_VALUE_RANGES = {
+    0: (40, (0, 1, 2, 3, 4, 5, 6)),  # ASYNC_ERROR.origin
+    1: (36, (0, 1, 2, 3, 4, 5)),     # DEVICE_LOST.reason_code
+    2: (36, (0, 1, 2)),              # DEVICE_STATUS_CHANGED.new_status
+    3: (40, (0, 1, 2, 3)),            # DEVICE_MEMORY_PRESSURE.pressure_level
+    4: (36, (0, 1, 2)),              # DEVICE_IDLE.idle_reason
+    6: (44, (0, 1)),                 # SUBMISSION_FAILED.failure_class
+}
+EVENT_RESERVED_OFFSETS = {0: (56,), 2: (44,), 3: (44,), 5: (44,)}
+
+
 EVENT_FIELDS = {
     "ASYNC_ERROR": {
         "device_xid": (32, 4), "error_code": (36, 4), "origin": (40, 4),
@@ -173,6 +177,22 @@ class GoldenXGEEventTests(unittest.TestCase):
         vector["xge_length"] += 1
         with self.assertRaisesRegex(ValueError, "XGE length"):
             encode_event(vector)
+
+    def test_event_value_ranges_match_normative_registry(self):
+        registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        sections = (
+            ("ASYNC_ERROR.origin", 0),
+            ("DEVICE_LOST.reason_code", 1),
+            ("DEVICE_STATUS_CHANGED.new_status", 2),
+            ("DEVICE_MEMORY_PRESSURE.pressure_level", 3),
+            ("DEVICE_IDLE.idle_reason", 4),
+            ("SUBMISSION_FAILED.failure_class", 6),
+        )
+        for heading, event_type in sections:
+            match = re.search(r"^## `" + re.escape(heading) + r"`\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
+            self.assertIsNotNone(match, f"missing registry section {heading}")
+            values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", match.group(1), re.M)}
+            self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
 
     def test_rejects_invalid_event_local_values(self):
         cases = (
