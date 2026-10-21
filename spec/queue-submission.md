@@ -95,6 +95,19 @@ Bei Device Loss schlagen alle angenommenen, noch nicht terminalen Submissions de
 
 The semaphore types and host-side semaphore operations used by `QueueSubmit` are specified in [Synchronization objects](synchronization.md). The `QueueSubmit` request retains its wait and signal arrays as described above.
 
+# Queue-Reihenfolge und queueübergreifende Abhängigkeiten
+
+Die folgenden Regeln gelten für angenommene Submissions desselben logischen Devices:
+
+- **Dieselbe Queue:** Der Server reicht angenommene Submissions in der Reihenfolge ihrer `QueueSubmit`-Annahme auf dieser Queue ein. Queue-Reihenfolge ist keine Garantie, dass eine Submission vollständig abgeschlossen ist, bevor die nächste mit ihrer Ausführung beginnt; unabhängige Arbeit darf sich überlappen. Die Reihenfolge allein ersetzt weder eine notwendige Memory-Dependency noch eine explizite Synchronisation zwischen Commands.
+- **Verschiedene Queues:** Zwischen unterschiedlichen Queues, auch innerhalb derselben Queue-Family, besteht keine implizite Reihenfolge und keine implizite Memory-Dependency. Der Server darf weder eine gemeinsame FIFO-Reihenfolge noch Fairness oder eine maximale Wartezeit versprechen.
+- **Explizite Abhängigkeit:** Eine queueübergreifende GPU-Abhängigkeit muss mit einem passenden Semaphore-Signal und -Wait hergestellt werden. Das Wait-Stage-Mask bestimmt, an welchen unterstützten Pipeline-Stages die Warteabhängigkeit wirksam wird; es erzeugt nicht automatisch beliebige Memory-Dependencies für alle Ressourcen. Erforderliche Memory-Dependencies müssen den Vulkan-Regeln entsprechend durch die unterstützten Commands und Synchronisationsoperationen abgedeckt sein.
+- **Fence und Host-Wait:** Eine Fence beobachtet den terminalen Zustand der Submission, der sie zugeordnet ist. `WaitForFence` und `WaitSemaphores` blockieren den aufrufenden Client bis zum Reply, erzeugen aber selbst keine GPU-Abhängigkeit zwischen Queues. Ein Host-Wait auf ein Semaphore ist kein Ersatz für ein Queue-seitiges Semaphore-Wait.
+- **Host-Signal:** `SignalSemaphore` aktualisiert den Timeline-Counter hostseitig. Eine Queue, die auf diesen Wert wartet, kann dadurch fortschreiten; die Host-Signaloperation ordnet jedoch keine anderen GPU-Commands, die nicht über diese Semaphore-Abhängigkeit verbunden sind.
+- **Token und Events:** `submission_token` ist nur ein Korrelationswert. Weder sein Zahlenwert noch die Reihenfolge von Tokens oder Event-Sequence-Nummern legt eine Submission-Reihenfolge fest. Terminal-Events melden Ergebnisse, sie schaffen keine Synchronisation.
+
+Diese Regeln spezifizieren notwendige Vulkan-kompatible Ordnungsgrenzen, nicht Scheduler-Implementierungsdetails. Insbesondere gibt es in v0.1 keine Zusage zu Fairness, maximaler Scheduling-Latenz oder Fortschritt innerhalb einer festen Frist.
+
 # Ordering- und Synchronisationsgarantien
 
 1. Requests derselben X11-Verbindung werden grundsätzlich in X11-Protokollreihenfolge validiert und verarbeitet. Ein Request, der auf GPU-Fortschritt wartet, darf den Dispatcher aber nicht so blockieren, dass ein späterer `SignalSemaphore`-Request derselben Verbindung den Fortschritt nicht mehr ermöglichen kann.
