@@ -149,7 +149,7 @@ Reply-Status:
 - `EXECUTION_FAILED = 2`
 - `DEVICE_LOST = 3`
 
-Timeout und Ausführungsfehler werden als normale Reply-Statuswerte zurückgegeben.
+Timeout und Ausführungsfehler werden als normale Reply-Statuswerte zurückgegeben. Für `timeout_ns` gilt: 0 bedeutet nicht blockierend, `UINT64_MAX` bedeutet unbegrenzt, alle anderen Werte sind Nanosekunden.
 
 ## `ResetFence`
 
