@@ -97,14 +97,7 @@ Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes.
 
 Die Records folgen der Vulkan-Reihenfolge. Die Payload-Länge muss durch 12 teilbar sein.
 
-Queue-Flag-Bits:
-
-- Bit 0: `GRAPHICS`
-- Bit 1: `COMPUTE`
-- Bit 2: `TRANSFER`
-- Bit 3: `SPARSE_BINDING`
-- Bit 4: `PROTECTED`
-- Bits 5–31: reserviert
+Die Bits von `queue_flags` sind in der [Queue-Flag-Registry](../registries/queue-flags.md) normativ definiert. Server müssen native Vulkan-Flags in diese XAverius-Wire-Bits übersetzen; Bits 5–31 sind reserviert.
 
 ## `CreateDevice`
 
