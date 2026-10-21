@@ -99,3 +99,7 @@ Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arit
 ## Event-selection request addition — 2026-10-21
 
 `SelectEvents` is now defined as a 32-byte Void request at subopcode 40. The request atomically replaces the selection for one connection, device, or queue scope; masks are scope-specific and `ASYNC_ERROR`/`DEVICE_LOST` are unmaskable. Conformance coverage was added. This adds one request without changing assignments 1–39.
+
+## Reply and XGE ABI review — 2026-10-21
+
+The specification-level ABI pass rechecked the standard 32-byte X11 reply header, fixed versus variable reply payload lengths, and all seven registered XGE event layouts against the event registry. The common XGE header is now explicit (GenericEvent response type 35, dynamic extension major opcode, 16-bit sequence, 32-bit length, static 16-bit `evtype`, zero reserved header bytes), and all event total lengths agree with `32 + 4 * length`: 60/7 for `ASYNC_ERROR`, 48/4 for four device events, and 56/6 for both submission events. Submission-event offsets, failure-class values, and the exactly-one-terminal-event rule are aligned. `SelectEvents` is checked as a 32-byte Void request with scope-specific fields and masks. Conformance cases now cover these layouts and reply padding. This closes the specification-level layout question for submission events; actual interoperability testing against an X11/XGE server remains an implementation-level task.
