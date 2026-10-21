@@ -228,6 +228,18 @@ class GoldenXGEEventTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "extension major opcode"):
             validate_event_wire(bytes(wire), vector["byte_order"])
 
+    def test_rejects_raw_event_reserved_payload_fields(self):
+        cases = (("ASYNC_ERROR", 56), ("DEVICE_STATUS_CHANGED", 44),
+                 ("DEVICE_MEMORY_PRESSURE", 44), ("SUBMISSION_COMPLETE", 44))
+        for event, offset in cases:
+            for order in ("little", "big"):
+                vector = next(v for v in self.vectors if v["event"] == event and v["byte_order"] == order)
+                wire = bytearray(encode_event(vector))
+                wire[offset:offset + 4] = (1).to_bytes(4, order)
+                with self.subTest(event=event, order=order):
+                    with self.assertRaisesRegex(ValueError, "reserved event field"):
+                        validate_event_wire(bytes(wire), order)
+
     def test_rejects_nonzero_reserved_field(self):
         import copy
         vector = copy.deepcopy(next(v for v in self.vectors if v["event"] == "SUBMISSION_COMPLETE"))
