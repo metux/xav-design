@@ -83,10 +83,18 @@ def check_events(c: Check) -> None:
         "SUBMISSION_COMPLETE": (5, 56, 6),
         "SUBMISSION_FAILED": (6, 56, 6),
     }
-    reg_ids = {
-        name: int(value)
+    event_rows = [
+        (int(value), name)
         for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$", registry, re.M)
-    }
+    ]
+    c.require(len(event_rows) == 7, f"event registry: expected 7 rows, found {len(event_rows)}")
+    c.require(len({value for value, _name in event_rows}) == len(event_rows),
+              "event registry contains duplicate event type IDs")
+    c.require(len({name for _value, name in event_rows}) == len(event_rows),
+              "event registry contains duplicate event names")
+    c.require({value for value, _name in event_rows} == set(range(7)),
+              "event registry must assign event type IDs 0 through 6 exactly once")
+    reg_ids = {name: value for value, name in event_rows}
     doc_sections = dict(sections(event_doc))
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
@@ -147,6 +155,31 @@ def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
             name, opcode, kind = row.group(1), int(row.group(2)), row.group(3).strip()
             result[opcode] = (name, kind)
     return result
+
+def check_error_registry(c: Check) -> None:
+    """Check that centrally assigned XAverius error offsets are unique and used."""
+    registry = read("registries/errors.md")
+    error_doc = read("spec/errors.md")
+    rows = [
+        (int(offset), symbol)
+        for offset, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z][A-Z0-9_]+)`\s*\|\s*$",
+            registry, re.M,
+        )
+    ]
+    c.require(bool(rows), "error registry: no numeric error assignments found")
+    c.require(len({offset for offset, _symbol in rows}) == len(rows),
+              "error registry contains duplicate offsets")
+    c.require(len({symbol for _offset, symbol in rows}) == len(rows),
+              "error registry contains duplicate symbols")
+    c.require([offset for offset, _symbol in rows] == list(range(len(rows))),
+              "error registry offsets must be contiguous from zero")
+    c.require("first_error + offset" in error_doc,
+              "error chapter must define absolute code as first_error + offset")
+    for _offset, symbol in rows:
+        c.require(f"`{symbol}`" in error_doc,
+                  f"error registry symbol {symbol} is missing from error guidance")
+
 
 def check_request_document_coverage(c: Check) -> None:
     """Keep every registered request represented in error and conformance guidance."""
@@ -663,6 +696,7 @@ def check_reply_formula_vectors(c: Check) -> None:
 def main() -> int:
     c = Check()
     check_events(c)
+    check_error_registry(c)
     check_request_document_coverage(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
