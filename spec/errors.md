@@ -49,7 +49,8 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
 - Ungültige oder falsche Device-/Shader-Module-XID: request-spezifischer X11-Fehler beziehungsweise `BadMatch` bei falschem Typ oder Device
 - `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
-- Ungültiges SPIR-V oder fehlgeschlagene Shader-Module-Erstellung: request-spezifischer Vulkan-Erstellungsfehler; kein Shader Module bleibt live und das Assembly wird verworfen
+- Ungültiges SPIR-V oder ein SPIR-V-Modul, das die v0.1-Validierungsregeln nicht erfüllt: `BadValue`; kein Shader Module bleibt live und das Assembly wird verworfen
+- Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module.
 
 ### `CommandPool` und `CommandBufferData`
