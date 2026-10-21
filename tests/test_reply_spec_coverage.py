@@ -124,7 +124,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
             "property-failure-zero", "property-padding-zero", "queue-record-reserved",
             "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
             "device-name-padding-zero", "device-record-length", "memory-type-heap-index-range",
-            "reserved-zero",
+            "queue-record-length", "read-buffer-padding-zero", "reserved-zero",
         }
         for rule in sorted(required_rules):
             for order in ("little", "big"):
