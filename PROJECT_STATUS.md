@@ -19,10 +19,10 @@
 
 ## Immediate next steps
 
-- Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
-- Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
-- Continue final ABI review of reply layouts and XGE event framing; validate the specified queue-ordering contract against backend behavior.
-- Keep request-specific error mappings and conformance cases synchronized as protocol decisions evolve; the v0.1 feature/extension/property registry cross-check is complete.
+- Continue centralizing numeric registries that can be derived from already-settled protocol semantics; the checker now verifies unique contiguous request/event/error assignments.
+- Run implementation-level interoperability tests for `QueryExtension`, XGE framing, and `SelectEvents` when a live X11/XGE implementation is available; current checks are specification/reference tests only.
+- Validate the specified queue-ordering and `WriteBuffer` visibility contracts against backend behavior once a server implementation exists.
+- Continue request-specific error-mapping and conformance review; the checker now requires all 40 registered requests to be represented in both documents, and the `SelectEvents` mapping is explicit. The v0.1 feature/extension/property registry cross-check is complete.
 
 ## End-to-end compute-path audit — 2026-10-21
 
