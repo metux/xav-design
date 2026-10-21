@@ -1,6 +1,18 @@
 # XAverius-Events
 
-Alle folgenden Events verwenden XGE.
+Alle folgenden Events verwenden XGE. Der gemeinsame 32-Byte-Header entspricht dem X Generic Event-Format:
+
+| Offset | Typ | Feld |
+|---:|---|---|
+| 0 | CARD8 | `response_type = GenericEvent (35)` |
+| 1 | CARD8 | `extension`: dynamisch zugewiesener XAverius-Major-Opcode |
+| 2 | CARD16 | X11-Event-Sequenznummer |
+| 4 | CARD32 | XGE `length`, Anzahl der Vierbyteeinheiten nach Offset 32 |
+| 8 | CARD16 | `evtype`, statische Event-Type-ID aus der Event-Registry |
+| 10–31 | — | XGE-reservierte Header-Bytes, null |
+
+Event-spezifische Felder beginnen bei Offset 32. Die Gesamtlänge ist exakt `32 + 4 * length`; die Verbindung-byte-order gilt auch für Header und Payload. Die Werte `extension` und `evtype` sind nicht austauschbar: Ersterer ist pro X11-Server dynamisch, letzterer ist XAverius-statisch.
+
 
 ## `ASYNC_ERROR`
 
