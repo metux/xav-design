@@ -73,4 +73,4 @@ Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unass
 | 0 | `EXECUTION_FAILED` |
 | 1 | `DEVICE_LOST` |
 
-Event-selection request layouts and the final event-selection wire mechanism remain open. This registry does not imply that an event-selection request has been assigned an opcode.
+Event selection is implemented by the 32-byte Void request `SelectEvents` at subopcode 40 in the central request registry. Its scopes, masks, atomic replacement semantics, and XGE negotiation prerequisite are specified in [the event chapter](../spec/events.md). This event-type registry remains separate from request subopcodes.
