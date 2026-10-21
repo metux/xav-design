@@ -53,6 +53,14 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module.
 
+### `CreateDescriptorSetLayout`
+
+- Falsche Request-Länge oder ein nicht zum `binding_count` passender Payload: `BadLength`
+- Nicht-null `flags`, reservierte/ungültige Feldwerte, unbekannte oder nicht unterstützte Stage-Bits, nicht unterstützter Descriptor-Typ oder ungültige Binding-Records: `BadValue`
+- Ungültige oder bereits belegte Create-XID: `BadIDChoice`
+- Ungültiges Device-XID: request-spezifischer Standard-X11-Fehler; Cross-Device-Ressource: `BadMatch`
+- Jeder Fehler lässt das Descriptor Set Layout unangelegt; Teilresultate sind unzulässig.
+
 ### `CommandPool` und `CommandBufferData`
 
 - Falsche Request-Länge oder unvollständiger Entry: `BadLength`
