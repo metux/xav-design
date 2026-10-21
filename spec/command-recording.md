@@ -160,7 +160,7 @@ Die Dispatch-Werte müssen innerhalb der vom Device unterstützten Limits liegen
 
 Entry-Länge: `5 + ceil(data_length / 4)` Wörter.
 
-Für v0.1 muss `stage_flags` exakt dem Compute-Shader-Bit entsprechen. `offset` und `data_length` müssen Vielfache von vier sein. `data_length` muss positiv sein.
+Für v0.1 muss `stage_flags` exakt dem in der [Shader-Stage-Registry](../registries/shader-stages.md) definierten `COMPUTE`-Bit entsprechen. `offset` und `data_length` müssen Vielfache von vier sein. `data_length` muss positiv sein.
 
 Der Bereich muss innerhalb von `maxPushConstantsSize` liegen und von einem kompatiblen Push-Constant-Range des angegebenen Pipeline Layouts abgedeckt werden.
 
