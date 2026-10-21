@@ -2,7 +2,7 @@
 
 Status: **39 defined requests assigned; registry remains open for future requests and is not a v0.1 freeze**.
 
-This file is the central inventory for XAverius extension requests. It records only requests already named and described in the current specification chapters. It does not assign numeric values or imply that the wire protocol is frozen.
+This file is the central inventory and numeric assignment for XAverius extension requests. It records only requests already named and described in the current specification chapters. The assignments do not imply that the wire protocol is frozen.
 
 ## Rules
 
