@@ -90,6 +90,14 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Ungültiger Reset-/Destroy-Zustand: `INVALID_SYNCHRONIZATION_STATE`
 - Timeout und asynchroner Ausführungsfehler bei `WaitForFence`: normaler Reply-Status
 
+### `DestroyResource`
+
+- Falsche Request-Länge: `BadLength`
+- Ungültige oder nicht mehr live XID: request-spezifischer Standard-X11-Fehler
+- Ressourcentyp, der nicht für den generischen Request zugelassen ist, oder falsche Ownership: `BadMatch`
+- Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln: `INVALID_SYNCHRONIZATION_STATE`
+- Ablehnung lässt XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert.
+
 ### Ressourcenzerstörung und Memory-Freigabe
 
 - Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
