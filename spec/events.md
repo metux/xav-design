@@ -97,7 +97,7 @@ Gesamtlänge: 56 Bytes; XGE `length = 6`.
 - Offset 36: `CARD32 queue_family_index`
 - Offset 40: `CARD32 queue_index`
 - Offset 44: `CARD32 reserved = 0`
-- Offset 48: `CARD64 submission_id`
+- Offset 48: `CARD64 submission_token`, der vom Client in `QueueSubmit` angegebene Token
 
 ## `SUBMISSION_FAILED`
 
@@ -107,7 +107,7 @@ Gesamtlänge: 56 Bytes; XGE `length = 6`.
 - Offset 36: `CARD32 queue_family_index`
 - Offset 40: `CARD32 queue_index`
 - Offset 44: `CARD32 failure_class`
-- Offset 48: `CARD64 submission_id`
+- Offset 48: `CARD64 submission_token`, der vom Client in `QueueSubmit` angegebene Token
 
 Failure-Class-Werte:
 
