@@ -2,11 +2,46 @@
 
 ## 6.1 Shader Modules
 
-`CreateShaderModule` überträgt SPIR-V explizit. `DestroyShaderModule` zerstört die öffentliche Ressource.
+Shader upload and creation use one request opcode, `ShaderModuleData`, with request-specific flags in the XAverius common header. The request is a Void request: successful chunks receive no reply; errors are reported as ordinary X11 errors correlated to the offending request. A successful `FINAL` request means the module has been fully validated and created.
 
-`pNext`-Strukturen und Vulkan-Allocator-Callbacks werden in v0.1 nicht über das Protokoll übertragen. Die genauen Wire-Layouts und Subopcode-Zuweisungen sind noch offen.
+The fixed request header and payload are:
 
-Nach erfolgreicher Erstellung einer Compute-Pipeline darf das Shader Module öffentlich zerstört werden, soweit dies mit den Vulkan-Lebensdauerregeln vereinbar ist.
+| Offset | Type | Field |
+|---:|---|---|
+| 8 | XID | `device_xid` |
+| 12 | XID | `shader_module_xid` |
+| 16 | CARD32 | `data_length`, number of SPIR-V payload bytes in this request |
+| 20 | BYTE[] | SPIR-V bytes for this chunk, followed by zero padding to a four-byte boundary |
+
+Total request length is `20 + ((data_length + 3) & ~3)` bytes. `data_length` excludes padding. The SPIR-V byte stream is concatenated exactly as received; padding bytes are not part of the module. The total assembled module length must be a multiple of four and the assembled bytes must form a valid SPIR-V module accepted by the server's Vulkan implementation.
+
+The common-header `flags` byte is defined for this request as:
+
+| Bit | Name | Meaning |
+|---:|---|---|
+| 0 | `CREATE` | Begin a new upload and reserve `shader_module_xid` for this attempt |
+| 1 | `FINAL` | This is the final chunk; validate and create the shader module atomically |
+| 2 | `ABORT` | Discard an upload in progress |
+| 3–7 | reserved | MUST be zero |
+
+Flag combinations and chunk rules:
+
+- `CREATE=1, FINAL=0, ABORT=0`: start a new upload and append this chunk.
+- `CREATE=1, FINAL=1, ABORT=0`: create and finalize a module from this single request.
+- `CREATE=0, FINAL=0, ABORT=0`: append a chunk to an upload already in progress for this XID.
+- `CREATE=0, FINAL=1, ABORT=0`: append the final chunk and attempt module creation.
+- `CREATE=0, FINAL=0, ABORT=1`: abort and discard an upload in progress. `data_length` MUST be zero.
+- All other combinations are invalid. In particular, `ABORT` cannot be combined with `CREATE` or `FINAL`.
+
+A non-abort chunk must have positive `data_length`. Every request is a complete chunk; chunks cannot split a field of the X11/XAverius framing, and their payloads are concatenated without inter-chunk padding beyond each request's own final zero padding. The server checks request length, padding, flag combinations, device ownership, XID state, accumulated-size overflow, and the implementation's maximum shader-module size before accepting a chunk.
+
+There may be at most one upload in progress for a given `shader_module_xid` on a client connection. The XID must be unused when `CREATE` is received. While an upload is in progress, the XID is reserved for that attempt and cannot be used by another create request. The assembled bytes and metadata are private server state, not a public shader-module resource, until a `FINAL` chunk succeeds.
+
+If a chunk is malformed, has invalid padding, exceeds a limit, or otherwise fails validation, the request receives an X11 error and the entire in-progress upload for that XID is discarded. A failed `FINAL` also discards the assembly and leaves no live shader-module resource. After cleanup, the client may retry using the same XID if it remains a valid unused XID under normal X11 resource-ID rules. An `ABORT` of an existing upload discards it; an `ABORT` with no matching upload fails with the request-specific invalid-state error and changes nothing. Disconnect and device loss discard all affected incomplete uploads. Implementations must bound per-upload and aggregate assembly memory and must not allocate based on unchecked lengths.
+
+SPIR-V validation and Vulkan shader-module creation occur atomically at `FINAL`: on success, the public resource becomes live; on failure, no public resource remains. `pNext` structures and Vulkan allocator callbacks are not transmitted in v0.1.
+
+After successful creation of a Compute Pipeline, the Shader Module may be destroyed subject to Vulkan lifetime rules.
 
 ## 6.2 Descriptor Set Layout
 
