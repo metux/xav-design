@@ -49,6 +49,16 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     elif kind == "GetPhysicalDeviceProperty-not-supported":
         if wire[12:20] != bytes(8) or wire[32:] or declared: errors.append("property-failure-zero")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
+    elif kind.startswith("ReadBuffer-") and kind.endswith("-bytes"):
+        try:
+            data_length = int(kind.split("-")[1])
+            padded_length = (data_length + 3) & ~3
+            if len(wire) != 32 + padded_length or declared != padded_length // 4:
+                errors.append("read-buffer-payload-length")
+            elif wire[32 + data_length:] != bytes(padded_length - data_length):
+                errors.append("read-buffer-padding-zero")
+        except (ValueError, IndexError):
+            errors.append("read-buffer-payload-length")
     elif kind == "EnumeratePhysicalDevices":
         pos = 32
         while pos < len(wire):
@@ -69,7 +79,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if pos != len(wire) and "device-record-length" not in errors:
             errors.append("device-record-length")
     elif kind == "GetPhysicalDeviceQueueFamilyProperties-two-records":
-        if any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire), 12)): errors.append("queue-record-reserved")
+        if (len(wire) - 32) % 12: errors.append("queue-record-length")
+        if any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire) - ((len(wire) - 32) % 12), 12)): errors.append("queue-record-reserved")
     elif kind in ("GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetPhysicalDeviceMemoryProperties"):
         payload = wire[32:]
         if len(payload) >= 8:
