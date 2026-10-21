@@ -161,7 +161,23 @@ def check_request_document_coverage(c: Check) -> None:
 
 
 def check_reply_matrix(c: Check) -> None:
-    registry = parse_request_registry(read("registries/request-subopcodes.md"))
+    registry_text = read("registries/request-subopcodes.md")
+    registry_rows = [
+        (name, int(opcode), kind.strip())
+        for name, opcode, kind in re.findall(
+            r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|",
+            registry_text, re.M,
+        )
+    ]
+    registry = parse_request_registry(registry_text)
+    opcodes = [opcode for _name, opcode, _kind in registry_rows]
+    names = [name for name, _opcode, _kind in registry_rows]
+    c.require(len(registry_rows) == 40,
+              f"request registry: expected 40 table rows, found {len(registry_rows)}")
+    c.require(len(set(opcodes)) == len(opcodes), "request registry contains duplicate subopcode values")
+    c.require(len(set(names)) == len(names), "request registry contains duplicate request names")
+    c.require(set(opcodes) == set(range(1, 41)),
+              "request registry must assign each subopcode 1 through 40 exactly once; 0 is reserved")
     audit = read("spec/request-audit.md")
     matrix = audit.split("## Per-request contract matrix", 1)
     c.require(len(matrix) == 2, "request-audit.md: missing per-request contract matrix")
