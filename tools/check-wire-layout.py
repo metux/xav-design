@@ -422,9 +422,10 @@ def check_reply_golden_vectors(c: Check) -> None:
             c.require(int.from_bytes(wire[12:16], order) == 1, f"{name}: property type must be CARD32")
             c.require(int.from_bytes(wire[16:20], order) == 4, f"{name}: property value_length must be four")
             c.require(wire[20:32] == bytes(12), f"{name}: property reserved bytes must be zero")
-        elif kind == "GetPhysicalDeviceProperty-not-supported":
+        elif kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available"):
+            expected_status = 1 if kind.endswith("not-supported") else 2
             c.require(len(wire) == 32 and declared == 0, f"{name}: failed property reply must have no payload")
-            c.require(int.from_bytes(wire[8:12], order) == 1, f"{name}: property status must be NOT_SUPPORTED")
+            c.require(int.from_bytes(wire[8:12], order) == expected_status, f"{name}: property failure status mismatch")
             c.require(wire[12:32] == bytes(20), f"{name}: failed property fields/reserved bytes must be zero")
         elif kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap":
             c.require(len(payload) == 40 and declared == 10, f"{name}: one type and one heap require 40 payload bytes")
@@ -457,7 +458,7 @@ def check_reply_golden_vectors(c: Check) -> None:
         "EnumeratePhysicalDevices-one-record",
         "GetPhysicalDeviceQueueFamilyProperties-empty",
         "GetPhysicalDeviceQueueFamilyProperties-two-records",
-        "GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported",
+        "GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available",
         "GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetBufferMemoryRequirements",
         "WriteBuffer-success", "WaitSemaphores-timeout",
     }
