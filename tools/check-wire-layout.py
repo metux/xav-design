@@ -337,6 +337,99 @@ def check_reply_layouts(c: Check) -> None:
 
 
 
+
+def check_reply_golden_vectors(c: Check) -> None:
+    """Validate committed reply bytes against framing and normative reply formulas."""
+    try:
+        fixture = __import__("json").loads(read("tests/reply-vectors.json"))
+    except (ValueError, KeyError) as exc:
+        c.require(False, f"reply golden vectors: invalid JSON fixture: {exc}")
+        return
+    c.require(fixture.get("schema_version") == 1, "reply golden vectors: schema_version must be 1")
+    vectors = fixture.get("vectors")
+    c.require(isinstance(vectors, list) and bool(vectors), "reply golden vectors: vectors must be a non-empty list")
+    if not isinstance(vectors, list):
+        return
+
+    seen_names: set[str] = set()
+    coverage: dict[str, set[str]] = {}
+    by_name: dict[str, dict] = {}
+    for vector in vectors:
+        if not isinstance(vector, dict):
+            c.require(False, "reply golden vectors: each vector must be an object")
+            continue
+        name = vector.get("name")
+        order = vector.get("byte_order")
+        c.require(isinstance(name, str) and bool(name), "reply golden vectors: missing name")
+        if not isinstance(name, str) or not name:
+            continue
+        c.require(name not in seen_names, f"reply golden vectors: duplicate name {name}")
+        seen_names.add(name)
+        by_name[name] = vector
+        c.require(order in ("little", "big"), f"{name}: byte_order must be little or big")
+        if order not in ("little", "big"):
+            continue
+        kind = vector.get("event")
+        c.require(isinstance(kind, str) and bool(kind), f"{name}: missing reply kind")
+        if isinstance(kind, str):
+            coverage.setdefault(kind, set()).add(order)
+        try:
+            wire = bytes.fromhex(vector["wire_hex"])
+            payload = bytes.fromhex(vector["payload_hex"])
+        except (KeyError, TypeError, ValueError) as exc:
+            c.require(False, f"{name}: invalid wire_hex/payload_hex: {exc}")
+            continue
+        c.require(len(wire) >= 32, f"{name}: reply shorter than standard 32-byte header")
+        c.require(len(wire) % 4 == 0, f"{name}: reply size is not four-byte aligned")
+        if len(wire) < 32:
+            continue
+        c.require(wire[0] == 1, f"{name}: response_type must be 1")
+        c.require(wire[1] == vector.get("data_byte"), f"{name}: data byte mismatch")
+        c.require(int.from_bytes(wire[2:4], order) == vector.get("sequence"),
+                  f"{name}: sequence field mismatch")
+        declared = int.from_bytes(wire[4:8], order)
+        c.require(declared == vector.get("reply_length"), f"{name}: reply.length metadata mismatch")
+        c.require(32 + declared * 4 == len(wire), f"{name}: reply.length disagrees with total size")
+        c.require(wire[32:] == payload, f"{name}: payload_hex disagrees with wire bytes")
+        c.require(len(wire) == vector.get("total_bytes"), f"{name}: total_bytes metadata mismatch")
+
+        if kind in ("EnumeratePhysicalDevices-empty", "GetPhysicalDeviceQueueFamilyProperties-empty"):
+            c.require(declared == 0 and len(payload) == 0, f"{name}: empty enumeration must have zero payload")
+        elif kind == "EnumeratePhysicalDevices-one-record":
+            c.require(len(payload) >= 32, f"{name}: PHYSICALDEVICEINFO shorter than 32-byte fixed prefix")
+            if len(payload) >= 32:
+                name_len = int.from_bytes(payload[28:30], order)
+                record_len = 32 + ((name_len + 3) & ~3)
+                c.require(len(payload) == record_len, f"{name}: PHYSICALDEVICEINFO record length mismatch")
+                c.require(payload[30:32] == bytes(2), f"{name}: PHYSICALDEVICEINFO reserved field must be zero")
+                c.require(payload[32 + name_len:record_len] == bytes(record_len - 32 - name_len),
+                          f"{name}: PHYSICALDEVICEINFO name padding must be zero")
+        elif kind == "GetPhysicalDeviceQueueFamilyProperties-two-records":
+            c.require(len(payload) % 12 == 0, f"{name}: queue-family payload must be a multiple of 12")
+            c.require(declared == 3 * (len(payload) // 12), f"{name}: queue-family reply.length formula mismatch")
+            for offset in range(0, len(payload), 12):
+                c.require(payload[offset + 8:offset + 12] == bytes(4),
+                          f"{name}: queue-family reserved field must be zero at payload offset {offset + 8}")
+        elif kind == "ReadBuffer-5-bytes":
+            c.require(len(payload) == 8 and declared == 2, f"{name}: five-byte ReadBuffer payload must occupy two words")
+            if len(payload) == 8:
+                c.require(payload[5:] == bytes(3), f"{name}: ReadBuffer padding must be zero")
+        elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue"):
+            c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
+
+    for kind, orders in coverage.items():
+        c.require(orders == {"little", "big"}, f"reply golden vectors: {kind} must cover both byte orders")
+    required = {
+        "GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue",
+        "ReadBuffer-5-bytes", "EnumeratePhysicalDevices-empty",
+        "EnumeratePhysicalDevices-one-record",
+        "GetPhysicalDeviceQueueFamilyProperties-empty",
+        "GetPhysicalDeviceQueueFamilyProperties-two-records",
+    }
+    present = {v.get("event") for v in vectors if isinstance(v, dict)}
+    for kind in sorted(required):
+        c.require(kind in present, f"reply golden vectors: missing required sample {kind}")
+
 def check_reply_formula_vectors(c: Check) -> None:
     """Exercise boundary values for every documented variable reply/request formula."""
     pad4 = lambda n: (n + 3) & ~3
@@ -371,6 +464,7 @@ def main() -> int:
     check_reply_matrix(c)
     check_reply_layouts(c)
     check_reply_formula_vectors(c)
+    check_reply_golden_vectors(c)
     if c.errors:
         print(f"wire-layout check FAILED: {len(c.errors)} of {c.checks} checks failed", file=sys.stderr)
         for error in c.errors:
