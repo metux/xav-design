@@ -36,6 +36,9 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `ShaderModuleData`: Einzelrequest CREATE|FINAL, mehrteiliger Upload, exakte Konkatenation ohne Paddingbytes, gültige Flag-Kombinationen und Null-Padding
 - Fehler in einem Shader-Chunk verwirft das gesamte Assembly; FINAL-Fehler hinterlässt kein live Shader Module; ABORT gibt Assembly-Speicher frei
 - Upload-Grenzen und aggregierte Assembly-Speicherlimits werden vor Allokation geprüft
+- `CreateDescriptorSetLayout` prüft die exakte Länge `24 + 16 * binding_count`, `flags = 0`, Binding-Eindeutigkeit, positive Descriptor-Counts und unterstützte Descriptor-/Stage-Werte
+- Ein leeres Descriptor Set Layout mit `binding_count = 0` ist gültig; fehlerhafte Binding-Records oder nicht-null Layout-Flags hinterlassen kein öffentliches Objekt
+- Ein nicht zum Count passender Payload ergibt `BadLength`; nicht unterstützte Flags, Typen oder Stage-Bits werden abgewiesen
 - `CreateCommandPool` prüft Queue-Family-Index und reservierte Pool-Flags; `DestroyCommandPool` invalidiert alle Kinder atomar
 - `CreateCommandPool` akzeptiert nur `TRANSIENT` und `RESET_COMMAND_BUFFER`; unbekannte Pool-Flags werden mit `BadValue` abgewiesen und nicht stillschweigend ergänzt
 - `TRANSIENT` ändert keine beobachtbare Semantik; `RESET_COMMAND_BUFFER` und `TRANSIENT` sind unabhängig kombinierbar
