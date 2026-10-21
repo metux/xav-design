@@ -34,6 +34,16 @@ The audit found no request-length arithmetic contradiction in the reviewed concr
 - A submission always has one internal terminal outcome; delivery of its completion/failure event depends on event selection and the connection remaining alive.
 - In v0.1, `ReadBuffer` waits for all previously accepted submissions on the same logical device and relevant prior writes to the requested range. A prior failed submission must not be treated as successful; read data is not guaranteed correct if failed work could have modified that range.
 
-The queue-crossing scope of the successful `WriteBuffer` visibility guarantee remains open (issue 14). Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially shader-module and command-pool wire layouts, command-buffer chunk failure recovery, event registration/layouts, complete error mapping, and final wait-stage masks.
+The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially shader-module and command-pool wire layouts, command-buffer chunk failure recovery, event registration/layouts, complete error mapping, and final wait-stage masks.
 
 This is an internal consistency and compute-workflow audit, not a claim of full Vulkan-spec conformance or a frozen v0.1 wire protocol.
+
+## WriteBuffer visibility decision — 2026-10-21
+
+The former open issue on cross-queue visibility is closed. A successful `WriteBuffer` reply guarantees this order for its logical device:
+
+1. All earlier accepted submissions have reached a terminal outcome.
+2. The transfer has completed and required visibility operations have completed.
+3. Every later accepted submission on any queue sees the written bytes.
+
+The contract applies to the full written range and does not require client semaphore/barrier operations solely for upload visibility. A conservative implementation may fully synchronize the device. Device loss or transfer failure must not produce a successful reply. The issue was removed from [open issues](spec/open-issues.md), and conformance cases were added.
