@@ -56,6 +56,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateComputePipeline` verwendet die normative Länge `28 + ((entry_point_length + 3) & ~3)` und prüft nichtleeren ASCII-Entry-Point sowie Null-Padding
 - `DestroySemaphore` und `DestroyFence` sind jeweils 16-Byte-Void-Requests; `WaitSemaphores` verwendet `28 + 12 * semaphore_count`
 - `GetFenceStatus` ist ein 16-Byte-Reply-Request mit Fence-Status in Reply-Byte 1, `reply.length = 0` und null reservierten XAverius-Bytes in Offsets 8–31
+- Error-Offsets und Event-/Reply-Statuswerte bleiben getrennte Namespaces: `EXECUTION_FAILED` ist Error-Offset 3, `WaitForFence`-Status 2 und `SUBMISSION_FAILED.failure_class` 0; `DEVICE_LOST` ist Error-Offset 1, `WaitForFence`-Status 3 und `SUBMISSION_FAILED.failure_class` 1. `DEVICE_LOST.reason_code` verwendet wiederum die eigene Reason-Code-Registry.
 - `WaitSemaphores` und `WaitForFence` mit Timeout 0 prüfen den Zustand ohne absichtliches Warten; `UINT64_MAX` wartet unbegrenzt, andere Werte verwenden eine monotone Nanosekunden-Frist ab Ausführungsübernahme
 - Eine endliche Wait-Frist wird bei internen Warteabschnitten oder Scheduler-Unterbrechungen nicht neu gestartet; die Antwort darf verspätet eintreffen, aber eine bereits erfüllte Bedingung gewinnt bei der abschließenden Zustandsprüfung gegen `TIMEOUT`
 - `WaitSemaphores`-Timeout liefert Status `TIMEOUT` ohne Zustandsänderung; `WaitForFence` liefert `SUCCESS`, `EXECUTION_FAILED` oder `TIMEOUT` gemäß dem terminalen Fence-Zustand und der Frist
