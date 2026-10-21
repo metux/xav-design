@@ -7,7 +7,7 @@ The following questions were open in the consolidated draft and remain open. Mov
 3. Event-selection request layouts and event registration.
 4. Complete property-name/Atom registry.
 5. Numeric registries for descriptor types, shader stages, feature IDs, device types, and queue flags.
-6. Complete request-specific X11 error mapping.
+6. Complete request-specific X11 error mapping, including invalid-resource and wrong-type cases.
 7. Recovery behavior if a later CommandBufferData chunk fails.
 8. Final Command Buffer state after asynchronous error or Device Loss.
 9. Exact pending-destruction rules for Pipeline, Pipeline Layout, Fence, and Semaphore.
@@ -23,5 +23,4 @@ The following questions were open in the consolidated draft and remain open. Mov
 20. Final Vulkan stage mapping and valid wait-stage masks.
 21. Complete normative definition of the central resource state machine.
 22. Exact Vulkan lifetime validation for all resource combinations before the specification is considered stable.
-23. Specify host-side `SignalSemaphore` completion/error behavior and its ordering relative to subsequent requests.
-24. Define the X11 request-header `data` byte semantics and how XAverius `subopcode` is represented in standard X11 error packets (`minorCode`).
+23. Define the complete request-specific error mapping, including how core X11 errors and XAverius errors are selected for every invalid-resource and wrong-type case.

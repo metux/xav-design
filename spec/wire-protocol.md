@@ -7,7 +7,7 @@ Jeder XAverius-Request beginnt mit dem Standard-X11-Request-Header von vier Byte
 ```c
 /* X11 header: offset 0 */
 CARD8  reqType;       /* Extension major opcode */
-CARD8  data;          /* X11 request framing */
+CARD8  data;          /* MUST be zero for XAverius v0.1 */
 CARD16 length;        /* Request length in 4-byte units */
 
 /* XAverius header: offset 4 */
@@ -20,7 +20,7 @@ Der Common-Header ist vier Bytes groß; der gesamte feste XAverius-Request-Heade
 
 Die X11-Verbindungsbyteordnung gilt für sämtliche mehrbyteigen Wire-Felder.
 
-Der X-Server weist die Extension-Major-Opcode zu. XAverius verwendet zentral vergebene Minor- beziehungsweise Subopcode-Werte.
+Der X-Server weist die Extension-Major-Opcode zu. Für XAverius v0.1 ist das X11-Request-Header-Feld `data` immer null; die Request-Identität steht ausschließlich im `subopcode`-Feld bei Offset 4. Der `subopcode` ist zentral registriert. In einem standardmäßigen X11-Error-Packet wird dieser Wert zero-extended in `minorCode` eingetragen. `majorCode` enthält den Extension-Major-Opcode. Clients dürfen `data` nicht als Subopcode interpretieren.
 
 ## Längen, Padding und BIG-REQUESTS
 
@@ -29,7 +29,7 @@ Der X-Server weist die Extension-Major-Opcode zu. XAverius verwendet zentral ver
 - Padding muss null sein.
 - Ein inkonsistentes Request-Layout oder ein nicht passender Payload-Umfang ergibt `BadLength`.
 - Ungültige Werte oder reservierte Bits ergeben normalerweise `BadValue`.
-- BIG-REQUESTS ist für v0.1 noch nicht spezifiziert. Das Extended-Length-Feld von BIG-REQUESTS liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header. Eine Implementierung darf BIG-REQUESTS daher nicht als unterstützt deklarieren, solange dieses Framing nicht gelöst ist.
+- BIG-REQUESTS wird in v0.1 nicht unterstützt. Sein Extended-Length-Feld liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header.
 - Ohne BIG-REQUESTS beträgt die maximale gewöhnliche Request-Länge 262140 Bytes einschließlich des gesamten Requests, also einschließlich X11- und XAverius-Header. Größere Nutzdaten müssen in mehreren Requests übertragen werden, soweit der jeweilige Request dies erlaubt.
 - Größenberechnungen müssen vor der Verarbeitung auf Überläufe geprüft werden.
 
@@ -51,7 +51,7 @@ Der absolute Fehlercode ist:
 
 `first_error + XAverius_error_offset`
 
-Der Fehler muss mit der ursprünglichen Request-Sequenznummer korreliert werden.
+Der Fehler muss mit der ursprünglichen Request-Sequenznummer korreliert werden. Das Error-Packet setzt `majorCode` auf den XAverius-Extension-Major-Opcode und `minorCode` auf den zero-extended XAverius-`subopcode` des fehlerhaften Requests.
 
 ## XGE-Events
 

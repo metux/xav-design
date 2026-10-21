@@ -77,13 +77,17 @@ Der Reply enthält bei Offset 8 den Status `SUCCESS = 0` oder `TIMEOUT = 1`. Ein
 
 ## `SignalSemaphore`
 
-Request: 24 Bytes.
+Request: 24 Bytes; Void-Request ohne Reply.
 
 - Offset 8: Device-XID
 - Offset 12: Semaphore-XID
 - Offset 16: `CARD64 signal_value`
 
-Nur Timeline-Semaphoren sind erlaubt. Der Signalwert muss größer als der aktuelle Wert und mit allen ausstehenden Signalen konsistent sein. Prüfung und Signaloperation sind atomar.
+Nur Timeline-Semaphoren sind erlaubt. Der Signalwert muss größer als der aktuelle Counter und mit allen ausstehenden Signalen konsistent sein. Validierung und Host-Signaloperation bilden eine atomare Request-Operation.
+
+Der Server führt das Host-Signal aus, bevor er mit der Verarbeitung eines späteren Requests derselben X11-Verbindung fortfährt. Sobald die Verarbeitung des Requests fortgesetzt wird, ist der Counter aktualisiert und jeder dadurch erfüllte Wait darf fortschreiten. Der Server darf den Request nicht als abgeschlossen behandeln, solange das Host-Signal nicht erfolgreich ausgeführt wurde.
+
+Validierungsfehler und unmittelbar feststellbare Vulkan-Fehler werden als normale X11-Request-Fehler gemeldet; der Request hinterlässt dann keine teilweise ausgeführte Signaloperation. Ein nach Annahme der Operation auftretender Device Loss wird über die normalen Device-Loss-/asynchronen Fehlermechanismen gemeldet. Da der Request kein Reply erzeugt, kann der Client Fehler mit der üblichen X11-Fehlerbehandlung beziehungsweise `XSync` erkennen. Ein späterer Request derselben Verbindung darf nicht vor Abschluss der Host-Signaloperation ausgeführt werden.
 
 ## Fences
 

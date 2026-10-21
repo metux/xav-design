@@ -22,6 +22,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 ## Settled wire-protocol constraints
 
 - `BIG-REQUESTS` is not supported in v0.1 because its extended-length field conflicts with the XAverius common header at offset 4. The ordinary X11 request-size limit applies; larger payloads must use request-specific chunking where defined.
+- For XAverius v0.1, the X11 request-header `data` byte is always zero; the subopcode is at offset 4 and is copied zero-extended to the standard X11 error packet's `minorCode`.
 
 ## Provisional rules requiring review
 
