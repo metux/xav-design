@@ -114,6 +114,12 @@ Failure-Class-Werte:
 - 0: `EXECUTION_FAILED`
 - 1: `DEVICE_LOST`
 
+## Voraussetzung fuer lange XGE-Events
+
+Alle in diesem Kapitel definierten Events sind laenger als der normale 32-Byte-X11-Event. Vor dem Versand solcher Events muss der Server wissen, dass der jeweilige Client XGE unterstuetzt; andernfalls kann der X11-Bytestrom fuer einen Client ohne XGE-Unterstuetzung falsch ausgerichtet werden.
+
+Ein XAverius-Client muss deshalb vor dem Erzeugen eines logischen Devices oder vor einer nichtleeren Event-Auswahl erfolgreich `GEQueryVersion` ausfuehren und mindestens XGE 1.0 ausgehandelt haben. Der XAverius-Server muss diesen erfolgreichen Austausch pro Verbindung verfolgen. Ohne ausgehandelte XGE-Unterstuetzung werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unveraendert. Ein Server, der XGE nicht unterstuetzt, darf XAverius nicht als verfuegbare Extension anbieten.
+
 ## Event-Auswahl: `SelectEvents`
 
 Die Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt. Sie sind von Request-Subopcodes, Error-Offsets und dem serverseitig vergebenen XGE-Event-Base zu unterscheiden.
