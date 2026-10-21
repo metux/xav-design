@@ -4,13 +4,14 @@ All wire-visible numeric identifiers are defined centrally. Chapter-local tables
 
 | Registry | Namespace | Status |
 |---|---|---|
-| [Request subopcodes](request-subopcodes.md) | X11 request subopcode | 39 current requests assigned; append-only |
+| [Request subopcodes](request-subopcodes.md) | X11 request subopcode | 40 current requests assigned; append-only |
 | [Errors](errors.md) | XAverius error offset from X11 `first_error` | Assigned |
 | [Descriptor types](descriptor-types.md) | `descriptor_type` values | v0.1 storage-buffer type assigned |
 | [Shader stages](shader-stages.md) | shader-stage bit masks | v0.1 compute stage assigned |
 | [Queue flags](queue-flags.md) | physical-device queue capability bits | Assigned from the device chapter |
 | [Physical-device types](device-types.md) | `PHYSICALDEVICEINFO.device_type` | Assigned |
-| [Event types and fields](event-types.md) | XGE event type IDs and event-local enums | Event type IDs assigned; selection request layout open |
-| Feature IDs and device extensions | `CreateDevice` feature/extension namespace | Open: exact v0.1 support set not settled |
-| Property names and Atoms | `GetPhysicalDeviceProperty` property namespace | Open: canonical property/Atom registry not settled |
+| [Event types and fields](event-types.md) | XGE event type IDs and event-local enums | Event type IDs and SelectEvents layout assigned |
+| [Feature IDs](feature-ids.md) | `DEVICEFEATUREREQUEST.feature_id` | v0.1 has no optional feature assignments |
+| [Device extensions](device-extensions.md) | `DEVICEEXTENSIONREQUEST` names | v0.1 has no optional device extensions |
+| [Physical-device properties](physical-device-properties.md) | Canonical Atom names and property wire types | Four v0.1 properties registered; Atom numbers remain server-assigned |
 | Command-buffer entry IDs | `CommandBufferData` entry namespace | Open: numeric IDs not yet allocated |
