@@ -152,3 +152,13 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Ein Host-Signal kann einen Queue-Wait auf denselben Semaphore-Wert freigeben, ordnet aber keine unverbundene GPU-Arbeit.
 - Submission-Tokens und Event-Sequence-Nummern sind keine Ordnungswerte.
 - Für unabhängige Queues sind weder Fairness noch eine feste maximale Scheduling-Latenz zugesichert.
+
+## XGE- und Reply-ABI
+
+- Jeder XAverius-XGE-Event-Header ist genau 32 Bytes groß: `response_type = 35`, `extension` ist der ausgehandelte XAverius-Major-Opcode, `sequence` liegt bei Offset 2, `length` bei Offset 4 und `evtype` bei Offset 8; Header-Padding bei Offset 10–31 ist null.
+- XGE-Längen werden als `32 + 4 * length` geprüft: `ASYNC_ERROR` 60 Bytes/length 7; `DEVICE_LOST`, `DEVICE_STATUS_CHANGED`, `DEVICE_MEMORY_PRESSURE` und `DEVICE_IDLE` je 48 Bytes/length 4; `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED` je 56 Bytes/length 6.
+- Event-`evtype`-Werte stimmen exakt mit der Event-Registry überein (0–6); der dynamische Extension-Major-Opcode wird nicht als Event-Type-ID verwendet.
+- Die event-spezifischen Felder beginnen bei Offset 32. Alle als reserviert definierten Felder sind null; `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED` unterscheiden sich bei Offset 44 (reserviert null bzw. `failure_class`) und dürfen für dieselbe angenommene Submission nicht beide als terminales Event auftreten.
+- `SelectEvents` hat exakt 32 Bytes, Subopcode 40, null Flags/reservierte Felder und Scope-spezifische Felder bei Offset 8–31. Der Event-Maskenwert wird anhand des Scopes validiert; Fehler ändern die vorherige Auswahl nicht.
+- Feste Replies sind 32 Bytes mit `reply.length = 0`, sofern keine Payload über Offset 32 hinausgeht. Bei variabler Payload bezeichnet `reply.length` ausschließlich die gepaddeten Vierbyteeinheiten nach Offset 32; Payload-Bytes und Null-Padding werden getrennt geprüft.
+- `GetFenceStatus` legt den Fence-Status in Reply-Byte 1 ab; Offset 0 bleibt `response_type`, Offsets 2–3 Sequenznummer und Offsets 4–7 `reply.length = 0`. Die restlichen XAverius-reservierten Bytes sind null.
