@@ -55,4 +55,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Device Removal und Device Loss
 - Korrekte XGE-Längen und Event-Feldpositionen
 - Keine verspäteten X11-Fehler für angenommene asynchrone Requests
+- Ein terminaler interner Submission-Ausgang auch dann, wenn das zugehörige Event nicht ausgewählt ist; bei ausgewähltem Event genau eine Zustellung des passenden Completion- oder Failure-Events
+- `ReadBuffer` wartet auf alle zuvor angenommenen Submissions desselben logischen Devices und auf relevante vorherige `WriteBuffer`-Transfers
+- Readback-Ergebnisse werden nicht als korrekt vorausgesetzt, wenn fehlgeschlagene frühere GPU-Arbeit den gelesenen Bereich hätte verändern können
 - Korrekte Berechnung von `C[i] = A[i] + B[i]`
