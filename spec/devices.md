@@ -145,7 +145,7 @@ Größe: 8 Bytes. In v0.1 muss `enabled = 1` sein. Nicht angegebene Features wer
 
 Größe: `4 + ((name_length + 3) & ~3)`.
 
-Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert. Die Registry unterscheidet bekannte Feature-IDs von unbekannten IDs; ein bekanntes Feature kann je Physical Device unterstützt oder nicht unterstützt sein. Extension-Namen müssen nichtleere ASCII-Namen ohne NUL sein und dem Vulkan-Extension-Namensformat entsprechen. Für die syntaktische Prüfung gilt das Muster VK_Author_name: Der Name muss ein gültiger C-Bezeichner sein, der Autor-Teil und der Namens-Teil müssen nichtleer sein, der Autor-Teil ist großgeschrieben und der Namens-Teil kleingeschrieben. Die Wire-Länge ist auf 255 Bytes begrenzt; diese Prüfung erfolgt vor dem Registry-Lookup.
+Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert. Die Registry unterscheidet bekannte Feature-IDs von unbekannten IDs; ein bekanntes Feature kann je Physical Device unterstützt oder nicht unterstützt sein. Extension-Namen müssen nichtleere ASCII-Namen ohne NUL sein und dem Vulkan-Extension-Namensformat entsprechen: `VK_` gefolgt von einem nichtleeren Autor-Teil, einem Unterstrich und einem nichtleeren Extension-Namen. Beide Teile dürfen nur ASCII-Buchstaben, Ziffern und Unterstriche enthalten; Groß-/Kleinschreibung im Extension-Namen wird exakt beibehalten und geprüft. Die Wire-Länge ist auf 255 Bytes begrenzt; diese Prüfung erfolgt vor dem Registry-Lookup.
 
 Für die Fehlerbehandlung gilt:
 
