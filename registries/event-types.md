@@ -14,7 +14,7 @@ XAverius events use XGE. The XGE `extension` field carries the dynamically assig
 | 5 | `SUBMISSION_COMPLETE` |
 | 6 | `SUBMISSION_FAILED` |
 
-Event type IDs are stable and MUST NOT be renumbered. Values 7–255 are unassigned.
+Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unassigned.
 
 ## `ASYNC_ERROR.origin`
 
