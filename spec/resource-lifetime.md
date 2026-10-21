@@ -115,17 +115,21 @@ In v0.1 ist `DestroyResource` ausschließlich für diese eigenständigen Ressour
 - Fence
 - Semaphore
 
-Der Request ist nicht für Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets oder Memory zulässig. Diese Typen besitzen eigene Lebensdauer- beziehungsweise Kaskadenregeln und müssen über `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets` oder `FreeMemory` behandelt werden. Ein `DestroyResource` auf einem ausgeschlossenen Typ wird mit `BadMatch` abgewiesen. Diese Ausschlüsse sind normativ; Implementierungen dürfen nicht stillschweigend einen anderen Destroy-Pfad wählen.
+Der Request ist nicht für Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets oder Memory zulässig. Diese Typen besitzen eigene Lebensdauer- beziehungsweise Kaskadenregeln und müssen über `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence` oder `DestroySemaphore` behandelt werden. Ein `DestroyResource` auf einem ausgeschlossenen Typ wird mit `BadMatch` abgewiesen. Diese Ausschlüsse sind normativ; Implementierungen dürfen nicht stillschweigend einen anderen Destroy-Pfad wählen.
 
 Die Eignung für den generischen Request ersetzt keine typabhängigen Lebensdauerprüfungen:
 
 - Buffer: Pending-Use-Regeln, Command-Buffer-Invalidierung und stale Descriptor-Slots gelten wie oben beschrieben.
 - Pipeline und Pipeline Layout: Referenzen aus einem `RECORDING`-Command-Buffer verhindern die Zerstörung; Pending-Use verhindert sie ebenfalls. Bei erfolgreicher Zerstörung werden nicht-pending `EXECUTABLE`-Command-Buffer mit entsprechenden Referenzen `INVALID`.
-- Fence: Eine Zuordnung zu einer nicht-terminalen Submission verhindert die Zerstörung.
-- Semaphore: Ein angenommener Queue-Wait, Queue-Signal oder eine laufende Host-Operation verhindert die Zerstörung.
 - Shader Module und Descriptor Set Layout: Nach Ende ihrer erforderlichen Erstellungs-/Pipeline-Layout-Abhängigkeit gelten die jeweiligen Vulkan-Lebensdauerregeln.
 
 Jede Ablehnung ist atomar und lässt die öffentliche XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert. Bei Erfolg wird die öffentliche XID im Request sofort ungültig; interne Objekte bleiben bis zum Ende aller erforderlichen Referenzen und Backend-Zugriffe erhalten. Die Device-weite Kaskadeninvalidierung bei `DestroyDevice`, Client-Disconnect oder Device Loss bleibt davon unberührt.
+
+## Dedicated destruction requests
+
+`DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets` und `FreeMemory` bleiben eigene Requests, weil sie eigene Ownership-, Kaskaden- oder Speicherfreigaberegeln besitzen. `DestroyFence` und `DestroySemaphore` sind ebenfalls dedizierte Requests; sie sind ausdrücklich **nicht** über `DestroyResource` aufrufbar. Das verhindert zwei Wire-Pfade mit unterschiedlichen Zustandsprüfungen für dasselbe Synchronisationsobjekt.
+
+`FreeMemory` invalidiert die Memory-XID nur bei Erfolg. Gebundene Buffer führen zu `BadMatch`; angenommene GPU-Arbeit, die auf die Allokation zugreift, führt zu `INVALID_SYNCHRONIZATION_STATE`. XAverius v0.1 kennt kein Unbind/Rebind, daher müssen alle gebundenen Buffer zuerst zerstört werden.
 
 ## Device-Zerstörung und Client-Disconnect
 
@@ -156,7 +160,7 @@ Kann der Server bei Device-Zerstörung oder Device Loss nicht bestätigen, dass 
 
 ## Pipelines und Synchronisationsobjekte
 
-`DestroyPipeline` und `DestroyPipelineLayout` werden abgewiesen, solange eine angenommene Submission die jeweilige Ressource verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`.
+`DestroyResource` auf eine Pipeline oder ein Pipeline Layout wird abgewiesen, solange eine angenommene Submission die jeweilige Ressource verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`.
 
 `DestroyFence` wird abgewiesen, solange die Fence einer nicht-terminalen Submission zugeordnet ist. `DestroySemaphore` wird abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine noch laufende serverseitige Host-Operation die Semaphore verwendet. Diese Ablehnungen sind atomar und verwenden `INVALID_SYNCHRONIZATION_STATE`. Nach Device Loss darf die Device-weite Kaskadeninvalidierung diese normalen Ablehnungen umgehen, während interne Referenzen bis zum Ende möglicher Backend-Zugriffe bestehen bleiben.
 
@@ -170,7 +174,7 @@ Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
 ## Buffer und Memory
 
-`DestroyBuffer` wird abgewiesen, solange eine angenommene Submission den Buffer direkt oder über einen Descriptor Set verwendet. Nach erfolgreicher Zerstörung werden nicht-pending executable Command Buffer, die den Buffer direkt oder indirekt referenzieren, gemäß der allgemeinen Regel `INVALID`. Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen, gelten aber als nicht submitbar, bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden. Neue Submissions mit solchen ungültigen Descriptor-Inhalten werden atomar abgewiesen.
+`DestroyResource` auf einen Buffer wird abgewiesen, solange eine angenommene Submission den Buffer direkt oder über einen Descriptor Set verwendet. Nach erfolgreicher Zerstörung werden nicht-pending executable Command Buffer, die den Buffer direkt oder indirekt referenzieren, gemäß der allgemeinen Regel `INVALID`. Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen, gelten aber als nicht submitbar, bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden. Neue Submissions mit solchen ungültigen Descriptor-Inhalten werden atomar abgewiesen.
 
 `FreeMemory` wird abgewiesen, solange irgendein Buffer an die Allokation gebunden ist oder angenommene Arbeit auf die Allokation zugreift. XAverius v0.1 bietet kein Unbind/Rebind. Der Client muss daher alle gebundenen Buffer zuerst erfolgreich zerstören und erst danach den Memory-Block freigeben. Ein gebundener Buffer führt zu `BadMatch`; ausstehende GPU-Arbeit führt zu `INVALID_SYNCHRONIZATION_STATE`. Ein abgewiesener `FreeMemory`-Request invalidiert die Memory-XID nicht. Wenn ein zerstörter Buffer noch von Descriptor-Slots referenziert wird, bleibt sein internes Objekt bis zum Überschreiben dieser Slots oder zur Freigabe der Descriptor Sets erhalten; die Buffer-XID bleibt dabei ungültig.
 
