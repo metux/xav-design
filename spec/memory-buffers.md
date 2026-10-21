@@ -133,7 +133,7 @@ Die Bounds-Prüfung muss überlaufsicher erfolgen:
 - `memory_offset <= allocation_size`
 - `requirements.size <= allocation_size - memory_offset`
 
-Cross-Device-Nutzung, unpassender Memory-Type, doppeltes Binden, ungültiges Alignment oder unzureichender Speicher ergeben `BadMatch`. Ungültige oder nicht mehr live Device-, Buffer- oder Memory-XIDs führen zum Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; die genaue Auswahl dieses Fehlercodes ist noch offen. Bei nicht verfügbarem oder verlorenem Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.
+Cross-Device-Nutzung, unpassender Memory-Type, doppeltes Binden, ungültiges Alignment oder unzureichender Speicher ergeben `BadMatch`. Unbekannte/nicht-live Device-, Buffer- oder Memory-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp ergibt `BadMatch`. Bei nicht verfügbarem oder verlorenem Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.
 
 ## 5.7 `WriteBuffer`
 
