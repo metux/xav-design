@@ -18,4 +18,3 @@ The following questions were open in the consolidated draft and remain open. Mov
 14. Wire representation of Physical Device UUID and Driver UUID.
 15. Queue-crossing scope of the `WriteBuffer` visibility guarantee.
 16. Final Vulkan stage mapping and valid wait-stage masks.
-17. Complete normative definition of the central resource state machine.
