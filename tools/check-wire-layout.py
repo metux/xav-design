@@ -121,6 +121,7 @@ def check_events(c: Check) -> None:
         (r"\|\s*2\s*\|\s*CARD16\s*\|[^\n]*Sequenznummer", "16-bit X11 event sequence at offset 2"),
         (r"\|\s*1\s*\|[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
         (r"\|\s*4\s*\|[^\n]*XGE `length`", "XGE length at offset 4"),
+        (r"\|\s*10–31\s*\|[^\n]*null", "zeroed reserved common-header bytes"),
         (r"\|\s*8\s*\|[^\n]*`evtype`", "evtype at offset 8"),
         (r"32 \+ 4 \* length", "XGE total-length formula"),
     ]
