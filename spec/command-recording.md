@@ -64,6 +64,8 @@ Der Server verfolgt die direkten und indirekten Ressourcenreferenzen jedes aufge
 
 ## 7.3 `CommandBufferData`
 
+`CommandBufferData` ist ein Void-Request. Seine Gesamtlänge beträgt mindestens 16 Bytes und ist durch die Summe des 16-Byte-Headers und der vollständigen Command-Entries bestimmt; der Payload muss vollständig aus ganzen Entries bestehen. Bei `ABORT` muss die Gesamtlänge exakt 16 Bytes betragen.
+
 Wire-Layout:
 
 - Offset 0: X11-Header
