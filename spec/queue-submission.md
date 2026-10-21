@@ -57,7 +57,7 @@ Der Server übernimmt den Token unverändert in das zugehörige `SUBMISSION_COMP
 | `TRANSFER` | `0x00000004` | `VK_PIPELINE_STAGE_TRANSFER_BIT` |
 | `ALL_COMMANDS` | `0x00000008` | `VK_PIPELINE_STAGE_ALL_COMMANDS_BIT` |
 
-Bits 4–31 sind reserviert und müssen null sein. Die Maske muss mindestens ein Bit setzen. `ALL_COMMANDS` ist exklusiv und darf mit keinem anderen Bit kombiniert werden. XAverius übersetzt jedes gesetzte Bit explizit in den entsprechenden Vulkan-Wert; die XAverius-Maske darf nicht unverändert als Vulkan-Maske durchgereicht werden.
+Bits 4–31 sind reserviert und müssen null sein. Die Maske muss mindestens ein Bit setzen. `ALL_COMMANDS` darf wie in Vulkan mit anderen unterstützten Bits kombiniert werden; solche Kombinationen sind semantisch redundant, aber gültig. XAverius übersetzt jedes gesetzte Bit explizit in den entsprechenden Vulkan-Wert und verknüpft die Vulkan-Bits per bitwise OR; die XAverius-Maske darf nicht unverändert als Vulkan-Maske durchgereicht werden.
 
 Die gesetzten Stages müssen auf der adressierten Queue-Family unterstützt sein, entsprechend Vulkan-Synchronisationsregeln:
 
@@ -66,7 +66,7 @@ Die gesetzten Stages müssen auf der adressierten Queue-Family unterstützt sein
 - `TRANSFER`: Queue-Family mit `GRAPHICS`, `COMPUTE` oder `TRANSFER`.
 - `ALL_COMMANDS`: auf jeder Queue-Family zulässig, die für das logische Device erstellt wurde.
 
-Eine Maske mit unbekannten/reservierten Bits, ohne gesetztes Bit oder mit `ALL_COMMANDS` plus weiteren Bits ist syntaktisch ungültig und ergibt `BadValue`. Eine syntaktisch gültige Maske, deren Stage nicht von der adressierten Queue-Family unterstützt wird, ergibt `INVALID_SYNCHRONIZATION_STATE`. Diese Prüfung erfolgt vor Annahme; ein Fehler lässt Submission, Fence und Semaphore-Zustände unverändert.
+Eine Maske mit unbekannten/reservierten Bits oder ohne gesetztes Bit ist syntaktisch ungültig und ergibt `BadValue`. Eine syntaktisch gültige Maske, deren Stage nicht von der adressierten Queue-Family unterstützt wird, ergibt `INVALID_SYNCHRONIZATION_STATE`. Diese Prüfung erfolgt vor Annahme; ein Fehler lässt Submission, Fence und Semaphore-Zustände unverändert.
 
 Für den Compute-only-Referenzablauf sind `COMPUTE_SHADER`, `TRANSFER` und `ALL_COMMANDS` gültige Einzelmasken auf einer Compute-fähigen Queue. `DRAW_INDIRECT` ist ebenfalls stage-seitig auf einer Compute-Queue zulässig, auch wenn der v0.1-Command-Stream keine indirekten Dispatch-Commands definiert. Der Wait wird am gewählten Vulkan-Ziel-Stage wirksam; er ist keine allgemeine Ersetzung für notwendige Memory-Dependencies zwischen Commands.
 
