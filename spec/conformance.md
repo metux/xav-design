@@ -50,6 +50,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `DestroyBuffer` während Pending-Use wird abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
 - `FreeMemory` bei gebundenem Buffer ergibt `BadMatch`; die Allokation kann erst nach Zerstörung aller gebundenen Buffer freigegeben werden.
 - Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion.
+- Wenn Backend-Quieszenz nach Device Loss nicht nachweisbar ist, werden interne Ressourcen quarantänisiert und weder freigegeben noch wiederverwendet, bis Quieszenz nachgewiesen oder der Serverprozess beendet ist.
 - XID-Wiederverwendung bei ausstehender Arbeit
 - Device Removal und Device Loss
 - Korrekte XGE-Längen und Event-Feldpositionen
