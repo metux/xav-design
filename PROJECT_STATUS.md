@@ -24,3 +24,16 @@
 - Finalize request/reply layouts and registry ownership.
 - Resolve the questions in [open issues](spec/open-issues.md).
 - Add conformance tests as protocol decisions are made.
+
+## End-to-end compute-path audit — 2026-10-21
+
+Reviewed the specification path from physical-device discovery through logical-device creation, memory and buffer setup, shader/pipeline and descriptor creation, command recording, queue submission, synchronization, readback, and resource teardown.
+
+The audit found no request-length arithmetic contradiction in the reviewed concrete layouts. It did identify two underspecified cross-chapter contracts, now clarified in [queue submission and ordering](spec/queue-submission.md):
+
+- A submission always has one internal terminal outcome; delivery of its completion/failure event depends on event selection and the connection remaining alive.
+- In v0.1, `ReadBuffer` waits for all previously accepted submissions on the same logical device and relevant prior writes to the requested range. A prior failed submission must not be treated as successful; read data is not guaranteed correct if failed work could have modified that range.
+
+The queue-crossing scope of the successful `WriteBuffer` visibility guarantee remains open (issue 14). Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially shader-module and command-pool wire layouts, command-buffer chunk failure recovery, event registration/layouts, complete error mapping, and final wait-stage masks.
+
+This is an internal consistency and compute-workflow audit, not a claim of full Vulkan-spec conformance or a frozen v0.1 wire protocol.
