@@ -93,3 +93,7 @@ The queue-submission chapter now distinguishes same-queue submission order from 
 ## Reply and XGE ABI review — 2026-10-21
 
 Completed a specification-level cross-check of fixed and variable reply lengths, standard X11 reply header fields, the seven registered XGE event IDs and layouts, the GenericEvent header, and `SelectEvents` field/mask rules. All event total lengths agree with the XGE length formula; event-specific offsets and reserved fields are now explicit and have conformance cases. The submission-event layout question is closed at the specification level. Remaining ABI work is implementation-level interoperability testing against an X11/XGE server; this review does not claim that a server implementation has been tested.
+
+## Automated wire-layout checker — 2026-10-21
+
+Added `tools/check-wire-layout.py` and a GitHub Actions workflow. The checker validates all seven registered XGE event IDs and expected total/XGE lengths, parses event fields to detect overlaps, payload holes, out-of-bounds fields, alignment violations, and reserved fields without an explicit zero requirement. It also checks the 40-entry request/reply matrix against the central subopcode registry and asserts key reply layouts/formulas from the defining chapters. Run it with `python3 tools/check-wire-layout.py`; CI also syntax-checks the script first. This is static specification validation, not implementation interoperability or Vulkan backend conformance. The workflow has been committed, but its hosted execution result has not been independently observed in this review.
