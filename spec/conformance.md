@@ -162,3 +162,16 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `SelectEvents` hat exakt 32 Bytes, Subopcode 40, null Flags/reservierte Felder und Scope-spezifische Felder bei Offset 8–31. Der Event-Maskenwert wird anhand des Scopes validiert; Fehler ändern die vorherige Auswahl nicht.
 - Feste Replies sind 32 Bytes mit `reply.length = 0`, sofern keine Payload über Offset 32 hinausgeht. Bei variabler Payload bezeichnet `reply.length` ausschließlich die gepaddeten Vierbyteeinheiten nach Offset 32; Payload-Bytes und Null-Padding werden getrennt geprüft.
 - `GetFenceStatus` legt den Fence-Status in Reply-Byte 1 ab; Offset 0 bleibt `response_type`, Offsets 2–3 Sequenznummer und Offsets 4–7 `reply.length = 0`. Die restlichen XAverius-reservierten Bytes sind null.
+
+## Automatisierter Wire-Layout-Check
+
+Im Repository-Root ausführen:
+
+```sh
+python3 -m py_compile tools/check-wire-layout.py
+python3 tools/check-wire-layout.py
+```
+
+Der Checker verwendet nur die Python-Standardbibliothek. Er prüft die sieben registrierten XGE-Event-IDs und -Längen, extrahiert die Event-Felder aus den Layoutbeschreibungen und meldet Überlappungen, Lücken, unzulässige Offsets/Ausrichtung, Felder außerhalb der Eventlänge sowie nicht explizit auf null gesetzte reservierte Felder. Für Replies vergleicht er das 40-Request-Inventar und die Längenmatrix mit dem Subopcode-Register und prüft zentrale feste Reply-Felder sowie variable `reply.length`-Formeln in den normativen Kapiteln. GitHub Actions führt den Check bei Änderungen auf dem Arbeitsbranch und bei Pull Requests aus.
+
+Der Check ist eine statische Dokumentations-Konsistenzprüfung. Er ersetzt weder Tests gegen einen laufenden X11/XGE-Server noch Backend-/Vulkan-Konformitätstests.
