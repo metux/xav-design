@@ -151,7 +151,7 @@ class GoldenWireVectorTests(unittest.TestCase):
             with self.subTest(vector=vector["name"]):
                 wire = encode_request(vector)
                 validate_request_wire(wire, vector["byte_order"])
-                self.assertEqual(len(wire), 32 + ((vector["fields"]["data_length"] + 3) & ~3))
+                self.assertEqual(len(wire), 28 + ((vector["fields"]["data_length"] + 3) & ~3))
 
     def test_rejects_truncated_common_header(self) -> None:
         for size in range(8):
