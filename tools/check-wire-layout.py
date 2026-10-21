@@ -518,6 +518,8 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "property-padding-zero":
                     value_length = int.from_bytes(wire[16:20], order)
                     invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
+                elif rule == "device-record-reserved":
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and wire[62:64] != bytes(2)
                 elif rule == "device-name-padding-zero":
                     name_length = int.from_bytes(wire[60:62], order) if len(wire) >= 64 else 0
                     padded = (name_length + 3) & ~3
@@ -537,6 +539,8 @@ def check_reply_golden_vectors(c: Check) -> None:
                         invalid = pos != len(wire)
                 elif rule == "memory-type-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[32:36], order) > 32
                 elif rule == "memory-heap-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[36:40], order) > 16
+                elif rule == "queue-flags-reserved":
+                    invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and len(wire) >= 36 and bool(int.from_bytes(wire[32:36], order) & ~0x1F)
                 elif rule == "queue-record-length":
                     invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and len(wire) >= 32 and (len(wire) - 32) % 12 != 0
                 elif rule == "read-buffer-padding-zero":
@@ -546,6 +550,19 @@ def check_reply_golden_vectors(c: Check) -> None:
                         invalid = kind.startswith("ReadBuffer-") and len(wire) == 32 + padded and wire[32 + data_length:] != bytes(padded - data_length)
                     except (ValueError, IndexError):
                         invalid = False
+                elif rule == "memory-payload-length":
+                    type_count = int.from_bytes(wire[32:36], order) if len(wire) >= 36 else 0
+                    heap_count = int.from_bytes(wire[36:40], order) if len(wire) >= 40 else 0
+                    expected = 16 + type_count * 8 + heap_count * 16
+                    invalid = kind == "GetPhysicalDeviceMemoryProperties" and (len(wire) < 48 or len(wire) - 32 != expected)
+                elif rule == "memory-reserved-zero":
+                    invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 48 and wire[40:48] != bytes(8)
+                elif rule == "memory-type-flags-range":
+                    invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 56 and bool(int.from_bytes(wire[48:52], order) & ~0x3F)
+                elif rule == "memory-heap-flags-range":
+                    type_count = int.from_bytes(wire[32:36], order) if len(wire) >= 36 else 0
+                    heap_offset = 48 + type_count * 8
+                    invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= heap_offset + 12 and bool(int.from_bytes(wire[heap_offset + 8:heap_offset + 12], order) & ~0x1)
                 elif rule == "memory-type-heap-index-range":
                     type_count = int.from_bytes(wire[32:36], order) if len(wire) >= 36 else 0
                     heap_count = int.from_bytes(wire[36:40], order) if len(wire) >= 40 else 0
