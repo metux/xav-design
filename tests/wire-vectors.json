@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "description": "Golden XAverius request bytes. major_opcode 0x90 is a fixture value; real connections use the server-assigned opcode.",
+  "vectors": [
+    {
+      "name": "CreateBuffer-little-endian",
+      "byte_order": "little",
+      "request": "CreateBuffer",
+      "major_opcode": 144,
+      "subopcode": 8,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "size": 72623859790382856,
+        "usage_flags": 5,
+        "reserved": 0
+      },
+      "wire_hex": "900008000800000004030201d0c0b0a008070605040302010500000000000000"
+    },
+    {
+      "name": "CreateBuffer-big-endian",
+      "byte_order": "big",
+      "request": "CreateBuffer",
+      "major_opcode": 144,
+      "subopcode": 8,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "size": 72623859790382856,
+        "usage_flags": 5,
+        "reserved": 0
+      },
+      "wire_hex": "900000080800000001020304a0b0c0d001020304050607080000000500000000"
+    },
+    {
+      "name": "WriteBuffer-three-byte-payload-little-endian",
+      "byte_order": "little",
+      "request": "WriteBuffer",
+      "major_opcode": 144,
+      "subopcode": 13,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "buffer_offset": 72623859790382856,
+        "data_length": 3,
+        "payload_hex": "aabbcc",
+        "padding_hex": "00"
+      },
+      "wire_hex": "900008000d00000004030201d0c0b0a0080706050403020103000000aabbcc00"
+    },
+    {
+      "name": "WriteBuffer-three-byte-payload-big-endian",
+      "byte_order": "big",
+      "request": "WriteBuffer",
+      "major_opcode": 144,
+      "subopcode": 13,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "buffer_offset": 72623859790382856,
+        "data_length": 3,
+        "payload_hex": "aabbcc",
+        "padding_hex": "00"
+      },
+      "wire_hex": "900000080d00000001020304a0b0c0d0010203040506070800000003aabbcc00"
+    },
+    {
+      "name": "ReadBuffer-three-byte-payload-little-endian",
+      "byte_order": "little",
+      "request": "ReadBuffer",
+      "major_opcode": 144,
+      "subopcode": 14,
+      "flags": 0,
+      "length_bytes": 28,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "buffer_offset": 72623859790382856,
+        "data_length": 3
+      },
+      "wire_hex": "900007000e00000004030201d0c0b0a0080706050403020103000000"
+    },
+    {
+      "name": "ReadBuffer-three-byte-payload-big-endian",
+      "byte_order": "big",
+      "request": "ReadBuffer",
+      "major_opcode": 144,
+      "subopcode": 14,
+      "flags": 0,
+      "length_bytes": 28,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "buffer_offset": 72623859790382856,
+        "data_length": 3
+      },
+      "wire_hex": "900000070e00000001020304a0b0c0d0010203040506070800000003"
+    }
+  ]
+}
