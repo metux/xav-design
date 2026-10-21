@@ -8,7 +8,7 @@ The following questions remain open; listing them here does not resolve them.
 4. Future feature IDs and device extensions must be registered append-only; the v0.1 optional sets are intentionally empty.
 5. Semantics of `memory_properties_flags`.
 6. Confirm the `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` layouts and event-delivery behavior in the final ABI review. The contract for closed connections and failed event sends is defined in [events.md](events.md).
-7. Timeout boundaries and scheduling guarantees.
+7. Queue scheduling guarantees across independent queue families and queues, including any fairness or progress bounds; v0.1 defines per-queue submission ordering and explicit synchronization dependencies but does not promise bounded scheduling latency.
 8. Ownership for future X11 resource-sharing mechanisms.
 9. Physical Device UUID and Driver UUID are defined as opaque 16-byte `BYTE_ARRAY` properties; the server preserves the Vulkan-returned bytes exactly.
 
