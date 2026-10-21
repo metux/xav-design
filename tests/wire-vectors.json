@@ -52,7 +52,7 @@
         "payload_hex": "aabbcc",
         "padding_hex": "00"
       },
-      "wire_hex": "900008000d00000004030201d0c0b0a0080706050403020103000000aabbcc00"
+      "wire_hex": "900008000d00000004030201d0c0b0a0000706050403020103000000aabbcc00"
     },
     {
       "name": "WriteBuffer-three-byte-payload-big-endian",
@@ -70,7 +70,7 @@
         "payload_hex": "aabbcc",
         "padding_hex": "00"
       },
-      "wire_hex": "900000080d00000001020304a0b0c0d0010203040506070800000003aabbcc00"
+      "wire_hex": "900000080d00000001020304a0b0c0d0010203040506070000000003aabbcc00"
     },
     {
       "name": "ReadBuffer-three-byte-payload-little-endian",
