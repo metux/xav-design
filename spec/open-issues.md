@@ -11,4 +11,4 @@ The following questions remain open; listing them here does not resolve them.
 7. Timeout boundaries and scheduling guarantees.
 8. Ownership for future X11 resource-sharing mechanisms.
 9. Physical Device UUID and Driver UUID are defined as opaque 16-byte `BYTE_ARRAY` properties; the server preserves the Vulkan-returned bytes exactly.
-10. Final Vulkan stage mapping and valid wait-stage masks.
+
