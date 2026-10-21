@@ -115,6 +115,38 @@ class ReplySpecCoverageTests(unittest.TestCase):
             self.assertEqual(int.from_bytes(wire[4:8], order), expected_words)
             self.assertEqual(len(wire), 32 + expected_words * 4)
 
+
+    def test_negative_fixtures_cover_normative_boundaries_in_both_orders(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        vectors = fixture["vectors"]
+        required_rules = {
+            "standard-header", "fence-status", "wait-status", "wait-for-fence-status",
+            "property-failure-zero", "property-padding-zero", "queue-record-reserved",
+            "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
+            "reserved-zero",
+        }
+        for rule in sorted(required_rules):
+            for order in ("little", "big"):
+                self.assertTrue(any(v["violates"] == rule and v["byte_order"] == order for v in vectors),
+                                f"negative fixture for {rule} missing in {order}-endian")
+
+        sync = section(self.sync, "GetFenceStatus")
+        fence_statuses = assignments(sync, {"UNSIGNALED", "PENDING", "SIGNALED", "FAILED"})
+        self.assertEqual(set(fence_statuses.values()), {0, 1, 2, 3})
+        memory = section(self.memory, "GetPhysicalDeviceMemoryProperties")
+        limits = re.search(r"maximal\\s+(\\d+)\\s+Memory Types und\\s+(\\d+)\\s+Memory Heaps", memory, re.I)
+        self.assertIsNotNone(limits)
+        max_types, max_heaps = map(int, limits.groups())
+        for rule, offset, limit in (("memory-type-count-range", 32, max_types),
+                                    ("memory-heap-count-range", 36, max_heaps)):
+            for order in ("little", "big"):
+                cases = [v for v in vectors if v["violates"] == rule and v["byte_order"] == order]
+                self.assertTrue(cases)
+                for case in cases:
+                    wire = bytes.fromhex(case["wire_hex"])
+                    count = int.from_bytes(wire[offset:offset + 4], order)
+                    self.assertGreater(count, limit, f"{case['name']} does not exceed normative limit {limit}")
+
     def test_read_buffer_boundary_fixtures_follow_wire_formula(self):
         body = section(self.memory, "ReadBuffer")
         self.assertRegex(body, r"reply\.length\s*=\s*ceil\(data_length\s*/\s*4\)")
