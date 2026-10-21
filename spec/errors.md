@@ -84,7 +84,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 
 - Falsche Request-Länge oder unpassender Payload-Umfang: `BadLength`
 - Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
-- Ungültige oder falsche Device-/Shader-Module-XID: `BadValue` bei unbekannter/nicht-live XID; `BadMatch` bei falschem live Typ oder Device
+- Ungültige/nicht-live `device_xid`: `BadValue`; falscher live Device-Typ: `BadMatch`. Bei `CREATE` ergibt eine ungültige/belegte `shader_module_xid` `BadIDChoice`. Ohne `CREATE` erfordert der Request ein passendes Upload-Assembly; fehlt es, ergibt sich `INVALID_SYNCHRONIZATION_STATE`.
 - `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
 - Ungültiges SPIR-V oder ein SPIR-V-Modul, das die v0.1-Validierungsregeln nicht erfüllt: `BadValue`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
@@ -112,7 +112,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 
 - Falsche Request-Länge oder unvollständiger Entry: `BadLength`
 - Reservierte Bits/Felder, ungültige Flag-Kombination, fehlerhaftes Padding oder ungültige Entry-Länge: `BadValue`
-- Falscher Ressourcentyp, Queue-Family-Index oder Cross-Device-Objekt: `BadMatch`
+- Falscher live Ressourcentyp, ungültiger Queue-Family-Index oder Cross-Device-Objekt: `BadMatch`; ein ungültiger/belegter Command-Buffer-Ziel-XID bei `CREATE` ergibt `BadIDChoice`. Ohne `CREATE` muss der Buffer im Zustand `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`.
 - ABORT bei einem Buffer, der nicht `RECORDING` ist, oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`
 - `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER`-Pool-Flag oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`; Ablehnung lässt Zustand und Ressourcenreferenzen unverändert
 - `ResetCommandBuffer` mit unbekannter/nicht-live XID: `BadValue`; falscher live Ressourcentyp oder Cross-Device-Verwendung: `BadMatch`
