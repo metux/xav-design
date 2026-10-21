@@ -59,6 +59,8 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Reservierte Bits/Felder, ungültige Flag-Kombination, fehlerhaftes Padding oder ungültige Entry-Länge: `BadValue`
 - Falscher Ressourcentyp, Queue-Family-Index oder Cross-Device-Objekt: `BadMatch`
 - ABORT bei einem Buffer, der nicht `RECORDING` ist, oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`
+- `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER`-Pool-Flag oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`; Ablehnung lässt Zustand und Ressourcenreferenzen unverändert
+- `ResetCommandBuffer` mit ungültiger Ressource oder falschem Device: request-spezifischer X11-Fehler beziehungsweise `BadMatch` bei Cross-Device-Verwendung
 - Fehlerhafte Entries eines `CommandBufferData`-Chunks werden atomar abgewiesen; der aktuelle Chunk wird nicht teilweise angehängt. Bereits vorher akzeptierte Chunks bleiben bis zu einem erfolgreichen Retry oder ABORT erhalten.
 
 ### `QueueSubmit`
