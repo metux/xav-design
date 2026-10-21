@@ -72,7 +72,7 @@ Bei einem Status ungleich `SUCCESS` müssen `property_type` und `value_length` n
 
 Die kanonischen v0.1-Namen, Typen, exakten Wertlängen und Verfügbarkeitsregeln sind in der [Physical-Device-Property- und Atom-Namens-Registry](../registries/physical-device-properties.md) verbindlich festgelegt. Die v0.1-Einträge sind `XAverius.deviceUUID`, `XAverius.driverUUID`, `XAverius.compute.maxWorkGroupInvocations` und `XAverius.compute.maxWorkGroupSize`. UUIDs sind 16 rohe Bytes und keine Textstrings; `maxWorkGroupSize` ist ein Array aus genau drei `CARD32`-Werten in X-, Y-, Z-Reihenfolge.
 
-Vorgesehene XAverius-Property-Type-IDs:
+Normative XAverius-Property-Type-IDs:
 
 | ID | Typ |
 |---:|---|
