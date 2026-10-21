@@ -56,7 +56,7 @@ def event_field_records(body: str) -> list[tuple[int, int, str, str]]:
             typ = bullet.group(2)
             tail = bullet.group(3)
             if not typ:
-                tm = re.search(r"`(CARD8|CARD16|CARD32|CARD64|XID|ATOM|BYTE)(?:\\s+[^`]*)?`", tail)
+                tm = re.search(r"`(CARD8|CARD16|CARD32|CARD64|XID|ATOM|BYTE)(?:\s+[^`]*)?`", tail)
                 typ = tm.group(1) if tm else None
             if typ in sizes:
                 records.append((int(bullet.group(1)), sizes[typ], typ, tail.strip()))
@@ -94,7 +94,7 @@ def check_events(c: Check) -> None:
         if name not in doc_sections:
             continue
         body = doc_sections[name]
-        total_match = re.search(r"Gesamtlänge:\\s*(\\d+)\\s*Bytes;\\s*XGE `length\\s*=\\s*(\\d+)`", body)
+        total_match = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE `length\s*=\s*(\d+)`", body)
         c.require(bool(total_match), f"{name}: total length and XGE length declaration missing")
         if total_match:
             declared_total, declared_length = map(int, total_match.groups())
