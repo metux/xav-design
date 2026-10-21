@@ -29,8 +29,8 @@ Der X-Server weist die Extension-Major-Opcode zu. XAverius verwendet zentral ver
 - Padding muss null sein.
 - Ein inkonsistentes Request-Layout oder ein nicht passender Payload-Umfang ergibt `BadLength`.
 - Ungültige Werte oder reservierte Bits ergeben normalerweise `BadValue`.
-- BIG-REQUESTS folgt den Standard-X11-Regeln.
-- Ohne BIG-REQUESTS beträgt die maximale gewöhnliche Request-Länge 262140 Bytes einschließlich Header.
+- BIG-REQUESTS ist für v0.1 noch nicht spezifiziert. Das Extended-Length-Feld von BIG-REQUESTS liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header. Eine Implementierung darf BIG-REQUESTS daher nicht als unterstützt deklarieren, solange dieses Framing nicht gelöst ist.
+- Ohne BIG-REQUESTS beträgt die maximale gewöhnliche Request-Länge 262140 Bytes einschließlich des gesamten Requests, also einschließlich X11- und XAverius-Header. Größere Nutzdaten müssen in mehreren Requests übertragen werden, soweit der jeweilige Request dies erlaubt.
 - Größenberechnungen müssen vor der Verarbeitung auf Überläufe geprüft werden.
 
 Ein Server darf variable Payloads nicht auf Grundlage ungeprüfter Counts allokieren.
