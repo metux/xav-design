@@ -34,7 +34,9 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 
 - Exakte Request-Längen, Counts und Padding
 - `EnumeratePhysicalDevices` ist ein 8-Byte-Reply-Request; `DestroyDevice` ist ein 12-Byte-Void-Request
-- `CreateDevice`-Länge entspricht exakt den drei geordneten variablen Record-Arrays; `CreateDevice` und `CreateDefaultDevice` senden bei Erfolg keinen Reply
+- `CreateDevice`-Länge entspricht exakt den drei geordneten variablen Record-Arrays; mindestens eine Queue-Family-Anforderung ist erforderlich; Queue-Prioritäten müssen endlich und in [0,1] liegen; `CreateDevice` und `CreateDefaultDevice` senden bei Erfolg keinen Reply
+- `CreateBuffer` weist `usage_flags = 0` und unbekannte Usage-Bits mit `BadValue` ab
+- `CreateDescriptorPool`, `AllocateDescriptorSets` und `FreeDescriptorSets` weisen Count null mit `BadValue` ab
 - `CreateComputePipeline` verwendet die normative Länge `28 + ((entry_point_length + 3) & ~3)` und prüft nichtleeren ASCII-Entry-Point sowie Null-Padding
 - `DestroySemaphore` und `DestroyFence` sind jeweils 16-Byte-Void-Requests; `WaitSemaphores` verwendet `28 + 12 * semaphore_count`
 - `CommandBufferData`-ABORT hat exakt 16 Bytes; andere Chunks enthalten nur vollständige Entries
