@@ -150,6 +150,20 @@ class ReplySpecCoverageTests(unittest.TestCase):
                     count = int.from_bytes(wire[offset:offset + 4], order)
                     self.assertGreater(count, limit, f"{case['name']} does not exceed normative limit {limit}")
 
+    def test_registered_property_shapes_match_registry(self):
+        registry = (ROOT / "registries/physical-device-properties.md").read_text(encoding="utf-8")
+        self.assertIn("Exactly 16 raw bytes", registry)
+        self.assertIn("Exactly three unsigned 32-bit integers in X, Y, Z order", registry)
+        for order in ("little", "big"):
+            for kind, type_id, size in (("byte-array-16", 5, 16), ("card32-array-3", 6, 12)):
+                event = "GetPhysicalDeviceProperty-success-" + kind
+                matches = [v for v in self.vectors if v["event"] == event and v["byte_order"] == order]
+                self.assertEqual(len(matches), 1, f"{event} missing in {order}-endian")
+                wire = bytes.fromhex(matches[0]["wire_hex"])
+                self.assertEqual(int.from_bytes(wire[12:16], order), type_id)
+                self.assertEqual(int.from_bytes(wire[16:20], order), size)
+                self.assertEqual(int.from_bytes(wire[4:8], order), size // 4)
+
     def test_property_payload_boundaries_follow_normative_formula(self):
         body = section(self.devices, "GetPhysicalDeviceProperty")
         self.assertIn("ceil(value_length / 4)", body)
