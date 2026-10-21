@@ -24,7 +24,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 - `check-wire-layout.py` validates reply vectors against the 32-byte X11
   framing contract, declared lengths, enumeration/memory record formulas, fixed reply field offsets and status values,
   reserved fields, padding, required endian coverage, and intentionally malformed negative reply fixtures.
-  Negative replies include variable device-record length/padding errors and memory-type heap indices outside the advertised heap range.
+  Negative replies include variable device-record length/padding errors and memory-type heap indices outside the advertised heap range. Additional cases cover a truncated second device record, malformed queue-family record-array length, and nonzero ReadBuffer padding.
 
 Run all fixture tests from the repository root:
 
