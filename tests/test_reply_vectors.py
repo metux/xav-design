@@ -49,6 +49,25 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     elif kind == "GetPhysicalDeviceProperty-not-supported":
         if wire[12:20] != bytes(8) or wire[32:] or declared: errors.append("property-failure-zero")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
+    elif kind == "EnumeratePhysicalDevices":
+        pos = 32
+        while pos < len(wire):
+            if len(wire) - pos < 32:
+                errors.append("device-record-length")
+                break
+            name_length = int.from_bytes(wire[pos + 28:pos + 30], byte_order)
+            record_length = 32 + ((name_length + 3) & ~3)
+            if pos + record_length > len(wire):
+                errors.append("device-record-length")
+                break
+            if wire[pos + 30:pos + 32] != bytes(2):
+                errors.append("device-record-reserved")
+            pad_start = pos + 32 + name_length
+            if wire[pad_start:pos + record_length] != bytes(pos + record_length - pad_start):
+                errors.append("device-name-padding-zero")
+            pos += record_length
+        if pos != len(wire) and "device-record-length" not in errors:
+            errors.append("device-record-length")
     elif kind == "GetPhysicalDeviceQueueFamilyProperties-two-records":
         if any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire), 12)): errors.append("queue-record-reserved")
     elif kind in ("GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetPhysicalDeviceMemoryProperties"):
@@ -59,6 +78,10 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
             if type_count > 32: errors.append("memory-type-count-range")
             if heap_count > 16: errors.append("memory-heap-count-range")
             if kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap" and wire[68:72] != bytes(4): errors.append("memory-heap-reserved")
+            if len(payload) >= 16 + type_count * 8:
+                for index in range(type_count):
+                    heap_index = int.from_bytes(payload[20 + index * 8:24 + index * 8], byte_order)
+                    if heap_index >= heap_count: errors.append("memory-type-heap-index-range"); break
     elif kind == "GetBufferMemoryRequirements":
         if wire[28:32] != bytes(4): errors.append("reserved-zero")
     elif kind == "GetSemaphoreCounterValue":
