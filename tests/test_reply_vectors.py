@@ -126,7 +126,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 60)
+        self.assertEqual(len(self.vectors), 62)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -193,6 +193,26 @@ class GoldenReplyVectorTests(unittest.TestCase):
             self.assertEqual(int.from_bytes(payload[20:24], vector["byte_order"]), 0x10002)
             self.assertEqual(int.from_bytes(payload[24:28], vector["byte_order"]), 1)
             self.assertEqual(payload[30:32], bytes(2))
+
+    def test_enumeration_multiple_records_variable_name_lengths(self):
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors if v["event"] == "EnumeratePhysicalDevices-two-records" and v["byte_order"] == order)
+            wire = bytes.fromhex(vector["wire_hex"])
+            payload = wire[32:]
+            records = []
+            pos = 0
+            while pos < len(payload):
+                self.assertGreaterEqual(len(payload) - pos, 32)
+                name_length = int.from_bytes(payload[pos + 28:pos + 30], order)
+                record_length = 32 + ((name_length + 3) & ~3)
+                self.assertLessEqual(pos + record_length, len(payload))
+                self.assertEqual(payload[pos + 30:pos + 32], bytes(2))
+                self.assertEqual(payload[pos + 32 + name_length:pos + record_length], bytes(record_length - 32 - name_length))
+                records.append((name_length, payload[pos + 32:pos + 32 + name_length]))
+                pos += record_length
+            self.assertEqual(records, [(1, b"A"), (5, b"GPU-0")])
+            self.assertEqual(pos, len(payload))
+            self.assertEqual(int.from_bytes(wire[4:8], order), len(payload) // 4)
 
     def test_queue_family_enumeration_record_lengths(self):
         for vector in self.vectors:
