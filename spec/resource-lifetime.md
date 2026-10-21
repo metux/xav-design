@@ -54,29 +54,29 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | Ressource | Öffentliche Zerstörung | Regel bei ausstehender Verwendung |
 |---|---|---|
 | Device | Invalidiert Device und Kinder sofort | Interne Bereinigung wird verzögert |
-| CommandPool | Invalidiert Pool und Kind-Command-Buffer | Abweisen, solange ein Kind pending ist |
+| CommandPool | Invalidiert Pool und Kind-Command-Buffer atomar | Abweisen, solange mindestens ein Kind pending ist |
 | CommandBuffer | XID wird ungültig | Abweisen, solange pending |
-| DescriptorPool | Invalidiert Pool und Kind-Sets | Abweisen, solange ein Kind-Set pending ist |
+| DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, solange mindestens ein Kind-Set pending ist |
 | DescriptorSet | XID wird ungültig | Abweisen, solange pending |
-| Buffer | XID wird ungültig | Buffer und gebundener Speicher bleiben intern erhalten |
-| Memory | XID wird ungültig | Tatsächliche Freigabe erst, wenn abhängige Objekte und Arbeit es erlauben |
-| Pipeline | XID wird ungültig | Konservative Regel: Zerstörung bei Pending-Use abweisen |
-| PipelineLayout | XID wird ungültig | Konservative Regel: Zerstörung bei noch bestehender Command-/Submission-Abhängigkeit abweisen |
+| Buffer | XID wird ungültig | Abweisen, solange ein angenommener GPU-Command den Buffer direkt oder indirekt verwendet; sonst interne Freigabe verzögern, falls noch Serveroperationen darauf verweisen |
+| Memory | Nur bei erfolgreicher Prüfung invalidiert | `FreeMemory` wird abgewiesen, solange irgendein Buffer daran gebunden ist oder angenommene Arbeit die Allokation verwendet |
+| Pipeline | XID wird ungültig | Abweisen, solange ein angenommener Command die Pipeline verwendet |
+| PipelineLayout | XID wird ungültig | Abweisen, solange ein angenommener Command das Layout verwendet; nicht-pending executable Command Buffer werden nach der allgemeinen Referenzregel invalidiert |
 | ShaderModule | Nach erfolgreicher Pipeline-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
 | DescriptorSetLayout | Nach erfolgreicher Pipeline-Layout-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
-| Fence | XID wird ungültig | Konservative Regel: Pending-Zerstörung abweisen |
-| Semaphore | XID wird ungültig | Konservative Regel: Zerstörung bei Pending-Use abweisen |
+| Fence | XID wird ungültig | Abweisen, solange die Fence einer nicht-terminalen Submission zugeordnet ist |
+| Semaphore | XID wird ungültig | Abweisen, solange ein angenommener Queue-Wait/-Signal oder eine ausstehende Server-Host-Operation die Semaphore verwendet |
 | Physical Device | Nicht durch Client zerstörbar | Server-Ownership; XID wird nie neu zugewiesen |
 
 Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
 
 ## Aufgezeichnete Referenzen und Command-Buffer-Invalidierung
 
-Der Server verfolgt für jeden Command Buffer die Ressourcen, auf die seine aufgezeichneten Commands direkt oder indirekt verweisen. Dazu gehören insbesondere Pipelines, Pipeline Layouts, Descriptor Sets, Buffer und die über Descriptor Sets referenzierten Buffer. Diese Abhängigkeiten bleiben bestehen, solange der Command Buffer aufgezeichnet oder ausführbar ist.
+Der Server verfolgt für jeden Command Buffer die Ressourcen, auf die seine aufgezeichneten Commands direkt oder indirekt verweisen. Dazu gehören insbesondere Pipelines, Pipeline Layouts, Descriptor Sets, Buffer und die über Descriptor Sets referenzierten Buffer. Diese Abhängigkeiten bleiben bestehen, solange der Command Buffer aufgezeichnet oder ausführbar ist. Eine Submission übernimmt eigene interne Referenzen, die bis zum terminalen Submission-Ausgang und bis zum Ende aller Backend-Zugriffe bestehen bleiben. Ein XID-Invalidieren darf nie einen Backend-Handle auf ein anderes Objekt umleiten.
 
 - Wird eine Ressource zerstört, auf die ein `RECORDING`-Command-Buffer verweist, wird die Zerstörung mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Der Client muss die Aufzeichnung beenden oder den Command Buffer verwerfen, bevor er die Ressource zerstört.
 - Wird eine Ressource zerstört, auf die ein `EXECUTABLE`-Command-Buffer verweist, werden diese Command Buffer vor erfolgreichem Abschluss des Destroy-Requests in `INVALID` überführt. Sie dürfen danach nicht eingereicht werden; eine erneute Aufzeichnung ist erforderlich.
-- Ist die Ressource in einer angenommenen Submission noch in Verwendung, gilt die ressourcenspezifische Pending-Regel aus der Zerstörungsmatrix. Ein bereits angenommener Command darf niemals durch eine spätere XID-Zerstörung auf ein anderes Objekt umgeleitet werden.
+- Ist die Ressource in einer angenommenen Submission noch in Verwendung, gilt die ressourcenspezifische Pending-Regel aus der Zerstörungsmatrix. Ein Destroy-Request, der wegen Pending-Use abgewiesen wird, lässt XID und Command-Buffer-Zustände unverändert.
 - Ein Destroy-Request ist atomar: Wenn die ressourcenspezifische Regel die Zerstörung ablehnt, werden weder die öffentliche XID invalidiert noch Command-Buffer-Zustände geändert.
 
 Das gilt auch für indirekte Abhängigkeiten, die über Descriptor Set → Buffer oder Buffer → gebundenen Memory verlaufen. Der Server darf einen ausführbaren Command Buffer nicht als gültig behandeln, wenn eine seiner aufgezeichneten Ressourcenabhängigkeiten öffentlich zerstört wurde.
@@ -125,9 +125,9 @@ Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
 ## Buffer und Memory
 
-Ein Buffer darf öffentlich invalidiert werden, obwohl eine Submission ihn noch benötigt. Das interne Buffer-Objekt und gebundener Speicher müssen erhalten bleiben, bis Vulkan ihre Freigabe erlaubt.
+`DestroyBuffer` wird abgewiesen, solange eine angenommene Submission den Buffer direkt oder über einen Descriptor Set verwendet. Nach erfolgreicher Zerstörung werden nicht-pending executable Command Buffer, die den Buffer direkt oder indirekt referenzieren, gemäß der allgemeinen Regel `INVALID`. Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen, gelten aber als nicht submitbar, bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden. Neue Submissions mit solchen ungültigen Descriptor-Inhalten werden atomar abgewiesen.
 
-Memory darf nicht freigegeben werden, solange ein gebundener Buffer oder eine ausstehende Operation darauf angewiesen ist.
+`FreeMemory` wird abgewiesen, solange irgendein Buffer an die Allokation gebunden ist oder angenommene Arbeit auf die Allokation zugreift. XAverius v0.1 bietet kein Unbind/Rebind. Der Client muss daher alle gebundenen Buffer zuerst erfolgreich zerstören und erst danach den Memory-Block freigeben. Ein abgewiesener `FreeMemory`-Request invalidiert die Memory-XID nicht.
 
 ## Fehler bei ungültigen Lebenszyklusoperationen
 
