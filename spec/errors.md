@@ -53,6 +53,14 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module.
 
+### Device-Discovery und Device-Erstellung
+
+- `EnumeratePhysicalDevices`: Request muss exakt 8 Bytes lang sein; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden.
+- `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültige Atom-/Device-XID über Standard-X11-Fehler; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
+- `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; ungültige Physical-Device-XID über Standard-X11-Fehler.
+- `CreateDevice` und `CreateDefaultDevice`: Void-Requests; Erfolg erzeugt keinen Reply. `CreateDefaultDevice` meldet fehlendes geeignetes Gerät mit `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bei `CreateDevice` bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
+- `DestroyDevice`: falsche Länge `BadLength`; ungültige XID über Standard-X11-Fehler; fremde Device-Ownership `BadMatch`.
+
 ### `CreateDescriptorSetLayout`
 
 - Falsche Request-Länge oder ein nicht zum `binding_count` passender Payload: `BadLength`
@@ -80,6 +88,13 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Nicht ausführbarer Command Buffer, ungültiger Fence- oder Semaphore-Zustand: `INVALID_SYNCHRONIZATION_STATE`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Ungültige Abhängigkeit, die Annahme verhindert: `DEPENDENCY_FAILED`
+
+### Synchronisations-Requests
+
+- `CreateSemaphore`: exakt 28 Bytes; `CreateFence`: exakt 24 Bytes; `DestroySemaphore`, `GetSemaphoreCounterValue`, `DestroyFence`, `GetFenceStatus` und `ResetFence`: exakt 16 Bytes; `SignalSemaphore` und `WaitForFence`: exakt 24 Bytes.
+- `WaitSemaphores`: exakt `28 + 12 * semaphore_count` Bytes; Count null oder nicht exakt passende Länge wird abgewiesen (`BadValue` bei null Count, `BadLength` bei Längenabweichung).
+- Ungültige Semaphoren-/Fence-XIDs: Standard-X11-Fehler; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
+- `WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status und keinen X11-Fehler.
 
 ### Fence-Requests
 
