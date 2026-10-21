@@ -149,14 +149,17 @@ Clients dürfen mehrere Requests im normalen X11-Request-Stream hintereinander s
 
 `WriteBuffer` ist ein Reply-Request. Bei Erfolg sendet der Server einen leeren Standard-X11-Reply von 32 Bytes; bei einem Fehler vor Abschluss sendet er den definierten X11-Fehler. Ein Void-Request ohne Reply wäre mit den folgenden Abschlussgarantien nicht vereinbar.
 
-Ein erfolgreicher Reply garantiert:
+Ein erfolgreicher Reply garantiert normativ:
 
-1. Die Eingabedaten wurden übernommen.
-2. Der Client darf seinen Eingabepuffer wiederverwenden.
-3. Der Transfer ist abgeschlossen.
-4. Die geschriebenen Bytes sind für nachfolgende abhängige XAverius-GPU-Arbeit sichtbar.
+1. Die Eingabedaten wurden vollständig übernommen; der Client darf seinen Eingabepuffer wiederverwenden.
+2. Der Transfer ist abgeschlossen und alle erforderlichen Host-Cache- sowie GPU-Visibility-Operationen sind erfolgt.
+3. Alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions desselben logischen Devices haben ihren terminalen Ausgang erreicht, bevor der Schreibtransfer die Zieldaten verändert. Dies verhindert Rennen mit früher eingereihter GPU-Arbeit, auch wenn sie auf einer anderen Queue läuft.
+4. Jeder `QueueSubmit` desselben logischen Devices, den der Server nach erfolgreicher Verarbeitung dieses Requests annimmt, muss die geschriebenen Bytes sehen, wenn die Submission sie liest. Das gilt unabhängig von Queue-Family und Queue-Index und auch dann, wenn der Buffer oder Speicher nicht host-coherent ist.
+5. Diese Garantie gilt für den gesamten geschriebenen Bereich und erfordert keine expliziten Semaphore oder Barrieren des Clients zwischen diesem Upload und später angenommenen Submissions.
 
-Der Server darf Staging-Speicher einsetzen. Er muss die korrekte Reihenfolge überlappender Writes und nachfolgender abhängiger GPU-Arbeit gewährleisten.
+Diese Regeln definieren einen geräteweiten Ordnungsübergang: frühere angenommene GPU-Arbeit → abgeschlossener `WriteBuffer`-Transfer → später angenommene GPU-Arbeit. In v0.1 darf der Server dies konservativ durch vollständiges Warten auf vorherige Submissions und durch notwendige Transfer-/Speicherbarrieren beziehungsweise Device-Synchronisation implementieren. Eine optimierte Implementierung darf feingranularer arbeiten, muss aber dieselbe beobachtbare Ordnung garantieren.
+
+Ein vorheriger Submission-Fehler allein verhindert den Upload nicht, sofern das Device weiterhin verwendbar ist: Der Server wartet auf den terminalen Ausgang, führt den Transfer danach aus und garantiert die neuen Bytes für spätere Arbeit. Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden. Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.
 
 ## 5.7 `ReadBuffer`
 
