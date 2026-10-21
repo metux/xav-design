@@ -15,6 +15,8 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Acceptance of `QueueSubmit` is distinct from GPU completion.
 - `QueueSubmit` carries a client-generated 64-bit `submission_token`; it must be nonzero and unique for the lifetime of that X11 client connection, but has no ordering semantics. The server echoes it in submission-related events.
 - Asynchronous failures are reported through XAverius events and synchronization state.
+- Every accepted submission has exactly one terminal outcome event (`SUBMISSION_COMPLETE` or `SUBMISSION_FAILED`) while the client connection can receive events; diagnostic `ASYNC_ERROR` events do not replace that terminal outcome.
+- Device Loss fails every accepted nonterminal submission with `DEVICE_LOST`; fences become `FAILED`, and affected command buffers become `INVALID` after leaving the pending phase. No successful completion is synthesized.
 - Public resource XIDs become invalid on successful destruction; internal Vulkan objects may remain alive until safe release.
 - The server tracks direct and indirect resource references recorded by command buffers. Destroying a referenced resource is rejected while a command buffer is recording; executable command buffers that reference a destroyed resource become invalid and must be recorded again.
 - Descriptor sets may not be updated or freed while pending use is possible.
