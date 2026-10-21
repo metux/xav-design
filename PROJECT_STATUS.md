@@ -90,6 +90,10 @@ The v0.1 optional feature-ID and device-extension sets are explicitly empty: the
 
 The queue-submission chapter now distinguishes same-queue submission order from completion order and execution overlap, specifies that different queues have no implicit ordering or memory dependency, and requires explicit semaphore dependencies for queue-to-queue GPU ordering. Fence and host waits observe status but do not create queue dependencies; host semaphore signals only satisfy waits on the signaled semaphore. Submission tokens and event sequence numbers are correlation/transport values, not ordering values. v0.1 promises neither fairness nor bounded scheduling latency for independent queues. Conformance cases were added, and the open issue was narrowed to whether a future protocol version should add stronger fairness/progress guarantees. Backend conformance remains to be verified.
 
+## Request error and conformance coverage — 2026-10-21
+
+The request inventory was compared against the error-mapping chapter and conformance checklist. This found a missing central `SelectEvents` error-mapping section and missing explicit conformance cases for `AllocateMemory`, `CreatePipelineLayout`, `CreateSemaphore`, and `CreateFence`; these have been added. The wire-layout checker now detects if any registered request disappears from either document, while preserving the defining chapter as the semantic authority.
+
 ## Expanded reply and XGE validation — 2026-10-21
 
 The reply golden set now covers 60 byte-exact replies in both X11 byte orders, including one- and five-byte BYTE_ARRAY boundary payloads, the registered 16-byte UUID and three-element CARD32_ARRAY shapes, padding/word-count boundaries, and the maximum memory type/heap counts. The 52 negative reply vectors cover variable record truncation, reserved fields, invalid memory type/heap indices, count limits, reserved flag masks, aggregate payload length, and nonzero padding. The validator also checks every PHYSICALDEVICEINFO record in a variable enumeration payload, rather than only the first record.
