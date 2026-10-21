@@ -523,9 +523,29 @@ def check_reply_golden_vectors(c: Check) -> None:
                     padded = (name_length + 3) & ~3
                     invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 + padded and wire[64 + name_length:64 + padded] != bytes(padded - name_length)
                 elif rule == "device-record-length":
-                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and 32 + ((int.from_bytes(wire[60:62], order) + 3) & ~3) != len(wire) - 32
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 32
+                    pos = 32
+                    while invalid and pos < len(wire):
+                        if len(wire) - pos < 32:
+                            break
+                        name_length = int.from_bytes(wire[pos + 28:pos + 30], order)
+                        record_length = 32 + ((name_length + 3) & ~3)
+                        if pos + record_length > len(wire):
+                            break
+                        pos += record_length
+                    if invalid:
+                        invalid = pos != len(wire)
                 elif rule == "memory-type-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[32:36], order) > 32
                 elif rule == "memory-heap-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[36:40], order) > 16
+                elif rule == "queue-record-length":
+                    invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and len(wire) >= 32 and (len(wire) - 32) % 12 != 0
+                elif rule == "read-buffer-padding-zero":
+                    try:
+                        data_length = int(kind.split("-")[1])
+                        padded = (data_length + 3) & ~3
+                        invalid = kind.startswith("ReadBuffer-") and len(wire) == 32 + padded and wire[32 + data_length:] != bytes(padded - data_length)
+                    except (ValueError, IndexError):
+                        invalid = False
                 elif rule == "memory-type-heap-index-range":
                     type_count = int.from_bytes(wire[32:36], order) if len(wire) >= 36 else 0
                     heap_count = int.from_bytes(wire[36:40], order) if len(wire) >= 40 else 0
