@@ -1,0 +1,26 @@
+name: XAverius wire-layout checks
+
+on:
+  push:
+    branches:
+      - docs/restructure-2026-10-21
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wire-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax-check checker
+        run: python -m py_compile tools/check-wire-layout.py
+      - name: Validate request/reply matrix and XGE event layouts
+        run: python tools/check-wire-layout.py
