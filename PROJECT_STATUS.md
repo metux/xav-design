@@ -21,8 +21,8 @@
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
 - Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
-- Cross-check the newly registered v0.1 feature/extension/property sets against error mappings and conformance cases.
-- Finish the final ABI review of request-specific error coverage and reply layouts; keep adding conformance cases with each protocol decision.
+- Continue final ABI review of reply layouts, XGE event framing, wait-stage masks, timeout boundaries, and backend conformance.
+- Keep request-specific error mappings and conformance cases synchronized as protocol decisions evolve; the v0.1 feature/extension/property registry cross-check is complete.
 
 ## End-to-end compute-path audit — 2026-10-21
 
