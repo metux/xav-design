@@ -53,6 +53,10 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `GetFenceStatus` ist ein 16-Byte-Reply-Request mit Fence-Status in Reply-Byte 1, `reply.length = 0` und null reservierten XAverius-Bytes in Offsets 8–31
 - `CommandBufferData`-ABORT hat exakt 16 Bytes; andere Chunks enthalten nur vollständige Entries
 - `QueueSubmit`-Länge stimmt exakt mit `40 + 4*C + 16*W + 12*S` überein; Null- und wiederverwendete Submission-Tokens ergeben `BadValue`; Counts/Längenüberlauf ergeben `BadLength`; fremde Ownership/Queue ergeben `BadMatch`; ungültige Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`; synchron abgewiesene Requests erzeugen kein Submission-Event
+- `QueueSubmit.wait_stage_mask` wird als XAverius-Bitmaske und nicht als rohe Vulkan-Maske interpretiert: `DRAW_INDIRECT=0x1`, `COMPUTE_SHADER=0x2`, `TRANSFER=0x4`, `ALL_COMMANDS=0x8`; die Backend-Übersetzung verwendet die zugehörigen Vulkan-Stage-Bits
+- Wait-Stage-Masken mit Wert 0, reservierten Bits oder `ALL_COMMANDS` kombiniert mit weiteren Bits ergeben `BadValue`; die Ablehnung ist atomar und lässt Fence-/Semaphore-Zustände unverändert
+- Auf einer Compute-Queue sind alle vier einzeln definierten Stage-Bits gültig; auf einer reinen Transfer-Queue sind nur `TRANSFER` und `ALL_COMMANDS` gültig; `COMPUTE_SHADER` auf einer Nicht-Compute-Queue sowie `DRAW_INDIRECT` ohne Graphics- oder Compute-Unterstützung ergeben `INVALID_SYNCHRONIZATION_STATE`
+- Eine kombinierte Maske aus mehreren unterstützten Einzelstages (z. B. `COMPUTE_SHADER | TRANSFER`) wird akzeptiert; dieselbe Maske mit einem nicht unterstützten Stage wird mit `INVALID_SYNCHRONIZATION_STATE` atomar abgewiesen
 - `ShaderModuleData`: Einzelrequest CREATE|FINAL, mehrteiliger Upload, exakte Konkatenation ohne Paddingbytes, gültige Flag-Kombinationen und Null-Padding
 - Fehler in einem Shader-Chunk verwirft das gesamte Assembly; FINAL-Fehler hinterlässt kein live Shader Module; ABORT gibt Assembly-Speicher frei
 - Upload-Grenzen und aggregierte Assembly-Speicherlimits werden vor Allokation geprüft
