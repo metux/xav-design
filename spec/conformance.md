@@ -112,6 +112,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - XID-Wiederverwendung bei ausstehender Arbeit
 - Device Removal und Device Loss
 - Korrekte XGE-Längen und Event-Feldpositionen
+- Die XAverius-Major-Opcode wird pro X11-Server mit `QueryExtension` entdeckt, liegt im X11-Erweiterungsbereich 128–255 und wird sowohl als Request-`reqType` als auch als XGE-`extension` verwendet; `evtype` bleibt die statische Event-Type-ID. XGE-Headerlängen, feste Event-Gesamtlängen, reservierte Header-/Payload-Felder und registrierte Event-lokale Werte werden unabhängig validiert.
 - Keine verspäteten X11-Fehler für angenommene asynchrone Requests
 - Ein terminaler interner Submission-Ausgang auch dann, wenn das zugehörige Event nicht ausgewählt ist; bei ausgewähltem Event genau eine Zustellung des passenden Completion- oder Failure-Events
 - Erfolgreiches `WriteBuffer` wartet auf alle zuvor angenommenen Submissions desselben logischen Devices, bevor es den Zielbereich verändert; dies gilt auch bei früherer Arbeit auf einer anderen Queue und bei überlappenden Buffer-Bereichen
