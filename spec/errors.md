@@ -1,22 +1,3 @@
-# Zentrale XAverius-Fehler-Registry
-
-Die folgenden Werte sind Offsets relativ zu `first_error` der Extension.
-
-| Offset | Symbol |
-|---:|---|
-| 0 | `DEVICE_UNAVAILABLE` |
-| 1 | `DEVICE_LOST` |
-| 2 | `INVALID_SYNCHRONIZATION_STATE` |
-| 3 | `EXECUTION_FAILED` |
-| 4 | `TRANSFER_FAILED` |
-| 5 | `ALLOCATION_FAILED` |
-| 6 | `DEPENDENCY_FAILED` |
-| 7 | `INTERNAL_SERVER_ERROR` |
-
-Der tatsächliche X11-Fehlercode ist `first_error + offset`.
-
-Das Fehlerpaket verwendet den Extension-Major-Opcode, den Request-Subopcode, die Sequenznummer des auslösenden Requests und eine betroffene Ressourcen-XID, falls sinnvoll; andernfalls null.
-
 ## Allgemeine Fehlerklassen
 
 | Situation | Ergebnis |
