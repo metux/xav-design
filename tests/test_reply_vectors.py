@@ -61,7 +61,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 28)
+        self.assertEqual(len(self.vectors), 30)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -139,7 +139,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
 
     def test_property_reply_fields_and_failure_encoding(self):
         for vector in self.vectors:
-            if vector["event"] not in ("GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported"):
+            if vector["event"] not in ("GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available"):
                 continue
             wire = bytes.fromhex(vector["wire_hex"])
             order = vector["byte_order"]
@@ -150,7 +150,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
                 self.assertEqual(wire[20:32], bytes(12))
                 self.assertEqual(wire[32:36], bytes.fromhex("78563412") if order == "little" else bytes.fromhex("12345678"))
             else:
-                self.assertEqual(int.from_bytes(wire[8:12], order), 1)
+                self.assertEqual(int.from_bytes(wire[8:12], order), 1 if vector["event"].endswith("not-supported") else 2)
                 self.assertEqual(wire[12:20], bytes(8))
                 self.assertEqual(wire[20:32], bytes(12))
                 self.assertEqual(len(wire), 32)
