@@ -21,13 +21,34 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
         raise ValueError("unknown byte order")
     if wire[0] != 35:
         raise ValueError("response_type must be GenericEvent (35)")
+    if wire[1] < 128:
+        raise ValueError("extension major opcode must be in 128..255")
     declared = int.from_bytes(wire[4:8], byte_order)
     if 32 + declared * 4 != len(wire):
         raise ValueError("XGE length does not match wire bytes")
     if any(wire[10:32]):
         raise ValueError("XGE reserved header bytes must be zero")
-    if int.from_bytes(wire[8:10], byte_order) not in range(7):
+    event_type = int.from_bytes(wire[8:10], byte_order)
+    if event_type not in range(7):
         raise ValueError("unknown XAverius event type")
+    expected_lengths = {0: 60, 1: 48, 2: 48, 3: 48, 4: 48, 5: 56, 6: 56}
+    if len(wire) != expected_lengths[event_type]:
+        raise ValueError("event total length does not match event type")
+    value_rules = {
+        0: ((40, (0, 1, 2, 3, 4, 5, 6)),),
+        1: ((36, (0, 1, 2, 3, 4, 5)),),
+        2: ((36, (0, 1, 2)),),
+        3: ((40, (0, 1, 2, 3)),),
+        4: ((36, (0, 1, 2)),),
+        6: ((44, (0, 1)),),
+    }
+    for offset, allowed in value_rules.get(event_type, ()):
+        if int.from_bytes(wire[offset:offset + 4], byte_order) not in allowed:
+            raise ValueError("event-local value is outside its registered range")
+    reserved_offsets = {0: (56,), 2: (44,), 3: (44,), 5: (44,)}
+    for offset in reserved_offsets.get(event_type, ()):
+        if wire[offset:offset + 4] != bytes(4):
+            raise ValueError("reserved event field must be zero")
 
 
 def encode_event(vector: dict) -> bytes:
@@ -38,6 +59,8 @@ def encode_event(vector: dict) -> bytes:
     total = vector["total_bytes"]
     if total < 32 or total % 4:
         raise ValueError("XGE event length must be >= 32 and divisible by four")
+    if vector["extension_opcode"] not in range(128, 256):
+        raise ValueError("extension major opcode must be in 128..255")
     if vector["xge_length"] != (total - 32) // 4:
         raise ValueError("XGE length does not match total bytes")
     data = bytearray(total)
@@ -150,6 +173,40 @@ class GoldenXGEEventTests(unittest.TestCase):
         vector["xge_length"] += 1
         with self.assertRaisesRegex(ValueError, "XGE length"):
             encode_event(vector)
+
+    def test_rejects_invalid_event_local_values(self):
+        cases = (
+            ("ASYNC_ERROR", 40, 7),
+            ("DEVICE_LOST", 36, 6),
+            ("DEVICE_STATUS_CHANGED", 36, 3),
+            ("DEVICE_MEMORY_PRESSURE", 40, 4),
+            ("DEVICE_IDLE", 36, 3),
+            ("SUBMISSION_FAILED", 44, 2),
+        )
+        for event, offset, invalid in cases:
+            for order in ("little", "big"):
+                vector = next(v for v in self.vectors if v["event"] == event and v["byte_order"] == order)
+                wire = bytearray(encode_event(vector))
+                wire[offset:offset + 4] = invalid.to_bytes(4, order)
+                with self.subTest(event=event, order=order):
+                    with self.assertRaisesRegex(ValueError, "event-local value"):
+                        validate_event_wire(bytes(wire), order)
+
+    def test_rejects_event_specific_length_mismatch(self):
+        vector = next(v for v in self.vectors if v["event"] == "ASYNC_ERROR")
+        wire = bytearray(encode_event(vector))
+        del wire[-4:]
+        order = vector["byte_order"]
+        wire[4:8] = (6).to_bytes(4, order)
+        with self.assertRaisesRegex(ValueError, "total length does not match event type"):
+            validate_event_wire(bytes(wire), order)
+
+    def test_rejects_invalid_extension_major_opcode(self):
+        vector = self.vectors[0]
+        wire = bytearray(encode_event(vector))
+        wire[1] = 127
+        with self.assertRaisesRegex(ValueError, "extension major opcode"):
+            validate_event_wire(bytes(wire), vector["byte_order"])
 
     def test_rejects_nonzero_reserved_field(self):
         import copy
