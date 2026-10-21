@@ -37,6 +37,18 @@ Für alle XAverius-Requests gilt dieselbe Grundzuordnung, sofern ein Request kei
 
 Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Server prüft die Wire-Struktur zuerst, danach Feldwerte und anschließend XIDs in der im jeweiligen Request-Kapitel festgelegten Feldreihenfolge. Die erste fehlerhafte XID bestimmt den gemeldeten Ressourcenfehler. Der Request bleibt atomar.
 
+## `CreateDevice`: Feature- und Extension-Anforderungen
+
+Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht erfüllbaren Anforderungen:
+
+- `feature_id` ist nicht in der XAverius-Feature-Registry definiert: `BadValue`.
+- `feature_id` ist registriert, wird aber vom ausgewählten Physical Device nicht unterstützt: `BadMatch`.
+- Feature-Record mit `enabled != 1` oder doppelte Feature-ID: `BadValue`.
+- Extension-Name ist leer, enthält Nicht-ASCII-/NUL-Bytes oder verletzt das registrierte Wire-Namensformat: `BadValue`.
+- Extension-Name ist syntaktisch gültig, aber unbekannt in der XAverius-Extension-Registry oder vom Physical Device nicht unterstützt: `BadMatch`.
+- Doppelte Extension-Namen: `BadValue`.
+- Alle Anforderungen müssen vor der Device-Erzeugung geprüft werden. Bei jedem Fehler bleibt die angeforderte `device_xid` unangelegt; der Server darf Features oder Extensions nicht stillschweigend auslassen.
+
 ## Request-spezifische Fehlerzuordnung
 
 ### `WriteBuffer`
@@ -74,7 +86,7 @@ Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Serv
 - `EnumeratePhysicalDevices`: Request muss exakt 8 Bytes lang sein; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden.
 - `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültiges Atom `BadAtom`; unbekannte/nicht-live Device-XID `BadValue`; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
 - `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; unbekannte/nicht-live Physical-Device-XID `BadValue`.
-- `CreateDevice`: falsche Länge `BadLength`; nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1 oder ungültige Counts `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher Ressourcentyp, nicht unterstützte Queue-Family-Anforderung oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
+- `CreateDevice`: falsche Länge `BadLength`; nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1, doppelte Feature-/Extension-Einträge, unbekannte Feature-ID oder formal ungültiger Extension-Name `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher live Ressourcentyp, nicht unterstützte Queue-Family-Anforderung, registriertes aber nicht unterstütztes Feature, unbekannte oder nicht unterstützte formal gültige Extension oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Die Prüfung ist atomar und veröffentlicht kein logisches Device bei Fehler.
 - `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
 - Beide Requests sind Void-Requests; Erfolg erzeugt keinen normalen Reply.
 - `DestroyDevice`: falsche Länge `BadLength`; unbekannte/nicht-live XAverius-XID `BadValue`; fremde Device-Ownership `BadMatch`.
