@@ -23,6 +23,7 @@
 - Run implementation-level interoperability tests for `QueryExtension`, XGE framing, and `SelectEvents` when a live X11/XGE implementation is available; current checks are specification/reference tests only.
 - Validate the specified queue-ordering and `WriteBuffer` visibility contracts against backend behavior once a server implementation exists.
 - Continue request-specific error-mapping and conformance review; the checker now requires all 40 registered requests to be represented in both documents, and the `SelectEvents` mapping is explicit. The v0.1 feature/extension/property registry cross-check is complete.
+- One v0.1 event-ABI decision remains open: `DEVICE_STATUS_CHANGED.reason_code` has no normative value registry; see [open issues](spec/open-issues.md).
 
 ## End-to-end compute-path audit — 2026-10-21
 
