@@ -281,6 +281,90 @@
       "byte_order": "big",
       "wire_hex": "0100123400000001000000000000000000000000000000000000000000000000aa7f0000",
       "violates": "read-buffer-padding-zero"
+    },
+    {
+      "name": "device-record-reserved-nonzero-little",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "little",
+      "wire_hex": "01003412080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100",
+      "violates": "device-record-reserved"
+    },
+    {
+      "name": "queue-family-flags-reserved-little",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "little",
+      "wire_hex": "01003412080000000000000000000000000000000000000000000000000000002000000001000000000000000000000000000000000000000000000000000000",
+      "violates": "queue-flags-reserved"
+    },
+    {
+      "name": "memory-payload-length-mismatch-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "0100341206000000000000000000000000000000000000000000000000000000010000000100000000000000000000000100000000000000",
+      "violates": "memory-payload-length"
+    },
+    {
+      "name": "memory-reserved-nonzero-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "010034120a00000000000000000000000000000000000000000000000000000001000000010000000100000000000000010000000000000000100000001000000100000000000000",
+      "violates": "memory-reserved-zero"
+    },
+    {
+      "name": "memory-type-flags-reserved-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "010034120a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000400000000000000000100000001000000100000000000000",
+      "violates": "memory-type-flags-range"
+    },
+    {
+      "name": "memory-heap-flags-reserved-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "010034120a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000010000000000000000100000001000000200000000000000",
+      "violates": "memory-heap-flags-range"
+    },
+    {
+      "name": "device-record-reserved-nonzero-big",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "big",
+      "wire_hex": "01001234000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100",
+      "violates": "device-record-reserved"
+    },
+    {
+      "name": "queue-family-flags-reserved-big",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "big",
+      "wire_hex": "01001234000000080000000000000000000000000000000000000000000000000000002000000001000000000000000000000000000000000000000000000000",
+      "violates": "queue-flags-reserved"
+    },
+    {
+      "name": "memory-payload-length-mismatch-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "0100123400000006000000000000000000000000000000000000000000000000000000010000000100000000000000000000000100000000",
+      "violates": "memory-payload-length"
+    },
+    {
+      "name": "memory-reserved-nonzero-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000100000000000000010000000000001000000010000000000100000000",
+      "violates": "memory-reserved-zero"
+    },
+    {
+      "name": "memory-type-flags-reserved-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000400000000000001000000010000000000100000000",
+      "violates": "memory-type-flags-range"
+    },
+    {
+      "name": "memory-heap-flags-reserved-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000010000000000001000000010000000000200000000",
+      "violates": "memory-heap-flags-range"
     }
   ]
 }
