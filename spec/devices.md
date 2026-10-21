@@ -17,6 +17,8 @@ Der Queue-Family-Index entspricht der Reihenfolge der zurückgegebenen Queue-Fam
 
 ## `EnumeratePhysicalDevices`
 
+Request: Void-Payload, feste Gesamtlänge 8 Bytes; der Request enthält nur den X11- und XAverius-Common-Header. Der Request ist vom Typ `Reply`.
+
 Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld.
 
 Fester Record-Anteil: 32 Bytes.
@@ -146,6 +148,10 @@ Größe: `4 + ((name_length + 3) & ~3)`.
 
 Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert.
 
+Die Gesamtlänge beträgt `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))`, wobei die Queue-Family-Records zuerst, danach alle Feature-Records und zuletzt alle Extension-Records folgen. Der Request muss exakt dieser Länge entsprechen; zusätzliche oder fehlende Bytes ergeben `BadLength`.
+
+`CreateDevice` ist ein Void-Request. Erfolgsfälle erzeugen keinen Reply; Fehler werden als normale X11-Fehler für diesen Request gemeldet. Die konkrete Zuordnung für nicht unterstützte Features und Extensions bleibt in [Open issues](open-issues.md) ausdrücklich offen.
+
 Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
 
 ## `CreateDefaultDevice`
@@ -161,9 +167,11 @@ Gesamtlänge: `16 + 4 * queue_count`.
 
 Die Queue-Anzahl muss mindestens 1 betragen. Der Server wählt ein geeignetes Physical Device und eine Compute-fähige Queue Family. Es werden keine optionalen Features oder Extensions implizit aktiviert.
 
-Falls kein geeignetes Gerät existiert, wird `DEVICE_UNAVAILABLE` zurückgegeben.
+`CreateDefaultDevice` ist ein Void-Request. Falls kein geeignetes Gerät existiert, meldet der Server den XAverius-X11-Fehler `DEVICE_UNAVAILABLE`; es gibt keinen normalen Reply.
 
 ## `DestroyDevice`
+
+`DestroyDevice` ist ein Void-Request mit fester Gesamtlänge von 12 Bytes: Device-XID bei Offset 8. Die XID muss ein logisches Device sein, das dieser Client-Verbindung gehört. Bei ungültigem XID oder falschem Typ wird ein Standard-X11-Fehler gemeldet; eine fremde Ownership wird mit `BadMatch` abgewiesen. Bei Device Loss darf die Bereinigung nach den Lebensdauerregeln fortgesetzt werden.
 
 Bei erfolgreichem Request werden die öffentliche Device-XID und alle öffentlichen XIDs seiner Ressourcen sofort ungültig.
 
