@@ -114,20 +114,43 @@ Failure-Class-Werte:
 - 0: `EXECUTION_FAILED`
 - 1: `DEVICE_LOST`
 
-## Event-Auswahl
+## Event-Auswahl: `SelectEvents`
 
 Die Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt. Sie sind von Request-Subopcodes, Error-Offsets und dem serverseitig vergebenen XGE-Event-Base zu unterscheiden.
 
-Vorgesehene Masks:
+`SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
 
-- Connection-Mask Bit 0: `DEVICE_STATUS_CHANGED`
-- Device-Mask Bit 0: `DEVICE_MEMORY_PRESSURE`
-- Device-Mask Bit 1: `DEVICE_IDLE`
-- Queue-Mask Bit 0: `SUBMISSION_COMPLETE`
-- Queue-Mask Bit 1: `SUBMISSION_FAILED`
+| Offset | Typ | Feld |
+|---:|---|---|
+| 8 | CARD32 | `scope` |
+| 12 | XID | `device_xid` |
+| 16 | CARD32 | `queue_family_index` |
+| 20 | CARD32 | `queue_index` |
+| 24 | CARD32 | `event_mask` |
+| 28 | CARD32 | `reserved = 0` |
 
-Andere Bits sind reserviert.
+Scope-Werte:
 
-`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar. Completion- und Failure-Events werden entsprechend der Event-Auswahl ausgeliefert. Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` ausgeliefert werden.
+- `CONNECTION = 0`: `device_xid = 0`, `queue_family_index = 0`, `queue_index = 0`. Gilt für die X11-Verbindung als Ganzes.
+- `DEVICE = 1`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; beide Queue-Indizes müssen null sein.
+- `QUEUE = 2`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; das Tupel `(queue_family_index, queue_index)` muss eine tatsächlich angeforderte Queue dieses Devices identifizieren.
 
-Event-Auswahl-Request-Layouts und die endgültigen Event-Opcode-Registrierungen sind noch offen.
+Für nicht verwendete Felder müssen die genannten Nullwerte exakt eingehalten werden. Unbekannte Scope-Werte, nicht-null reservierte Felder, ungültige Maskenbits oder Scope/Feld-Kombinationen ergeben `BadValue`. Unbekannte/nicht-live XIDs ergeben `BadValue`; falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`. Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`. Bei jedem Fehler bleibt die vorherige Auswahl unverändert.
+
+Die Masken sind scopeabhängig:
+
+| Scope | Bit | Event |
+|---|---:|---|
+| `CONNECTION` | 0 | `DEVICE_STATUS_CHANGED` |
+| `DEVICE` | 0 | `DEVICE_MEMORY_PRESSURE` |
+| `DEVICE` | 1 | `DEVICE_IDLE` |
+| `QUEUE` | 0 | `SUBMISSION_COMPLETE` |
+| `QUEUE` | 1 | `SUBMISSION_FAILED` |
+
+Alle anderen Bits sind reserviert und müssen abgewiesen werden. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
+
+`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt, solange die Verbindung Events empfangen kann. `DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt. Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist. Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände. Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.
+
+Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert. Das ändert nicht den internen terminalen Ausgang der Submission. Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.
+
+Die Event-Type-IDs und event-lokalen Werte sind in der [Event-Registry](../registries/event-types.md) registriert. Das serverseitige XGE-Event-Base wird bei der Extension-Initialisierung zugewiesen und ist kein XAverius-konstanter Wire-Wert.
