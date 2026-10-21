@@ -33,7 +33,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 16)
+        self.assertEqual(len(self.vectors), 28)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -108,6 +108,56 @@ class GoldenReplyVectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "truncated"):
             validate_reply_wire(bytes(28), "little")
 
+
+    def test_property_reply_fields_and_failure_encoding(self):
+        for vector in self.vectors:
+            if vector["event"] not in ("GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported"):
+                continue
+            wire = bytes.fromhex(vector["wire_hex"])
+            order = vector["byte_order"]
+            if vector["event"].endswith("-success"):
+                self.assertEqual(int.from_bytes(wire[8:12], order), 0)
+                self.assertEqual(int.from_bytes(wire[12:16], order), 1)
+                self.assertEqual(int.from_bytes(wire[16:20], order), 4)
+                self.assertEqual(wire[20:32], bytes(12))
+                self.assertEqual(wire[32:36], bytes.fromhex("78563412") if order == "little" else bytes.fromhex("12345678"))
+            else:
+                self.assertEqual(int.from_bytes(wire[8:12], order), 1)
+                self.assertEqual(wire[12:20], bytes(8))
+                self.assertEqual(wire[20:32], bytes(12))
+                self.assertEqual(len(wire), 32)
+
+    def test_memory_properties_record_layout(self):
+        for vector in self.vectors:
+            if vector["event"] != "GetPhysicalDeviceMemoryProperties-one-type-one-heap":
+                continue
+            wire = bytes.fromhex(vector["wire_hex"])
+            order = vector["byte_order"]
+            payload = wire[32:]
+            self.assertEqual(len(payload), 40)
+            self.assertEqual([int.from_bytes(payload[i:i+4], order) for i in (0, 4, 8, 12)], [1, 1, 0, 0])
+            self.assertEqual(int.from_bytes(payload[16:20], order), 3)
+            self.assertEqual(int.from_bytes(payload[20:24], order), 0)
+            self.assertEqual(int.from_bytes(payload[24:32], order), 0x0102030405060708)
+            self.assertEqual(int.from_bytes(payload[32:36], order), 1)
+            self.assertEqual(payload[36:40], bytes(4))
+
+    def test_buffer_requirements_write_and_wait_reply_fields(self):
+        for vector in self.vectors:
+            wire = bytes.fromhex(vector["wire_hex"])
+            order = vector["byte_order"]
+            if vector["event"] == "GetBufferMemoryRequirements":
+                self.assertEqual(len(wire), 32)
+                self.assertEqual(int.from_bytes(wire[8:16], order), 0x1000)
+                self.assertEqual(int.from_bytes(wire[16:24], order), 256)
+                self.assertEqual(int.from_bytes(wire[24:28], order), 3)
+                self.assertEqual(wire[28:32], bytes(4))
+            elif vector["event"] == "WriteBuffer-success":
+                self.assertEqual(len(wire), 32)
+                self.assertEqual(wire[8:32], bytes(24))
+            elif vector["event"] == "WaitSemaphores-timeout":
+                self.assertEqual(int.from_bytes(wire[8:12], order), 1)
+                self.assertEqual(wire[12:32], bytes(20))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
