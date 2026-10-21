@@ -31,6 +31,20 @@ Die Implementierung sollte zusätzlich die interne Ressourcenidentität, Client-
 
 Die öffentliche XID wird bei erfolgreicher Zerstörung sofort ungültig. Die tatsächliche Vulkan-Zerstörung darf verzögert erfolgen.
 
+## Normative Zustandsübergänge
+
+Die folgenden Übergänge sind normativ:
+
+- Erfolgreiches Erstellen: öffentliche Sicht `LIVE`, interner Zustand `ACTIVE`.
+- Abgewiesener Destroy-Request: keinerlei Änderung an öffentlichem Zustand, internem Zustand, abhängigen Command-Buffer-Zuständen oder Ownership.
+- Erfolgreiche normale Zerstörung: öffentliche Sicht wird im selben Request `INVALID`. Sind keine internen Referenzen und keine Backend-Zugriffe mehr vorhanden, darf das Objekt direkt nach `RELEASED` wechseln; andernfalls wechselt es nach `DESTROY_PENDING`.
+- `DESTROY_PENDING` → `RELEASED`: erst wenn alle internen Referenzen freigegeben sind, kein Backend-Zugriff mehr möglich ist und die Backend-Zerstörung abgeschlossen ist.
+- Device-Kaskadeninvalidierung bei `DestroyDevice`, Client-Disconnect oder Device Loss: alle zugehörigen öffentlichen XIDs werden `INVALID`; Objekte mit verbleibenden internen Referenzen oder Backend-Zugriffen bleiben `DESTROY_PENDING`, die übrigen dürfen `RELEASED` werden.
+
+Ein Objekt im Zustand `DESTROY_PENDING` kann nicht über seine alte XID adressiert oder erneut zerstört werden. Eine wiederverwendete XID bezeichnet eine neue interne Ressourcenidentität und darf keine Referenzen auf das alte Objekt übernehmen. `RELEASED` ist terminal.
+
+Interne Referenzen werden getrennt gezählt beziehungsweise nachverfolgt für aufgezeichnete Command Buffer, angenommene Submissions, Eltern-Kind-Ownership und noch laufende Serveroperationen. Das Entfernen einer öffentlichen XID entfernt nicht automatisch die Referenzen einer bereits angenommenen Submission. Bei erfolgreichem normalen Destroy müssen alle erforderlichen Command-Buffer-Invalidierungen und internen Referenzanpassungen atomar mit der öffentlichen Invalidierung erfolgen.
+
 ## Ownership-Hierarchie
 
 Explizite Eltern-Kind-Beziehungen:
