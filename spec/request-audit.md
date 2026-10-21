@@ -22,7 +22,7 @@ These are not silently treated as defined requests or settled protocol behavior:
 
 1. `SelectEvents` is included as subopcode 40; its wire layout and scope semantics are defined in `events.md`. The server-assigned XGE event base remains open.
 2. Numeric registries for feature IDs, device extensions, and property identifiers remain incomplete. Descriptor types, shader stages, device types, queue flags, command entries, event types, and XAverius error offsets already have dedicated registries; their v0.1 support definitions still need cross-checking against every use.
-3. The exact v0.1 supported feature/extension set, `memory_properties_flags`, timeout/scheduling boundaries, final Vulkan wait-stage mapping, and final XGE event-base discovery/registration remain open as listed in [open issues](open-issues.md).
+3. The exact v0.1 supported feature/extension set, `memory_properties_flags`, timeout/scheduling boundaries, final Vulkan wait-stage mapping, and final ABI verification of XGE event framing remain open as listed in [open issues](open-issues.md).
 4. This audit does not establish full Vulkan-spec conformance, implementation feasibility, or final v0.1 freeze.
 
 ## Subopcode allocation policy
