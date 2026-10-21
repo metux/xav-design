@@ -126,3 +126,8 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 
 - CreateDevice, CreateDefaultDevice, and SelectEvents before successful GEQueryVersion negotiation are rejected with BadMatch; no target XID or event-mask change is left behind.
 - After XGE 1.0 negotiation, long XAverius XGE events are framed with GenericEvent (35), the XAverius major opcode in extension, and the registered CARD16 evtype.
+- Property UUID byte preservation: a server returns the exact 16 bytes supplied by Vulkan for `deviceUUID` and `driverUUID`, without integer reinterpretation or host-endian conversion.
+- Extension-name syntax: empty names, names longer than 255 bytes, non-ASCII bytes, embedded NUL bytes, and names that do not match the required Vulkan extension-name form are rejected with `BadValue` before registry lookup; syntactically valid names absent from the v0.1 registry produce `BadMatch`.
+- `CreateDevice` validation order: malformed packet structure and reserved fields are rejected before resource lookup; feature and extension records are checked for syntax, duplicates, registry membership, and Physical Device support before any logical Device or backend object is published.
+- `GetPhysicalDeviceProperty` successful replies use the exact registry type and length; UUID properties contain exactly 16 opaque bytes, `maxWorkGroupInvocations` exactly one `CARD32`, and `maxWorkGroupSize` exactly three `CARD32` values; all padding is zero.
+- Feature-ID and device-extension registries are empty in v0.1: every feature ID is `BadValue`; malformed extension names are `BadValue`; any syntactically valid extension name is `BadMatch`; failures leave `device_xid` unallocated.
