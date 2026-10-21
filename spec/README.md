@@ -22,7 +22,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 
 ## Central registries
 
-- [Request subopcode registry](../registries/request-subopcodes.md) — inventory of currently defined requests; numeric assignments remain unallocated.
+- [Request subopcode registry](../registries/request-subopcodes.md) — inventory and stable numeric assignments for currently defined requests.
 
 ## Editorial conventions
 
