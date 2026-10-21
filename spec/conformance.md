@@ -116,3 +116,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - SelectEvents uses subopcode 40 and an exact total length of 32 bytes.
 - SelectEvents rejects unknown scope values, reserved nonzero fields, unsupported mask bits, and inconsistent scope fields; rejection preserves the previous selection.
 - A zero event mask clears only the selected scope; unmaskable ASYNC_ERROR and DEVICE_LOST delivery is independent of the selection.
+
+- SelectEvents CONNECTION requires all target fields to be zero; DEVICE requires zero queue indices; QUEUE identifies a requested queue by device XID and family/index tuple.
+- SelectEvents rejects a queue tuple that does not identify a requested queue, and rejects resources owned by another client without changing the previous mask.
+- A closed client connection or failed event send does not prevent an accepted submission from reaching its internal terminal state or releasing safe backend resources.
