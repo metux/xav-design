@@ -37,6 +37,15 @@ Für alle XAverius-Requests gilt dieselbe Grundzuordnung, sofern ein Request kei
 
 Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Server prüft die Wire-Struktur zuerst, danach Feldwerte und anschließend XIDs in der im jeweiligen Request-Kapitel festgelegten Feldreihenfolge. Die erste fehlerhafte XID bestimmt den gemeldeten Ressourcenfehler. Der Request bleibt atomar.
 
+### Create-XID und chunk-basierte Erzeugung
+
+Die Ziel-XID eines Create-Requests ist keine Eingabe-XID, die als vorhandene Ressource aufgelöst wird. Eine ungültige oder bereits belegte Ziel-XID ergibt deshalb `BadIDChoice`; sie darf nicht als gewöhnliche unbekannte Eingabe-XID mit `BadValue` behandelt werden. Bei atomaren Batch-Erzeugungen wird der gesamte Request abgewiesen, wenn eine Ziel-XID ungültig, bereits belegt oder innerhalb desselben Requests doppelt angegeben ist; es bleibt keine Teilmenge live.
+
+Diese Regel gilt insbesondere für die Ziel-XIDs von `CreatePipelineLayout`, `CreateComputePipeline` und die in `AllocateDescriptorSets` angeforderten Descriptor Sets. Für `ShaderModuleData` und `CommandBufferData` gilt sie, wenn das `CREATE`-Flag gesetzt ist. Bei `ShaderModuleData` reserviert ein erfolgreicher CREATE-Chunk die Ziel-XID für das Upload-Assembly; ein zweites CREATE oder eine bereits live belegte Ziel-XID ergibt `BadIDChoice`.
+
+Bei `ShaderModuleData` ohne `CREATE` muss ein passendes Upload-Assembly existieren. Bei `CommandBufferData` ohne `CREATE` muss die Ziel-XID einen live Command Buffer im Zustand `RECORDING` bezeichnen. Fehlt das erforderliche Assembly beziehungsweise der Recording-Zustand, ergibt sich `INVALID_SYNCHRONIZATION_STATE`; unbekannte/nicht-live XIDs bleiben `BadValue`, und ein falscher live Ressourcentyp bleibt `BadMatch`. Alle Prüfungen erfolgen vor einer Zustandsänderung.
+
+
 ## `CreateDevice`: Feature- und Extension-Anforderungen
 
 Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht erfüllbaren Anforderungen:
@@ -191,11 +200,11 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 ### Descriptor-Pool- und Pipeline-Requests
 
-- `CreateDescriptorPool`: falsche Länge oder nicht zum `pool_size_count` passende Payload `BadLength`; ungültige Counts, nicht unterstützte Descriptor-Typen oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; Backend-Allokationsfehler `ALLOCATION_FAILED`.
-- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live Pool-/Layout-XID `BadValue`; falsches Device, falscher Typ oder Layout-/Device-Inkompatibilität `BadMatch`; Pool-Kapazität erschöpft `ALLOCATION_FAILED`. Die Operation ist atomar.
+- `CreateDescriptorPool`: falsche Länge oder nicht zum `pool_size_count` passende Payload `BadLength`; ungültige Counts, doppelte Pool-Size-Typen, nicht unterstützte Descriptor-Typen oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; Backend-Allokationsfehler `ALLOCATION_FAILED`.
+- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; ungültige/belegte oder innerhalb des Requests doppelte Ziel-Set-XID `BadIDChoice`; unbekannte/nicht-live Pool-/Layout-Eingabe-XID `BadValue`; falsches Device, falscher Typ oder Layout-/Device-Inkompatibilität `BadMatch`; Pool-Kapazität erschöpft `ALLOCATION_FAILED`. Die Operation ist atomar.
 - `FreeDescriptorSets`: falsche Länge `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; Set gehört nicht zum angegebenen Pool oder Device `BadMatch`; unbekannte/nicht-live XID `BadValue`; pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`. Keine Teilfreigabe bei Ablehnung.
-- `CreatePipelineLayout`: falsche Länge/Count `BadLength`; nicht unterstützte Stage-Bits, ungültige Push-Constant-Ranges oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live XID `BadValue`; inkompatibles oder fremdes Set-Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet.
-- `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live Shader-/Layout-/Device-XID `BadValue`; inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
+- `CreatePipelineLayout`: falsche Länge/Count `BadLength`; nicht unterstützte Stage-Bits, ungültige Push-Constant-Ranges oder nicht-null reservierte Felder `BadValue`; ungültige/belegte `pipeline_layout_xid` `BadIDChoice`; unbekannte/nicht-live Device- oder Set-Layout-XID `BadValue`; falscher live Ressourcentyp oder inkompatibles/fremdes Set-Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet.
+- `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; ungültige/belegte `pipeline_xid` `BadIDChoice`; unbekannte/nicht-live Shader-/Layout-/Device-Eingabe-XID `BadValue`; falscher live Ressourcentyp, inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
 
 ### Command-Pool-Requests
 
@@ -207,7 +216,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `CreateSemaphore` und `CreateFence`: falsche Länge `BadLength`; ungültige Typen, Werte, Flags oder reservierte Felder `BadValue`; ungültige/belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; Backend-Allokationsfehler `ALLOCATION_FAILED`.
 - `GetSemaphoreCounterValue`: nur für Timeline-Semaphoren; falscher Typ `BadMatch`, unbekannte/nicht-live XID `BadValue`.
 - `SignalSemaphore`: nur für Timeline-Semaphoren; unbekannte/nicht-live XID `BadValue`; falscher Typ oder Device `BadMatch`; Signalwert, der nicht größer als der aktuelle Counter oder mit pending Signalen inkonsistent ist, `INVALID_SYNCHRONIZATION_STATE`. Bei synchroner Ablehnung wird kein Host-Signal teilweise ausgeführt.
-- `WaitSemaphores`: unbekannte/nicht-live XID `BadValue`; falscher Typ, falsches Device oder doppelte Semaphore-XID `BadMatch`; ungültiger Wait-Modus oder ungültige Werte `BadValue`. `TIMEOUT` ist ausschließlich ein normaler Reply-Status.
+- `WaitSemaphores`: unbekannte/nicht-live XID `BadValue`; falscher live Typ oder falsches Device `BadMatch`; doppelte Semaphore-XID, ungültiger Wait-Modus oder ungültige Werte `BadValue`. `TIMEOUT` ist ausschließlich ein normaler Reply-Status.
 - `GetFenceStatus`: unbekannte/nicht-live XID `BadValue`; falscher Typ oder Device `BadMatch`.
 - `ResetFence`: nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden; andere Zustände `INVALID_SYNCHRONIZATION_STATE`. Bei verlorenem Device `DEVICE_LOST`.
 - Die verbindliche XID-Zuordnung steht im Abschnitt „Verbindliche XID-Fehlerregel“: unbekannte/nicht-live XAverius-XIDs ergeben `BadValue`, falsche live Ressourcentypen `BadMatch`, ungültige Atoms `BadAtom`.
