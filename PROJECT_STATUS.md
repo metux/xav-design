@@ -21,7 +21,7 @@
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
 - Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
-- Continue final ABI review of reply layouts and XGE event framing; review cross-queue scheduling guarantees and backend conformance.
+- Continue final ABI review of reply layouts and XGE event framing; validate the specified queue-ordering contract against backend behavior.
 - Keep request-specific error mappings and conformance cases synchronized as protocol decisions evolve; the v0.1 feature/extension/property registry cross-check is complete.
 
 ## End-to-end compute-path audit — 2026-10-21
@@ -33,7 +33,7 @@ The audit found no request-length arithmetic contradiction in the reviewed concr
 - A submission always has one internal terminal outcome; delivery of its completion/failure event depends on event selection and the connection remaining alive.
 - In v0.1, `ReadBuffer` waits for all previously accepted submissions on the same logical device and relevant prior writes to the requested range. A prior failed submission must not be treated as successful; read data is not guaranteed correct if failed work could have modified that range.
 
-The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially cross-queue scheduling guarantees and backend conformance. Timeout semantics and the wait-stage mask mapping are now specified and covered by conformance cases.
+The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially final ABI review and backend conformance. Queue-ordering semantics, timeout behavior, and the wait-stage mask mapping are now specified and covered by conformance cases.
 
 This is an internal consistency and compute-workflow audit, not a claim of full Vulkan-spec conformance or a frozen v0.1 wire protocol.
 
@@ -85,3 +85,7 @@ The event chapter now requires successful per-connection `GEQueryVersion` negoti
 ## Feature, extension and physical-device property registries — 2026-10-21
 
 The v0.1 optional feature-ID and device-extension sets are explicitly empty: the compute baseline requires no optional feature requests or device extensions. Unknown feature IDs therefore produce `BadValue`; syntactically valid but unregistered extension names produce `BadMatch`. Four physical-device properties are registered by canonical Atom name, while numeric Atom IDs remain assigned by the X server. UUID properties use 16 raw bytes; compute work-group limits use `CARD32` and a three-element `CARD32_ARRAY`. Registered-but-unavailable values are distinguished from unknown properties. See the three new registry files and the updated device-discovery chapter.
+
+## Queue-ordering contract — 2026-10-21
+
+The queue-submission chapter now distinguishes same-queue submission order from completion order and execution overlap, specifies that different queues have no implicit ordering or memory dependency, and requires explicit semaphore dependencies for queue-to-queue GPU ordering. Fence and host waits observe status but do not create queue dependencies; host semaphore signals only satisfy waits on the signaled semaphore. Submission tokens and event sequence numbers are correlation/transport values, not ordering values. v0.1 promises neither fairness nor bounded scheduling latency for independent queues. Conformance cases were added, and the open issue was narrowed to whether a future protocol version should add stronger fairness/progress guarantees. Backend conformance remains to be verified.
