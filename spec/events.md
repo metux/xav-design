@@ -118,7 +118,7 @@ Failure-Class-Werte:
 
 Die Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt. Sie sind von Request-Subopcodes, Error-Offsets und dem serverseitig vergebenen XGE-Event-Base zu unterscheiden.
 
-`SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Das request-spezifische Feld im Common-Header hat den Wert null. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
+`SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Das Common-Header-Feld `flags` bei Offset 5 muss 0 sein; das reservierte Common-Header-Feld bei Offset 6 muss ebenfalls 0 sein. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
 
 | Offset | Typ | Feld |
 |---:|---|---|
