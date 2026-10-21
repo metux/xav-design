@@ -26,3 +26,4 @@ The following questions were open in the consolidated draft and remain open. Mov
 22. Exact Vulkan lifetime validation for all resource combinations before the specification is considered stable.
 23. Define how clients learn and correlate `submission_id`; `QueueSubmit` currently is a Void request while completion/failure events carry a server-generated ID.
 24. Specify host-side `SignalSemaphore` completion/error behavior and its ordering relative to subsequent requests.
+25. Define the X11 request-header `data` byte semantics and how XAverius `subopcode` is represented in standard X11 error packets (`minorCode`).

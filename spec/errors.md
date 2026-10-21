@@ -2,7 +2,7 @@
 
 Error codes are offsets relative to the X11 extension's `first_error` value. The absolute X11 error code is `first_error + offset`; implementations must use the central values in [the error registry](../registries/errors.md), not allocate values ad hoc.
 
-XAverius errors use the standard 32-byte X11 error packet and add no XAverius-specific payload bytes. The packet carries the extension major opcode, the request subopcode, and the sequence number of the request that caused the error. The resource field identifies the affected resource when meaningful; otherwise it is zero.
+XAverius errors use the standard 32-byte X11 error packet and add no XAverius-specific payload bytes. The packet carries the extension major opcode and the sequence number of the request that caused the error. The resource field identifies the affected resource when meaningful; otherwise it is zero. The mapping between the X11 request-header `data` byte, XAverius `subopcode`, and the error packet's `minorCode` must be finalized before v0.1; see the open-issues list.
 
 ## Allgemeine Fehlerklassen
 

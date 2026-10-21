@@ -56,6 +56,8 @@ Der Reply enthält nach dem 32-Byte-Header:
 - `CARD32 heap_flags`
 - `CARD32 reserved = 0`
 
+Die Reply-Payload-Länge beträgt `16 + 8 * memory_type_count + 16 * memory_heap_count` Bytes. Entsprechend ist `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count`.
+
 Memory-Type-Flags:
 
 - Bit 0: `DEVICE_LOCAL`

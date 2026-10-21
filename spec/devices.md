@@ -64,7 +64,7 @@ Statuswerte:
 - `NOT_SUPPORTED`
 - `NOT_AVAILABLE`
 
-Bei einem Status ungleich `SUCCESS` müssen `property_type` und `value_length` null sein und der Reply enthält keinen Wert-Payload.
+Bei einem Status ungleich `SUCCESS` müssen `property_type` und `value_length` null sein und der Reply enthält keinen Wert-Payload. Bei Erfolg gilt `reply.length = ceil(value_length / 4)`; bei einem Status ungleich `SUCCESS` ist `reply.length = 0`.
 
 Vorgesehene XAverius-Property-Type-IDs:
 

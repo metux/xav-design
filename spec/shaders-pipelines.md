@@ -121,6 +121,8 @@ Jeder Push-Constant-Range-Record enthält:
 - `CARD32 offset`
 - `CARD32 size`
 
+Die Gesamtlänge des Requests beträgt `20 + 4 * set_layout_count + 12 * push_constant_range_count` Bytes.
+
 Der Server prüft Device-Ownership, Set-Layout- und Push-Constant-Limits, Stage-Masks, Offsets, Größen und Vulkan-Kompatibilitätsregeln.
 
 Nach erfolgreicher Erstellung darf das Descriptor Set Layout öffentlich zerstört werden. Die internen Referenzen müssen den tatsächlichen Vulkan-Lebensdauerregeln entsprechen.
