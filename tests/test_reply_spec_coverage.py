@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Cross-check reply fixture coverage against normative Markdown contracts."""
+from __future__ import annotations
+
+import json
+import re
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def section(document: str, name: str) -> str:
+    match = re.search(r"^## `" + re.escape(name) + r"`\s*$", document, re.M)
+    if not match:
+        raise AssertionError(f"missing normative section: {name}")
+    next_heading = re.search(r"^## ", document[match.end():], re.M)
+    end = match.end() + next_heading.start() if next_heading else len(document)
+    return document[match.end():end]
+
+
+def assignments(text: str, names: set[str]) -> dict[str, int]:
+    result = {}
+    for name, value in re.findall(r"`?([A-Z_]+)`?\s*=\s*(\d+)", text):
+        if name in names:
+            result[name] = int(value)
+    return result
+
+
+class ReplySpecCoverageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        cls.sync = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        cls.memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        fixture = json.loads((ROOT / "tests/reply-vectors.json").read_text(encoding="utf-8"))
+        cls.vectors = fixture["vectors"]
+
+    def assert_values_covered_in_both_orders(self, kind: str, values: set[int], read_value):
+        for value in sorted(values):
+            for order in ("little", "big"):
+                matching = [
+                    vector for vector in self.vectors
+                    if vector["event"] == kind and vector["byte_order"] == order
+                    and read_value(vector, order) == value
+                ]
+                self.assertTrue(matching, f"{kind} value {value} missing for {order}-endian")
+
+    def test_fence_statuses_follow_normative_table(self):
+        body = section(self.sync, "GetFenceStatus")
+        statuses = assignments(body, {"UNSIGNALED", "PENDING", "SIGNALED", "FAILED"})
+        self.assertEqual(statuses, {"UNSIGNALED": 0, "PENDING": 1, "SIGNALED": 2, "FAILED": 3})
+        self.assert_values_covered_in_both_orders(
+            "GetFenceStatus", set(statuses.values()),
+            lambda vector, _order: bytes.fromhex(vector["wire_hex"])[1],
+        )
+
+    def test_wait_for_fence_statuses_follow_normative_table(self):
+        body = section(self.sync, "WaitForFence")
+        status_part = body.split("Reply-Status:", 1)[-1]
+        statuses = assignments(status_part, {"SUCCESS", "TIMEOUT", "EXECUTION_FAILED", "DEVICE_LOST"})
+        self.assertEqual(statuses, {"SUCCESS": 0, "TIMEOUT": 1, "EXECUTION_FAILED": 2, "DEVICE_LOST": 3})
+        self.assert_values_covered_in_both_orders(
+            "WaitForFence", set(statuses.values()),
+            lambda vector, order: int.from_bytes(bytes.fromhex(vector["wire_hex"])[8:12], order),
+        )
+
+    def test_semaphore_wait_statuses_follow_normative_contract(self):
+        body = section(self.sync, "WaitSemaphores")
+        match = re.search(r"status.*?SUCCESS\s*=\s*(\d+).*?TIMEOUT\s*=\s*(\d+)", body, re.S)
+        self.assertIsNotNone(match, "WaitSemaphores status contract missing")
+        statuses = {int(match.group(1)), int(match.group(2))}
+        for value in statuses:
+            suffix = "success" if value == 0 else "timeout" if value == 1 else f"status-{value}"
+            for order in ("little", "big"):
+                self.assertTrue(any(
+                    v["event"] == f"WaitSemaphores-{suffix}" and v["byte_order"] == order
+                    and int.from_bytes(bytes.fromhex(v["wire_hex"])[8:12], order) == value
+                    for v in self.vectors
+                ), f"WaitSemaphores status {value} missing for {order}-endian")
+
+    def test_property_statuses_follow_normative_table(self):
+        body = section(self.devices, "GetPhysicalDeviceProperty")
+        statuses = assignments(body, {"SUCCESS", "NOT_SUPPORTED", "NOT_AVAILABLE"})
+        self.assertEqual(statuses, {"SUCCESS": 0, "NOT_SUPPORTED": 1, "NOT_AVAILABLE": 2})
+        event_for_status = {0: "GetPhysicalDeviceProperty-success",
+                            1: "GetPhysicalDeviceProperty-not-supported",
+                            2: "GetPhysicalDeviceProperty-not-available"}
+        for value, event in event_for_status.items():
+            for order in ("little", "big"):
+                self.assertTrue(any(
+                    v["event"] == event and v["byte_order"] == order
+                    and int.from_bytes(bytes.fromhex(v["wire_hex"])[8:12], order) == value
+                    for v in self.vectors
+                ), f"property status {value} missing for {order}-endian")
+
+    def test_memory_count_limits_and_formula_match_maximum_fixture(self):
+        body = section(self.memory, "GetPhysicalDeviceMemoryProperties")
+        limits = re.search(r"maximal\s+(\d+)\s+Memory Types und\s+(\d+)\s+Memory Heaps", body, re.I)
+        self.assertIsNotNone(limits, "normative memory type/heap limits missing")
+        type_limit, heap_limit = map(int, limits.groups())
+        formula = re.search(r"Reply-Payload-Länge beträgt\s+`(\d+)\s*\+\s*(\d+)\s*\*\s*memory_type_count\s*\+\s*(\d+)\s*\*\s*memory_heap_count`", body)
+        self.assertIsNotNone(formula, "normative memory payload formula missing")
+        base, type_size, heap_size = map(int, formula.groups())
+        expected_size = base + type_size * type_limit + heap_size * heap_limit
+        expected_words = expected_size // 4
+        for order in ("little", "big"):
+            matches = [v for v in self.vectors if v["event"] == "GetPhysicalDeviceMemoryProperties-max-counts" and v["byte_order"] == order]
+            self.assertTrue(matches, f"maximum memory-count fixture missing for {order}-endian")
+            wire = bytes.fromhex(matches[0]["wire_hex"])
+            payload = wire[32:]
+            self.assertEqual(int.from_bytes(payload[0:4], order), type_limit)
+            self.assertEqual(int.from_bytes(payload[4:8], order), heap_limit)
+            self.assertEqual(len(payload), expected_size)
+            self.assertEqual(int.from_bytes(wire[4:8], order), expected_words)
+            self.assertEqual(len(wire), 32 + expected_words * 4)
+
+    def test_read_buffer_boundary_fixtures_follow_wire_formula(self):
+        body = section(self.memory, "ReadBuffer")
+        self.assertRegex(body, r"reply\.length\s*=\s*ceil\(data_length\s*/\s*4\)")
+        sizes = set()
+        for vector in self.vectors:
+            match = re.fullmatch(r"ReadBuffer-(\d+)-bytes", vector["event"])
+            if not match:
+                continue
+            size = int(match.group(1))
+            sizes.add(size)
+            wire = bytes.fromhex(vector["wire_hex"])
+            padded = (size + 3) & ~3
+            self.assertEqual(len(wire[32:]), padded)
+            self.assertEqual(int.from_bytes(wire[4:8], vector["byte_order"]), padded // 4)
+            self.assertEqual(wire[32 + size:], bytes(padded - size))
+        self.assertTrue({1, 4, 5, 8}.issubset(sizes), "ReadBuffer alignment boundary samples missing")
+
+
+if __name__ == "__main__":
+    unittest.main()
