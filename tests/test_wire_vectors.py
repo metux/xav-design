@@ -120,5 +120,33 @@ class GoldenWireVectorTests(unittest.TestCase):
                 self.assertEqual(wire[28 + vector["fields"]["data_length"]:], b"\x00")
 
 
+    def test_rejects_declared_length_mismatch(self) -> None:
+        vector = next(v.copy() for v in self.vectors if v["request"] == "ReadBuffer")
+        vector["length_bytes"] += 4
+        with self.assertRaisesRegex(ValueError, "declared"):
+            encode_request(vector)
+
+    def test_rejects_nonzero_write_padding(self) -> None:
+        import copy
+        vector = copy.deepcopy(next(v for v in self.vectors if v["request"] == "WriteBuffer"))
+        vector["fields"]["padding_hex"] = "7f"
+        with self.assertRaisesRegex(ValueError, "padding"):
+            encode_request(vector)
+
+    def test_rejects_write_payload_length_mismatch(self) -> None:
+        import copy
+        vector = copy.deepcopy(next(v for v in self.vectors if v["request"] == "WriteBuffer"))
+        vector["fields"]["data_length"] = 4
+        with self.assertRaisesRegex(ValueError, "data_length"):
+            encode_request(vector)
+
+    def test_rejects_nonzero_create_buffer_reserved_field(self) -> None:
+        import copy
+        vector = copy.deepcopy(next(v for v in self.vectors if v["request"] == "CreateBuffer"))
+        vector["fields"]["reserved"] = 1
+        with self.assertRaisesRegex(ValueError, "reserved"):
+            encode_request(vector)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
