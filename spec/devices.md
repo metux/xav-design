@@ -19,7 +19,7 @@ Der Queue-Family-Index entspricht der Reihenfolge der zurückgegebenen Queue-Fam
 
 Der Request enthält keinen request-spezifischen Payload und ist insgesamt 8 Bytes lang. Der Request-Typ ist `Reply`.
 
-Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld.
+Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld. Da jeder Record einschließlich des gepaddeten Namens vierbyte-ausgerichtet ist, gilt `reply.length = Summe aller Record-Längen / 4`; bei null Records ist `reply.length = 0`.
 
 Fester Record-Anteil: 32 Bytes.
 
@@ -62,9 +62,9 @@ Reply:
 
 Statuswerte:
 
-- `SUCCESS`
-- `NOT_SUPPORTED`
-- `NOT_AVAILABLE`
+- `SUCCESS = 0`
+- `NOT_SUPPORTED = 1`
+- `NOT_AVAILABLE = 2`
 
 Bei einem Status ungleich `SUCCESS` müssen `property_type` und `value_length` null sein und der Reply enthält keinen Wert-Payload. Bei Erfolg gilt `reply.length = ceil(value_length / 4)`; bei einem Status ungleich `SUCCESS` ist `reply.length = 0`.
 
@@ -87,7 +87,7 @@ Kandidaten für Properties sind `device.uuid`, `driver.uuid`, `compute.maxWorkGr
 
 Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes.
 
-Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes.
+Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes. Es gibt kein zusätzliches Count-Feld; `reply.length = 3 * queue_family_count`, wobei `queue_family_count` aus der Payload-Länge geteilt durch 12 folgt. Bei null Queue-Families ist `reply.length = 0`.
 
 | Relativer Offset | Typ | Feld |
 |---:|---|---|
