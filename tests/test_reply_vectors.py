@@ -61,7 +61,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 30)
+        self.assertEqual(len(self.vectors), 52)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -87,10 +87,16 @@ class GoldenReplyVectorTests(unittest.TestCase):
             wire = bytes.fromhex(vector["wire_hex"])
             order = vector["byte_order"]
             if vector["event"] == "GetFenceStatus":
-                self.assertEqual(wire[1], 2)  # SIGNALED
+                expected = 2 if vector["name"] == f"GetFenceStatus-{order}" else (
+                    0 if "-unsignaled-" in vector["name"] else 1 if "-pending-" in vector["name"] else 3
+                )
+                self.assertEqual(wire[1], expected)
                 self.assertEqual(wire[8:32], bytes(24))
             elif vector["event"] == "WaitForFence":
-                self.assertEqual(int.from_bytes(wire[8:12], order), 0)  # SUCCESS
+                expected = 0 if vector["name"] == f"WaitForFence-{order}" else (
+                    1 if "-timeout-" in vector["name"] else 2 if "-execution-failed-" in vector["name"] else 3
+                )
+                self.assertEqual(int.from_bytes(wire[8:12], order), expected)
                 self.assertEqual(wire[12:32], bytes(20))
             elif vector["event"] == "GetSemaphoreCounterValue":
                 self.assertEqual(int.from_bytes(wire[8:16], order), 72623859790382856)
@@ -204,6 +210,48 @@ class GoldenReplyVectorTests(unittest.TestCase):
             with self.subTest(vector=vector["name"]):
                 errors = reply_contract_errors(vector["kind"], bytes.fromhex(vector["wire_hex"]), vector["byte_order"])
                 self.assertIn(vector["violates"], errors)
+
+
+    def test_read_buffer_alignment_boundaries(self):
+        expected = {1: (1, 3), 4: (1, 0), 8: (2, 0)}
+        for vector in self.vectors:
+            if not vector["event"].startswith("ReadBuffer-") or vector["event"] == "ReadBuffer-5-bytes":
+                continue
+            size = int(vector["event"].split("-")[1])
+            wire = bytes.fromhex(vector["wire_hex"])
+            words, padding = expected[size]
+            self.assertEqual(int.from_bytes(wire[4:8], vector["byte_order"]), words)
+            self.assertEqual(len(wire[32:]), words * 4)
+            self.assertEqual(wire[32+size:], bytes(padding))
+
+    def test_all_fence_wait_status_values(self):
+        for vector in self.vectors:
+            wire = bytes.fromhex(vector["wire_hex"])
+            order = vector["byte_order"]
+            if vector["event"] == "GetFenceStatus":
+                self.assertIn(wire[1], (0, 1, 2, 3))
+            elif vector["event"] == "WaitForFence":
+                self.assertIn(int.from_bytes(wire[8:12], order), (0, 1, 2, 3))
+            elif vector["event"] in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
+                self.assertIn(int.from_bytes(wire[8:12], order), (0, 1))
+
+    def test_maximum_memory_type_and_heap_counts(self):
+        for vector in self.vectors:
+            if vector["event"] != "GetPhysicalDeviceMemoryProperties-max-counts":
+                continue
+            wire = bytes.fromhex(vector["wire_hex"])
+            order = vector["byte_order"]
+            payload = wire[32:]
+            self.assertEqual(len(payload), 528)
+            self.assertEqual(int.from_bytes(wire[4:8], order), 132)
+            self.assertEqual([int.from_bytes(payload[i:i+4], order) for i in (0, 4, 8, 12)], [32, 16, 0, 0])
+            heaps_start = 16 + 32 * 8
+            for i in range(32):
+                entry = payload[16+i*8:24+i*8]
+                self.assertEqual(int.from_bytes(entry[4:8], order), i % 16)
+            for i in range(16):
+                entry = payload[heaps_start+i*16:heaps_start+(i+1)*16]
+                self.assertEqual(int.from_bytes(entry[12:16], order), 0)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
