@@ -20,7 +20,7 @@
 ## Immediate next steps
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
-- Finalize the server-assigned XGE event framing and extension-opcode lookup and verify event layouts during the ABI review.
+- Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
 - Complete the v0.1 feature/extension support set and property/Atom registry when their semantics are specified.
 - Finish the final ABI review of request-specific error coverage and reply layouts; keep adding conformance cases with each protocol decision.
 
@@ -74,4 +74,4 @@ The request registry still contains 39 unique assignments (1–39); no existing 
 
 ## Event selection contract — 2026-10-21
 
-Defined `SelectEvents` as a 32-byte Void request assigned subopcode 40. It atomically replaces the mask for one connection, device, or queue scope; masks and unused fields are validated per scope, and failures preserve the previous selection. `ASYNC_ERROR` and `DEVICE_LOST` remain unmaskable. Event delivery failure or connection closure does not alter the internal terminal result of a submission or block backend cleanup. The event chapter, request registry, request audit, open-issues list, and conformance tests were updated in separate commits. Remaining event-related work is the server-assigned XGE event framing and extension-opcode lookup and final ABI verification.
+Defined `SelectEvents` as a 32-byte Void request assigned subopcode 40. It atomically replaces the mask for one connection, device, or queue scope; masks and unused fields are validated per scope, and failures preserve the previous selection. `ASYNC_ERROR` and `DEVICE_LOST` remain unmaskable. Event delivery failure or connection closure does not alter the internal terminal result of a submission or block backend cleanup. The event chapter, request registry, request audit, open-issues list, and conformance tests were updated in separate commits. Remaining event-related work is final ABI verification of XGE framing and standard extension-opcode lookup.
