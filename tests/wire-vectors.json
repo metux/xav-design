@@ -120,7 +120,7 @@
         "payload_hex": "aa",
         "padding_hex": "000000"
       },
-      "wire_hex": "900009000d00000004030201d0c0b0a0000706050403020101000000aa000000"
+      "wire_hex": "900008000d00000004030201d0c0b0a0000706050403020101000000aa000000"
     },
     {
       "name": "WriteBuffer-1-byte-payload-big-endian",
@@ -138,7 +138,7 @@
         "payload_hex": "aa",
         "padding_hex": "000000"
       },
-      "wire_hex": "900000090d00000001020304a0b0c0d0010203040506070000000001aa000000"
+      "wire_hex": "900000080d00000001020304a0b0c0d0010203040506070000000001aa000000"
     },
     {
       "name": "WriteBuffer-4-byte-payload-little-endian",
@@ -156,7 +156,7 @@
         "payload_hex": "aabbccdd",
         "padding_hex": ""
       },
-      "wire_hex": "900009000d00000004030201d0c0b0a0000706050403020104000000aabbccdd"
+      "wire_hex": "900008000d00000004030201d0c0b0a0000706050403020104000000aabbccdd"
     },
     {
       "name": "WriteBuffer-4-byte-payload-big-endian",
@@ -174,7 +174,7 @@
         "payload_hex": "aabbccdd",
         "padding_hex": ""
       },
-      "wire_hex": "900000090d00000001020304a0b0c0d0010203040506070000000004aabbccdd"
+      "wire_hex": "900000080d00000001020304a0b0c0d0010203040506070000000004aabbccdd"
     },
     {
       "name": "WriteBuffer-5-byte-payload-little-endian",
@@ -192,7 +192,7 @@
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
       },
-      "wire_hex": "90000a000d00000004030201d0c0b0a0000706050403020105000000aabbccddee000000"
+      "wire_hex": "900009000d00000004030201d0c0b0a0000706050403020105000000aabbccddee000000"
     },
     {
       "name": "WriteBuffer-5-byte-payload-big-endian",
@@ -210,7 +210,7 @@
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
       },
-      "wire_hex": "9000000a0d00000001020304a0b0c0d0010203040506070000000005aabbccddee000000"
+      "wire_hex": "900000090d00000001020304a0b0c0d0010203040506070000000005aabbccddee000000"
     }
   ]
 }
