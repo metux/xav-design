@@ -115,8 +115,6 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 
 ### Ressourcenzerstörung und Memory-Freigabe
 
-- `DestroyDescriptorPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein enthaltenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird; die Ablehnung ist atomar.
-
 - Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
 - Destroy eines pending Command Buffers, Descriptor Sets, Buffers, einer Pipeline oder eines Pipeline Layouts: `INVALID_SYNCHRONIZATION_STATE`.
 - `DestroyCommandPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn mindestens ein Kind-Command-Buffer pending ist.
@@ -138,7 +136,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 ### Descriptor-Pool- und Pipeline-Requests
 
 - `CreateDescriptorPool`: falsche Länge oder nicht zum `pool_size_count` passende Payload `BadLength`; ungültige Counts, nicht unterstützte Descriptor-Typen oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; ungültiges Device-XID als Standard-X11-Fehler; Backend-Allokationsfehler `ALLOCATION_FAILED`.
-- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; ungültige Pool-/Layout-XID als Standard-X11-Fehler; falsches Device, falscher Typ, Pool-/Layout-Inkompatibilität oder Pool-Kapazität erschöpft `BadMatch` beziehungsweise `ALLOCATION_FAILED`, wenn die Ursache ein Backend-Allokationsfehler ist. Die Operation ist atomar.
+- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; ungültige Pool-/Layout-XID als Standard-X11-Fehler; falsches Device, falscher Typ, Pool-/Layout-Inkompatibilität oder Pool-Kapazität erschöpft `ALLOCATION_FAILED`; Layout-/Device-Inkompatibilität `BadMatch`. Die Operation ist atomar.
 - `FreeDescriptorSets`: falsche Länge `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; Set gehört nicht zum angegebenen Pool oder Device `BadMatch`; ungültige XID als Standard-X11-Fehler; pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`. Keine Teilfreigabe bei Ablehnung.
 - `CreatePipelineLayout`: falsche Länge/Count `BadLength`; nicht unterstützte Stage-Bits, ungültige Push-Constant-Ranges oder nicht-null reservierte Felder `BadValue`; ungültige XID als Standard-X11-Fehler; inkompatibles oder fremdes Set-Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet.
 - `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; ungültige Shader-/Layout-/Device-XID als Standard-X11-Fehler; inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
