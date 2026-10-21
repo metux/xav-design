@@ -10,7 +10,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   extension opcode and current sequence number.
 - `reply-vectors.json` covers fixed fence/semaphore replies, padded ReadBuffer
   data, empty and populated physical-device enumeration, queue-family and memory-property
-  records, property success/failure, buffer requirements, WriteBuffer success, and
+  records, property success, NOT_SUPPORTED/NOT_AVAILABLE failures, buffer requirements, WriteBuffer success, and
   semaphore timeout replies in both byte orders.
 - `test_wire_vectors.py` checks request encoding, declared lengths, padding,
   and malformed request framing.
@@ -20,7 +20,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   variable payload lengths, record boundaries, padding, and malformed headers.
 - `check-wire-layout.py` validates reply vectors against the 32-byte X11
   framing contract, declared lengths, enumeration/memory record formulas, fixed reply field offsets and status values,
-  reserved fields, padding, and required endian coverage.
+  reserved fields, padding, required endian coverage, and intentionally malformed negative reply fixtures.
 
 Run all fixture tests from the repository root:
 
