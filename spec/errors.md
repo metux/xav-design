@@ -43,7 +43,7 @@ Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Serv
 
 - Falsche Request-Länge: `BadLength`
 - Länge null oder ungültige reservierte Felder: `BadValue`
-- Ungültige XID: request-spezifischer X11-Fehler
+- Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
@@ -53,7 +53,7 @@ Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Serv
 
 - Falsche Request-Länge: `BadLength`
 - Länge null oder ungültige reservierte Felder: `BadValue`
-- Ungültige XID: request-spezifischer X11-Fehler
+- Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, ungültiger Bereich: `BadMatch`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
@@ -63,7 +63,7 @@ Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Serv
 
 - Falsche Request-Länge oder unpassender Payload-Umfang: `BadLength`
 - Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
-- Ungültige oder falsche Device-/Shader-Module-XID: request-spezifischer X11-Fehler beziehungsweise `BadMatch` bei falschem Typ oder Device
+- Ungültige oder falsche Device-/Shader-Module-XID: `BadValue` bei unbekannter/nicht-live XID; `BadMatch` bei falschem live Typ oder Device
 - `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
 - Ungültiges SPIR-V oder ein SPIR-V-Modul, das die v0.1-Validierungsregeln nicht erfüllt: `BadValue`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
@@ -72,12 +72,12 @@ Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Serv
 ### Device-Discovery und Device-Erstellung
 
 - `EnumeratePhysicalDevices`: Request muss exakt 8 Bytes lang sein; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden.
-- `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültige Atom-/Device-XID über Standard-X11-Fehler; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
-- `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; ungültige Physical-Device-XID über Standard-X11-Fehler.
-- `CreateDevice`: falsche Länge `BadLength`; nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1 oder ungültige Counts `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; ungültige Physical-Device-XID als Standard-X11-Fehler; falscher Ressourcentyp, nicht unterstützte Queue-Family-Anforderung oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
+- `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültiges Atom `BadAtom`; unbekannte/nicht-live Device-XID `BadValue`; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
+- `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; unbekannte/nicht-live Physical-Device-XID `BadValue`.
+- `CreateDevice`: falsche Länge `BadLength`; nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1 oder ungültige Counts `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher Ressourcentyp, nicht unterstützte Queue-Family-Anforderung oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
 - `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
 - Beide Requests sind Void-Requests; Erfolg erzeugt keinen normalen Reply.
-- `DestroyDevice`: falsche Länge `BadLength`; ungültige XID über Standard-X11-Fehler; fremde Device-Ownership `BadMatch`.
+- `DestroyDevice`: falsche Länge `BadLength`; unbekannte/nicht-live XAverius-XID `BadValue`; fremde Device-Ownership `BadMatch`.
 
 ### `CreateDescriptorSetLayout`
 
@@ -137,7 +137,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 - `CreateSemaphore`: exakt 28 Bytes; `CreateFence`: exakt 24 Bytes; `DestroySemaphore`, `GetSemaphoreCounterValue`, `DestroyFence`, `GetFenceStatus` und `ResetFence`: exakt 16 Bytes; `SignalSemaphore` und `WaitForFence`: exakt 24 Bytes.
 - `WaitSemaphores`: exakt `28 + 12 * semaphore_count` Bytes; Count null oder nicht exakt passende Länge wird abgewiesen (`BadValue` bei null Count, `BadLength` bei Längenabweichung).
-- Ungültige Semaphoren-/Fence-XIDs: Standard-X11-Fehler; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
+- Unbekannte/nicht-live Semaphore-/Fence-XIDs: `BadValue`; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
 - `WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status und keinen X11-Fehler.
 
 ### Fence-Requests
@@ -172,7 +172,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 ### Buffer- und Memory-Requests
 
 - `CreateBuffer`: falsche feste Länge `BadLength`; nicht-positive Größe, unbekannte Usage-Bits oder nicht-null reservierte Felder `BadValue`; ungültige oder bereits belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`.
-- `GetBufferMemoryRequirements`: falsche Länge `BadLength`; ungültiges Buffer-/Device-XID als Standard-X11-Fehler; falscher Ressourcentyp oder Cross-Device-Zugriff `BadMatch`.
+- `GetBufferMemoryRequirements`: falsche Länge `BadLength`; unbekannte/nicht-live Buffer-/Device-XID `BadValue`; falscher Ressourcentyp oder Cross-Device-Zugriff `BadMatch`.
 - `AllocateMemory`: falsche Länge `BadLength`; ungültige Größe, Memory-Type-Index oder reserviertes Feld `BadValue`; ungültige oder belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`.
 - `FreeMemory`: siehe die Lebensdauerregeln unten; bei Ablehnung bleibt die Allokation öffentlich gültig.
 - `BindBufferMemory`: siehe die spezifische Zuordnung unten.
@@ -180,10 +180,10 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 ### Descriptor-Pool- und Pipeline-Requests
 
 - `CreateDescriptorPool`: falsche Länge oder nicht zum `pool_size_count` passende Payload `BadLength`; ungültige Counts, nicht unterstützte Descriptor-Typen oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; Backend-Allokationsfehler `ALLOCATION_FAILED`.
-- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; ungültige Pool-/Layout-XID als Standard-X11-Fehler; falsches Device, falscher Typ oder Layout-/Device-Inkompatibilität `BadMatch`; Pool-Kapazität erschöpft `ALLOCATION_FAILED`. Die Operation ist atomar.
+- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live Pool-/Layout-XID `BadValue`; falsches Device, falscher Typ oder Layout-/Device-Inkompatibilität `BadMatch`; Pool-Kapazität erschöpft `ALLOCATION_FAILED`. Die Operation ist atomar.
 - `FreeDescriptorSets`: falsche Länge `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; Set gehört nicht zum angegebenen Pool oder Device `BadMatch`; unbekannte/nicht-live XID `BadValue`; pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`. Keine Teilfreigabe bei Ablehnung.
 - `CreatePipelineLayout`: falsche Länge/Count `BadLength`; nicht unterstützte Stage-Bits, ungültige Push-Constant-Ranges oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live XID `BadValue`; inkompatibles oder fremdes Set-Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet.
-- `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; ungültige Shader-/Layout-/Device-XID als Standard-X11-Fehler; inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
+- `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; unbekannte/nicht-live Shader-/Layout-/Device-XID `BadValue`; inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
 
 ### Command-Pool-Requests
 
