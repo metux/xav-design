@@ -46,7 +46,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         expected_words = (value_length + 3) // 4
         if declared != expected_words or len(wire) != 32 + expected_words * 4: errors.append("property-payload-length")
         if len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length): errors.append("property-padding-zero")
-    elif kind == "GetPhysicalDeviceProperty-not-supported":
+    elif kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available"):
         if wire[12:20] != bytes(8) or wire[32:] or declared: errors.append("property-failure-zero")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
     elif kind.startswith("ReadBuffer-") and kind.endswith("-bytes"):
@@ -96,7 +96,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
             if heap_count > 16: errors.append("memory-heap-count-range")
             expected_length = 16 + type_count * 8 + heap_count * 16
             if len(payload) != expected_length: errors.append("memory-payload-length")
-            if payload[8:16] != bytes(8): errors.append("memory-reserved-zero")
+            if payload[8:12] != bytes(4): errors.append("memory-properties-flags-zero")
+            if payload[12:16] != bytes(4): errors.append("memory-reserved-zero")
             if len(payload) >= 16 + type_count * 8:
                 for index in range(type_count):
                     entry = payload[16 + index * 8:24 + index * 8]
