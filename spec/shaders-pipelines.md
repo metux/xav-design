@@ -70,7 +70,7 @@ Der Request muss exakt die durch `binding_count` bestimmte Länge haben. Die Ges
 
 `flags` muss null sein. Nicht-null Flags werden mit `BadValue` abgewiesen; v0.1 akzeptiert keine implizit ignorierten Layout-Flags. Der Server prüft zusätzlich Device-Ownership, unbenutzte Create-XID, Descriptor- und Stage-Unterstützung sowie Geräte-Limits. Die Erstellung ist atomar: Bei einem Fehler wird kein Descriptor Set Layout öffentlich angelegt.
 
-Im initialen Compute-Test werden Bindings 0, 1 und 2 jeweils als `STORAGE_BUFFER`, Anzahl 1 und `COMPUTE_SHADER` angelegt.
+Im initialen Compute-Test werden Bindings 0, 1 und 2 jeweils als `STORAGE_BUFFER`, Anzahl 1 und `COMPUTE` angelegt.
 
 Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öffentlich zerstört werden, sofern die tatsächlichen Vulkan-Lebensdauerregeln dies erlauben. Interne Referenzen werden entsprechend den Vulkan-Regeln erhalten.
 
