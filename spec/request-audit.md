@@ -19,7 +19,7 @@ An outdated sentence in `DECISIONS.md` incorrectly included Fence and Semaphore 
 ## Known exclusions and unresolved items
 1. `SelectEvents` is included as subopcode 40. Its wire layout, scope semantics, XGE negotiation prerequisite, and event framing are specified; final ABI verification remains.
 2. The v0.1 feature-ID and device-extension registries are explicitly empty, and the physical-device property/Atom-name registry defines four properties. Their basic error mapping and conformance cases are now covered.
-3. Timeout boundaries, scheduling guarantees, the final Vulkan wait-stage mapping, and implementation-level backend conformance remain open as listed in [open issues](open-issues.md).
+3. Timeout boundaries, scheduling guarantees, and implementation-level backend conformance remain open as listed in [open issues](open-issues.md). The v0.1 wait-stage mapping, queue-family compatibility rules, and invalid-mask error precedence are now explicit in [queue submission](queue-submission.md), [error mapping](errors.md), and the conformance checklist.
 ## Subopcode allocation policy
 
 The 40 requests in the central registry are assigned explicit values 1 through 40. Value 0 is reserved and MUST NOT identify a request. These numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` uses the next unused value, 40; assignments 1 through 39 were not changed.
