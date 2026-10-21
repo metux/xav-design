@@ -99,7 +99,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                 self.assertEqual(len(actual), vector["length_bytes"])
                 self.assertEqual(actual[1], 0, "X11 data byte must be zero")
                 self.assertEqual(actual[5], 0, "v0.1 flags must be zero in these vectors")
-                self.assertEqual(actual[6:8], b"\\x00\\x00", "reserved header must be zero")
+                self.assertEqual(actual[6:8], b"\x00\x00", "reserved header must be zero")
                 self.assertEqual(
                     int.from_bytes(actual[2:4], vector["byte_order"]),
                     len(actual) // 4,
@@ -117,7 +117,7 @@ class GoldenWireVectorTests(unittest.TestCase):
         for vector in writes:
             with self.subTest(vector=vector["name"]):
                 wire = encode_request(vector)
-                self.assertEqual(wire[28 + vector["fields"]["data_length"]:], b"\\x00")
+                self.assertEqual(wire[28 + vector["fields"]["data_length"]:], b"\x00")
 
 
 if __name__ == "__main__":
