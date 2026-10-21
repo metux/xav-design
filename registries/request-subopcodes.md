@@ -29,12 +29,14 @@ This file is the central inventory for XAverius extension requests. It records o
 | `CreateBuffer` | UNASSIGNED | Void | Create a buffer resource with size and usage flags. [Memory and buffers](../spec/memory-buffers.md) |
 | `GetBufferMemoryRequirements` | UNASSIGNED | Reply | Return buffer allocation size, alignment, and compatible memory-type bits. [Memory and buffers](../spec/memory-buffers.md) |
 | `AllocateMemory` | UNASSIGNED | Void | Allocate device memory. [Memory and buffers](../spec/memory-buffers.md) |
+| `FreeMemory` | UNASSIGNED | Void | Free a memory allocation only after all bound buffers are destroyed and no accepted work uses it. [Memory and buffers](../spec/memory-buffers.md), [lifetime](../spec/resource-lifetime.md) |
 | `BindBufferMemory` | UNASSIGNED | Void | Bind an allocation and offset to a buffer. [Memory and buffers](../spec/memory-buffers.md) |
 | `WriteBuffer` | UNASSIGNED | Reply | Upload bytes to a buffer; successful reply establishes the specified device-scoped ordering and visibility boundary. [Memory and buffers](../spec/memory-buffers.md) |
 | `ReadBuffer` | UNASSIGNED | Reply | Read buffer bytes after required earlier work and visibility operations. [Memory and buffers](../spec/memory-buffers.md) |
 | `ShaderModuleData` | UNASSIGNED | Void | Create a shader module through chunked SPIR-V upload, finalization, or abort. [Shaders and pipelines](../spec/shaders-pipelines.md) |
 | `CreateDescriptorSetLayout` | UNASSIGNED | Void | Create a descriptor-set layout from binding records. [Shaders and pipelines](../spec/shaders-pipelines.md) |
 | `CreateDescriptorPool` | UNASSIGNED | Void | Create a descriptor pool with set and descriptor capacity. [Shaders and pipelines](../spec/shaders-pipelines.md) |
+| `DestroyDescriptorPool` | UNASSIGNED | Void | Destroy a descriptor pool and atomically invalidate its child sets when lifetime rules permit. [Shaders and pipelines](../spec/shaders-pipelines.md), [lifetime](../spec/resource-lifetime.md) |
 | `AllocateDescriptorSets` | UNASSIGNED | Void | Atomically allocate descriptor sets from a pool using supplied layouts. [Shaders and pipelines](../spec/shaders-pipelines.md) |
 | `UpdateDescriptorSets` | UNASSIGNED | Void | Atomically update descriptor slots, currently for supported buffer descriptors. [Shaders and pipelines](../spec/shaders-pipelines.md) |
 | `FreeDescriptorSets` | UNASSIGNED | Void | Free selected descriptor sets from their pool subject to lifetime rules. [Shaders and pipelines](../spec/shaders-pipelines.md), [lifetime](../spec/resource-lifetime.md) |
@@ -55,7 +57,7 @@ This file is the central inventory for XAverius extension requests. It records o
 | `WaitForFence` | UNASSIGNED | Reply | Wait for a fence with timeout and execution/device-loss status. [Synchronization](../spec/synchronization.md) |
 | `ResetFence` | UNASSIGNED | Void | Reset a signaled or failed fence to unsignaled. [Synchronization](../spec/synchronization.md) |
 | `DestroyFence` | UNASSIGNED | Void | Destroy a non-pending fence. [Synchronization](../spec/synchronization.md), [lifetime](../spec/resource-lifetime.md) |
-| `DestroyResource` | UNASSIGNED | Void | Generic destroy for the explicitly permitted standalone resource types; excluded types retain dedicated destruction paths. [Resource lifetime](../spec/resource-lifetime.md) |
+| `DestroyResource` | UNASSIGNED | Void | Generic destroy for Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, and Pipeline; synchronization objects use dedicated destroy requests. [Resource lifetime](../spec/resource-lifetime.md) |
 
 ## Allocation work still required
 
