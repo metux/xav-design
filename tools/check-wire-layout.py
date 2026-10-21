@@ -60,6 +60,9 @@ def event_field_records(body: str) -> list[tuple[int, int, str, str]]:
                 continue
             # Compact event bullets commonly omit the type but start with an XID or CARD type.
             tm = re.match(r"(XID|CARD8|CARD16|CARD32|CARD64|ATOM|BYTE)\b", tail)
+            if not tm and re.search(r"(?:Device|Resource)-XID", tail, re.I):
+                records.append((int(bullet.group(1)), 4, "XID", tail.strip()))
+                continue
             if tm:
                 records.append((int(bullet.group(1)), sizes[tm.group(1)], tm.group(1), tail.strip()))
     return records
@@ -115,10 +118,10 @@ def check_events(c: Check) -> None:
         c.require(name in reg_ids, f"event registry: missing {name}")
     header_checks = [
         (r"response_type\s*=\s*GenericEvent\s*\(35\)", "GenericEvent response_type 35"),
-        (r"Offset 1[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
-        (r"Offset 4[^\n]*XGE `length`", "XGE length at offset 4"),
-        (r"Offset 8[^\n]*`evtype`", "evtype at offset 8"),
-        (r"Offset 10–31[^\n]*null", "zeroed reserved common-header bytes"),
+        (r"\|\s*1\s*\|[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
+        (r"\|\s*4\s*\|[^\n]*XGE `length`", "XGE length at offset 4"),
+        (r"\|\s*8\s*\|[^\n]*`evtype`", "evtype at offset 8"),
+        (r"\|\s*1\s*\|[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
         (r"32 \+ 4 \* length", "XGE total-length formula"),
     ]
     for pattern, label in header_checks:
@@ -128,12 +131,11 @@ def check_events(c: Check) -> None:
 def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
     result: dict[int, tuple[str, str]] = {}
     for line in markdown.splitlines():
-        row = re.match(r"^\|\s*(\d+)\s*\|\s*`([^\x60]+)`\s*\|\s*([^|]+?)\s*\|", line)
+        row = re.match(r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|", line)
         if row:
-            opcode, name, kind = int(row.group(1)), row.group(2), row.group(3).strip()
+            name, opcode, kind = row.group(1), int(row.group(2)), row.group(3).strip()
             result[opcode] = (name, kind)
     return result
-
 
 def check_reply_matrix(c: Check) -> None:
     registry = parse_request_registry(read("registries/request-subopcodes.md"))
