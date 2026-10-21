@@ -2,11 +2,26 @@
 
 ## 7.1 Command Pools
 
-`CreateCommandPool` und `DestroyCommandPool` verwalten die Allokation von Command Buffers. Die genauen Request-Layouts und Subopcodes müssen noch festgelegt werden.
+`CreateCommandPool` hat eine feste Gesamtlänge von 24 Bytes:
 
-Ein Command Pool ist Elternobjekt der daraus allozierten Command Buffer. Die Zerstörung des Pools invalidiert die öffentlichen XIDs aller zugehörigen Command Buffer.
+| Offset | Typ | Feld |
+|---:|---|---|
+| 8 | XID | `device_xid` |
+| 12 | XID | `command_pool_xid` |
+| 16 | CARD32 | `queue_family_index` |
+| 20 | CARD32 | `flags` |
 
-In v0.1 wird die Pool-Zerstörung abgelehnt, solange ein Kind-Command-Buffer ausstehend ausgeführt wird.
+In v0.1 sind die Pool-Flags:
+
+- Bit 0: `TRANSIENT`
+- Bit 1: `RESET_COMMAND_BUFFER`
+- Bits 2–31: reserviert und müssen null sein.
+
+Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt. Der Server darf keine Flags stillschweigend hinzufügen. `TRANSIENT` ist ein Hinweis zur Optimierung und ändert keine beobachtbare Semantik. `RESET_COMMAND_BUFFER` erlaubt das Zurücksetzen einzelner nicht-pending Command Buffer; ohne dieses Flag ist `ResetCommandBuffer` nicht erlaubt. 
+
+`DestroyCommandPool` hat eine feste Gesamtlänge von 16 Bytes: `device_xid` bei Offset 8 und `command_pool_xid` bei Offset 12.
+
+Ein Command Pool ist Elternobjekt der daraus allozierten Command Buffer. Die Zerstörung des Pools invalidiert die öffentlichen XIDs aller zugehörigen Command Buffer atomar. In v0.1 wird die Pool-Zerstörung abgelehnt, solange ein Kind-Command-Buffer ausstehend ausgeführt wird.
 
 ## 7.2 Command-Buffer-Zustände
 
@@ -46,12 +61,24 @@ Wire-Layout:
 
 Flags im Common-Header:
 
-| CREATE | FINAL | Bedeutung |
-|---:|---:|---|
-| 0 | 0 | Entries an einen bereits aufzeichnenden Buffer anhängen |
-| 0 | 1 | Letzte Entries anhängen und Recording beenden |
-| 1 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |
-| 1 | 1 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |
+| Bit | Name | Bedeutung |
+|---:|---|---|
+| 0 | `CREATE` | Command Buffer neu anlegen und Recording beginnen |
+| 1 | `FINAL` | Letzten Chunk anhängen und Recording beenden |
+| 2 | `ABORT` | Laufendes Recording verwerfen und Buffer auf `INITIAL` zurücksetzen |
+| 3–7 | reserviert | Müssen null sein |
+
+Zulässige Kombinationen:
+
+| CREATE | FINAL | ABORT | Bedeutung |
+|---:|---:|---:|---|
+| 0 | 0 | 0 | Entries an einen bereits aufzeichnenden Buffer anhängen |
+| 0 | 1 | 0 | Letzte Entries anhängen und Recording beenden |
+| 1 | 0 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |
+| 1 | 1 | 0 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |
+| 0 | 0 | 1 | Recording abbrechen; keine Entries erlaubt |
+
+Alle anderen Kombinationen sind ungültig. Ein ABORT-Request muss außer dem festen Header keine Payload enthalten. `command_pool_xid` muss auch bei ABORT dem Pool des Buffers entsprechen.
 
 `FINAL` entspricht dem Ende der Aufzeichnung. Ein separater `EndCommandBuffer`-Request ist nicht vorgesehen.
 
@@ -128,4 +155,4 @@ Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
 
 Der Server validiert Command-Buffer-Zustand, Entry-Längen, Ressourcen-Typen, Device-Ownership, reservierte Felder, Pipeline- und Layout-Kompatibilität, Descriptor-Bindings, Push-Constant-Ranges und Dispatch-Limits.
 
-Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Bereits durch vorherige Requests akzeptierte Chunks bleiben erhalten, falls ein späterer Chunk fehlschlägt. Das genaue Recovery-Verhalten muss noch eingefroren werden.
+Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Die vollständigen Entries des aktuellen Requests werden erst nach erfolgreicher Validierung aller Entries atomar an den Recording-Stream angehängt. Scheitert ein Chunk, bleibt der Command Buffer im Zustand `RECORDING`; zuvor erfolgreich angehängte Chunks bleiben erhalten, der fehlgeschlagene Chunk wird vollständig verworfen. Der Client kann einen korrigierten Chunk senden oder das Recording mit `ABORT` verwerfen. `ABORT` setzt einen nicht-pending Command Buffer auf `INITIAL` und verwirft alle bis dahin aufgezeichneten Entries und Ressourcenreferenzen. Ein fehlgeschlagener CREATE-Request hinterlässt weder einen Command Buffer noch einen Pool-Kind-Eintrag. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer im Zustand `RECORDING`, sodass der Client korrigierte letzte Entries senden oder abbrechen kann. ABORT ist nicht zulässig, wenn der Buffer nicht `RECORDING` oder bereits pending ist.
