@@ -153,7 +153,7 @@ Ein erfolgreicher Reply garantiert normativ:
 
 1. Die Eingabedaten wurden vollständig übernommen; der Client darf seinen Eingabepuffer wiederverwenden.
 2. Der Transfer ist abgeschlossen und alle erforderlichen Host-Cache- sowie GPU-Visibility-Operationen sind erfolgt.
-3. Alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions desselben logischen Devices haben ihren terminalen Ausgang erreicht, bevor der Schreibtransfer die Zieldaten verändert. Dies verhindert Rennen mit früher eingereihter GPU-Arbeit, auch wenn sie auf einer anderen Queue läuft.
+3. Alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions desselben logischen Devices haben ihren terminalen Ausgang erreicht und das Backend greift nicht mehr auf Ressourcen zu, deren Zugriff mit dem Schreibtransfer kollidieren könnte, bevor der Schreibtransfer die Zieldaten verändert. Dies verhindert Rennen mit früher eingereihter GPU-Arbeit, auch wenn sie auf einer anderen Queue läuft.
 4. Jeder `QueueSubmit` desselben logischen Devices, den der Server nach erfolgreicher Verarbeitung dieses Requests annimmt, muss die geschriebenen Bytes sehen, wenn die Submission sie liest. Das gilt unabhängig von Queue-Family und Queue-Index und auch dann, wenn der Buffer oder Speicher nicht host-coherent ist.
 5. Diese Garantie gilt für den gesamten geschriebenen Bereich und erfordert keine expliziten Semaphore oder Barrieren des Clients zwischen diesem Upload und später angenommenen Submissions.
 
