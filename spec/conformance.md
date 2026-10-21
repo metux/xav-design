@@ -44,6 +44,12 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fence- und Semaphore-Zustände sowie Timeouts
 - Descriptor-Update/Freigabe während Pending-Use
 - Ressourcenzerstörung bei internen Referenzen
+- Destroy einer von einem `RECORDING`-Command-Buffer referenzierten Ressource wird atomar abgewiesen.
+- Destroy einer von einem nicht-pending `EXECUTABLE`-Command-Buffer referenzierten Ressource invalidiert diesen Command Buffer.
+- `DestroyCommandPool`, `DestroyDescriptorPool` und `FreeDescriptorSets` werden bei verbotener Pending-/Recording-Referenz atomar abgewiesen; erfolgreiche Kaskaden invalidieren alle betroffenen XIDs.
+- `DestroyBuffer` während Pending-Use wird abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
+- `FreeMemory` bei gebundenem Buffer ergibt `BadMatch`; die Allokation kann erst nach Zerstörung aller gebundenen Buffer freigegeben werden.
+- Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion.
 - XID-Wiederverwendung bei ausstehender Arbeit
 - Device Removal und Device Loss
 - Korrekte XGE-Längen und Event-Feldpositionen
