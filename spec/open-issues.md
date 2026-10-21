@@ -3,7 +3,7 @@
 The following questions were open in the consolidated draft and remain open. Moving them here does not resolve them.
 
 1. Central numeric subopcode registry for all requests.
-2. Final request layouts for generic destruction and Descriptor Set Layouts.
+2. Final request layout and applicability rules for generic destruction.
 3. Event-selection request layouts and event registration.
 4. Complete property-name/Atom registry.
 5. Numeric registries for descriptor types, shader stages, feature IDs, device types, and queue flags.
