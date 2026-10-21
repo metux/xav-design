@@ -20,7 +20,7 @@
 ## Immediate next steps
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
-- Define event-selection request layouts and their validation rules before assigning new request subopcodes.
+- Finalize the server-assigned XGE event-base discovery/registration contract and verify event layouts during the ABI review.
 - Complete the v0.1 feature/extension support set and property/Atom registry when their semantics are specified.
 - Finish the final ABI review of request-specific error coverage and reply layouts; keep adding conformance cases with each protocol decision.
 
@@ -70,3 +70,8 @@ Rechecked all 39 registered requests against their defining chapter, request kin
 - Extended conformance checks for the new reply formulas, statuses, Create-XID rules, and duplicate-entry handling.
 
 The request registry still contains 39 unique assignments (1–39); no existing subopcode was changed. This pass does not resolve the open feature/extension set, property/Atom registry, event-selection wire layouts, wait-stage mapping, or timeout/scheduling semantics. The protocol remains a working draft and `master` was not changed.
+
+
+## Event selection contract — 2026-10-21
+
+Defined `SelectEvents` as a 32-byte Void request assigned subopcode 40. It atomically replaces the mask for one connection, device, or queue scope; masks and unused fields are validated per scope, and failures preserve the previous selection. `ASYNC_ERROR` and `DEVICE_LOST` remain unmaskable. Event delivery failure or connection closure does not alter the internal terminal result of a submission or block backend cleanup. The event chapter, request registry, request audit, open-issues list, and conformance tests were updated in separate commits. Remaining event-related work is the server-assigned XGE event-base discovery/registration contract and final ABI verification.
