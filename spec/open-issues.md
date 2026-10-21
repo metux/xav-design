@@ -24,3 +24,8 @@ The following questions were open in the consolidated draft and remain open. Mov
 20. Final Vulkan stage mapping and valid wait-stage masks.
 21. Complete normative definition of the central resource state machine.
 22. Exact Vulkan lifetime validation for all resource combinations before the specification is considered stable.
+23. Resolve the `BIG-REQUESTS` framing conflict: its extended-length field overlaps the XAverius common header at offset 4. Until resolved, `BIG-REQUESTS` is not supported in v0.1.
+24. Define how clients learn and correlate `submission_id`; `QueueSubmit` currently is a Void request while completion/failure events carry a server-generated ID.
+25. Define the exact success/reply contract for `WriteBuffer` so its transfer-completion and input-buffer-reuse guarantees are observable and protocol-valid.
+26. Specify host-side `SignalSemaphore` completion/error behavior and its ordering relative to subsequent requests.
+27. Confirm that `GetPhysicalDeviceMemoryProperties` is keyed by a Physical-Device XID, not a logical Device XID.

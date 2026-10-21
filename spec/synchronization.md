@@ -14,7 +14,7 @@ Typen:
 - `BINARY = 0`
 - `TIMELINE = 1`
 
-Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled.
+Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled. In `QueueSubmit` müssen die `wait_value`- und `signal_value`-Felder für Binary-Semaphoren ebenfalls null sein.
 
 ## Binary-Semaphoren
 
@@ -120,7 +120,7 @@ Request: 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12.
 
 Reply: 32 Bytes.
 
-- Byte 1: Fence-Status
+- Byte 1: Fence-Status (`UNSIGNALED = 0`, `PENDING = 1`, `SIGNALED = 2`, `FAILED = 3`)
 - Reply-Länge: null
 - Offsets 8–31: reserviert, null
 

@@ -26,10 +26,14 @@ Jeder Wait-Entry ist 16 Bytes groß:
 - Offset 4: `CARD64 wait_value`
 - Offset 12: `CARD32 wait_stage_mask`
 
+Für Binary-Semaphoren muss `wait_value = 0` sein. Für Timeline-Semaphoren ist `wait_value` der erforderliche Counter-Wert.
+
 Jeder Signal-Entry ist 12 Bytes groß:
 
 - Relativer Offset 0: Semaphore-XID
 - Offset 4: `CARD64 signal_value`
+
+Für Binary-Semaphoren muss `signal_value = 0` sein. Für Timeline-Semaphoren ist `signal_value` der zu signalisierende Counter-Wert.
 
 Gesamtlänge:
 

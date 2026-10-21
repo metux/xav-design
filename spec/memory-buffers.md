@@ -34,7 +34,7 @@ Für den initialen Compute-Test:
 
 ## 5.2 `GetPhysicalDeviceMemoryProperties`
 
-Request: Device-XID bei Offset 8, Gesamtlänge 12 Bytes.
+Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes. Der Request verwendet ausdrücklich die XID eines Physical Devices, nicht die XID eines logischen Devices.
 
 Der Reply enthält nach dem 32-Byte-Header:
 
@@ -144,6 +144,8 @@ Der Buffer muss gebunden sein, `TRANSFER_DST` besitzen und den vollständigen Zi
 Jeder `WriteBuffer`-Request ist ein eigenständiger Schreibvorgang. Es gibt weder Upload-ID noch einen mehrteiligen Upload-Transaktionszustand oder ein Final-Chunk-Flag.
 
 Clients dürfen mehrere Requests im normalen X11-Request-Stream hintereinander senden. Jeder Request erhält seine eigene Sequenznummer und seinen eigenen Reply.
+
+`WriteBuffer` ist ein Reply-Request. Bei Erfolg sendet der Server einen leeren Standard-X11-Reply von 32 Bytes; bei einem Fehler vor Abschluss sendet er den definierten X11-Fehler. Ein Void-Request ohne Reply wäre mit den folgenden Abschlussgarantien nicht vereinbar.
 
 Ein erfolgreicher Reply garantiert:
 
