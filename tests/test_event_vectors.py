@@ -21,7 +21,7 @@ def encode_event(vector: dict) -> bytes:
         raise ValueError("XGE event length must be >= 32 and divisible by four")
     if vector["xge_length"] != (total - 32) // 4:
         raise ValueError("XGE length does not match total bytes")
-    data = bytearray(32)
+    data = bytearray(total)
     struct.pack_into(endian + "BBH I H", data, 0,
                      35, vector["extension_opcode"], vector["sequence"],
                      vector["xge_length"], vector["event_type"])
@@ -36,7 +36,6 @@ def encode_event(vector: dict) -> bytes:
             raise ValueError("reserved event field must be zero")
         fmt = {4: "I", 8: "Q"}[size]
         struct.pack_into(endian + fmt, data, offset, int(value))
-    data.extend(bytes(total - len(data)))
     if len(data) != total:
         raise ValueError("event fields exceed declared total length")
     if any(data[10:32]):
