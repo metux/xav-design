@@ -69,7 +69,7 @@ Memory-Type-Flags:
 
 Heap-Flag-Bit 0 bezeichnet `DEVICE_LOCAL`. Andere Bits sind reserviert.
 
-Es gelten maximal 32 Memory Types und 16 Memory Heaps. Indizes beginnen bei null und bleiben während der Lebensdauer des logischen Devices stabil. Jeder Heap-Index muss gültig sein.
+Es gelten maximal 32 Memory Types und 16 Memory Heaps. Indizes beginnen bei null und bleiben für die Lebensdauer der Physical-Device-XID beziehungsweise ihrer Gerätegeneration stabil; alle logischen Devices auf diesem Physical Device verwenden dieselbe Zuordnung. Jeder Heap-Index muss gültig sein.
 
 `memory_properties_flags` besitzt noch keine festgelegte Semantik; bis zur Zuweisung einer Registry-Definition muss das Feld null sein.
 
