@@ -58,7 +58,9 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - `EnumeratePhysicalDevices`: Request muss exakt 8 Bytes lang sein; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden.
 - `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültige Atom-/Device-XID über Standard-X11-Fehler; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
 - `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; ungültige Physical-Device-XID über Standard-X11-Fehler.
-- `CreateDevice` und `CreateDefaultDevice`: Void-Requests; Erfolg erzeugt keinen Reply. `CreateDefaultDevice` meldet fehlendes geeignetes Gerät mit `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bei `CreateDevice` bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
+- `CreateDevice`: falsche Länge `BadLength`; nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1 oder ungültige Counts `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; ungültige Physical-Device-XID als Standard-X11-Fehler; falscher Ressourcentyp, nicht unterstützte Queue-Family-Anforderung oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Nicht unterstützte Feature-/Extension-Anfragen bleiben gemäß Open Issues noch nicht abschließend zugeordnet.
+- `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
+- Beide Requests sind Void-Requests; Erfolg erzeugt keinen normalen Reply.
 - `DestroyDevice`: falsche Länge `BadLength`; ungültige XID über Standard-X11-Fehler; fremde Device-Ownership `BadMatch`.
 
 ### `CreateDescriptorSetLayout`
