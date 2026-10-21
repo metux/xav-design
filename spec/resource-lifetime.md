@@ -56,7 +56,7 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | Device | Invalidiert Device und Kinder sofort | Interne Bereinigung wird verzögert |
 | CommandPool | Invalidiert Pool und Kind-Command-Buffer atomar | Abweisen, solange mindestens ein Kind pending ist |
 | CommandBuffer | XID wird ungültig | Abweisen, solange pending |
-| DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, solange mindestens ein Kind-Set pending ist |
+| DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, wenn ein Kind-Set pending ist oder ein Kind-Set von einem `RECORDING`-Command-Buffer referenziert wird |
 | DescriptorSet | XID wird ungültig | Abweisen, solange pending |
 | Buffer | XID wird ungültig | Abweisen, solange ein angenommener GPU-Command den Buffer direkt oder indirekt verwendet; sonst interne Freigabe verzögern, falls noch Serveroperationen darauf verweisen |
 | Memory | Nur bei erfolgreicher Prüfung invalidiert | `FreeMemory` wird abgewiesen, solange irgendein Buffer daran gebunden ist oder angenommene Arbeit die Allokation verwendet |
@@ -96,11 +96,9 @@ Ungültige XIDs, falsche Typen und fremde Ownership werden gemäß der request-s
 
 ## Device-Zerstörung und Client-Disconnect
 
-Bei `DestroyDevice` oder Client-Disconnect werden öffentliche Device-Ressourcen ungültig.
+Bei erfolgreichem `DestroyDevice` oder Client-Disconnect werden die öffentlichen XIDs des logischen Devices und seiner Ressourcen ungültig; danach sind sie für neue Requests nicht mehr adressierbar. Die Kaskadeninvalidierung darf nicht an normalen Pending-Use-Ablehnungen scheitern. Sie ändert aber nicht rückwirkend bereits angenommene Arbeit: Bei normalem Teardown muss diese Arbeit ihren tatsächlichen terminalen Ausgang erreichen, und interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten. Bei Client-Disconnect können Events nicht mehr zugestellt werden.
 
-Die interne Bereinigung muss sicher und unabhängig von der öffentlichen XID-Verfügbarkeit erfolgen. Der Server darf nicht unbegrenzt auf einem hängenden oder verlorenen Device warten.
-
-Nach Device Loss müssen betroffene Operationen als fehlgeschlagen behandelt werden. Der Server darf nicht so tun, als sei GPU-Arbeit erfolgreich abgeschlossen worden.
+Die interne Bereinigung muss sicher und unabhängig von der öffentlichen XID-Verfügbarkeit erfolgen. Der Server darf nicht unbegrenzt auf einem hängenden oder verlorenen Device warten. Wenn das Device verloren ist, gelten die folgenden Device-Loss-Regeln; der Server darf erfolgreiche GPU-Completion nicht vortäuschen.
 
 ## Device Loss und terminale Bereinigung
 
@@ -111,7 +109,7 @@ Wird ein logisches Device als verloren erkannt, gilt für alle darauf angenommen
 - Betroffene Command Buffer wechseln nach Ende ihrer Pending-Phase nach `INVALID` und sind nicht erneut einreichbar.
 - Interne Ressourcenreferenzen bleiben so lange erhalten, wie der Backend-Treiber oder die Serverbereinigung noch auf sie zugreifen kann. Ihre Freigabe darf nicht von einer GPU-Completion abhängen, die nach Device Loss nicht mehr eintreten kann.
 
-Öffentliche Ressourcen-XIDs dürfen bei Device-Zerstörung oder der dazugehörigen Kaskadenbereinigung invalidiert werden, auch wenn normale Pending-Use-Zerstörungen sonst abgewiesen würden. Diese Sonderregel gilt nur für die Device-weite Bereinigung; sie darf keine erfolgreiche Completion vortäuschen. Der Server muss den Backend-Zustand sicher abbauen und darf interne Ressourcen erst freigeben, wenn kein Backend-Zugriff mehr möglich ist.
+Öffentliche Ressourcen-XIDs dürfen bei Device-Zerstörung oder der dazugehörigen Kaskadenbereinigung invalidiert werden, auch wenn normale Pending-Use-Zerstörungen sonst abgewiesen würden. Diese Sonderregel gilt nur für die Device-weite Bereinigung; sie hebt interne Referenzpflichten nicht auf und darf keine erfolgreiche Completion vortäuschen. Der Server muss den Backend-Zustand sicher abbauen und darf interne Ressourcen erst freigeben, wenn kein Backend-Zugriff mehr möglich ist.
 
 Nach erkanntem Device Loss schlagen Requests, die weitere Vulkan-Arbeit erfordern, mit `DEVICE_LOST` fehl. Requests zur Statusabfrage und zur logischen Bereinigung dürfen weiterhin verarbeitet werden, soweit ihr jeweiliger Vertrag dies zulässt. Der genaue Fehlerpfad für fehlgeschlagene Backend-Teardown-Schritte bleibt ein offener Implementierungsaspekt.
 
