@@ -16,6 +16,10 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 12. [Reference workflow and conformance](conformance.md)
 13. [Open issues](open-issues.md)
 
+## Central registries
+
+- [Request subopcode registry](../registries/request-subopcodes.md) — inventory of currently defined requests; numeric assignments remain unallocated.
+
 ## Editorial conventions
 
 - Define generic framing, byte order, padding, and length rules once in the wire-protocol chapter.
