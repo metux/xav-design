@@ -309,6 +309,28 @@
       "payload_hex": "",
       "total_bytes": 32,
       "wire_hex": "0100123400000000000000010000000000000000000000000000000000000000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-available-little",
+      "event": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-available-big",
+      "event": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
