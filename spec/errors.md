@@ -160,6 +160,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `WaitSemaphores`: exakt `28 + 12 * semaphore_count` Bytes; Count null oder nicht exakt passende Länge wird abgewiesen (`BadValue` bei null Count, `BadLength` bei Längenabweichung).
 - Unbekannte/nicht-live Semaphore-/Fence-XIDs: `BadValue`; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
 - `WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status und keinen X11-Fehler.
+- Device Loss während `WaitSemaphores` wird als `DEVICE_LOST`-X11-Fehler gemeldet; bei `WaitForFence` wird `DEVICE_LOST` als normaler Reply-Status zurückgegeben.
 
 ### Fence-Requests
 
