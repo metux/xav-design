@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def section(document: str, name: str) -> str:
-    match = re.search(r"^## `" + re.escape(name) + r"`\s*$", document, re.M)
+    match = re.search(r"^## .*?`" + re.escape(name) + r"`\s*$", document, re.M)
     if not match:
         raise AssertionError(f"missing normative section: {name}")
     next_heading = re.search(r"^## ", document[match.end():], re.M)
