@@ -60,14 +60,15 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fence- und Semaphore-Zustände sowie Timeouts
 - Descriptor-Update/Freigabe während Pending-Use
 - Ressourcenzerstörung bei internen Referenzen
-- `DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, Pipeline, Fence und Semaphore; es weist Device, Pools, Command Buffer, Descriptor Set und Memory mit `BadMatch` ab
+- `DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline; es weist Fence, Semaphore, Device, Pools, Command Buffer, Descriptor Set und Memory mit `BadMatch` ab. Fence und Semaphore werden ausschließlich über `DestroyFence` beziehungsweise `DestroySemaphore` zerstört
 - `DestroyResource` hat exakt 12 Bytes und inferiert Device/Ownership aus der Ressource; fremde Ownership und abgewiesene Recording-/Pending-Zustände ändern keine XID oder Referenz
 - Erfolgreiches `DestroyResource` invalidiert die öffentliche XID sofort, erhält interne Objekte aber bis zum Ende notwendiger Referenzen und Backend-Zugriffe
 - Destroy einer von einem `RECORDING`-Command-Buffer referenzierten Ressource wird atomar abgewiesen.
 - Destroy einer von einem nicht-pending `EXECUTABLE`-Command-Buffer referenzierten Ressource invalidiert diesen Command Buffer.
 - `DestroyCommandPool`, `DestroyDescriptorPool` und `FreeDescriptorSets` werden bei verbotener Pending-/Recording-Referenz atomar abgewiesen; erfolgreiche Kaskaden invalidieren alle betroffenen XIDs.
 - `DestroyBuffer` während Pending-Use wird abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
-- `FreeMemory` bei gebundenem Buffer ergibt `BadMatch`; die Allokation kann erst nach Zerstörung aller gebundenen Buffer freigegeben werden.
+- `DestroyDescriptorPool` wird im Request-Register als eigener Void-Request geführt und bei verbotener Pending-/Recording-Referenz atomar abgewiesen.
+- `FreeMemory` ist ein eigener Void-Request; bei gebundenem Buffer ergibt er `BadMatch`; die Allokation kann erst nach Zerstörung aller gebundenen Buffer freigegeben werden.
 - Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion.
 - Wenn Backend-Quieszenz nach Device Loss nicht nachweisbar ist, werden interne Ressourcen quarantänisiert und weder freigegeben noch wiederverwendet, bis Quieszenz nachgewiesen oder der Serverprozess beendet ist.
 - XID-Wiederverwendung bei ausstehender Arbeit
