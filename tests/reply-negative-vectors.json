@@ -426,42 +426,42 @@
       "name": "fence-reserved-nonzero-little",
       "kind": "GetFenceStatus",
       "byte_order": "little",
-      "wire_hex": "0102341206000000010000000000000000000000000000000000000000000000",
+      "wire_hex": "0102341200000000010000000000000000000000000000000000000000000000",
       "violates": "reserved-zero"
     },
     {
       "name": "wait-for-fence-reserved-nonzero-little",
       "kind": "WaitForFence",
       "byte_order": "little",
-      "wire_hex": "0100341206000000000000000100000000000000000000000000000000000000",
+      "wire_hex": "0100341200000000000000000100000000000000000000000000000000000000",
       "violates": "reserved-zero"
     },
     {
       "name": "wait-semaphores-reserved-nonzero-little",
       "kind": "WaitSemaphores-timeout",
       "byte_order": "little",
-      "wire_hex": "0100341206000000010000000100000000000000000000000000000000000000",
+      "wire_hex": "0100341200000000010000000100000000000000000000000000000000000000",
       "violates": "reserved-zero"
     },
     {
       "name": "fence-reserved-nonzero-big",
       "kind": "GetFenceStatus",
       "byte_order": "big",
-      "wire_hex": "0102123400000006010000000000000000000000000000000000000000000000",
+      "wire_hex": "0102123400000000010000000000000000000000000000000000000000000000",
       "violates": "reserved-zero"
     },
     {
       "name": "wait-for-fence-reserved-nonzero-big",
       "kind": "WaitForFence",
       "byte_order": "big",
-      "wire_hex": "0100123400000006000000000100000000000000000000000000000000000000",
+      "wire_hex": "0100123400000000000000000100000000000000000000000000000000000000",
       "violates": "reserved-zero"
     },
     {
       "name": "wait-semaphores-reserved-nonzero-big",
       "kind": "WaitSemaphores-timeout",
       "byte_order": "big",
-      "wire_hex": "0100123400000006000000010100000000000000000000000000000000000000",
+      "wire_hex": "0100123400000000000000010100000000000000000000000000000000000000",
       "violates": "reserved-zero"
     }
   ]
