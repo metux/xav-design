@@ -327,7 +327,8 @@ class GoldenReplyVectorTests(unittest.TestCase):
         for vector in fixture["vectors"]:
             with self.subTest(vector=vector["name"]):
                 errors = reply_contract_errors(vector["kind"], bytes.fromhex(vector["wire_hex"]), vector["byte_order"])
-                self.assertIn(vector["violates"], errors)
+                self.assertEqual(errors, [vector["violates"]],
+                                 "each negative vector must isolate exactly one normative violation")
 
 
     def test_read_buffer_alignment_boundaries(self):
