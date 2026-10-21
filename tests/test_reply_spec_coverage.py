@@ -164,6 +164,27 @@ class ReplySpecCoverageTests(unittest.TestCase):
                 self.assertEqual(int.from_bytes(wire[16:20], order), size)
                 self.assertEqual(int.from_bytes(wire[4:8], order), size // 4)
 
+    def test_multiple_device_records_follow_record_length_formula(self):
+        body = section(self.devices, "EnumeratePhysicalDevices")
+        self.assertIn("32 + ((device_name_length + 3) & ~3)", body)
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors if v["event"] == "EnumeratePhysicalDevices-two-records" and v["byte_order"] == order)
+            wire = bytes.fromhex(vector["wire_hex"])
+            payload = wire[32:]
+            pos = 0
+            lengths = []
+            while pos < len(payload):
+                name_length = int.from_bytes(payload[pos + 28:pos + 30], order)
+                record_length = 32 + ((name_length + 3) & ~3)
+                self.assertLessEqual(pos + record_length, len(payload))
+                self.assertEqual(payload[pos + 30:pos + 32], bytes(2))
+                self.assertEqual(payload[pos + 32 + name_length:pos + record_length], bytes(record_length - 32 - name_length))
+                lengths.append(name_length)
+                pos += record_length
+            self.assertEqual(lengths, [1, 5])
+            self.assertEqual(pos, len(payload))
+            self.assertEqual(int.from_bytes(wire[4:8], order), len(payload) // 4)
+
     def test_property_payload_boundaries_follow_normative_formula(self):
         body = section(self.devices, "GetPhysicalDeviceProperty")
         self.assertIn("ceil(value_length / 4)", body)
