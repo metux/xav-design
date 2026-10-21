@@ -50,7 +50,7 @@ Reply:
 
 ## `WaitSemaphores`
 
-Fester Request-Header: 28 Bytes.
+Fester Request-Header: 28 Bytes; Gesamtlänge: `28 + 12 * semaphore_count` Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: `CARD32 semaphore_count`
@@ -73,7 +73,7 @@ Timeout:
 - `UINT64_MAX`: unendlich
 - sonst: Nanosekunden
 
-Der Reply enthält bei Offset 8 den Status `SUCCESS = 0` oder `TIMEOUT = 1`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
+Der Reply ist genau 32 Bytes lang. Byte 1 (X11-Reply-Feld `data`) enthält den Status `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 8–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
 
 ## `SignalSemaphore`
 
@@ -91,7 +91,7 @@ Validierungsfehler und unmittelbar feststellbare Vulkan-Fehler werden als normal
 
 ## Semaphore-Zerstörung
 
-`DestroySemaphore` verwendet die allgemeinen Lebensdauerregeln aus [Resource lifetime and ownership](resource-lifetime.md). Die Zerstörung wird mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine laufende serverseitige Host-Operation die Semaphore verwendet. Eine Ablehnung ändert weder XID noch Synchronisationszustand. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten bleiben erhalten, solange Backend-Zugriffe möglich sind. Bei Device Loss darf die Device-weite Kaskadeninvalidierung die normale Ablehnung umgehen.
+`DestroySemaphore` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes: Device-XID bei Offset 8 und Semaphore-XID bei Offset 12. `DestroySemaphore` verwendet die allgemeinen Lebensdauerregeln aus [Resource lifetime and ownership](resource-lifetime.md). Die Zerstörung wird mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine laufende serverseitige Host-Operation die Semaphore verwendet. Eine Ablehnung ändert weder XID noch Synchronisationszustand. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten bleiben erhalten, solange Backend-Zugriffe möglich sind. Bei Device Loss darf die Device-weite Kaskadeninvalidierung die normale Ablehnung umgehen.
 
 ## Fences
 
@@ -140,6 +140,8 @@ Request: 24 Bytes.
 - Offset 12: Fence-XID
 - Offset 16: `CARD64 timeout_ns`
 
+Der Reply ist genau 32 Bytes lang. Byte 1 (X11-Reply-Feld `data`) enthält den Status. Offsets 8–31 sind null und `reply.length = 0`.
+
 Reply-Status:
 
 - `SUCCESS = 0`
@@ -156,6 +158,8 @@ Request: 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12.
 Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`. Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben.
 
 ## Fence-Zerstörung
+
+`DestroyFence` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes: Device-XID bei Offset 8 und Fence-XID bei Offset 12.
 
 Eine Fence darf nur zerstört werden, wenn sie nicht `PENDING` ist. Der Destroy-Request wird andernfalls mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen und lässt die XID sowie den Fence-Zustand unverändert. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten dürfen bis zum Ende noch möglicher Serverzugriffe erhalten bleiben. Eine Fence im Zustand `FAILED` darf zerstört werden.
 
