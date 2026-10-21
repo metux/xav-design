@@ -53,7 +53,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - `feature_id` ist nicht in der XAverius-Feature-Registry definiert: `BadValue`.
 - `feature_id` ist registriert, wird aber vom ausgewählten Physical Device nicht unterstützt: `BadMatch`.
 - Feature-Record mit `enabled != 1` oder doppelte Feature-ID: `BadValue`.
-- Extension-Name ist leer, enthält Nicht-ASCII-/NUL-Bytes oder verletzt das registrierte Wire-Namensformat: `BadValue`.
+- Extension-Name ist leer, länger als 255 Bytes oder syntaktisch ungültig: `BadValue`.
 - Extension-Name ist syntaktisch gültig, aber unbekannt in der XAverius-Extension-Registry oder vom Physical Device nicht unterstützt: `BadMatch`.
 - Doppelte Extension-Namen: `BadValue`.
 - Alle Anforderungen müssen vor der Device-Erzeugung geprüft werden. Bei jedem Fehler bleibt die angeforderte `device_xid` unangelegt; der Server darf Features oder Extensions nicht stillschweigend auslassen.
