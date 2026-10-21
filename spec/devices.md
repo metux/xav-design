@@ -146,11 +146,22 @@ Größe: 8 Bytes. In v0.1 muss `enabled = 1` sein. Nicht angegebene Features wer
 
 Größe: `4 + ((name_length + 3) & ~3)`.
 
-Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert.
+Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert. Die Registry unterscheidet bekannte Feature-IDs von unbekannten IDs; ein bekanntes Feature kann je Physical Device unterstützt oder nicht unterstützt sein. Extension-Namen müssen nichtleere ASCII-Namen ohne NUL sein und dem Vulkan-Extension-Namensformat entsprechen.
+
+Für die Fehlerbehandlung gilt:
+
+- Eine unbekannte `feature_id`, die nicht in der XAverius-Feature-Registry definiert ist, ergibt `BadValue`.
+- Ein registriertes Feature, das das ausgewählte Physical Device nicht unterstützt, ergibt `BadMatch`.
+- Ein formal ungültiger Extension-Name ergibt `BadValue`.
+- Eine formal gültige Extension, die nicht in der XAverius-Extension-Registry bekannt ist oder vom ausgewählten Physical Device nicht unterstützt wird, ergibt `BadMatch`.
+- Doppelte Feature-IDs oder Extension-Namen ergeben `BadValue`.
+- Der Server aktiviert nur die ausdrücklich angeforderten und unterstützten Features und Extensions. Er darf nicht unterstützte Anforderungen nicht stillschweigend ignorieren.
+
+Die Prüfung erfolgt vollständig vor der Erzeugung des logischen Devices. Bei einem Fehler bleibt die `device_xid` unangelegt und es werden keine partiellen Vulkan-Objekte veröffentlicht.
 
 Die Gesamtlänge beträgt `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))`, wobei die Queue-Family-Records zuerst, danach alle Feature-Records und zuletzt alle Extension-Records folgen. Der Request muss exakt dieser Länge entsprechen; zusätzliche oder fehlende Bytes ergeben `BadLength`.
 
-`CreateDevice` ist ein Void-Request. Erfolgsfälle erzeugen keinen Reply; Fehler werden als normale X11-Fehler für diesen Request gemeldet. Die konkrete Zuordnung für nicht unterstützte Features und Extensions bleibt in [Open issues](open-issues.md) ausdrücklich offen.
+`CreateDevice` ist ein Void-Request. Erfolgsfälle erzeugen keinen Reply; Fehler werden als normale X11-Fehler für diesen Request gemeldet. Die Fehlerzuordnung für unbekannte beziehungsweise nicht unterstützte Features und Extensions ist verbindlich in [Errors and error mapping](errors.md) festgelegt.
 
 Ist das ausgewählte Physical Device nicht verfügbar, wird `DEVICE_UNAVAILABLE` als X11-Fehler gemeldet. Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
 
