@@ -81,15 +81,41 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - `ResetCommandBuffer` mit ungültiger Ressource oder falschem Device: request-spezifischer X11-Fehler beziehungsweise `BadMatch` bei Cross-Device-Verwendung
 - Fehlerhafte Entries eines `CommandBufferData`-Chunks werden atomar abgewiesen; der aktuelle Chunk wird nicht teilweise angehängt. Bereits vorher akzeptierte Chunks bleiben bis zu einem erfolgreichen Retry oder ABORT erhalten.
 
-### `QueueSubmit`
+### Einheitliche XID- und Zustandszuordnung für ausgewählte Requests
 
-- Count-/Längenfehler: `BadLength`
-- Ungültige Masks, reservierte Felder oder numerische Werte: `BadValue`
-- Ungültige XID: request-spezifischer X11-Fehler
-- Falscher Typ oder Cross-Device-Ressource: `BadMatch`
-- Nicht ausführbarer Command Buffer, ungültiger Fence- oder Semaphore-Zustand: `INVALID_SYNCHRONIZATION_STATE`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
-- Ungültige Abhängigkeit, die Annahme verhindert: `DEPENDENCY_FAILED`
+Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integrität; Feldwerte und reservierte Felder; Auflösung jeder erforderlichen XID; Ressourcentyp und Ownership; request-spezifische Zustands- und Backend-Prüfungen. Ein Fehler beendet den Request ohne Teiländerungen. Ein als `0` definierter optionaler XID-Wert wird nicht aufgelöst.
+
+| Request / Bedingung | Fehler |
+|---|---|
+| `DestroyResource`: falsche Länge | `BadLength` |
+| `DestroyResource`: XID löst keine live Ressource auf | Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; genaue Auswahl bleibt offen |
+| `DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client | `BadMatch` |
+| `DestroyResource`: Ressource wird von einem `RECORDING`-Command-Buffer referenziert oder ihre typabhängige Pending-Regel verbietet die Zerstörung | `INVALID_SYNCHRONIZATION_STATE` |
+| `BindBufferMemory`: falsche Länge | `BadLength` |
+| `BindBufferMemory`: ungültige Feldwerte oder nicht-null reservierte Felder, sofern vorhanden | `BadValue` |
+| `BindBufferMemory`: Device-, Buffer- oder Memory-XID ist ungültig/nicht live | Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; genaue Auswahl bleibt offen |
+| `BindBufferMemory`: falscher Ressourcentyp, Client-/Device-Ownership passt nicht, Buffer bereits gebunden, Memory-Type nicht erlaubt, Alignment falsch oder Allocation zu klein | `BadMatch` |
+| `BindBufferMemory`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `UpdateDescriptorSets`: falsche Gesamtlänge oder Payload passt nicht zu `write_count` | `BadLength` |
+| `UpdateDescriptorSets`: `write_count = 0`, reservierte Felder ungleich null oder ungültige Werte/Flags | `BadValue` |
+| `UpdateDescriptorSets`: ungültige/nicht-live Device-, Set- oder Buffer-XID | Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; genaue Auswahl bleibt offen |
+| `UpdateDescriptorSets`: falscher Typ, fremde Client-/Device-Ownership, Layout/Binding/Array-Slot/Descriptor-Typ inkompatibel, Buffer ungebunden oder Bereich/Alignment ungültig | `BadMatch` |
+| `UpdateDescriptorSets`: betroffenes Set wird von angenommener Arbeit verwendet | `INVALID_SYNCHRONIZATION_STATE` |
+| `UpdateDescriptorSets`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
+| `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, ungültige Masks oder numerische Werte | `BadValue` |
+| `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; genaue Auswahl bleibt offen |
+| `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
+| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`, Fence nicht submitbar, Semaphore-Zustand unzulässig oder Wait-Stage-Mask ungültig für die Queue | `INVALID_SYNCHRONIZATION_STATE` |
+| `QueueSubmit`: Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `DEPENDENCY_FAILED` |
+| `QueueSubmit`: Device nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `ResetFence`: falsche Länge | `BadLength` |
+| `ResetFence`: Device- oder Fence-XID ungültig/nicht live | Standard-X11-Ressourcenfehler für den betreffenden XID-Kontext; genaue Auswahl bleibt offen |
+| `ResetFence`: falscher Ressourcentyp oder Fence gehört zu einem anderen Client/Device | `BadMatch` |
+| `ResetFence`: Fence ist weder `SIGNALED` noch `FAILED` | `INVALID_SYNCHRONIZATION_STATE` |
+| `ResetFence`: Device verloren | `DEVICE_LOST` |
+
+Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler gemeldet; der Request darf keine Teiländerungen hinterlassen. Nach angenommener `QueueSubmit` werden Ausführungsfehler ausschließlich über die Submission-Terminalereignisse und zugehörige Zustände gemeldet, nicht als nachträglicher X11-Fehler. Ein nicht verfügbarer Zustand wird nur dann gemeldet, wenn der Request tatsächlich weitere Backend-Arbeit benötigt; rein logische Bereinigung nach Device Loss folgt den jeweiligen Lebensdauerregeln.
 
 ### Synchronisations-Requests
 
@@ -160,14 +186,11 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 
 ### `BindBufferMemory`
 
-Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
+Die vollständige XID-, Ownership-, Feldwert- und Device-Fehlerzuordnung steht in der einheitlichen Tabelle oben. Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
 
 ### `UpdateDescriptorSets`
 
-- Falsche Länge: `BadLength`
-- Reservierte Felder oder ungültige Werte: `BadValue`
-- Inkompatibler Descriptor, Buffer oder Device: `BadMatch`
-- Update während Pending-Use: `INVALID_SYNCHRONIZATION_STATE`
+Die vollständige XID-, Ownership-, Feldwert- und Device-Fehlerzuordnung steht in der einheitlichen Tabelle oben. Der Request bleibt bei jedem Fehler atomar.
 
 Jeder Request muss vor Implementierungsfreigabe eine vollständige, konkrete Fehlerzuordnung besitzen.
 
