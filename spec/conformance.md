@@ -112,3 +112,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `ReadBuffer` wartet auf alle zuvor angenommenen Submissions desselben logischen Devices und auf relevante vorherige `WriteBuffer`-Transfers
 - Readback-Ergebnisse werden nicht als korrekt vorausgesetzt, wenn fehlgeschlagene frühere GPU-Arbeit den gelesenen Bereich hätte verändern können
 - Korrekte Berechnung von `C[i] = A[i] + B[i]`
+
+- SelectEvents uses subopcode 40 and an exact total length of 32 bytes.
+- SelectEvents rejects unknown scope values, reserved nonzero fields, unsupported mask bits, and inconsistent scope fields; rejection preserves the previous selection.
+- A zero event mask clears only the selected scope; unmaskable ASYNC_ERROR and DEVICE_LOST delivery is independent of the selection.
