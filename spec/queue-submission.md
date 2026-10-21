@@ -82,14 +82,13 @@ The semaphore types and host-side semaphore operations used by `QueueSubmit` are
 # Ordering- und Synchronisationsgarantien
 
 1. Requests desselben X11-Clients werden in X11-Protokollreihenfolge verarbeitet.
-2. Ein erfolgreicher `WriteBuffer`-Reply garantiert abgeschlossenen Transfer und Sichtbarkeit für spätere abhängige XAverius-GPU-Arbeit.
+2. Ein erfolgreicher `WriteBuffer`-Reply ist ein geräteweiter Ordnungsübergang: alle zuvor angenommenen Submissions desselben logischen Devices sind terminal, der Transfer ist abgeschlossen, und jede danach angenommene Submission auf jeder Queue sieht die geschriebenen Bytes. Die Details sind in [Memory und Buffers](memory-buffers.md#56-writebuffer) normativ festgelegt.
 3. Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen.
 4. `ReadBuffer` antwortet erst, wenn die angeforderten Daten bereit sind und notwendige GPU-/Host-Visibility-Operationen erfolgt sind. In v0.1 muss der Server vor dem Reply alle zuvor angenommenen `QueueSubmit`-Submissions desselben logischen Devices bis zu ihrem terminalen Ausgang abwarten; eine vollständige Device-Synchronisation erfüllt diese Anforderung. Der Server muss außerdem frühere `WriteBuffer`-Transfers berücksichtigen, die den gelesenen Bereich betreffen. Ein fehlgeschlagener vorheriger GPU-Auftrag darf nicht als erfolgreiche Ausführung behandelt werden; die Daten sind nicht garantiert korrekt, wenn fehlgeschlagene Arbeit den gelesenen Bereich hätte verändern können.
 5. X11-`Sync` bestätigt die Verarbeitung vorheriger X11-Requests, nicht die GPU-Completion.
-6. XAverius synchronisiert die von `WriteBuffer` und `ReadBuffer` benötigten Transfergrenzen automatisch.
+6. XAverius synchronisiert die von `WriteBuffer` und `ReadBuffer` benötigten Transfergrenzen automatisch. Die `WriteBuffer`-Garantie gilt über alle Queues desselben logischen Devices; Client-seitige Semaphore oder Barrieren sind zwischen erfolgreichem Upload und später angenommener Arbeit für die Sichtbarkeit dieses Uploads nicht erforderlich.
 7. XAverius leitet keine beliebigen Shader-zu-Shader-Abhängigkeiten aus dem Inhalt von Shadern ab.
 8. Clients bleiben für explizite GPU-Abhängigkeiten zwischen beliebigen Commands verantwortlich.
 9. Für die erste Implementierung ist eine konservative vollständige Device-Synchronisation akzeptabel.
 10. Nach angenommener asynchroner Arbeit werden Fehler durch Events und Synchronisationszustände gemeldet.
 
-Die genaue Queue-übergreifende Reichweite der `WriteBuffer`-Sichtbarkeitsgarantie muss noch abschließend definiert werden.
