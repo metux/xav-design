@@ -12,6 +12,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Both default device selection and explicit physical-device selection followed by `CreateDevice` are intended.
 - Images are outside the initial v0.1 compute path.
 - `WriteBuffer` uses independent requests rather than an upload transaction.
+- A successful `WriteBuffer` reply is a device-wide ordering boundary for its logical device: all previously accepted submissions reach a terminal outcome before the transfer modifies the destination, and all subsequently accepted submissions on any queue observe the written bytes. No client semaphore/barrier is required solely to make that upload visible. The server may implement this conservatively with full device synchronization; if the device is lost or the transfer fails, no successful reply is sent.
 - Acceptance of `QueueSubmit` is distinct from GPU completion.
 - `QueueSubmit` carries a client-generated 64-bit `submission_token`; it must be nonzero and unique for the lifetime of that X11 client connection, but has no ordering semantics. The server echoes it in submission-related events.
 - Asynchronous failures are reported through XAverius events and synchronization state.
@@ -38,7 +39,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 
 - Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
 - Complete request-specific error mappings and exact applicability/layout of generic `DestroyResource`.
-- Conservative synchronization rules and queue-crossing visibility guarantees.
+- Further optimization of the now-settled conservative `WriteBuffer` ordering contract, provided the normative observable ordering remains unchanged.
 
 ## Open decisions
 
