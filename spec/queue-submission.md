@@ -62,19 +62,18 @@ Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig. Dieselbe Semaphore 
 
 `QueueSubmit` ist ein Void-Request. Die Annahme oder Ablehnung wird synchron über die normalen X11-Fehlerregeln signalisiert; der Token dient ausschließlich der Korrelation späterer asynchroner Ergebnisse.
 
-## Submission terminal states and Device Loss
+## Terminaler Submission-Zustand und Device Loss
 
-Each accepted submission has exactly one terminal outcome:
+Jede angenommene Submission hat genau einen terminalen Ausgang:
 
-- `SUBMISSION_COMPLETE`: all commands in the submission completed successfully.
-- `SUBMISSION_FAILED`: the submission did not complete successfully; the event carries the `submission_token` and a failure status.
+- `SUBMISSION_COMPLETE`: Alle Commands der Submission wurden erfolgreich abgeschlossen.
+- `SUBMISSION_FAILED`: Die Submission wurde nicht erfolgreich abgeschlossen; das Event enthält den `submission_token` und einen Fehlerstatus.
 
-The server must emit exactly one of these terminal events for every accepted submission while the client connection remains able to receive events. An `ASYNC_ERROR` may provide additional diagnostic detail, but it does not replace the terminal submission event and must not cause a second terminal event. A rejected `QueueSubmit` was never accepted and produces no submission terminal event.
+Der Server erzeugt für jede angenommene Submission genau eines dieser terminalen Events. Die Zustellung richtet sich nach der XAverius-Event-Auswahl und ist nur möglich, solange die Client-Verbindung besteht. Ein `ASYNC_ERROR` kann zusätzliche Diagnoseinformationen liefern, ersetzt das terminale Submission-Event aber nicht und darf kein zweites terminales Event auslösen. Eine abgelehnte `QueueSubmit`-Anforderung wurde nicht angenommen und erzeugt kein terminales Submission-Event.
 
-If execution fails after acceptance, the submission is failed, not completed. Its Fence, if any, transitions to `FAILED`. Every Command Buffer used by that submission transitions to `INVALID` after the submission is no longer pending; it must be reset/re-recorded according to the Command-Buffer API before reuse. The server retains internal references until the failed submission is terminal and the backend no longer accesses them.
+Tritt nach der Annahme ein Ausführungsfehler auf, schlägt die Submission fehl; sie gilt nicht als abgeschlossen. Ihre Fence wechselt gegebenenfalls nach `FAILED`. Jeder von dieser Submission verwendete Command Buffer wechselt nach Ende der Pending-Phase nach `INVALID`. Vor einer erneuten Verwendung muss er gemäß der Command-Buffer-API zurückgesetzt und neu aufgezeichnet werden. Der Server hält interne Referenzen, bis die Submission terminal ist und das Backend nicht mehr auf die Ressourcen zugreift.
 
-On Device Loss, every accepted but nonterminal submission for that logical Device is failed with `DEVICE_LOST`. The server must not synthesize successful completion or signal a Fence as `SIGNALED` for work that did not complete successfully. A terminal event is still required for each accepted submission unless the client connection itself has been lost. Later GPU work on the lost Device is not executed; requests that only inspect or clean up the logical Device may follow their documented cleanup rules, while operations requiring a functioning Device fail with `DEVICE_LOST`.
-
+Bei Device Loss schlagen alle angenommenen, noch nicht terminalen Submissions des betroffenen logischen Devices mit `DEVICE_LOST` fehl. Der Server darf keine erfolgreiche Completion vortäuschen und keine Fence für nicht erfolgreich abgeschlossene Arbeit auf `SIGNALED` setzen. Für jede angenommene Submission bleibt genau ein terminales Event vorgesehen, sofern die Client-Verbindung noch besteht. Weitere GPU-Arbeit auf dem verlorenen Device wird nicht ausgeführt. Requests, die nur den Status abfragen oder das logische Device bereinigen, dürfen nach ihren jeweiligen Regeln weiterlaufen; Operationen, die ein funktionsfähiges Device benötigen, schlagen mit `DEVICE_LOST` fehl.
 
 ## Semaphore references
 
