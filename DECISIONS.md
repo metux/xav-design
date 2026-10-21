@@ -18,9 +18,12 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Descriptor sets may not be updated or freed while pending use is possible.
 - Unassigned registry values must not be guessed.
 
+## Settled wire-protocol constraints
+
+- `BIG-REQUESTS` is not supported in v0.1 because its extended-length field conflicts with the XAverius common header at offset 4. The ordinary X11 request-size limit applies; larger payloads must use request-specific chunking where defined.
+
 ## Provisional rules requiring review
 
-- Request-size and segmentation limits proposed after the 2026-10-20 draft; reconcile them with the historical BIG-REQUESTS wording.
 - Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
 - Exact request-specific error mappings and pending-destruction restrictions.
 - Generic `DestroyResource` applicability and exact behavior.
