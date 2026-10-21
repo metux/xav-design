@@ -22,7 +22,7 @@
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
 - Define event-selection request layouts and their validation rules before assigning new request subopcodes.
 - Complete the v0.1 feature/extension support set and property/Atom registry when their semantics are specified.
-- Continue checking cross-chapter consistency and add conformance cases with each protocol decision.
+- Finish the final ABI review of request-specific error coverage and reply layouts; keep adding conformance cases with each protocol decision.
 
 ## End-to-end compute-path audit — 2026-10-21
 
@@ -56,3 +56,17 @@ The working draft now defines the `ShaderModuleData` chunk layout and `CREATE`/`
 ## Request catalogue and wire-contract audit — 2026-10-21
 
 The current 39-request inventory was cross-checked against the defining chapters for request kind, fixed/formula-based lengths, common framing, and request-specific error rules. An outdated `DestroyResource` scope statement in `DECISIONS.md` was corrected: Fence and Semaphore require their dedicated destroy requests. The audit record is [spec/request-audit.md](spec/request-audit.md). Event-selection request layouts and several semantic/numeric registries remain open. The 39 currently defined requests now have stable subopcode assignments; this does not freeze v0.1.
+
+
+## Second systematic request-contract audit — 2026-10-21
+
+Rechecked all 39 registered requests against their defining chapter, request kind, total request length, reply framing, and error mapping. Added a 39-row per-request length matrix to [the audit record](spec/request-audit.md) and committed follow-up corrections in separate steps:
+
+- Made the `EnumeratePhysicalDevices` and `GetPhysicalDeviceQueueFamilyProperties` reply-length formulas explicit, and assigned numeric values to `GetPhysicalDeviceProperty` statuses.
+- Clarified the standard X11 reply header fields in `GetFenceStatus`.
+- Corrected the initial compute example to use XAverius' `COMPUTE` stage symbol; the descriptor registry already consistently limits v0.1 to `STORAGE_BUFFER = 1`.
+- Distinguished Create-target XID collisions (`BadIDChoice`) from missing input resources (`BadValue`) for pipeline creation, descriptor-set batch allocation, and chunked shader/command-buffer creation.
+- Filled in missing error mappings for invalid queue counts, duplicate queue-family records, duplicate descriptor-pool size types, duplicate descriptor writes, duplicate submission synchronization entries, and duplicate wait semaphore IDs.
+- Extended conformance checks for the new reply formulas, statuses, Create-XID rules, and duplicate-entry handling.
+
+The request registry still contains 39 unique assignments (1–39); no existing subopcode was changed. This pass does not resolve the open feature/extension set, property/Atom registry, event-selection wire layouts, wait-stage mapping, or timeout/scheduling semantics. The protocol remains a working draft and `master` was not changed.
