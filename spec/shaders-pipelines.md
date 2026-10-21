@@ -102,9 +102,9 @@ Der Pool muss zum angegebenen logischen Device gehören. Der Request wird atomar
 
 Bei Erfolg werden der Pool und alle enthaltenen Descriptor Sets öffentlich invalidiert. Nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`. Interne Objekte bleiben erhalten, bis alle Referenzen und Backend-Zugriffe beendet sind.
 
-## 6.4 Allocate Descriptor Sets
+## 6.4 `AllocateDescriptorSets`
 
-Fester Header: 20 Bytes.
+`AllocateDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Descriptor-Pool-XID
@@ -118,9 +118,9 @@ Gesamtlänge: `20 + 8 * descriptor_set_count`; `descriptor_set_count` muss posit
 
 Die Allokation ist atomar. Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben.
 
-## 6.5 Update Descriptor Sets
+## 6.5 `UpdateDescriptorSets`
 
-Fester Header: 20 Bytes.
+`UpdateDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: `CARD16 write_count`
@@ -150,9 +150,9 @@ Mehrere Writes desselben Descriptor-Slots innerhalb eines Requests sind ungülti
 
 Ein Descriptor Set darf nicht aktualisiert werden, solange eine angenommene Submission es verwenden kann. In diesem Fall wird `INVALID_SYNCHRONIZATION_STATE` zurückgegeben.
 
-## 6.6 Free Descriptor Sets
+## 6.6 `FreeDescriptorSets`
 
-Fester Header: 20 Bytes.
+`FreeDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Descriptor-Pool-XID
@@ -164,9 +164,9 @@ Gesamtlänge: `20 + 4 * descriptor_set_count`; `descriptor_set_count` muss posit
 
 Erfolgreich freigegebene Sets werden sofort öffentlich ungültig. Ein Set, das noch ausstehend verwendet wird, darf nicht freigegeben werden.
 
-## 6.7 Pipeline Layout
+## 6.7 `CreatePipelineLayout`
 
-`CreatePipelineLayout` enthält:
+`CreatePipelineLayout` ist ein Void-Request und enthält:
 
 - Offset 8: Device-XID
 - Offset 12: Pipeline-Layout-XID
