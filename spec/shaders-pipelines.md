@@ -189,7 +189,7 @@ Nach erfolgreicher Erstellung darf das Descriptor Set Layout öffentlich zerstö
 
 ## 6.8 Compute Pipeline
 
-Vorgeschlagene Gesamtlänge von `CreateComputePipeline`:
+`CreateComputePipeline` ist ein Void-Request. Die normative Gesamtlänge beträgt:
 
 `28 + ((entry_point_length + 3) & ~3)`
 
@@ -201,4 +201,4 @@ Vorgeschlagene Gesamtlänge von `CreateComputePipeline`:
 - Offset 26: `CARD16 reserved = 0`
 - Offset 28: ASCII-Entry-Point ohne NUL, auf vier Bytes gepaddet
 
-Der Entry-Point muss nichtleer sein. Specialization Constants werden in v0.1 nicht unterstützt. Die Erstellung ist atomar.
+Der Entry-Point muss nichtleer sein und ausschließlich ASCII-Bytes enthalten; NUL ist nicht erlaubt. Padding-Bytes müssen null sein. Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen; `entry_point_length` muss positiv sein. Specialization Constants werden in v0.1 nicht unterstützt. Die Erstellung ist atomar; bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt.
