@@ -43,7 +43,7 @@ Die Ziel-XID eines Create-Requests ist keine Eingabe-XID, die als vorhandene Res
 
 Diese Regel gilt insbesondere für die Ziel-XIDs von `CreatePipelineLayout`, `CreateComputePipeline` und die in `AllocateDescriptorSets` angeforderten Descriptor Sets. Für `ShaderModuleData` und `CommandBufferData` gilt sie, wenn das `CREATE`-Flag gesetzt ist. Bei `ShaderModuleData` reserviert ein erfolgreicher CREATE-Chunk die Ziel-XID für das Upload-Assembly; ein zweites CREATE oder eine bereits live belegte Ziel-XID ergibt `BadIDChoice`.
 
-Bei `ShaderModuleData` ohne `CREATE` muss ein passendes Upload-Assembly existieren. Bei `CommandBufferData` ohne `CREATE` muss die Ziel-XID einen live Command Buffer im Zustand `RECORDING` bezeichnen. Fehlt das erforderliche Assembly beziehungsweise der Recording-Zustand, ergibt sich `INVALID_SYNCHRONIZATION_STATE`; unbekannte/nicht-live XIDs bleiben `BadValue`, und ein falscher live Ressourcentyp bleibt `BadMatch`. Alle Prüfungen erfolgen vor einer Zustandsänderung.
+Bei `ShaderModuleData` ohne `CREATE` muss ein passendes Upload-Assembly existieren. Ist die XID eine live Ressource eines anderen Typs, gilt `BadMatch`; andernfalls ergibt ein fehlendes Assembly `INVALID_SYNCHRONIZATION_STATE`, auch wenn noch kein öffentliches Shader-Module-Objekt existiert. Bei `CommandBufferData` ohne `CREATE` muss die Ziel-XID einen live Command Buffer bezeichnen: unbekannte/nicht-live XIDs ergeben `BadValue`, ein falscher live Ressourcentyp `BadMatch`, und ein Command Buffer außerhalb von `RECORDING` ergibt `INVALID_SYNCHRONIZATION_STATE`. Alle Prüfungen erfolgen vor einer Zustandsänderung.
 
 
 ## `CreateDevice`: Feature- und Extension-Anforderungen
