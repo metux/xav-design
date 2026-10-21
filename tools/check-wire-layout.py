@@ -33,7 +33,7 @@ def read(path: str) -> str:
 
 def sections(markdown: str) -> list[tuple[str, str]]:
     # Bound every section by the next H2 heading, not only event headings.
-    headers = list(re.finditer(r"^## (.+?)\\s*$", markdown, re.M))
+    headers = list(re.finditer(r"^## (.+?)\s*$", markdown, re.M))
     result: list[tuple[str, str]] = []
     for i, match in enumerate(headers):
         name = re.fullmatch(r"`([^`]+)`", match.group(1).strip())
