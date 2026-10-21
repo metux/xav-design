@@ -8,7 +8,7 @@ This audit compares the currently defined request inventory in [the central requ
 
 - The registry contains 40 currently defined requests.
 - Every registered request has a defining specification chapter.
-- The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for the 39 registered requests.
+- The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for the 40 registered requests.
 - The common X11 framing rules specify an 8-byte request header, four-byte request-length units, zero padding, no BIG-REQUESTS in v0.1, and standard 32-byte X11 replies/errors.
 - The second systematic pass found several cross-chapter discrepancies and underspecified reply fields. These are recorded below and corrected in follow-up commits; the earlier pass must not be read as a claim that every contract was already consistent.
 
