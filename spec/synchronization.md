@@ -25,7 +25,7 @@ Binary-Semaphoren folgen den Vulkan-Signal-/Wait-Regeln.
 - Pending Signal-/Wait-Zustände müssen atomar validiert werden.
 - Ein Signal und ein Wait müssen nach den geltenden Vulkan-Regeln zusammenpassen.
 
-Die vollständigen Regeln für noch ausstehende Signal-/Wait-Operationen sind noch zu präzisieren.
+In v0.1 darf für eine Binary-Semaphore höchstens eine Signaloperation und höchstens eine Wait-Operation gleichzeitig pending sein. Ein einzelner pending Wait darf auf ein Signal warten, das noch nicht eingereiht wurde; ebenso darf ein Signal pending sein, bevor der passende Wait eingereiht wird. Sobald ein Signal durch einen Wait konsumiert wurde, kann die Semaphore erneut verwendet werden. Eine zweite pending Signaloperation oder eine zweite pending Wait-Operation auf derselben Binary-Semaphore wird bei `QueueSubmit` atomar mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Ein erfolgreicher Wait konsumiert das Signal genau einmal.
 
 ## Timeline-Semaphoren
 
@@ -153,6 +153,6 @@ Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDIN
 
 ## Fence-Zerstörung
 
-Die öffentliche Fence-XID wird bei erfolgreicher Zerstörung ungültig. Die interne Fence bleibt erhalten, solange angenommene Arbeit sie benötigt.
+Eine Fence darf nur zerstört werden, wenn sie nicht `PENDING` ist. Der Destroy-Request wird andernfalls mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen und lässt die XID sowie den Fence-Zustand unverändert. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten dürfen bis zum Ende noch möglicher Serverzugriffe erhalten bleiben. Eine Fence im Zustand `FAILED` darf zerstört werden.
 
-Die konservative v0.1-Regel lautet: Eine pending Fence kann nicht zerstört werden. Die genaue Fehlerzuordnung und das Verhalten nach Device Loss müssen mit der allgemeinen Zerstörungsregel konsistent umgesetzt werden.
+Bei Device Loss werden Fences aus nicht-terminalen Submissions nach `FAILED` überführt. Sie dürfen anschließend normal zerstört werden; die Device-weite Kaskadeninvalidierung bleibt unabhängig davon zulässig.
