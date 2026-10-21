@@ -69,7 +69,7 @@ Jede angenommene Submission hat genau einen terminalen Ausgang:
 - `SUBMISSION_COMPLETE`: Alle Commands der Submission wurden erfolgreich abgeschlossen.
 - `SUBMISSION_FAILED`: Die Submission wurde nicht erfolgreich abgeschlossen; das Event enthält den `submission_token` und einen Fehlerstatus.
 
-Der Server erzeugt für jede angenommene Submission genau eines dieser terminalen Events. Die Zustellung richtet sich nach der XAverius-Event-Auswahl und ist nur möglich, solange die Client-Verbindung besteht. Ein `ASYNC_ERROR` kann zusätzliche Diagnoseinformationen liefern, ersetzt das terminale Submission-Event aber nicht und darf kein zweites terminales Event auslösen. Eine abgelehnte `QueueSubmit`-Anforderung wurde nicht angenommen und erzeugt kein terminales Submission-Event.
+Jede angenommene Submission erhält intern genau einen terminalen Ausgang. Ist das passende Completion- oder Failure-Event für die Queue ausgewählt und die Client-Verbindung noch aktiv, liefert der Server genau das dazugehörige Event aus. Ohne passende Event-Auswahl wird kein solches Event an den Client zugestellt; der terminale interne Zustand bleibt davon unberührt. Ein `ASYNC_ERROR` kann zusätzliche Diagnoseinformationen liefern, ersetzt den terminalen Ausgang nicht und darf keinen zweiten terminalen Ausgang erzeugen. Eine abgelehnte `QueueSubmit`-Anforderung wurde nicht angenommen und erhält keinen terminalen Ausgang.
 
 Tritt nach der Annahme ein Ausführungsfehler auf, schlägt die Submission fehl; sie gilt nicht als abgeschlossen. Ihre Fence wechselt gegebenenfalls nach `FAILED`. Jeder von dieser Submission verwendete Command Buffer wechselt nach Ende der Pending-Phase nach `INVALID`. Vor einer erneuten Verwendung muss er gemäß der Command-Buffer-API zurückgesetzt und neu aufgezeichnet werden. Der Server hält interne Referenzen, bis die Submission terminal ist und das Backend nicht mehr auf die Ressourcen zugreift.
 
@@ -84,7 +84,7 @@ The semaphore types and host-side semaphore operations used by `QueueSubmit` are
 1. Requests desselben X11-Clients werden in X11-Protokollreihenfolge verarbeitet.
 2. Ein erfolgreicher `WriteBuffer`-Reply garantiert abgeschlossenen Transfer und Sichtbarkeit für spätere abhängige XAverius-GPU-Arbeit.
 3. Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen.
-4. `ReadBuffer` antwortet erst, wenn die angeforderten Daten bereit sind und notwendige GPU-/Host-Visibility-Operationen erfolgt sind.
+4. `ReadBuffer` antwortet erst, wenn die angeforderten Daten bereit sind und notwendige GPU-/Host-Visibility-Operationen erfolgt sind. In v0.1 muss der Server vor dem Reply alle zuvor angenommenen `QueueSubmit`-Submissions desselben logischen Devices bis zu ihrem terminalen Ausgang abwarten; eine vollständige Device-Synchronisation erfüllt diese Anforderung. Der Server muss außerdem frühere `WriteBuffer`-Transfers berücksichtigen, die den gelesenen Bereich betreffen. Ein fehlgeschlagener vorheriger GPU-Auftrag darf nicht als erfolgreiche Ausführung behandelt werden; die Daten sind nicht garantiert korrekt, wenn fehlgeschlagene Arbeit den gelesenen Bereich hätte verändern können.
 5. X11-`Sync` bestätigt die Verarbeitung vorheriger X11-Requests, nicht die GPU-Completion.
 6. XAverius synchronisiert die von `WriteBuffer` und `ReadBuffer` benötigten Transfergrenzen automatisch.
 7. XAverius leitet keine beliebigen Shader-zu-Shader-Abhängigkeiten aus dem Inhalt von Shadern ab.
