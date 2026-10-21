@@ -41,6 +41,11 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Complete request-specific error mappings and exact applicability/layout of generic `DestroyResource`.
 - Further optimization of the now-settled conservative `WriteBuffer` ordering contract, provided the normative observable ordering remains unchanged.
 
+## Newly settled wire decisions — 2026-10-21
+
+- `ShaderModuleData` uses one opcode and request flags `CREATE`, `FINAL`, and `ABORT`. Chunks concatenate their declared SPIR-V bytes; per-request zero padding is excluded. Any malformed chunk discards the entire in-progress shader assembly; successful FINAL atomically creates the module.
+- `CreateCommandPool` and `DestroyCommandPool` layouts are fixed. `CommandBufferData` validates each chunk atomically; a failed chunk does not append partial entries, earlier accepted chunks remain, and ABORT returns a non-pending recording buffer to `INITIAL`.
+
 ## Open decisions
 
 See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, and backend teardown failure handling.
