@@ -45,6 +45,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 
 - `ShaderModuleData` uses one opcode and request flags `CREATE`, `FINAL`, and `ABORT`. Chunks concatenate their declared SPIR-V bytes; per-request zero padding is excluded. Any malformed chunk discards the entire in-progress shader assembly; successful FINAL atomically creates the module.
 - `CreateCommandPool` and `DestroyCommandPool` layouts are fixed. `CommandBufferData` validates each chunk atomically; a failed chunk does not append partial entries, earlier accepted chunks remain, and ABORT returns a non-pending recording buffer to `INITIAL`.
+- `CreateCommandPool` flags are fixed for v0.1: bit 0 `TRANSIENT` (optimization hint only), bit 1 `RESET_COMMAND_BUFFER` (permits explicit `ResetCommandBuffer`), bits 2–31 zero. Unknown flags are rejected; the server never adds flags implicitly. `ResetCommandBuffer` is a 16-byte Void request and requires the pool flag and a non-pending buffer; success resets `INITIAL`, `RECORDING`, `EXECUTABLE`, or `INVALID` to `INITIAL` and drops recorded entries/references. `CommandBufferData` ABORT remains a distinct recording-upload recovery operation and does not require the pool reset flag.
 
 ## Open decisions
 
