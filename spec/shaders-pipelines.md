@@ -45,7 +45,17 @@ After successful creation of a Compute Pipeline, the Shader Module may be destro
 
 ## 6.2 Descriptor Set Layout
 
-Die Binding-Records von `CreateDescriptorSetLayout` sind jeweils 16 Bytes groß.
+`CreateDescriptorSetLayout` ist ein Void-Request mit folgendem Wire-Layout. Die Gesamtlänge beträgt `24 + 16 * binding_count` Bytes.
+
+| Offset | Typ | Feld |
+|---:|---|---|
+| 8 | XID | `device_xid` |
+| 12 | XID | `descriptor_set_layout_xid` |
+| 16 | CARD32 | `flags`; in v0.1 MUSS null sein |
+| 20 | CARD32 | `binding_count` |
+| 24 | BINDING[] | `binding_count` Binding-Records |
+
+Jeder Binding-Record ist 16 Bytes groß:
 
 | Relativer Offset | Typ | Feld |
 |---:|---|---|
@@ -54,11 +64,15 @@ Die Binding-Records von `CreateDescriptorSetLayout` sind jeweils 16 Bytes groß.
 | 8 | CARD32 | `descriptor_count` |
 | 12 | CARD32 | `stage_flags` |
 
+Der Request muss exakt die durch `binding_count` bestimmte Länge haben. Die Gesamtlänge muss innerhalb der normalen X11-Requestgrößenbegrenzung liegen. `binding_count = 0` ist zulässig und erzeugt ein leeres Layout. Für jeden Record muss `descriptor_count` größer als null sein. Binding-Nummern müssen innerhalb des Layouts eindeutig sein; doppelte Binding-Nummern machen den gesamten Request ungültig.
+
+`descriptor_type` und `stage_flags` verwenden ausschließlich Werte aus den zentralen Registries. Jeder verwendete Wert muss in v0.1 unterstützt sein. Die Stage-Maske darf keine unbekannten oder nicht unterstützten Bits enthalten und muss mindestens eine unterstützte Stage enthalten. Die für v0.1 unterstützten Descriptor-Typen sind auf die in diesem Kapitel beschriebenen Buffer-Descriptoren beschränkt; nicht unterstützte Descriptor-Typen werden abgewiesen. Die numerischen Registry-Werte werden nicht lokal in diesem Kapitel vergeben.
+
+`flags` muss null sein. Nicht-null Flags werden mit `BadValue` abgewiesen; v0.1 akzeptiert keine implizit ignorierten Layout-Flags. Der Server prüft zusätzlich Device-Ownership, unbenutzte Create-XID, Descriptor- und Stage-Unterstützung sowie Geräte-Limits. Die Erstellung ist atomar: Bei einem Fehler wird kein Descriptor Set Layout öffentlich angelegt.
+
 Im initialen Compute-Test werden Bindings 0, 1 und 2 jeweils als `STORAGE_BUFFER`, Anzahl 1 und `COMPUTE_SHADER` angelegt.
 
-Binding-Nummern müssen innerhalb eines Layouts eindeutig sein. Die Descriptor-Anzahl muss positiv sein. Descriptor-Type- und Stage-Flag-IDs müssen zentral registriert werden.
-
-Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öffentlich zerstört werden, wenn keine Vulkan-Regel eine weitere Lebensdauer verlangt.
+Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öffentlich zerstört werden, sofern die tatsächlichen Vulkan-Lebensdauerregeln dies erlauben. Interne Referenzen werden entsprechend den Vulkan-Regeln erhalten.
 
 ## 6.3 Descriptor Pool
 
