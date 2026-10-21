@@ -91,6 +91,17 @@ Jeder Pool-Entry enthält `CARD32 descriptor_type` und `CARD32 descriptor_count`
 
 `max_sets` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig.
 
+## 6.3.1 Destroy Descriptor Pool
+
+`DestroyDescriptorPool` hat eine feste Gesamtlänge von 16 Bytes:
+
+- Offset 8: Device-XID
+- Offset 12: Descriptor-Pool-XID
+
+Der Pool muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn ein enthaltenes Descriptor Set pending verwendet wird oder von einem `RECORDING`-Command-Buffer referenziert wird; der Fehler ist `INVALID_SYNCHRONIZATION_STATE`. Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert.
+
+Bei Erfolg werden der Pool und alle enthaltenen Descriptor Sets öffentlich invalidiert. Nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`. Interne Objekte bleiben erhalten, bis alle Referenzen und Backend-Zugriffe beendet sind.
+
 ## 6.4 Allocate Descriptor Sets
 
 Fester Header: 20 Bytes.
