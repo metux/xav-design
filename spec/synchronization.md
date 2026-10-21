@@ -89,6 +89,10 @@ Der Server führt das Host-Signal aus, bevor er mit der Verarbeitung eines spät
 
 Validierungsfehler und unmittelbar feststellbare Vulkan-Fehler werden als normale X11-Request-Fehler gemeldet; der Request hinterlässt dann keine teilweise ausgeführte Signaloperation. Ein nach Annahme der Operation auftretender Device Loss wird über die normalen Device-Loss-/asynchronen Fehlermechanismen gemeldet. Da der Request kein Reply erzeugt, kann der Client Fehler mit der üblichen X11-Fehlerbehandlung beziehungsweise `XSync` erkennen. Ein späterer Request derselben Verbindung darf nicht vor Abschluss der Host-Signaloperation ausgeführt werden.
 
+## Semaphore-Zerstörung
+
+`DestroySemaphore` verwendet die allgemeinen Lebensdauerregeln aus [Resource lifetime and ownership](resource-lifetime.md). Die Zerstörung wird mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine laufende serverseitige Host-Operation die Semaphore verwendet. Eine Ablehnung ändert weder XID noch Synchronisationszustand. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten bleiben erhalten, solange Backend-Zugriffe möglich sind. Bei Device Loss darf die Device-weite Kaskadeninvalidierung die normale Ablehnung umgehen.
+
 ## Fences
 
 ## Zustände
