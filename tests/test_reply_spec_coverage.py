@@ -150,6 +150,21 @@ class ReplySpecCoverageTests(unittest.TestCase):
                     count = int.from_bytes(wire[offset:offset + 4], order)
                     self.assertGreater(count, limit, f"{case['name']} does not exceed normative limit {limit}")
 
+    def test_property_payload_boundaries_follow_normative_formula(self):
+        body = section(self.devices, "GetPhysicalDeviceProperty")
+        self.assertIn("ceil(value_length / 4)", body)
+        for size in (1, 5):
+            for order in ("little", "big"):
+                matches = [v for v in self.vectors
+                           if v["event"] == "GetPhysicalDeviceProperty-success-byte-array-" + str(size)
+                           and v["byte_order"] == order]
+                self.assertEqual(len(matches), 1, f"property size {size} missing in {order}-endian")
+                wire = bytes.fromhex(matches[0]["wire_hex"])
+                padded = (size + 3) & ~3
+                self.assertEqual(len(wire), 32 + padded)
+                self.assertEqual(int.from_bytes(wire[4:8], order), padded // 4)
+                self.assertEqual(wire[32 + size:], bytes(padded - size))
+
     def test_read_buffer_boundary_fixtures_follow_wire_formula(self):
         body = section(self.memory, "ReadBuffer")
         self.assertRegex(body, r"reply\.length\s*=\s*ceil\(data_length\s*/\s*4\)")
