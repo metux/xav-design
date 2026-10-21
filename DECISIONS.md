@@ -35,10 +35,9 @@ This file tracks the status and rationale of design decisions. The historical dr
 ## Provisional rules requiring review
 
 - Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
-- Exact request-specific error mappings and pending-destruction restrictions.
-- Generic `DestroyResource` applicability and exact behavior.
+- Complete request-specific error mappings and exact applicability/layout of generic `DestroyResource`.
 - Conservative synchronization rules and queue-crossing visibility guarantees.
 
 ## Open decisions
 
-See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, submission-token correlation, semaphore state rules, and Vulkan lifetime validation.
+See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, and backend teardown failure handling.
