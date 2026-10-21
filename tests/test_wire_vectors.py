@@ -138,7 +138,7 @@ class GoldenWireVectorTests(unittest.TestCase):
         for vector in writes:
             with self.subTest(vector=vector["name"]):
                 wire = encode_request(vector)
-                self.assertEqual(wire[28 + vector["fields"]["data_length"]:], b"\x00")
+                self.assertEqual(wire[28 + vector["fields"]["data_length"]:], bytes.fromhex(vector["fields"]["padding_hex"]))
 
 
     def test_variable_payload_boundary_vectors(self) -> None:
@@ -157,7 +157,7 @@ class GoldenWireVectorTests(unittest.TestCase):
         for size in range(8):
             with self.subTest(size=size):
                 with self.assertRaisesRegex(ValueError, "truncated"):
-                    validate_request_wire(b"\\x00" * size, "little")
+                    validate_request_wire(bytes(size), "little")
 
     def test_rejects_raw_declared_length_mismatch(self) -> None:
         vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
