@@ -175,3 +175,9 @@ python3 tools/check-wire-layout.py
 Der Checker verwendet nur die Python-Standardbibliothek. Er prüft die sieben registrierten XGE-Event-IDs und -Längen, extrahiert die Event-Felder aus den Layoutbeschreibungen und meldet Überlappungen, Lücken, unzulässige Offsets/Ausrichtung, Felder außerhalb der Eventlänge sowie nicht explizit auf null gesetzte reservierte Felder. Für Replies vergleicht er das 40-Request-Inventar und die Längenmatrix mit dem Subopcode-Register und prüft zentrale feste Reply-Felder sowie variable `reply.length`-Formeln in den normativen Kapiteln. GitHub Actions führt den Check bei Änderungen auf dem Arbeitsbranch und bei Pull Requests aus.
 
 Der Check ist eine statische Dokumentations-Konsistenzprüfung. Er ersetzt weder Tests gegen einen laufenden X11/XGE-Server noch Backend-/Vulkan-Konformitätstests.
+
+### Reply-ABI-Abdeckung des statischen Prüfers
+
+Der Wire-Layout-Check muss alle elf als `Reply` registrierten Requests abdecken: `EnumeratePhysicalDevices`, `GetPhysicalDeviceProperty`, `GetPhysicalDeviceQueueFamilyProperties`, `GetPhysicalDeviceMemoryProperties`, `GetBufferMemoryRequirements`, `WriteBuffer`, `ReadBuffer`, `GetSemaphoreCounterValue`, `WaitSemaphores`, `GetFenceStatus` und `WaitForFence`. Die Prüfliste wird mit den `Reply`-Einträgen im zentralen Subopcode-Register verglichen; fehlt ein registrierter Reply oder ein erwarteter Vertrag, schlägt der Check fehl.
+
+Zusätzlich zu festen Reply-Feldern prüft er jetzt die variablen Record- und Payload-Verträge: `PHYSICALDEVICEINFO`-Records einschließlich Namenslänge und Padding, `QUEUEFAMILYINFO`-Records, `MEMORYTYPEINFO`/`MEMORYHEAPINFO`-Größen und -Counts, Property-Werte, `ReadBuffer`-Payloads sowie den variablen Request-/Reply-Vertrag von `WriteBuffer` und `WaitSemaphores`. Der Check ist absichtlich eine normative Text-Konsistenzprüfung; er führt keine Server- oder Vulkan-Operation aus.
