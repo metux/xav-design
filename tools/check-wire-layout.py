@@ -98,6 +98,26 @@ def check_events(c: Check) -> None:
     c.require({value for value, _name in event_rows} == set(range(7)),
               "event registry must assign event type IDs 0 through 6 exactly once")
     reg_ids = {name: value for value, name in event_rows}
+    local_sections = re.findall(r"^## \x60([^\x60]+)\x60\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
+    for heading, body in local_sections:
+        if heading == "Event type IDs":
+            continue
+        local_rows = [
+            (int(value), symbol)
+            for value, symbol in re.findall(
+                r"^\|\s*(\d+)\s*\|\s*\x60([A-Z_]+)\x60\s*\|\s*$", body, re.M,
+            )
+        ]
+        if not local_rows:
+            continue
+        local_values = [value for value, _symbol in local_rows]
+        local_symbols = [symbol for _value, symbol in local_rows]
+        c.require(len(set(local_values)) == len(local_values),
+                  f"event-local registry {heading} contains duplicate values")
+        c.require(len(set(local_symbols)) == len(local_symbols),
+                  f"event-local registry {heading} contains duplicate symbols")
+        c.require(sorted(local_values) == list(range(len(local_values))),
+                  f"event-local registry {heading} must assign values contiguously from zero")
     doc_sections = dict(sections(event_doc))
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
