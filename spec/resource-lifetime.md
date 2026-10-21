@@ -172,7 +172,7 @@ Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
 ## Fehler bei ungültigen Lebenszyklusoperationen
 
-- Ungültige oder zerstörte XID: request-spezifischer Standard-X11-Fehler
+- Unbekannte oder zerstörte XAverius-XID: `BadValue`
 - Falscher Typ oder inkompatible Ressource: normalerweise `BadMatch`
 - Falsches Device: `BadMatch`
 - Zerstörung eines pending Command Buffers oder Descriptor Sets: `INVALID_SYNCHRONIZATION_STATE`
