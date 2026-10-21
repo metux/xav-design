@@ -155,7 +155,7 @@ Timeout und Ausführungsfehler werden als normale Reply-Statuswerte zurückgegeb
 
 Request: 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12.
 
-Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`. Ungültige/nicht-live Device- oder Fence-XIDs ergeben den Standard-X11-Ressourcenfehler des betreffenden XID-Kontexts; falscher Typ oder fremde Client-/Device-Ownership ergibt `BadMatch`. Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben. Eine Ablehnung lässt den Fence-Zustand unverändert.
+Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`. Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`; falscher live Ressourcentyp oder fremde Client-/Device-Ownership ergibt `BadMatch`. Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben. Eine Ablehnung lässt den Fence-Zustand unverändert.
 
 ## Fence-Zerstörung
 
