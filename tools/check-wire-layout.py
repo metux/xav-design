@@ -410,12 +410,27 @@ def check_reply_golden_vectors(c: Check) -> None:
             for offset in range(0, len(payload), 12):
                 c.require(payload[offset + 8:offset + 12] == bytes(4),
                           f"{name}: queue-family reserved field must be zero at payload offset {offset + 8}")
-        elif kind == "ReadBuffer-5-bytes":
-            c.require(len(payload) == 8 and declared == 2, f"{name}: five-byte ReadBuffer payload must occupy two words")
-            if len(payload) == 8:
-                c.require(payload[5:] == bytes(3), f"{name}: ReadBuffer padding must be zero")
-        elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue"):
+        elif isinstance(kind, str) and kind.startswith("ReadBuffer-") and kind.endswith("-bytes"):
+            try:
+                data_size = int(kind.split("-")[1])
+                padded_size = (data_size + 3) & ~3
+                c.require(len(payload) == padded_size and declared == padded_size // 4,
+                          f"{name}: ReadBuffer payload size/word count mismatch")
+                c.require(payload[data_size:] == bytes(padded_size - data_size),
+                          f"{name}: ReadBuffer padding must be zero")
+            except (ValueError, IndexError):
+                c.require(False, f"{name}: malformed ReadBuffer vector kind")
+        elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
             c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
+            if kind == "GetFenceStatus":
+                c.require(wire[1] in (0, 1, 2, 3), f"{name}: invalid fence status")
+            elif kind == "WaitForFence":
+                status = int.from_bytes(wire[8:12], order)
+                c.require(status in (0, 1, 2, 3), f"{name}: invalid WaitForFence status")
+                c.require(wire[12:32] == bytes(20), f"{name}: reserved bytes must be zero")
+            elif kind == "WaitSemaphores-success":
+                c.require(int.from_bytes(wire[8:12], order) == 0, f"{name}: status must be SUCCESS")
+                c.require(wire[12:32] == bytes(20), f"{name}: reserved bytes must be zero")
         elif kind == "GetPhysicalDeviceProperty-success":
             c.require(len(wire) == 36 and declared == 1, f"{name}: successful 4-byte property must have one payload word")
             c.require(int.from_bytes(wire[8:12], order) == 0, f"{name}: property status must be SUCCESS")
@@ -436,6 +451,22 @@ def check_reply_golden_vectors(c: Check) -> None:
                 c.require(payload[12:16] == bytes(4), f"{name}: memory_properties_flags/reserved must be zero")
                 c.require(payload[20:24] == bytes(4), f"{name}: memory type heap_index must be zero")
                 c.require(payload[36:40] == bytes(4), f"{name}: memory heap reserved must be zero")
+        elif kind == "GetPhysicalDeviceMemoryProperties-max-counts":
+            c.require(len(payload) == 528 and declared == 132,
+                      f"{name}: maximum memory counts require 528 payload bytes")
+            if len(payload) == 528:
+                type_count = int.from_bytes(payload[0:4], order)
+                heap_count = int.from_bytes(payload[4:8], order)
+                c.require((type_count, heap_count) == (32, 16), f"{name}: maximum memory counts mismatch")
+                c.require(payload[8:16] == bytes(8), f"{name}: memory property flags/reserved must be zero")
+                for i in range(type_count):
+                    entry = payload[16+i*8:24+i*8]
+                    c.require(int.from_bytes(entry[4:8], order) < heap_count,
+                              f"{name}: memory type {i} has invalid heap index")
+                heap_start = 16 + type_count * 8
+                for i in range(heap_count):
+                    entry = payload[heap_start+i*16:heap_start+(i+1)*16]
+                    c.require(entry[12:16] == bytes(4), f"{name}: heap {i} reserved field must be zero")
         elif kind == "GetBufferMemoryRequirements":
             c.require(len(wire) == 32 and declared == 0, f"{name}: buffer requirements reply must be fixed 32 bytes")
             c.require(int.from_bytes(wire[8:16], order) == 0x1000, f"{name}: size field mismatch")
@@ -459,7 +490,7 @@ def check_reply_golden_vectors(c: Check) -> None:
         "GetPhysicalDeviceQueueFamilyProperties-empty",
         "GetPhysicalDeviceQueueFamilyProperties-two-records",
         "GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available",
-        "GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetBufferMemoryRequirements",
+        "GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetPhysicalDeviceMemoryProperties-max-counts", "GetBufferMemoryRequirements",
         "WriteBuffer-success", "WaitSemaphores-timeout",
     }
     present = {v.get("event") for v in vectors if isinstance(v, dict)}
