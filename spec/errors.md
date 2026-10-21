@@ -94,11 +94,14 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 
 - Falsche Request-Länge: `BadLength`
 - Ungültige oder nicht mehr live XID: request-spezifischer Standard-X11-Fehler
-- Ressourcentyp, der nicht für den generischen Request zugelassen ist, oder falsche Ownership: `BadMatch`
+- Ressourcentyp, der nicht für den generischen Request zugelassen ist (insbesondere Fence und Semaphore), oder falsche Ownership: `BadMatch`
 - Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln: `INVALID_SYNCHRONIZATION_STATE`
 - Ablehnung lässt XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert.
 
 ### Ressourcenzerstörung und Memory-Freigabe
+
+- `DestroyDescriptorPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein enthaltenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird; die Ablehnung ist atomar.
+- `FreeMemory`: `BadMatch`, solange ein Buffer an die Allokation gebunden ist; `INVALID_SYNCHRONIZATION_STATE`, solange angenommene Arbeit auf die Allokation zugreift; bei Ablehnung bleibt die Memory-XID live.
 
 - Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
 - Destroy eines pending Command Buffers, Descriptor Sets, Buffers, einer Pipeline oder eines Pipeline Layouts: `INVALID_SYNCHRONIZATION_STATE`.
