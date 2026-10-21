@@ -37,6 +37,11 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fehler in einem Shader-Chunk verwirft das gesamte Assembly; FINAL-Fehler hinterlässt kein live Shader Module; ABORT gibt Assembly-Speicher frei
 - Upload-Grenzen und aggregierte Assembly-Speicherlimits werden vor Allokation geprüft
 - `CreateCommandPool` prüft Queue-Family-Index und reservierte Pool-Flags; `DestroyCommandPool` invalidiert alle Kinder atomar
+- `CreateCommandPool` akzeptiert nur `TRANSIENT` und `RESET_COMMAND_BUFFER`; unbekannte Pool-Flags werden mit `BadValue` abgewiesen und nicht stillschweigend ergänzt
+- `TRANSIENT` ändert keine beobachtbare Semantik; `RESET_COMMAND_BUFFER` und `TRANSIENT` sind unabhängig kombinierbar
+- `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER` wird abgewiesen; mit Flag setzt es `INITIAL`, `RECORDING`, `EXECUTABLE` oder `INVALID` auf `INITIAL` und verwirft Entries samt aufgezeichneten Referenzen
+- `ResetCommandBuffer` bei `PENDING` wird atomar abgewiesen; Zustand und Referenzen bleiben unverändert
+- `CommandBufferData`-`ABORT` kann ein nicht-pending `RECORDING` unabhängig vom Pool-Reset-Flag auf `INITIAL` zurücksetzen, ist aber für andere Zustände unzulässig
 - `CommandBufferData` validiert alle Entries eines Chunks vor dem Anhängen; bei einem ungültigen Chunk wird nichts aus diesem Chunk angehängt
 - Nach fehlgeschlagenem CommandBufferData-Chunk bleiben zuvor akzeptierte Chunks erhalten; ein korrigierter Chunk kann folgen oder ABORT setzt den Buffer auf INITIAL zurück
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
