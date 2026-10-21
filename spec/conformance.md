@@ -59,6 +59,10 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
 - ABORT ist bei INITIAL, EXECUTABLE, INVALID oder PENDING unzulässig und ändert keinen Zustand
 - Die zentrale Request-Registry enthält genau 39 eindeutige, explizit vergebene Subopcodes (1–39); Subopcode 0 ist reserviert, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
+- Die Descriptor-Type-Registry definiert in v0.1 ausschließlich `STORAGE_BUFFER = 1`; `0` und alle nicht zugewiesenen Werte werden abgewiesen und niemals stillschweigend umgedeutet
+- Die Shader-Stage-Registry definiert ausschließlich das `COMPUTE`-Bit `0x00000001`; andere Bits sind reserviert und müssen abgewiesen werden
+- Queue-Flags werden gemäß der zentralen Registry übersetzt und zurückgegeben; Bits 5–31 sind null/reserviert
+- `PHYSICALDEVICEINFO.device_type` enthält nur die registrierten Werte 0–4; unbekannte native Kategorien werden als `OTHER = 0` abgebildet
 - Byteordnung und feste Wire-Feldbreiten
 - Reservierte Felder und unbekannte Flags
 - Ungültige XIDs, Ressourcentypen und Ownership
