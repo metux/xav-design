@@ -17,9 +17,22 @@ In v0.1 sind die Pool-Flags:
 - Bit 1: `RESET_COMMAND_BUFFER`
 - Bits 2–31: reserviert und müssen null sein.
 
-Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt. Der Server darf keine Flags stillschweigend hinzufügen. `TRANSIENT` ist ein Hinweis zur Optimierung und ändert keine beobachtbare Semantik. `RESET_COMMAND_BUFFER` erlaubt das Zurücksetzen einzelner nicht-pending Command Buffer; ohne dieses Flag ist `ResetCommandBuffer` nicht erlaubt. 
+Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt. Der Server darf keine Flags stillschweigend hinzufügen. `TRANSIENT` ist ein Hinweis zur Optimierung und ändert keine beobachtbare Semantik. `RESET_COMMAND_BUFFER` erlaubt den expliziten Request `ResetCommandBuffer` für einzelne nicht-pending Command Buffer. Ohne dieses Flag muss `ResetCommandBuffer` mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen werden. 
 
 `DestroyCommandPool` hat eine feste Gesamtlänge von 16 Bytes: `device_xid` bei Offset 8 und `command_pool_xid` bei Offset 12.
+
+`ResetCommandBuffer` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes:
+
+| Offset | Typ | Feld |
+|---:|---|---|
+| 8 | XID | `device_xid` |
+| 12 | XID | `command_buffer_xid` |
+
+Der Buffer muss zum angegebenen logischen Device gehören. Der Server prüft das `RESET_COMMAND_BUFFER`-Flag des zugehörigen Pools. Fehlt es, wird der Request mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Ein pending Buffer kann niemals zurückgesetzt werden und führt ebenfalls zu `INVALID_SYNCHRONIZATION_STATE`. Diese Prüfungen erfolgen vor jeder Zustandsänderung.
+
+Bei Erfolg setzt `ResetCommandBuffer` einen Buffer aus `INITIAL`, `RECORDING`, `EXECUTABLE` oder `INVALID` auf `INITIAL` zurück. Alle aufgezeichneten Entries und ihre Ressourcenreferenzen werden verworfen. Bei Ablehnung bleiben Zustand, Entries und Referenzen unverändert. Das Zurücksetzen eines `RECORDING`-Buffers verwirft damit auch eine noch nicht finalisierte Aufzeichnung.
+
+`TRANSIENT` und `RESET_COMMAND_BUFFER` sind unabhängige Bits. `TRANSIENT` ändert weder Zulässigkeit noch Ergebnis von Reset-Operationen. Reservierte Bits müssen null sein; der Server darf weder unbekannte Flags akzeptieren noch Flags stillschweigend ergänzen. 
 
 Ein Command Pool ist Elternobjekt der daraus allozierten Command Buffer. Die Zerstörung des Pools invalidiert die öffentlichen XIDs aller zugehörigen Command Buffer atomar. In v0.1 wird die Pool-Zerstörung abgelehnt, solange ein Kind-Command-Buffer ausstehend ausgeführt wird.
 
@@ -155,4 +168,4 @@ Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
 
 Der Server validiert Command-Buffer-Zustand, Entry-Längen, Ressourcen-Typen, Device-Ownership, reservierte Felder, Pipeline- und Layout-Kompatibilität, Descriptor-Bindings, Push-Constant-Ranges und Dispatch-Limits.
 
-Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Die vollständigen Entries des aktuellen Requests werden erst nach erfolgreicher Validierung aller Entries atomar an den Recording-Stream angehängt. Scheitert ein Chunk, bleibt der Command Buffer im Zustand `RECORDING`; zuvor erfolgreich angehängte Chunks bleiben erhalten, der fehlgeschlagene Chunk wird vollständig verworfen. Der Client kann einen korrigierten Chunk senden oder das Recording mit `ABORT` verwerfen. `ABORT` setzt einen nicht-pending Command Buffer auf `INITIAL` und verwirft alle bis dahin aufgezeichneten Entries und Ressourcenreferenzen. Ein fehlgeschlagener CREATE-Request hinterlässt weder einen Command Buffer noch einen Pool-Kind-Eintrag. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer im Zustand `RECORDING`, sodass der Client korrigierte letzte Entries senden oder abbrechen kann. ABORT ist nicht zulässig, wenn der Buffer nicht `RECORDING` oder bereits pending ist.
+Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Die vollständigen Entries des aktuellen Requests werden erst nach erfolgreicher Validierung aller Entries atomar an den Recording-Stream angehängt. Scheitert ein Chunk, bleibt der Command Buffer im Zustand `RECORDING`; zuvor erfolgreich angehängte Chunks bleiben erhalten, der fehlgeschlagene Chunk wird vollständig verworfen. Der Client kann einen korrigierten Chunk senden oder das Recording mit `ABORT` verwerfen. `ABORT` setzt einen nicht-pending Command Buffer auf `INITIAL` und verwirft alle bis dahin aufgezeichneten Entries und Ressourcenreferenzen. Dieses `ABORT` ist ausschließlich die Recovery-Operation für ein laufendes, chunk-basiertes `CommandBufferData`-Recording und benötigt deshalb nicht das Pool-Flag `RESET_COMMAND_BUFFER`; es ersetzt nicht den expliziten `ResetCommandBuffer`-Request für bereits abgeschlossene oder anderweitig ungültige Buffer. Ein fehlgeschlagener CREATE-Request hinterlässt weder einen Command Buffer noch einen Pool-Kind-Eintrag. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer im Zustand `RECORDING`, sodass der Client korrigierte letzte Entries senden oder abbrechen kann. ABORT ist nicht zulässig, wenn der Buffer nicht `RECORDING` oder bereits pending ist.
