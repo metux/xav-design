@@ -40,7 +40,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     elif kind == "WaitForFence":
         if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3): errors.append("wait-for-fence-status")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
-    elif kind == "GetPhysicalDeviceProperty-success":
+    elif kind.startswith("GetPhysicalDeviceProperty-success"):
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
         value_length = int.from_bytes(wire[16:20], byte_order)
         expected_words = (value_length + 3) // 4
@@ -215,6 +215,21 @@ class GoldenReplyVectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "truncated"):
             validate_reply_wire(bytes(28), "little")
 
+
+    def test_property_variable_payload_boundaries(self):
+        expected = {1: bytes([0xA5]), 5: bytes([1, 2, 3, 4, 5])}
+        for size, value in expected.items():
+            kind = "GetPhysicalDeviceProperty-success-byte-array-" + str(size)
+            for order in ("little", "big"):
+                matching = [v for v in self.vectors if v["event"] == kind and v["byte_order"] == order]
+                self.assertEqual(len(matching), 1, f"{kind} missing in {order}-endian")
+                wire = bytes.fromhex(matching[0]["wire_hex"])
+                padded = (size + 3) & ~3
+                self.assertEqual(int.from_bytes(wire[12:16], order), 5)
+                self.assertEqual(int.from_bytes(wire[16:20], order), size)
+                self.assertEqual(wire[32:32 + size], value)
+                self.assertEqual(wire[32 + size:], bytes(padded - size))
+                self.assertEqual(int.from_bytes(wire[4:8], order), padded // 4)
 
     def test_property_reply_fields_and_failure_encoding(self):
         for vector in self.vectors:
