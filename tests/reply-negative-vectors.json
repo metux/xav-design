@@ -463,6 +463,20 @@
       "byte_order": "big",
       "wire_hex": "0100123400000000000000010100000000000000000000000000000000000000",
       "violates": "reserved-zero"
+    },
+    {
+      "name": "wait-semaphores-success-reserved-nonzero-little",
+      "kind": "WaitSemaphores-success",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000000000000100000000000000000000000000000000000000",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "wait-semaphores-success-reserved-nonzero-big",
+      "kind": "WaitSemaphores-success",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000100000000000000000000000000000000000000",
+      "violates": "reserved-zero"
     }
   ]
 }
