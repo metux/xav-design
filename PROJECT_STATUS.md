@@ -1,24 +1,26 @@
 # Project status
 
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
-**Specification baseline:** v0.1 consolidated working draft, 2026-10-20  
-**Implementation target:** Xvfb, compute-only initial implementation  
+**Specification baseline:** consolidated working draft dated 2026-10-20  
+**Initial implementation target:** Xvfb, compute-only  
 **Status:** Design work in progress; wire protocol and registries are not frozen.
 
 ## Working rules
 
-1. The historical consolidated draft remains unchanged as a reference baseline.
-2. Chapter files are a structural split, not an assertion that every sentence is final.
-3. Mark decisions as settled, provisional, or open; do not turn a proposal into a normative rule without review.
-4. Before editing, reread the current repository state and check related chapters for consistency.
-5. Keep changes on a topic branch and review the diff before merging to `master`.
-6. Wire-format rules should be defined centrally and referenced from request descriptions rather than repeated.
-7. Do not assign unregistered numeric opcodes or registry values ad hoc.
+1. The historical WIP is preserved as the reference baseline unless an explicitly dated successor is added.
+2. The chapter split is structural; it must not silently change protocol semantics.
+3. Track decisions as settled, provisional, or open.
+4. Before every edit, reread the current branch and relevant source chapters.
+5. Work directly on `docs/restructure-2026-10-21` for this temporary workspace; keep commits topic-focused. Do not update `master` unless explicitly requested.
+6. Define common framing, byte order, lengths, and padding centrally.
+7. Request descriptions focus on request-specific payload and behavior; do not repeat generic headers.
+8. Filenames do not duplicate chapter numbers; the specification index defines chapter order.
+9. Do not invent unassigned opcode or registry values.
 
 ## Immediate next steps
 
-- Review the chapter split and adjust boundaries if needed.
-- Reconcile the 64 KiB XAverius request/segmentation proposal with the older BIG-REQUESTS wording in the historical draft.
-- Finalize request/reply layouts and central registries.
-- Resolve the open issues listed in [the specification](spec/08-reference-tests-open-issues.md).
-- Add conformance tests alongside protocol decisions.
+- Review chapter boundaries and links.
+- Reconcile the 64 KiB request/segmentation proposal with the historical BIG-REQUESTS wording before making either normative.
+- Finalize request/reply layouts and registry ownership.
+- Resolve the questions in [open issues](spec/open-issues.md).
+- Add conformance tests as protocol decisions are made.

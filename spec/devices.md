@@ -1,6 +1,6 @@
-# 4. Device-Discovery und logische Devices
+# Device-Discovery und logische Devices
 
-## 4.1 Device-Auswahl
+## Device-Auswahl
 
 Es gibt zwei Pfade:
 
@@ -15,7 +15,7 @@ identifiziert.
 
 Der Queue-Family-Index entspricht der Reihenfolge der zurückgegebenen Queue-Family-Liste. Der Queue-Index adressiert eine tatsächlich für diese Familie angeforderte Queue.
 
-## 4.2 `EnumeratePhysicalDevices`
+## `EnumeratePhysicalDevices`
 
 Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld.
 
@@ -40,7 +40,7 @@ Die Record-Länge beträgt:
 
 Padding muss null sein. `compute_queue_family_count` zählt nur Queue Families mit Compute-Unterstützung.
 
-## 4.3 `GetPhysicalDeviceProperty`
+## `GetPhysicalDeviceProperty`
 
 Request:
 
@@ -81,7 +81,7 @@ Vorgesehene XAverius-Property-Type-IDs:
 
 Kandidaten für Properties sind `device.uuid`, `driver.uuid`, `compute.maxWorkGroupInvocations` und `compute.maxWorkGroupSize`. Die konkrete Property- und Atom-Registry ist offen.
 
-## 4.4 `GetPhysicalDeviceQueueFamilyProperties`
+## `GetPhysicalDeviceQueueFamilyProperties`
 
 Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes.
 
@@ -104,7 +104,7 @@ Queue-Flag-Bits:
 - Bit 4: `PROTECTED`
 - Bits 5–31: reserviert
 
-## 4.5 `CreateDevice`
+## `CreateDevice`
 
 Request:
 
@@ -148,7 +148,7 @@ Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über ze
 
 Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
 
-## 4.6 `CreateDefaultDevice`
+## `CreateDefaultDevice`
 
 Request:
 
@@ -163,10 +163,36 @@ Die Queue-Anzahl muss mindestens 1 betragen. Der Server wählt ein geeignetes Ph
 
 Falls kein geeignetes Gerät existiert, wird `DEVICE_UNAVAILABLE` zurückgegeben.
 
-## 4.7 `DestroyDevice`
+## `DestroyDevice`
 
 Bei erfolgreichem Request werden die öffentliche Device-XID und alle öffentlichen XIDs seiner Ressourcen sofort ungültig.
 
 Interne Vulkan-Objekte werden erst freigegeben, wenn die Vulkan-Lebensdauerregeln und alle ausstehenden Abhängigkeiten dies erlauben.
 
 Die erfolgreiche Zerstörung bedeutet weder, dass die GPU-Arbeit abgeschlossen ist, noch dass das Device auf ein anderes Physical Device umgeleitet wurde.
+
+## Physische Devices
+
+Physical-Device-XIDs werden serverseitig vergeben.
+
+- Clients dürfen Physical-Device-XIDs nicht zerstören.
+- Ein bestehender XID darf niemals einem anderen Physical-Device-Objekt zugewiesen werden.
+- Bei Entfernung oder Ausfall bleibt die Identität erhalten; der Status ändert sich.
+- Die Sichtbarkeit eines Physical Devices garantiert nicht, dass ein logisches Device darauf erstellt werden darf.
+- Die konkrete Nutzungsberechtigung wird separat geprüft.
+
+## Device-Ownership
+
+Jede logische Device-Ressource gehört genau einem logischen Device.
+
+Cross-Device-Nutzung ergibt normalerweise `BadMatch`, auch wenn beide logischen Devices dasselbe physische GPU-Gerät verwenden.
+
+Ein Ressourcen-Request muss prüfen:
+
+1. Existenz und Typ der XID,
+2. Client-Ownership,
+3. Device-Zugehörigkeit,
+4. Ressourcenzustand,
+5. Request-spezifische Vulkan-Bedingungen.
+
+Die exakte Reihenfolge und Zuordnung der X11-Fehler muss requestweise festgelegt werden.

@@ -1,0 +1,95 @@
+# Zentrale XAverius-Fehler-Registry
+
+Die folgenden Werte sind Offsets relativ zu `first_error` der Extension.
+
+| Offset | Symbol |
+|---:|---|
+| 0 | `DEVICE_UNAVAILABLE` |
+| 1 | `DEVICE_LOST` |
+| 2 | `INVALID_SYNCHRONIZATION_STATE` |
+| 3 | `EXECUTION_FAILED` |
+| 4 | `TRANSFER_FAILED` |
+| 5 | `ALLOCATION_FAILED` |
+| 6 | `DEPENDENCY_FAILED` |
+| 7 | `INTERNAL_SERVER_ERROR` |
+
+Der tatsächliche X11-Fehlercode ist `first_error + offset`.
+
+Das Fehlerpaket verwendet den Extension-Major-Opcode, den Request-Subopcode, die Sequenznummer des auslösenden Requests und eine betroffene Ressourcen-XID, falls sinnvoll; andernfalls null.
+
+## Allgemeine Fehlerklassen
+
+| Situation | Ergebnis |
+|---|---|
+| Request-Länge oder Count inkonsistent | `BadLength` |
+| Ungültiger Feldwert, reservierte Bits oder Flags | `BadValue` |
+| Ungültige oder bereits belegte Create-XID | `BadIDChoice` |
+| Falscher Ressourcentyp oder Cross-Device-Kombination | normalerweise `BadMatch` |
+| Ungültige Ressource | Request-spezifischer Standard-X11-Fehler |
+| Device nicht verfügbar | `DEVICE_UNAVAILABLE` |
+| Device verloren | `DEVICE_LOST` |
+| Ungültiger Synchronisationszustand | `INVALID_SYNCHRONIZATION_STATE` |
+| Synchroner Transferfehler | `TRANSFER_FAILED` |
+| Synchroner Allokationsfehler | `ALLOCATION_FAILED` |
+| Ungültige Abhängigkeit verhindert Annahme | `DEPENDENCY_FAILED` |
+| Unerwarteter Serverfehler | `INTERNAL_SERVER_ERROR` |
+
+## Request-spezifische Fehlerzuordnung
+
+### `WriteBuffer`
+
+- Falsche Request-Länge: `BadLength`
+- Länge null oder ungültige reservierte Felder: `BadValue`
+- Ungültige XID: request-spezifischer X11-Fehler
+- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
+- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- Synchroner Transferfehler: `TRANSFER_FAILED`
+- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
+
+### `ReadBuffer`
+
+- Falsche Request-Länge: `BadLength`
+- Länge null oder ungültige reservierte Felder: `BadValue`
+- Ungültige XID: request-spezifischer X11-Fehler
+- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, ungültiger Bereich: `BadMatch`
+- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- Synchroner Transferfehler: `TRANSFER_FAILED`
+- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
+
+### `QueueSubmit`
+
+- Count-/Längenfehler: `BadLength`
+- Ungültige Masks, reservierte Felder oder numerische Werte: `BadValue`
+- Ungültige XID: request-spezifischer X11-Fehler
+- Falscher Typ oder Cross-Device-Ressource: `BadMatch`
+- Nicht ausführbarer Command Buffer, ungültiger Fence- oder Semaphore-Zustand: `INVALID_SYNCHRONIZATION_STATE`
+- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- Ungültige Abhängigkeit, die Annahme verhindert: `DEPENDENCY_FAILED`
+
+### Fence-Requests
+
+- Falsche Länge: `BadLength`
+- Ungültige Flags oder reservierte Felder: `BadValue`
+- Ungültige Ressource: request-spezifischer X11-Fehler
+- Falscher Typ oder Device: `BadMatch`
+- Ungültiger Reset-/Destroy-Zustand: `INVALID_SYNCHRONIZATION_STATE`
+- Timeout und asynchroner Ausführungsfehler bei `WaitForFence`: normaler Reply-Status
+
+### `BindBufferMemory`
+
+Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
+
+### `UpdateDescriptorSets`
+
+- Falsche Länge: `BadLength`
+- Reservierte Felder oder ungültige Werte: `BadValue`
+- Inkompatibler Descriptor, Buffer oder Device: `BadMatch`
+- Update während Pending-Use: `INVALID_SYNCHRONIZATION_STATE`
+
+Jeder Request muss vor Implementierungsfreigabe eine vollständige, konkrete Fehlerzuordnung besitzen.
+
+## Synchron versus asynchron
+
+Ein Fehler vor Annahme wird durch einen X11-Fehler oder den ausdrücklich definierten normalen Fehler-Reply signalisiert. Der Request darf keinen Teilzustand hinterlassen.
+
+Ein Fehler nach Annahme wird durch XAverius-Events und Synchronisationszustände signalisiert. Ein später X11-Fehler für einen bereits angenommenen Request ist unzulässig.

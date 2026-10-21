@@ -4,9 +4,9 @@ Working design repository for the XAverius X11 extension exposing a server-side 
 
 ## Documents
 
-- [Project status](PROJECT_STATUS.md) — current baseline, workflow, and immediate next steps.
-- [Decision log](DECISIONS.md) — decisions recorded as settled, provisional, or open.
-- [Specification chapters](spec/README.md) — chapter index and scope.
-- [Historical consolidated draft](wip/wip-2026-10-20.md) — preserved source document from 2026-10-20; not silently rewritten during this structural split.
+- [Project status](PROJECT_STATUS.md) — baseline and next steps.
+- [Decision log](DECISIONS.md) — settled, provisional, and open design decisions.
+- [Specification index](spec/README.md) — normative chapter order and links.
+- [Historical consolidated draft](wip/wip-2026-10-20.md) — preserved baseline from 2026-10-20.
 
-The split into chapters is intended to preserve the source wording and make subsequent reviews more focused. It does not freeze unresolved protocol details.
+The chapter split is organizational. It does not freeze unresolved protocol details or imply that every draft rule has been fully reconciled.

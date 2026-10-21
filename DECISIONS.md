@@ -1,31 +1,31 @@
 # Decision log
 
-This file tracks the status of design decisions. The historical draft's “Anhang B” records decisions previously stated as settled; items below are grouped by current confidence, not by whether they are implemented.
+This file tracks the status and rationale of design decisions. The historical draft's decision appendix records previously stated choices; it does not imply that every technical detail has been fully validated.
 
 ## Settled design direction
 
 - X11 is the transport; Vulkan handles remain server-side.
 - Initial implementation target is Xvfb with compute-only workloads.
 - Wire fields have explicit widths; native C structures, pointers, `size_t`, and compiler-dependent padding are not transmitted.
-- Queue identity is the tuple `(device_xid, queue_family_index, queue_index)`; there are no Queue XIDs.
-- Physical-device XIDs are server-owned, persist across client disconnects, and must never be silently rebound to another physical device.
-- `CreateDefaultDevice` and explicit physical-device selection followed by `CreateDevice` are both intended.
+- Queue identity is `(device_xid, queue_family_index, queue_index)`; there are no Queue XIDs.
+- Physical-device XIDs are server-owned, survive client disconnects, and must never be silently rebound to a different physical device.
+- Both default device selection and explicit physical-device selection followed by `CreateDevice` are intended.
 - Images are outside the initial v0.1 compute path.
 - `WriteBuffer` uses independent requests rather than an upload transaction.
 - Acceptance of `QueueSubmit` is distinct from GPU completion.
 - Asynchronous failures are reported through XAverius events and synchronization state.
 - Public resource XIDs become invalid on successful destruction; internal Vulkan objects may remain alive until safe release.
 - Descriptor sets may not be updated or freed while pending use is possible.
-- Unassigned registry values remain open and must not be guessed.
+- Unassigned registry values must not be guessed.
 
 ## Provisional rules requiring review
 
-- Exact per-request error mappings and some pending-destruction restrictions.
-- The request-size and segmentation limits discussed after the 2026-10-20 draft; these are not yet reconciled with the historical draft's BIG-REQUESTS text.
-- Shader-module upload assembly using one opcode with request flags; exact layout and semantics need a dedicated review.
-- Conservative synchronization behavior acceptable for the first implementation.
-- Generic `DestroyResource` request and its exact applicability to each resource type.
+- Request-size and segmentation limits proposed after the 2026-10-20 draft; reconcile them with the historical BIG-REQUESTS wording.
+- Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
+- Exact request-specific error mappings and pending-destruction restrictions.
+- Generic `DestroyResource` applicability and exact behavior.
+- Conservative synchronization rules and queue-crossing visibility guarantees.
 
 ## Open decisions
 
-See [the open-issues chapter](spec/08-reference-tests-open-issues.md). In particular: opcode and type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, submission IDs, semaphore state rules, and exact Vulkan lifetime validation.
+See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, submission IDs, semaphore state rules, and Vulkan lifetime validation.
