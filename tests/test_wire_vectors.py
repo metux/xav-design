@@ -96,7 +96,7 @@ def validate_request_wire(wire: bytes, byte_order: str) -> None:
         raise ValueError("X11 data byte must be zero")
     if wire[5] != 0:
         raise ValueError("reserved flags must be zero")
-    if wire[6:8] != b"\\x00\\x00":
+    if wire[6:8] != bytes(2):
         raise ValueError("reserved common-header field must be zero")
 
 
