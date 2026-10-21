@@ -79,6 +79,27 @@ def encode_request(vector: dict) -> bytes:
     return bytes(data)
 
 
+def validate_request_wire(wire: bytes, byte_order: str) -> None:
+    """Validate generic X11/XAverius request framing from raw bytes."""
+    if len(wire) < 8:
+        raise ValueError("truncated common request header")
+    if len(wire) % 4:
+        raise ValueError("request byte length must be divisible by four")
+    if byte_order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    declared_words = int.from_bytes(wire[2:4], byte_order)
+    if declared_words == 0:
+        raise ValueError("zero request length is invalid; BIG-REQUESTS is unsupported")
+    if declared_words * 4 != len(wire):
+        raise ValueError("declared request length does not match wire bytes")
+    if wire[1] != 0:
+        raise ValueError("X11 data byte must be zero")
+    if wire[5] != 0:
+        raise ValueError("reserved flags must be zero")
+    if wire[6:8] != b"\\x00\\x00":
+        raise ValueError("reserved common-header field must be zero")
+
+
 class GoldenWireVectorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -119,6 +140,38 @@ class GoldenWireVectorTests(unittest.TestCase):
                 wire = encode_request(vector)
                 self.assertEqual(wire[28 + vector["fields"]["data_length"]:], b"\x00")
 
+
+    def test_variable_payload_boundary_vectors(self) -> None:
+        writes = [v for v in self.vectors if v["request"] == "WriteBuffer"]
+        observed = {(v["fields"]["data_length"], v["byte_order"]) for v in writes}
+        for size in (1, 3, 4, 5):
+            for order in ("little", "big"):
+                self.assertIn((size, order), observed)
+        for vector in writes:
+            with self.subTest(vector=vector["name"]):
+                wire = encode_request(vector)
+                validate_request_wire(wire, vector["byte_order"])
+                self.assertEqual(len(wire), 32 + ((vector["fields"]["data_length"] + 3) & ~3))
+
+    def test_rejects_truncated_common_header(self) -> None:
+        for size in range(8):
+            with self.subTest(size=size):
+                with self.assertRaisesRegex(ValueError, "truncated"):
+                    validate_request_wire(b"\\x00" * size, "little")
+
+    def test_rejects_raw_declared_length_mismatch(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = bytearray(encode_request(vector))
+        wire[2:4] = (len(wire) // 4 + 1).to_bytes(2, vector["byte_order"])
+        with self.assertRaisesRegex(ValueError, "declared request length"):
+            validate_request_wire(bytes(wire), vector["byte_order"])
+
+    def test_rejects_nonzero_raw_header_reserved_fields(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = bytearray(encode_request(vector))
+        wire[6] = 1
+        with self.assertRaisesRegex(ValueError, "reserved common-header"):
+            validate_request_wire(bytes(wire), vector["byte_order"])
 
     def test_rejects_declared_length_mismatch(self) -> None:
         vector = next(v.copy() for v in self.vectors if v["request"] == "ReadBuffer")
