@@ -62,6 +62,18 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Ungültiger Reset-/Destroy-Zustand: `INVALID_SYNCHRONIZATION_STATE`
 - Timeout und asynchroner Ausführungsfehler bei `WaitForFence`: normaler Reply-Status
 
+### Ressourcenzerstörung und Memory-Freigabe
+
+- Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
+- Destroy eines pending Command Buffers, Descriptor Sets, Buffers, einer Pipeline oder eines Pipeline Layouts: `INVALID_SYNCHRONIZATION_STATE`.
+- `DestroyCommandPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn mindestens ein Kind-Command-Buffer pending ist.
+- `DestroyDescriptorPool` oder `FreeDescriptorSets`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein betroffenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird.
+- `DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`, solange die Fence einer nicht-terminalen Submission zugeordnet ist.
+- `DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`, solange Queue- oder Host-Operationen die Semaphore pending verwenden.
+- `FreeMemory`: `INVALID_SYNCHRONIZATION_STATE`, solange ein Buffer an die Allokation gebunden ist oder angenommene Arbeit darauf zugreift.
+- Ein Destroy-Request, der wegen Lebensdauerregeln abgewiesen wird, lässt alle öffentlichen XIDs und Command-Buffer-Zustände unverändert.
+- Device-weite Kaskadeninvalidierung ist von diesen normalen Pending-Use-Ablehnungen ausgenommen; interne Referenzen müssen trotzdem sicher erhalten bleiben.
+
 ### `BindBufferMemory`
 
 Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
