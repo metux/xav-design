@@ -32,7 +32,7 @@ def read(path: str) -> str:
 
 
 def sections(markdown: str) -> list[tuple[str, str]]:
-    matches = list(re.finditer(r"^## \\x60([^\\x60]+)\\x60\\s*$", markdown, re.M))
+    matches = list(re.finditer(r"^## \x60([^\x60]+)\x60\s*$", markdown, re.M))
     return [
         (m.group(1), markdown[m.end():matches[i + 1].start() if i + 1 < len(matches) else len(markdown)])
         for i, m in enumerate(matches)
@@ -44,11 +44,11 @@ def event_field_records(body: str) -> list[tuple[int, int, str, str]]:
     records: list[tuple[int, int, str, str]] = []
     sizes = {"BYTE": 1, "CARD8": 1, "CARD16": 2, "CARD32": 4, "CARD64": 8, "XID": 4, "ATOM": 4}
     for line in body.splitlines():
-        row = re.match(r"^\\|\\s*(\\d+)\\s*\\|\\s*([A-Z][A-Z0-9]*)\\s*\\|\\s*([^|]+?)\\s*\\|\\s*$", line)
+        row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9]*)\s*\|\s*([^|]+?)\s*\|\s*$", line)
         if row and row.group(2) in sizes:
             records.append((int(row.group(1)), sizes[row.group(2)], row.group(2), row.group(3).strip()))
             continue
-        bullet = re.match(r"^\\s*(?:[-*]\\s*)?Offset\\s+(\\d+)\\s*:\\s*(?:`([A-Z][A-Z0-9]*)`\\s+)?(.+)$", line)
+        bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(?:`([A-Z][A-Z0-9]*)`\s+)?(.+)$", line)
         if bullet:
             typ = bullet.group(2)
             tail = bullet.group(3)
@@ -59,7 +59,7 @@ def event_field_records(body: str) -> list[tuple[int, int, str, str]]:
                 records.append((int(bullet.group(1)), sizes[typ], typ, tail.strip()))
                 continue
             # Compact event bullets commonly omit the type but start with an XID or CARD type.
-            tm = re.match(r"(XID|CARD8|CARD16|CARD32|CARD64|ATOM|BYTE)\\b", tail)
+            tm = re.match(r"(XID|CARD8|CARD16|CARD32|CARD64|ATOM|BYTE)\b", tail)
             if tm:
                 records.append((int(bullet.group(1)), sizes[tm.group(1)], tm.group(1), tail.strip()))
     return records
@@ -79,7 +79,7 @@ def check_events(c: Check) -> None:
     }
     reg_ids = {
         name: int(value)
-        for value, name in re.findall(r"^\\|\\s*(\\d+)\\s*\\|\\s*`([A-Z_]+)`\\s*\\|\\s*$", registry, re.M)
+        for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$", registry, re.M)
     }
     doc_sections = dict(sections(event_doc))
     for name, (event_id, total, length) in expected.items():
@@ -88,7 +88,7 @@ def check_events(c: Check) -> None:
         if name not in doc_sections:
             continue
         body = doc_sections[name]
-        total_match = re.search(r"Gesamtlänge:\\s*(\\d+)\\s*Bytes;\\s*XGE `length`\\s*=\\s*(\\d+)", body)
+        total_match = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE `length`\s*=\s*(\d+)", body)
         c.require(bool(total_match), f"{name}: total length and XGE length declaration missing")
         if total_match:
             declared_total, declared_length = map(int, total_match.groups())
@@ -106,7 +106,7 @@ def check_events(c: Check) -> None:
                 occupied[byte] = field
             c.require(offset + size <= total, f"{name}.{field}: ends at {offset + size}, beyond event size {total}")
             if "reserved" in field.lower():
-                c.require(re.search(r"(?:=|must be|is)\\s*`?0`?", field, re.I) is not None,
+                c.require(re.search(r"(?:=|must be|is)\s*`?0`?", field, re.I) is not None,
                           f"{name}.{field}: reserved field must explicitly require zero")
         # Every byte in the event payload must be accounted for; this catches silent holes.
         missing = [i for i in range(32, total) if i not in occupied]
@@ -114,12 +114,12 @@ def check_events(c: Check) -> None:
     for name in expected:
         c.require(name in reg_ids, f"event registry: missing {name}")
     header_checks = [
-        (r"response_type\\s*=\\s*GenericEvent\\s*\\(35\\)", "GenericEvent response_type 35"),
-        (r"Offset 1[^\\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
-        (r"Offset 4[^\\n]*XGE `length`", "XGE length at offset 4"),
-        (r"Offset 8[^\\n]*`evtype`", "evtype at offset 8"),
-        (r"Offset 10–31[^\\n]*null", "zeroed reserved common-header bytes"),
-        (r"32 \\+ 4 \\* length", "XGE total-length formula"),
+        (r"response_type\s*=\s*GenericEvent\s*\(35\)", "GenericEvent response_type 35"),
+        (r"Offset 1[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
+        (r"Offset 4[^\n]*XGE `length`", "XGE length at offset 4"),
+        (r"Offset 8[^\n]*`evtype`", "evtype at offset 8"),
+        (r"Offset 10–31[^\n]*null", "zeroed reserved common-header bytes"),
+        (r"32 \+ 4 \* length", "XGE total-length formula"),
     ]
     for pattern, label in header_checks:
         c.require(re.search(pattern, event_doc, re.I) is not None, f"events.md: missing {label}")
@@ -128,7 +128,7 @@ def check_events(c: Check) -> None:
 def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
     result: dict[int, tuple[str, str]] = {}
     for line in markdown.splitlines():
-        row = re.match(r"^\\|\\s*(\\d+)\\s*\\|\\s*`([^\\x60]+)`\\s*\\|\\s*([^|]+?)\\s*\\|", line)
+        row = re.match(r"^\|\s*(\d+)\s*\|\s*`([^\x60]+)`\s*\|\s*([^|]+?)\s*\|", line)
         if row:
             opcode, name, kind = int(row.group(1)), row.group(2), row.group(3).strip()
             result[opcode] = (name, kind)
@@ -144,7 +144,7 @@ def check_reply_matrix(c: Check) -> None:
         return
     matrix_rows: dict[int, tuple[str, str, str]] = {}
     for line in matrix[1].splitlines():
-        row = re.match(r"^\\|\\s*(\\d+)\\s*\\|\\s*`([^\\x60]+)`\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|", line)
+        row = re.match(r"^\|\s*(\d+)\s*\|\s*`([^\x60]+)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|", line)
         if row:
             opcode, name, kind, length = int(row.group(1)), row.group(2), row.group(3).strip(), row.group(4).strip()
             matrix_rows[opcode] = (name, kind, length)
@@ -162,17 +162,17 @@ def check_reply_matrix(c: Check) -> None:
                   f"subopcode {opcode} ({name}): kind mismatch audit={audit_kind!r}, registry={kind!r}")
         c.require(bool(length) and length != "—", f"subopcode {opcode} ({name}): missing request length contract")
         if "Reply" in kind:
-            c.require(bool(re.search(r"\\b(?:Reply|reply)\\b", kind, re.I)),
+            c.require(bool(re.search(r"\b(?:Reply|reply)\b", kind, re.I)),
                       f"subopcode {opcode} ({name}): reply classification missing")
     # High-value reply ABI invariants that are explicit and normative in the audit/conformance docs.
     invariants = [
-        (r"`EnumeratePhysicalDevices`.*?\\| Reply \\| 8 \\|", "EnumeratePhysicalDevices is an 8-byte Reply request"),
-        (r"`GetPhysicalDeviceQueueFamilyProperties`.*?\\| Reply \\| 12 \\|", "queue-family query is a 12-byte Reply request"),
-        (r"`GetFenceStatus`.*?\\| Reply \\| 16 \\|", "GetFenceStatus is a 16-byte Reply request"),
-        (r"`WaitForFence`.*?\\| Reply \\| 24 \\|", "WaitForFence is a 24-byte Reply request"),
-        (r"`ReadBuffer`.*?\\| Reply \\| 28 \\|", "ReadBuffer is a 28-byte Reply request"),
-        (r"reply\\.length.*?3 \\* queue_family_count", "queue-family reply length formula is documented"),
-        (r"reply\\.length.*?PHYSICALDEVICEINFO", "physical-device enumeration reply length formula is documented"),
+        (r"`EnumeratePhysicalDevices`.*?\| Reply \| 8 \|", "EnumeratePhysicalDevices is an 8-byte Reply request"),
+        (r"`GetPhysicalDeviceQueueFamilyProperties`.*?\| Reply \| 12 \|", "queue-family query is a 12-byte Reply request"),
+        (r"`GetFenceStatus`.*?\| Reply \| 16 \|", "GetFenceStatus is a 16-byte Reply request"),
+        (r"`WaitForFence`.*?\| Reply \| 24 \|", "WaitForFence is a 24-byte Reply request"),
+        (r"`ReadBuffer`.*?\| Reply \| 28 \|", "ReadBuffer is a 28-byte Reply request"),
+        (r"reply\.length.*?3 \* queue_family_count", "queue-family reply length formula is documented"),
+        (r"reply\.length.*?PHYSICALDEVICEINFO", "physical-device enumeration reply length formula is documented"),
         (r"GetFenceStatus.*?Reply-Byte 1|GetFenceStatus.*?Reply-Byte 1", "fence status reply byte is documented"),
     ]
     combined = audit + "\n" + read("spec/conformance.md") + "\n" + read("spec/synchronization.md")
