@@ -24,6 +24,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - `FreeMemory` is rejected while any Buffer remains bound to the allocation; v0.1 has no unbind/rebind operation.
 - Destroying a Buffer invalidates non-pending executable command buffers that reference it; descriptor slots retaining that Buffer remain non-submittable until updated or freed, and retain the internal Buffer object until then.
 - Device teardown invalidates public XIDs immediately but preserves internal references until backend access ends. Device Loss fails nonterminal submissions; it never fabricates successful completion.
+- If backend quiescence cannot be proven after Device Loss/teardown failure, the device is isolated and internal resources are quarantined rather than freed or reused; quarantine lasts until backend quiescence is proven or the server process exits.
 - The server tracks direct and indirect resource references recorded by command buffers. Destroying a referenced resource is rejected while a command buffer is recording; executable command buffers that reference a destroyed resource become invalid and must be recorded again.
 - Descriptor sets may not be updated or freed while pending use is possible.
 - Unassigned registry values must not be guessed.
