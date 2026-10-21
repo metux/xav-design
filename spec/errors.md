@@ -127,6 +127,37 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Ein Destroy-Request, der wegen Lebensdauerregeln abgewiesen wird, lässt alle öffentlichen XIDs und Command-Buffer-Zustände unverändert.
 - Device-weite Kaskadeninvalidierung ist von diesen normalen Pending-Use-Ablehnungen ausgenommen; interne Referenzen müssen trotzdem sicher erhalten bleiben.
 
+### Buffer- und Memory-Requests
+
+- `CreateBuffer`: falsche feste Länge `BadLength`; nicht-positive Größe, unbekannte Usage-Bits oder nicht-null reservierte Felder `BadValue`; ungültige oder bereits belegte Create-XID `BadIDChoice`; ungültiges Device-XID als Standard-X11-Fehler; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`.
+- `GetBufferMemoryRequirements`: falsche Länge `BadLength`; ungültiges Buffer-/Device-XID als Standard-X11-Fehler; falscher Ressourcentyp oder Cross-Device-Zugriff `BadMatch`.
+- `AllocateMemory`: falsche Länge `BadLength`; ungültige Größe, Memory-Type-Index oder reserviertes Feld `BadValue`; ungültige oder belegte Create-XID `BadIDChoice`; ungültiges Device-XID als Standard-X11-Fehler; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`.
+- `FreeMemory`: siehe die Lebensdauerregeln unten; bei Ablehnung bleibt die Allokation öffentlich gültig.
+- `BindBufferMemory`: siehe die spezifische Zuordnung unten.
+
+### Descriptor-Pool- und Pipeline-Requests
+
+- `CreateDescriptorPool`: falsche Länge oder nicht zum `pool_size_count` passende Payload `BadLength`; ungültige Counts, nicht unterstützte Descriptor-Typen oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; ungültiges Device-XID als Standard-X11-Fehler; Backend-Allokationsfehler `ALLOCATION_FAILED`.
+- `AllocateDescriptorSets`: falsche Länge oder unvollständiger Allocation-Entry `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; ungültige Pool-/Layout-XID als Standard-X11-Fehler; falsches Device, falscher Typ, Pool-/Layout-Inkompatibilität oder Pool-Kapazität erschöpft `BadMatch` beziehungsweise `ALLOCATION_FAILED`, wenn die Ursache ein Backend-Allokationsfehler ist. Die Operation ist atomar.
+- `FreeDescriptorSets`: falsche Länge `BadLength`; Count null oder nicht-null reservierte Felder `BadValue`; Set gehört nicht zum angegebenen Pool oder Device `BadMatch`; ungültige XID als Standard-X11-Fehler; pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`. Keine Teilfreigabe bei Ablehnung.
+- `CreatePipelineLayout`: falsche Länge/Count `BadLength`; nicht unterstützte Stage-Bits, ungültige Push-Constant-Ranges oder nicht-null reservierte Felder `BadValue`; ungültige XID als Standard-X11-Fehler; inkompatibles oder fremdes Set-Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet.
+- `CreateComputePipeline`: falsche Länge `BadLength`; leerer Entry-Point, ungültiges Padding oder nicht-null reservierte Felder `BadValue`; ungültige Shader-/Layout-/Device-XID als Standard-X11-Fehler; inkompatibles oder gerätefremdes Shader Module beziehungsweise Pipeline Layout `BadMatch`; Backend-Erstellungsfehler werden als passender XAverius-Fehler gemeldet. Kein Pipeline-Objekt bleibt bei Ablehnung live.
+
+### Command-Pool-Requests
+
+- `CreateCommandPool`: falsche Länge `BadLength`; unbekannte Flags oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; ungültige Queue Family oder ungültiges Device `BadMatch` beziehungsweise Standard-X11-Fehler für eine ungültige XID.
+- `DestroyCommandPool`: falsche Länge `BadLength`; ungültige XID als Standard-X11-Fehler; falscher Typ oder Cross-Device-Ownership `BadMatch`; mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`. Ablehnung ist atomar.
+
+### Synchronisations-Requests
+
+- `CreateSemaphore` und `CreateFence`: falsche Länge `BadLength`; ungültige Typen, Werte, Flags oder reservierte Felder `BadValue`; ungültige/belegte Create-XID `BadIDChoice`; ungültiges Device-XID als Standard-X11-Fehler; Backend-Allokationsfehler `ALLOCATION_FAILED`.
+- `GetSemaphoreCounterValue`: nur für Timeline-Semaphoren; falscher Typ `BadMatch`, ungültige XID als Standard-X11-Fehler.
+- `SignalSemaphore`: nur für Timeline-Semaphoren; ungültige XID als Standard-X11-Fehler; falscher Typ oder Device `BadMatch`; Signalwert, der nicht größer als der aktuelle Counter oder mit pending Signalen inkonsistent ist, `INVALID_SYNCHRONIZATION_STATE`. Bei synchroner Ablehnung wird kein Host-Signal teilweise ausgeführt.
+- `WaitSemaphores`: ungültige XID als Standard-X11-Fehler; falscher Typ, falsches Device oder doppelte Semaphore-XID `BadMatch`; ungültiger Wait-Modus oder ungültige Werte `BadValue`. `TIMEOUT` ist ausschließlich ein normaler Reply-Status.
+- `GetFenceStatus`: ungültige XID als Standard-X11-Fehler; falscher Typ oder Device `BadMatch`.
+- `ResetFence`: nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden; andere Zustände `INVALID_SYNCHRONIZATION_STATE`. Bei verlorenem Device `DEVICE_LOST`.
+- Die genauen Standard-X11-Fehler für ungültige XIDs richten sich nach Ressourcentyp und vorhandener X11-Ressourcenregistrierung; XAverius darf sie nicht pauschal in `BadValue` umwandeln.
+
 ### `BindBufferMemory`
 
 Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
