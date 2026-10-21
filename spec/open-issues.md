@@ -11,4 +11,5 @@ The following questions remain open; listing them here does not resolve them.
 7. Whether future protocol versions should add fairness or bounded-progress guarantees for independent queues. In v0.1, same-queue submission order, absence of implicit cross-queue order, semaphore dependencies, and the lack of any fairness/latency promise are specified in [queue submission and ordering](queue-submission.md).
 8. Ownership for future X11 resource-sharing mechanisms.
 9. Physical Device UUID and Driver UUID are defined as opaque 16-byte `BYTE_ARRAY` properties; the server preserves the Vulkan-returned bytes exactly.
+10. `DEVICE_STATUS_CHANGED.reason_code` is present in the event layout but has no normative value table. Before ABI freeze, decide whether it reuses the `DEVICE_LOST.reason_code` namespace or receives its own append-only event-local registry; do not infer numeric values from the current golden vector.
 
