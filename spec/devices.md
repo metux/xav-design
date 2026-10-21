@@ -129,7 +129,7 @@ Request:
 
 Größe: `8 + 4 * queue_count`.
 
-Die Anzahl muss positiv und unterstützt sein. Prioritäten müssen endlich und im Intervall [0,1] liegen. Doppelte Queue-Family-Einträge sind unzulässig.
+Die Anzahl muss positiv und unterstützt sein. `queue_family_request_count` muss mindestens 1 sein. Prioritäten müssen endlich und im Intervall [0,1] liegen. Doppelte Queue-Family-Einträge sind unzulässig.
 
 `DEVICEFEATUREREQUEST`:
 
@@ -165,7 +165,7 @@ Request:
 
 Gesamtlänge: `16 + 4 * queue_count`.
 
-Die Queue-Anzahl muss mindestens 1 betragen. Der Server wählt ein geeignetes Physical Device und eine Compute-fähige Queue Family. Es werden keine optionalen Features oder Extensions implizit aktiviert.
+Die Queue-Anzahl muss mindestens 1 betragen. Alle Prioritäten müssen endlich und im Intervall [0,1] liegen; andernfalls wird `BadValue` gemeldet. Das reservierte Feld muss null sein. Der Server wählt ein geeignetes Physical Device und eine Compute-fähige Queue Family. Es werden keine optionalen Features oder Extensions implizit aktiviert.
 
 `CreateDefaultDevice` ist ein Void-Request. Falls kein geeignetes Gerät existiert, meldet der Server den XAverius-X11-Fehler `DEVICE_UNAVAILABLE`; es gibt keinen normalen Reply.
 
