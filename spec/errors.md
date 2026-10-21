@@ -43,6 +43,23 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 - Synchroner Transferfehler: `TRANSFER_FAILED`
 - Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
 
+### `ShaderModuleData`
+
+- Falsche Request-Länge oder unpassender Payload-Umfang: `BadLength`
+- Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
+- Ungültige oder falsche Device-/Shader-Module-XID: request-spezifischer X11-Fehler beziehungsweise `BadMatch` bei falschem Typ oder Device
+- `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
+- Ungültiges SPIR-V oder fehlgeschlagene Shader-Module-Erstellung: request-spezifischer Vulkan-Erstellungsfehler; kein Shader Module bleibt live und das Assembly wird verworfen
+- Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module.
+
+### `CommandPool` und `CommandBufferData`
+
+- Falsche Request-Länge oder unvollständiger Entry: `BadLength`
+- Reservierte Bits/Felder, ungültige Flag-Kombination, fehlerhaftes Padding oder ungültige Entry-Länge: `BadValue`
+- Falscher Ressourcentyp, Queue-Family-Index oder Cross-Device-Objekt: `BadMatch`
+- ABORT bei einem Buffer, der nicht `RECORDING` ist, oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`
+- Fehlerhafte Entries eines `CommandBufferData`-Chunks werden atomar abgewiesen; der aktuelle Chunk wird nicht teilweise angehängt. Bereits vorher akzeptierte Chunks bleiben bis zu einem erfolgreichen Retry oder ABORT erhalten.
+
 ### `QueueSubmit`
 
 - Count-/Längenfehler: `BadLength`
