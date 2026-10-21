@@ -89,7 +89,7 @@ Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öf
 
 Jeder Pool-Entry enthält `CARD32 descriptor_type` und `CARD32 descriptor_count`.
 
-`max_sets` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig.
+`max_sets`, `pool_size_count` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig.
 
 ## 6.3.1 Destroy Descriptor Pool
 
@@ -114,7 +114,7 @@ Fester Header: 20 Bytes.
 
 Jeder Allocation-Entry ist acht Bytes groß und enthält Descriptor-Set-XID sowie Descriptor-Set-Layout-XID.
 
-Gesamtlänge: `20 + 8 * descriptor_set_count`.
+Gesamtlänge: `20 + 8 * descriptor_set_count`; `descriptor_set_count` muss positiv sein.
 
 Die Allokation ist atomar. Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben.
 
@@ -160,7 +160,7 @@ Fester Header: 20 Bytes.
 - Offset 18: `CARD16 reserved = 0`
 - Offset 20: Array aus Descriptor-Set-XIDs
 
-Gesamtlänge: `20 + 4 * descriptor_set_count`.
+Gesamtlänge: `20 + 4 * descriptor_set_count`; `descriptor_set_count` muss positiv sein.
 
 Erfolgreich freigegebene Sets werden sofort öffentlich ungültig. Ein Set, das noch ausstehend verwendet wird, darf nicht freigegeben werden.
 
