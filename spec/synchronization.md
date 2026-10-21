@@ -128,9 +128,11 @@ Request: 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12.
 
 Reply: 32 Bytes.
 
+- Byte 0: standardmäßiges X11-Reply-`response_type`
 - Byte 1: Fence-Status (`UNSIGNALED = 0`, `PENDING = 1`, `SIGNALED = 2`, `FAILED = 3`)
-- Reply-Länge: null
-- Offsets 8–31: reserviert, null
+- Offsets 2–3: standardmäßige X11-Reply-Sequenznummer
+- Offsets 4–7: standardmäßiges `reply.length = 0`
+- Offsets 8–31: XAverius-reserviert, null
 
 ## `WaitForFence`
 
