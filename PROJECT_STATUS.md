@@ -20,10 +20,10 @@
 ## Immediate next steps
 
 - Review chapter boundaries and links.
-- Reconcile the 64 KiB request/segmentation proposal with the historical BIG-REQUESTS wording before making either normative.
-- Finalize remaining request/reply layouts and registry ownership.
-- Resolve the questions in [open issues](spec/open-issues.md).
-- Add conformance tests as protocol decisions are made.
+- Re-audit the defined request inventory against every request/reply layout, length formula, request kind, and error mapping.
+- Record and fix cross-chapter contradictions before numeric subopcode allocation.
+- Allocate subopcodes only for defined requests; keep event-selection requests unassigned until their layouts are specified.
+- Resolve the remaining questions in [open issues](spec/open-issues.md) and add conformance tests as decisions are made.
 
 ## End-to-end compute-path audit — 2026-10-21
 
