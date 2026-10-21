@@ -8,7 +8,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   byte orders. Fixture values for the extension opcode and event sequence are
   deliberately fixed test values; real connections supply their negotiated
   extension opcode and current sequence number.
-- `reply-vectors.json` covers fixed fence/semaphore replies, padded ReadBuffer
+- `reply-vectors.json` covers fixed fence/semaphore replies, padded ReadBuffer, variable one- and two-record physical-device enumeration,
   data, empty and populated physical-device enumeration, queue-family and memory-property
   records, property success, NOT_SUPPORTED/NOT_AVAILABLE failures, buffer requirements, WriteBuffer success, and
   semaphore timeout replies in both byte orders.
