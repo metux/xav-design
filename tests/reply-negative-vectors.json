@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "description": "Intentionally malformed XAverius reply bytes; each case violates one named normative invariant.",
+  "vectors": [
+    {
+      "name": "reply-length-mismatch-little",
+      "kind": "GetFenceStatus",
+      "byte_order": "little",
+      "wire_hex": "0102341201000000000000000000000000000000000000000000000000000000",
+      "violates": "standard-header"
+    },
+    {
+      "name": "wrong-response-type-little",
+      "kind": "GetFenceStatus",
+      "byte_order": "little",
+      "wire_hex": "0002341200000000000000000000000000000000000000000000000000000000",
+      "violates": "standard-header"
+    },
+    {
+      "name": "fence-status-out-of-range-little",
+      "kind": "GetFenceStatus",
+      "byte_order": "little",
+      "wire_hex": "0104341200000000000000000000000000000000000000000000000000000000",
+      "violates": "fence-status"
+    },
+    {
+      "name": "wait-invalid-status-little",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000020000000000000000000000000000000000000000000000",
+      "violates": "wait-status"
+    },
+    {
+      "name": "property-reserved-nonzero-little",
+      "kind": "GetPhysicalDeviceProperty-success",
+      "byte_order": "little",
+      "wire_hex": "010034120100000000000000010000000400000001000000000000000000000078563412",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "property-failure-fields-nonzero-little",
+      "kind": "GetPhysicalDeviceProperty-not-supported",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000010000000100000000000000000000000000000000000000",
+      "violates": "property-failure-zero"
+    },
+    {
+      "name": "queue-family-reserved-nonzero-little",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "little",
+      "wire_hex": "0100341206000000000000000000000000000000000000000000000000000000030000000200000001000000010000000100000000000000",
+      "violates": "queue-record-reserved"
+    },
+    {
+      "name": "memory-heap-reserved-nonzero-little",
+      "kind": "GetPhysicalDeviceMemoryProperties-one-type-one-heap",
+      "byte_order": "little",
+      "wire_hex": "010034120a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000030000000000000008070605040302010100000001000000",
+      "violates": "memory-heap-reserved"
+    },
+    {
+      "name": "buffer-requirements-reserved-nonzero-little",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000001000000000000000010000000000000300000001000000",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "semaphore-counter-reserved-nonzero-little",
+      "kind": "GetSemaphoreCounterValue",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000080706050403020101000000000000000000000000000000",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "reply-length-mismatch-big",
+      "kind": "GetFenceStatus",
+      "byte_order": "big",
+      "wire_hex": "0102123400000001000000000000000000000000000000000000000000000000",
+      "violates": "standard-header"
+    },
+    {
+      "name": "wrong-response-type-big",
+      "kind": "GetFenceStatus",
+      "byte_order": "big",
+      "wire_hex": "0002123400000000000000000000000000000000000000000000000000000000",
+      "violates": "standard-header"
+    },
+    {
+      "name": "fence-status-out-of-range-big",
+      "kind": "GetFenceStatus",
+      "byte_order": "big",
+      "wire_hex": "0104123400000000000000000000000000000000000000000000000000000000",
+      "violates": "fence-status"
+    },
+    {
+      "name": "wait-invalid-status-big",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000020000000000000000000000000000000000000000",
+      "violates": "wait-status"
+    },
+    {
+      "name": "property-reserved-nonzero-big",
+      "kind": "GetPhysicalDeviceProperty-success",
+      "byte_order": "big",
+      "wire_hex": "010012340000000100000000000000010000000401000000000000000000000012345678",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "property-failure-fields-nonzero-big",
+      "kind": "GetPhysicalDeviceProperty-not-supported",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000010100000000000000000000000000000000000000",
+      "violates": "property-failure-zero"
+    },
+    {
+      "name": "queue-family-reserved-nonzero-big",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "big",
+      "wire_hex": "0100123400000006000000000000000000000000000000000000000000000000000000030000000201000000000000010000000100000000",
+      "violates": "queue-record-reserved"
+    },
+    {
+      "name": "memory-heap-reserved-nonzero-big",
+      "kind": "GetPhysicalDeviceMemoryProperties-one-type-one-heap",
+      "byte_order": "big",
+      "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000030000000001020304050607080000000101000000",
+      "violates": "memory-heap-reserved"
+    },
+    {
+      "name": "buffer-requirements-reserved-nonzero-big",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000000100000000000000001000000000301000000",
+      "violates": "reserved-zero"
+    },
+    {
+      "name": "semaphore-counter-reserved-nonzero-big",
+      "kind": "GetSemaphoreCounterValue",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000010203040506070801000000000000000000000000000000",
+      "violates": "reserved-zero"
+    }
+  ]
+}
