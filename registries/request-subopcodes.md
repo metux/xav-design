@@ -1,6 +1,6 @@
 # XAverius v0.1 request subopcode registry
 
-Status: **39 defined requests assigned; registry remains open for future requests and is not a v0.1 freeze**.
+Status: **40 defined requests assigned; registry remains open for future requests and is not a v0.1 freeze**.
 
 This file is the central inventory and numeric assignment for XAverius extension requests. It records only requests already named and described in the current specification chapters. The assignments do not imply that the wire protocol is frozen.
 
@@ -8,12 +8,12 @@ This file is the central inventory and numeric assignment for XAverius extension
 
 - Every listed name denotes one XAverius request opcode unless explicitly noted otherwise.
 - Subopcode values are explicit protocol identifiers; clients and servers MUST use the values in this table and MUST NOT infer values from row order, chapter order, or Vulkan enum values.
-- Value `0` is reserved and MUST NOT identify a request. Values `1` through `39` are assigned below. Existing assignments are stable and MUST NOT be renumbered; future requests use unused values.
+- Value `0` is reserved and MUST NOT identify a request. Values `1` through `40` are assigned below. Existing assignments are stable and MUST NOT be renumbered; future requests use unused values.
 - `Void` means a successful request has no normal reply; request validation errors still use the standard X11 error mechanism.
 - `Reply` means the request returns a normal X11 reply. A reply may carry a status rather than reporting that condition as an X11 error.
 - `Void + async events` means no normal reply; later outcomes are reported through the specified events and synchronization state.
 - Event names are XGE event types, not request subopcodes. `CMD_*` names are command-buffer entries, not X11 requests, and are outside this register.
-- Event-selection requests are not listed: their request layouts are not yet specified. Add them only when their wire request definitions exist.
+- Event-selection request `SelectEvents` is assigned below; its wire layout is defined in [events.md](../spec/events.md).
 - The responsible chapter defines the request semantics and payload. Generic framing and common error framing remain defined in [wire protocol](../spec/wire-protocol.md).
 
 ## Request inventory
