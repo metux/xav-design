@@ -14,4 +14,4 @@ All wire-visible numeric identifiers are defined centrally. Chapter-local tables
 | [Feature IDs](feature-ids.md) | `DEVICEFEATUREREQUEST.feature_id` | v0.1 has no optional feature assignments |
 | [Device extensions](device-extensions.md) | `DEVICEEXTENSIONREQUEST` names | v0.1 has no optional device extensions |
 | [Physical-device properties](physical-device-properties.md) | Canonical Atom names and property wire types | Four v0.1 properties registered; Atom numbers remain server-assigned |
-| Command-buffer entry IDs | `CommandBufferData` entry namespace | Open: numeric IDs not yet allocated |
+| [Command-buffer entry IDs](command-entries.md) | `CommandBufferData` entry namespace | Values 1–4 assigned for v0.1 compute path |
