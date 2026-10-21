@@ -83,9 +83,10 @@ def check_events(c: Check) -> None:
         "SUBMISSION_COMPLETE": (5, 56, 6),
         "SUBMISSION_FAILED": (6, 56, 6),
     }
+    event_type_table = registry.split("## Event type IDs", 1)[1].split("\n## ", 1)[0]
     event_rows = [
         (int(value), name)
-        for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$", registry, re.M)
+        for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$", event_type_table, re.M)
     ]
     c.require(len(event_rows) == 7, f"event registry: expected 7 rows, found {len(event_rows)}")
     c.require(len({value for value, _name in event_rows}) == len(event_rows),
