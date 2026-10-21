@@ -585,6 +585,28 @@ def check_reply_golden_vectors(c: Check) -> None:
                 c.require(payload[30:32] == bytes(2), f"{name}: PHYSICALDEVICEINFO reserved field must be zero")
                 c.require(payload[32 + name_len:record_len] == bytes(record_len - 32 - name_len),
                           f"{name}: PHYSICALDEVICEINFO name padding must be zero")
+        elif kind == "EnumeratePhysicalDevices-two-records":
+            pos = 0
+            record_count = 0
+            while pos < len(payload):
+                c.require(len(payload) - pos >= 32, f"{name}: truncated PHYSICALDEVICEINFO fixed prefix")
+                if len(payload) - pos < 32:
+                    break
+                name_len = int.from_bytes(payload[pos + 28:pos + 30], order)
+                record_len = 32 + ((name_len + 3) & ~3)
+                c.require(pos + record_len <= len(payload), f"{name}: PHYSICALDEVICEINFO record overruns payload")
+                if pos + record_len > len(payload):
+                    break
+                c.require(payload[pos + 30:pos + 32] == bytes(2),
+                          f"{name}: PHYSICALDEVICEINFO reserved field must be zero")
+                c.require(payload[pos + 32 + name_len:pos + record_len] == bytes(record_len - 32 - name_len),
+                          f"{name}: PHYSICALDEVICEINFO name padding must be zero")
+                pos += record_len
+                record_count += 1
+            c.require(pos == len(payload) and record_count == 2,
+                      f"{name}: expected exactly two complete PHYSICALDEVICEINFO records")
+            c.require(declared == len(payload) // 4,
+                      f"{name}: enumeration reply.length must count all record words")
         elif kind == "GetPhysicalDeviceQueueFamilyProperties-two-records":
             c.require(len(payload) % 12 == 0, f"{name}: queue-family payload must be a multiple of 12")
             c.require(declared == 3 * (len(payload) // 12), f"{name}: queue-family reply.length formula mismatch")
