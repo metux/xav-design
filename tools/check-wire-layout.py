@@ -182,6 +182,94 @@ def check_error_registry(c: Check) -> None:
                   f"error registry symbol {symbol} is missing from error guidance")
 
 
+def check_other_numeric_registries(c: Check) -> None:
+    """Guard the small numeric registries against duplicate or drifting assignments."""
+    command_rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*(CMD_[A-Z_]+)\s*\|",
+            read("registries/command-entries.md"), re.M,
+        )
+    ]
+    c.require([value for value, _symbol in command_rows] == [1, 2, 3, 4],
+              "command-entry registry must assign IDs 1 through 4 exactly once")
+    c.require(len({symbol for _value, symbol in command_rows}) == len(command_rows),
+              "command-entry registry contains duplicate symbols")
+
+    descriptor_rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|",
+            read("registries/descriptor-types.md"), re.M,
+        )
+    ]
+    c.require([value for value, _symbol in descriptor_rows] == [0, 1],
+              "descriptor-type registry must define reserved 0 and STORAGE_BUFFER 1")
+    c.require(len({symbol for _value, symbol in descriptor_rows}) == len(descriptor_rows),
+              "descriptor-type registry contains duplicate symbols")
+
+    device_rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|",
+            read("registries/device-types.md"), re.M,
+        )
+    ]
+    c.require([value for value, _symbol in device_rows] == list(range(5)),
+              "device-type registry must define values 0 through 4 exactly once")
+    c.require(len({symbol for _value, symbol in device_rows}) == len(device_rows),
+              "device-type registry contains duplicate symbols")
+
+    queue_rows = [
+        (int(bit), int(mask, 16), symbol)
+        for bit, mask, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`0x([0-9A-Fa-f]+)`\s*\|\s*`([A-Z_]+)`\s*\|",
+            read("registries/queue-flags.md"), re.M,
+        )
+    ]
+    c.require([bit for bit, _mask, _symbol in queue_rows] == list(range(5)),
+              "queue-flag registry must define bits 0 through 4 exactly once")
+    c.require(all(mask == 1 << bit for bit, mask, _symbol in queue_rows),
+              "queue-flag masks must equal 1 shifted by their registered bit")
+    c.require(len({symbol for _bit, _mask, symbol in queue_rows}) == len(queue_rows),
+              "queue-flag registry contains duplicate symbols")
+
+    stage_rows = [
+        (int(bit), int(mask, 16), symbol)
+        for bit, mask, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`0x([0-9A-Fa-f]+)`\s*\|\s*`([A-Z_]+)`\s*\|",
+            read("registries/shader-stages.md"), re.M,
+        )
+    ]
+    c.require(stage_rows == [(0, 1, "COMPUTE")],
+              "v0.1 shader-stage registry must assign only COMPUTE at bit 0")
+
+    devices = read("spec/devices.md")
+    property_table = devices.split("Normative XAverius-Property-Type-IDs:", 1)[1].split("\n## ", 1)[0]
+    property_rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z0-9_]+)`\s*\|",
+            property_table, re.M,
+        )
+    ]
+    c.require([value for value, _symbol in property_rows] == list(range(8)),
+              "physical-property type IDs must be assigned 0 through 7 exactly once")
+    c.require(len({symbol for _value, symbol in property_rows}) == len(property_rows),
+              "physical-property type table contains duplicate symbols")
+    property_registry = read("registries/physical-device-properties.md")
+    for fragment in ("`BYTE_ARRAY` (5)", "`CARD32` (1)", "`CARD32_ARRAY` (6)"):
+        c.require(fragment in property_registry,
+                  f"physical-device property registry missing type mapping {fragment}")
+
+    feature_registry = read("registries/feature-ids.md")
+    extension_registry = read("registries/device-extensions.md")
+    c.require("No optional device feature IDs are assigned in v0.1" in feature_registry,
+              "feature-ID registry must explicitly preserve the empty v0.1 set")
+    c.require("No optional device extensions are assigned in v0.1" in extension_registry,
+              "device-extension registry must explicitly preserve the empty v0.1 set")
+
+
 def check_request_document_coverage(c: Check) -> None:
     """Keep every registered request represented in error and conformance guidance."""
     registry = parse_request_registry(read("registries/request-subopcodes.md"))
@@ -698,6 +786,7 @@ def main() -> int:
     c = Check()
     check_events(c)
     check_error_registry(c)
+    check_other_numeric_registries(c)
     check_request_document_coverage(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
