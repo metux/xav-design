@@ -25,10 +25,10 @@ Vorgesehene Zustände:
 - erfolgreicher FINAL-Chunk → `EXECUTABLE`
 - angenommene Submission → `PENDING`
 - erfolgreiche Ausführung → `EXECUTABLE`
-- asynchroner Fehler oder Device Loss → terminaler Fehlerzustand
+- asynchroner Ausführungsfehler oder Device Loss → nach Ende der Pending-Phase `INVALID`
 - Pool- oder Device-Zerstörung → öffentliche XID ungültig
 
-Ob der terminale Fehlerzustand `INVALID` oder ein separater `FAILED`-Zustand ist, muss noch festgelegt werden.
+Es gibt in v0.1 keinen separaten `FAILED`-Command-Buffer-Zustand. Eine fehlgeschlagene Submission macht jeden davon betroffenen Command Buffer nach Ende der Pending-Phase `INVALID`. Er darf nicht erneut eingereicht werden; er muss zurückgesetzt und neu aufgezeichnet werden. Ein fehlgeschlagener Command Buffer wird niemals automatisch wieder `EXECUTABLE`.
 
 Ein `PENDING`-Command-Buffer darf nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden. Gleichzeitige ausstehende Submissions desselben Command Buffers sind in v0.1 nicht vorgesehen.
 
