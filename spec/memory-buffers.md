@@ -104,7 +104,18 @@ Gesamtlänge: 32 Bytes.
 
 Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss existieren.
 
-## 5.5 `BindBufferMemory`
+## 5.5 `FreeMemory`
+
+Gesamtlänge: 16 Bytes.
+
+- Offset 8: Device-XID
+- Offset 12: Memory-XID
+
+Der Memory-Block muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn irgendein Buffer noch an diese Allokation gebunden ist (`BadMatch`) oder angenommene GPU-Arbeit auf die Allokation zugreift (`INVALID_SYNCHRONIZATION_STATE`). Bei Ablehnung bleiben Memory-XID und Allokation unverändert.
+
+XAverius v0.1 unterstützt kein Unbind/Rebind. Daher müssen alle an die Allokation gebundenen Buffer vor `FreeMemory` erfolgreich zerstört werden. Bei Erfolg wird die öffentliche Memory-XID sofort ungültig; die interne Allokation darf erst freigegeben werden, wenn keine internen Referenzen oder Backend-Zugriffe mehr bestehen.
+
+## 5.6 `BindBufferMemory`
 
 Gesamtlänge: 28 Bytes.
 
@@ -124,7 +135,7 @@ Die Bounds-Prüfung muss überlaufsicher erfolgen:
 
 Cross-Device-Nutzung, unpassender Memory-Type, doppeltes Binden, ungültiges Alignment oder unzureichender Speicher ergeben `BadMatch`.
 
-## 5.6 `WriteBuffer`
+## 5.7 `WriteBuffer`
 
 Request:
 
@@ -165,7 +176,7 @@ In v0.1 darf der Server dies konservativ durch vollständiges Warten auf vorheri
 
 Ein vorheriger Submission-Fehler allein verhindert den Upload nicht, sofern das Device weiterhin verwendbar ist: Der Server wartet auf den terminalen Ausgang, führt den Transfer danach aus und garantiert die neuen Bytes für spätere Arbeit. Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden. Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.
 
-## 5.7 `ReadBuffer`
+## 5.8 `ReadBuffer`
 
 Request:
 
