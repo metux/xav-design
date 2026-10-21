@@ -32,6 +32,8 @@ Ob der terminale Fehlerzustand `INVALID` oder ein separater `FAILED`-Zustand ist
 
 Ein `PENDING`-Command-Buffer darf nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden. Gleichzeitige ausstehende Submissions desselben Command Buffers sind in v0.1 nicht vorgesehen.
 
+Der Server verfolgt die direkten und indirekten Ressourcenreferenzen jedes aufgezeichneten Command Buffers. Wird eine referenzierte Ressource während `RECORDING` zerstört, muss der Destroy-Request abgewiesen werden. Wird sie zerstört, während der Command Buffer `EXECUTABLE` ist und nicht pending verwendet wird, wechselt der Command Buffer vor erfolgreichem Abschluss der Zerstörung in `INVALID`. Ein solcher Command Buffer muss neu aufgezeichnet werden, bevor er erneut eingereicht werden darf. Eine angenommene Submission behält ihre internen Ressourcenreferenzen bis zum terminalen Abschluss.
+
 ## 7.3 `CommandBufferData`
 
 Wire-Layout:

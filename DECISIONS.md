@@ -16,6 +16,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - `QueueSubmit` carries a client-generated 64-bit `submission_token`; it must be nonzero and unique for the lifetime of that X11 client connection, but has no ordering semantics. The server echoes it in submission-related events.
 - Asynchronous failures are reported through XAverius events and synchronization state.
 - Public resource XIDs become invalid on successful destruction; internal Vulkan objects may remain alive until safe release.
+- The server tracks direct and indirect resource references recorded by command buffers. Destroying a referenced resource is rejected while a command buffer is recording; executable command buffers that reference a destroyed resource become invalid and must be recorded again.
 - Descriptor sets may not be updated or freed while pending use is possible.
 - Unassigned registry values must not be guessed.
 
