@@ -116,17 +116,7 @@ Failure-Class-Werte:
 
 ## Event-Auswahl
 
-Event-Typen:
-
-| Typ | Event |
-|---:|---|
-| 0 | `ASYNC_ERROR` |
-| 1 | `DEVICE_LOST` |
-| 2 | `DEVICE_STATUS_CHANGED` |
-| 3 | `DEVICE_MEMORY_PRESSURE` |
-| 4 | `DEVICE_IDLE` |
-| 5 | `SUBMISSION_COMPLETE` |
-| 6 | `SUBMISSION_FAILED` |
+Die Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt. Sie sind von Request-Subopcodes, Error-Offsets und dem serverseitig vergebenen XGE-Event-Base zu unterscheiden.
 
 Vorgesehene Masks:
 
