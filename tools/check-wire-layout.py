@@ -228,6 +228,14 @@ def check_reply_layouts(c: Check) -> None:
             (r"\|\s*28\s*\|\s*CARD16\s*\|\s*\x60device_name_length\x60\s*\|", "device-name length field"),
             (r"\|\s*30\s*\|\s*CARD16\s*\|\s*\x60reserved = 0\x60\s*\|", "record reserved field"),
             (r"Padding muss null sein", "zero record padding"),
+            (r"\|\s*0\s*\|\s*XID\s*\|\s*\x60physical_device_xid\x60\s*\|", "physical-device XID at record offset 0"),
+            (r"\|\s*4\s*\|\s*CARD32\s*\|\s*\x60device_type\x60\s*\|", "device type at record offset 4"),
+            (r"\|\s*8\s*\|\s*CARD32\s*\|\s*\x60vendor_id\x60\s*\|", "vendor ID at record offset 8"),
+            (r"\|\s*12\s*\|\s*CARD32\s*\|\s*\x60device_id\x60\s*\|", "device ID at record offset 12"),
+            (r"\|\s*16\s*\|\s*CARD32\s*\|\s*\x60api_version\x60\s*\|", "API version at record offset 16"),
+            (r"\|\s*20\s*\|\s*CARD32\s*\|\s*\x60driver_version\x60\s*\|", "driver version at record offset 20"),
+            (r"\|\s*24\s*\|\s*CARD32\s*\|\s*\x60compute_queue_family_count\x60\s*\|", "compute queue count at record offset 24"),
+            (r"\|\s*32\s*\|\s*BYTE\[\]\s*\|\s*UTF-8-Gerätename", "device name payload at record offset 32"),
         ]),
         "GetPhysicalDeviceProperty": ("devices", [
             (r"\|\s*8\s*\|\s*CARD32\s*\|\s*\x60status\x60\s*\|", "status at offset 8"),
@@ -236,6 +244,8 @@ def check_reply_layouts(c: Check) -> None:
             (r"\|\s*20–31\s*\|\s*BYTE\[12\]\s*\|\s*reserviert, null\s*\|", "reserved bytes 20–31"),
             (r"reply\.length = ceil\(value_length / 4\)", "variable value payload formula"),
             (r"Status ungleich \x60SUCCESS\x60.*?reply\.length = 0", "empty failure-status reply"),
+            (r"Bei einem Status ungleich \x60SUCCESS\x60 müssen \x60property_type\x60 und \x60value_length\x60 null sein", "property failure fields zero"),
+            (r"Bei Erfolg gilt", "property success payload rule"),
         ]),
         "GetPhysicalDeviceQueueFamilyProperties": ("devices", [
             (r"\x60QUEUEFAMILYINFO\x60-Records mit je 12 Bytes", "12-byte queue-family records"),
@@ -252,6 +262,8 @@ def check_reply_layouts(c: Check) -> None:
             (r"\x60MEMORYHEAPINFO\x60 ist 16 Bytes groß", "16-byte memory-heap records"),
             (r"reply\.length = 4 \+ 2 \* memory_type_count \+ 4 \* memory_heap_count", "memory-properties reply.length formula"),
             (r"\x60CARD32 reserved = 0\x60", "reserved count/record fields"),
+            (r"\x60CARD32 property_flags\x60.*?\x60CARD32 heap_index\x60", "memory-type record fields"),
+            (r"\x60CARD64 size\x60.*?\x60CARD32 heap_flags\x60.*?\x60CARD32 reserved = 0\x60", "memory-heap record fields"),
             (r"maximal 32 Memory Types und 16 Memory Heaps", "bounded record counts"),
         ]),
         "GetBufferMemoryRequirements": ("memory", [
@@ -282,6 +294,7 @@ def check_reply_layouts(c: Check) -> None:
         "WaitSemaphores": ("sync", [
             (r"Gesamtlänge: \x6028 \+ 12 \* semaphore_count\x60 Bytes", "variable request length formula"),
             (r"Array aus 12-Byte-Entries", "12-byte wait entries"),
+            (r"Jeder Entry enthält Semaphore-XID und \x60CARD64 wait_value\x60", "wait entry fields"),
             (r"Der Reply ist genau 32 Bytes lang", "fixed 32-byte reply"),
             (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
             (r"Offsets 12–31 sind null und \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
