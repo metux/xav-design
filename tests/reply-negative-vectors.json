@@ -239,6 +239,48 @@
       "byte_order": "big",
       "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000010000000100001000000010000000000000000000",
       "violates": "memory-type-heap-index-range"
+    },
+    {
+      "name": "device-second-record-truncated-little",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "little",
+      "wire_hex": "010034120a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000aaaaaaaaaaaaaaaa",
+      "violates": "device-record-length"
+    },
+    {
+      "name": "queue-family-record-length-invalid-little",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "little",
+      "wire_hex": "01003412040000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f10",
+      "violates": "queue-record-length"
+    },
+    {
+      "name": "read-buffer-padding-nonzero-little",
+      "kind": "ReadBuffer-1-bytes",
+      "byte_order": "little",
+      "wire_hex": "0100341201000000000000000000000000000000000000000000000000000000aa7f0000",
+      "violates": "read-buffer-padding-zero"
+    },
+    {
+      "name": "device-second-record-truncated-big",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "big",
+      "wire_hex": "010012340000000a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000aaaaaaaaaaaaaaaa",
+      "violates": "device-record-length"
+    },
+    {
+      "name": "queue-family-record-length-invalid-big",
+      "kind": "GetPhysicalDeviceQueueFamilyProperties-two-records",
+      "byte_order": "big",
+      "wire_hex": "01001234000000040000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f10",
+      "violates": "queue-record-length"
+    },
+    {
+      "name": "read-buffer-padding-nonzero-big",
+      "kind": "ReadBuffer-1-bytes",
+      "byte_order": "big",
+      "wire_hex": "0100123400000001000000000000000000000000000000000000000000000000aa7f0000",
+      "violates": "read-buffer-padding-zero"
     }
   ]
 }
