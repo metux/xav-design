@@ -41,7 +41,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateComputePipeline` verwendet die normative Länge `28 + ((entry_point_length + 3) & ~3)` und prüft nichtleeren ASCII-Entry-Point sowie Null-Padding
 - `DestroySemaphore` und `DestroyFence` sind jeweils 16-Byte-Void-Requests; `WaitSemaphores` verwendet `28 + 12 * semaphore_count`
 - `CommandBufferData`-ABORT hat exakt 16 Bytes; andere Chunks enthalten nur vollständige Entries
-- `QueueSubmit`-Länge stimmt exakt mit `40 + 4*C + 16*W + 12*S` überein; Null- und wiederverwendete Submission-Tokens werden abgewiesen
+- `QueueSubmit`-Länge stimmt exakt mit `40 + 4*C + 16*W + 12*S` überein; Null- und wiederverwendete Submission-Tokens ergeben `BadValue`; Counts/Längenüberlauf ergeben `BadLength`; fremde Ownership/Queue ergeben `BadMatch`; ungültige Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`; synchron abgewiesene Requests erzeugen kein Submission-Event
 - `ShaderModuleData`: Einzelrequest CREATE|FINAL, mehrteiliger Upload, exakte Konkatenation ohne Paddingbytes, gültige Flag-Kombinationen und Null-Padding
 - Fehler in einem Shader-Chunk verwirft das gesamte Assembly; FINAL-Fehler hinterlässt kein live Shader Module; ABORT gibt Assembly-Speicher frei
 - Upload-Grenzen und aggregierte Assembly-Speicherlimits werden vor Allokation geprüft
@@ -64,6 +64,10 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Cross-Device-Verwendung
 - Atomare Create-, Update- und Submit-Operationen
 - Überlauf- und Grenzfälle bei Buffer-Bereichen
+- `BindBufferMemory`: ungültige XIDs, falscher Typ/Ownership, bereits gebundener Buffer, Alignment, Memory-Type und Bounds werden jeweils dem festgelegten Fehlerpfad zugeordnet; bei Ablehnung bleibt der Buffer ungebunden
+- `UpdateDescriptorSets`: Count null ergibt `BadValue`, Payload-Längenfehler `BadLength`, inkompatible Ressourcen `BadMatch`, Pending-Use `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung keine Teiländerung
+- `ResetFence`: nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden; andere Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`, verlorenes Device `DEVICE_LOST`, Ablehnung erhält den Zustand
+- Ungültige XIDs, falsche Ressourcentypen, Cross-Client-/Cross-Device-Ownership und Zustandsfehler für `DestroyResource`, `BindBufferMemory`, `UpdateDescriptorSets`, `QueueSubmit` und `ResetFence` folgen der zentralen Tabelle in `errors.md`
 - Memory-Alignment und Memory-Type-Kompatibilität
 - Command-Buffer-Zustandsübergänge
 - Fence- und Semaphore-Zustände sowie Timeouts
