@@ -11,6 +11,25 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "event-vectors.json"
 
 
+def validate_event_wire(wire: bytes, byte_order: str) -> None:
+    """Validate raw XGE framing, including the common reserved header bytes."""
+    if len(wire) < 32:
+        raise ValueError("truncated XGE header")
+    if len(wire) % 4:
+        raise ValueError("XGE event length must be divisible by four")
+    if byte_order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if wire[0] != 35:
+        raise ValueError("response_type must be GenericEvent (35)")
+    declared = int.from_bytes(wire[4:8], byte_order)
+    if 32 + declared * 4 != len(wire):
+        raise ValueError("XGE length does not match wire bytes")
+    if any(wire[10:32]):
+        raise ValueError("XGE reserved header bytes must be zero")
+    if int.from_bytes(wire[8:10], byte_order) not in range(7):
+        raise ValueError("unknown XAverius event type")
+
+
 def encode_event(vector: dict) -> bytes:
     order = vector["byte_order"]
     if order not in ("little", "big"):
@@ -95,6 +114,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                 names.add(vector["name"])
                 actual = encode_event(vector)
                 self.assertEqual(actual.hex(), vector["wire_hex"])
+                validate_event_wire(actual, vector["byte_order"])
                 self.assertEqual(len(actual), vector["total_bytes"])
                 self.assertEqual(actual[0], 35)
                 self.assertEqual(actual[1], vector["extension_opcode"])
@@ -109,6 +129,20 @@ class GoldenXGEEventTests(unittest.TestCase):
             seen.setdefault(vector["event"], set()).add(vector["byte_order"])
         self.assertEqual(set(seen), set(EVENT_IDS))
         self.assertTrue(all(orders == {"little", "big"} for orders in seen.values()))
+
+    def test_rejects_raw_reserved_header_byte(self):
+        wire = bytearray(encode_event(self.vectors[0]))
+        wire[31] = 1
+        with self.assertRaisesRegex(ValueError, "reserved header"):
+            validate_event_wire(bytes(wire), self.vectors[0]["byte_order"])
+
+    def test_rejects_raw_xge_length_mismatch(self):
+        vector = self.vectors[0]
+        wire = bytearray(encode_event(vector))
+        order = vector["byte_order"]
+        wire[4:8] = (vector["xge_length"] + 1).to_bytes(4, order)
+        with self.assertRaisesRegex(ValueError, "XGE length"):
+            validate_event_wire(bytes(wire), order)
 
     def test_rejects_inconsistent_xge_length(self):
         import copy
