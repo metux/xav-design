@@ -17,7 +17,7 @@ Der Queue-Family-Index entspricht der Reihenfolge der zurückgegebenen Queue-Fam
 
 ## `EnumeratePhysicalDevices`
 
-Request: Void-Payload, feste Gesamtlänge 8 Bytes; der Request enthält nur den X11- und XAverius-Common-Header. Der Request ist vom Typ `Reply`.
+Der Request enthält keinen request-spezifischen Payload und ist insgesamt 8 Bytes lang. Der Request-Typ ist `Reply`.
 
 Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld.
 
@@ -152,7 +152,7 @@ Die Gesamtlänge beträgt `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_
 
 `CreateDevice` ist ein Void-Request. Erfolgsfälle erzeugen keinen Reply; Fehler werden als normale X11-Fehler für diesen Request gemeldet. Die konkrete Zuordnung für nicht unterstützte Features und Extensions bleibt in [Open issues](open-issues.md) ausdrücklich offen.
 
-Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
+Ist das ausgewählte Physical Device nicht verfügbar, wird `DEVICE_UNAVAILABLE` als X11-Fehler gemeldet. Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
 
 ## `CreateDefaultDevice`
 
