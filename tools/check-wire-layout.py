@@ -416,6 +416,38 @@ def check_reply_golden_vectors(c: Check) -> None:
                 c.require(payload[5:] == bytes(3), f"{name}: ReadBuffer padding must be zero")
         elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue"):
             c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
+        elif kind == "GetPhysicalDeviceProperty-success":
+            c.require(len(wire) == 36 and declared == 1, f"{name}: successful 4-byte property must have one payload word")
+            c.require(int.from_bytes(wire[8:12], order) == 0, f"{name}: property status must be SUCCESS")
+            c.require(int.from_bytes(wire[12:16], order) == 1, f"{name}: property type must be CARD32")
+            c.require(int.from_bytes(wire[16:20], order) == 4, f"{name}: property value_length must be four")
+            c.require(wire[20:32] == bytes(12), f"{name}: property reserved bytes must be zero")
+        elif kind == "GetPhysicalDeviceProperty-not-supported":
+            c.require(len(wire) == 32 and declared == 0, f"{name}: failed property reply must have no payload")
+            c.require(int.from_bytes(wire[8:12], order) == 1, f"{name}: property status must be NOT_SUPPORTED")
+            c.require(wire[12:32] == bytes(20), f"{name}: failed property fields/reserved bytes must be zero")
+        elif kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap":
+            c.require(len(payload) == 40 and declared == 10, f"{name}: one type and one heap require 40 payload bytes")
+            if len(payload) == 40:
+                types = int.from_bytes(payload[0:4], order)
+                heaps = int.from_bytes(payload[4:8], order)
+                c.require((types, heaps) == (1, 1), f"{name}: memory type/heap counts must be one")
+                c.require(payload[12:16] == bytes(4), f"{name}: memory_properties_flags/reserved must be zero")
+                c.require(payload[20:24] == bytes(4), f"{name}: memory type heap_index must be zero")
+                c.require(payload[36:40] == bytes(4), f"{name}: memory heap reserved must be zero")
+        elif kind == "GetBufferMemoryRequirements":
+            c.require(len(wire) == 32 and declared == 0, f"{name}: buffer requirements reply must be fixed 32 bytes")
+            c.require(int.from_bytes(wire[8:16], order) == 0x1000, f"{name}: size field mismatch")
+            c.require(int.from_bytes(wire[16:24], order) == 256, f"{name}: alignment field mismatch")
+            c.require(int.from_bytes(wire[24:28], order) == 3, f"{name}: memory_type_bits field mismatch")
+            c.require(wire[28:32] == bytes(4), f"{name}: buffer requirements reserved field must be zero")
+        elif kind == "WriteBuffer-success":
+            c.require(len(wire) == 32 and declared == 0 and wire[8:32] == bytes(24),
+                      f"{name}: successful WriteBuffer reply must be an empty standard reply")
+        elif kind == "WaitSemaphores-timeout":
+            c.require(len(wire) == 32 and declared == 0, f"{name}: WaitSemaphores reply must be fixed 32 bytes")
+            c.require(int.from_bytes(wire[8:12], order) == 1, f"{name}: WaitSemaphores status must be TIMEOUT")
+            c.require(wire[12:32] == bytes(20), f"{name}: WaitSemaphores reserved bytes must be zero")
 
     for kind, orders in coverage.items():
         c.require(orders == {"little", "big"}, f"reply golden vectors: {kind} must cover both byte orders")
@@ -425,6 +457,9 @@ def check_reply_golden_vectors(c: Check) -> None:
         "EnumeratePhysicalDevices-one-record",
         "GetPhysicalDeviceQueueFamilyProperties-empty",
         "GetPhysicalDeviceQueueFamilyProperties-two-records",
+        "GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported",
+        "GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetBufferMemoryRequirements",
+        "WriteBuffer-success", "WaitSemaphores-timeout",
     }
     present = {v.get("event") for v in vectors if isinstance(v, dict)}
     for kind in sorted(required):
