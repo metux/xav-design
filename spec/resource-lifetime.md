@@ -97,16 +97,35 @@ Das gilt auch für indirekte Abhängigkeiten, die über Descriptor Set → Buffe
 
 ## `DestroyResource`
 
-Vorgeschlagener generischer Request:
+`DestroyResource` ist ein generischer Void-Request mit fester Gesamtlänge von 12 Bytes:
 
-- Offset 8: Ressourcen-XID
-- Gesamtlänge: 12 Bytes
+| Offset | Typ | Feld |
+|---:|---|---|
+| 8 | XID | `resource_xid` |
 
-Die genaue Zulässigkeit für einzelne Ressourcentypen wird durch die jeweilige API-Regel bestimmt. Physical Devices sind ausgenommen.
+Das logische Device und der Eigentümer werden aus der adressierten Ressource ermittelt. Der Request darf nur eine live Ressource adressieren, die dem aufrufenden Client gehört. Es gibt kein zusätzliches `device_xid`-Feld; dadurch kann der Request keine Ressource eines anderen Clients oder Devices umdeuten.
 
-Ein erfolgreicher Request invalidiert die öffentliche XID sofort. Interne Objekte dürfen erst freigegeben werden, wenn ihre Vulkan-Lebensdauerbedingungen erfüllt sind.
+In v0.1 ist `DestroyResource` ausschließlich für diese eigenständigen Ressourcentypen vorgesehen:
 
-Ungültige XIDs, falsche Typen und fremde Ownership werden gemäß der request-spezifischen X11-Fehlerzuordnung behandelt.
+- Buffer
+- Shader Module
+- Descriptor Set Layout
+- Pipeline Layout
+- Pipeline
+- Fence
+- Semaphore
+
+Der Request ist nicht für Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets oder Memory zulässig. Diese Typen besitzen eigene Lebensdauer- beziehungsweise Kaskadenregeln und müssen über `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets` oder `FreeMemory` behandelt werden. Ein `DestroyResource` auf einem ausgeschlossenen Typ wird mit `BadMatch` abgewiesen. Diese Ausschlüsse sind normativ; Implementierungen dürfen nicht stillschweigend einen anderen Destroy-Pfad wählen.
+
+Die Eignung für den generischen Request ersetzt keine typabhängigen Lebensdauerprüfungen:
+
+- Buffer: Pending-Use-Regeln, Command-Buffer-Invalidierung und stale Descriptor-Slots gelten wie oben beschrieben.
+- Pipeline und Pipeline Layout: Referenzen aus einem `RECORDING`-Command-Buffer verhindern die Zerstörung; Pending-Use verhindert sie ebenfalls. Bei erfolgreicher Zerstörung werden nicht-pending `EXECUTABLE`-Command-Buffer mit entsprechenden Referenzen `INVALID`.
+- Fence: Eine Zuordnung zu einer nicht-terminalen Submission verhindert die Zerstörung.
+- Semaphore: Ein angenommener Queue-Wait, Queue-Signal oder eine laufende Host-Operation verhindert die Zerstörung.
+- Shader Module und Descriptor Set Layout: Nach Ende ihrer erforderlichen Erstellungs-/Pipeline-Layout-Abhängigkeit gelten die jeweiligen Vulkan-Lebensdauerregeln.
+
+Jede Ablehnung ist atomar und lässt die öffentliche XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert. Bei Erfolg wird die öffentliche XID im Request sofort ungültig; interne Objekte bleiben bis zum Ende aller erforderlichen Referenzen und Backend-Zugriffe erhalten. Die Device-weite Kaskadeninvalidierung bei `DestroyDevice`, Client-Disconnect oder Device Loss bleibt davon unberührt.
 
 ## Device-Zerstörung und Client-Disconnect
 
