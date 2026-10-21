@@ -51,6 +51,10 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateComputePipeline` verwendet die normative Länge `28 + ((entry_point_length + 3) & ~3)` und prüft nichtleeren ASCII-Entry-Point sowie Null-Padding
 - `DestroySemaphore` und `DestroyFence` sind jeweils 16-Byte-Void-Requests; `WaitSemaphores` verwendet `28 + 12 * semaphore_count`
 - `GetFenceStatus` ist ein 16-Byte-Reply-Request mit Fence-Status in Reply-Byte 1, `reply.length = 0` und null reservierten XAverius-Bytes in Offsets 8–31
+- `WaitSemaphores` und `WaitForFence` mit Timeout 0 prüfen den Zustand ohne absichtliches Warten; `UINT64_MAX` wartet unbegrenzt, andere Werte verwenden eine monotone Nanosekunden-Frist ab Ausführungsübernahme
+- Eine endliche Wait-Frist wird bei internen Warteabschnitten oder Scheduler-Unterbrechungen nicht neu gestartet; die Antwort darf verspätet eintreffen, aber eine bereits erfüllte Bedingung gewinnt bei der abschließenden Zustandsprüfung gegen `TIMEOUT`
+- `WaitSemaphores`-Timeout liefert Status `TIMEOUT` ohne Zustandsänderung; `WaitForFence` liefert `SUCCESS`, `EXECUTION_FAILED` oder `TIMEOUT` gemäß dem terminalen Fence-Zustand und der Frist
+- Device Loss während eines blockierenden Waits wird nicht als Timeout maskiert: `WaitSemaphores` endet mit `DEVICE_LOST`-X11-Fehler, `WaitForFence` liefert `DEVICE_LOST` im Reply
 - `CommandBufferData`-ABORT hat exakt 16 Bytes; andere Chunks enthalten nur vollständige Entries
 - `QueueSubmit`-Länge stimmt exakt mit `40 + 4*C + 16*W + 12*S` überein; Null- und wiederverwendete Submission-Tokens ergeben `BadValue`; Counts/Längenüberlauf ergeben `BadLength`; fremde Ownership/Queue ergeben `BadMatch`; ungültige Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`; synchron abgewiesene Requests erzeugen kein Submission-Event
 - `QueueSubmit.wait_stage_mask` wird als XAverius-Bitmaske und nicht als rohe Vulkan-Maske interpretiert: `DRAW_INDIRECT=0x1`, `COMPUTE_SHADER=0x2`, `TRANSFER=0x4`, `ALL_COMMANDS=0x8`; die Backend-Übersetzung verwendet die zugehörigen Vulkan-Stage-Bits
