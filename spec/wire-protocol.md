@@ -55,9 +55,9 @@ Der Fehler muss mit der ursprünglichen Request-Sequenznummer korreliert werden.
 
 ## XGE-Events
 
-XAverius-Events verwenden X Generic Events (XGE). Der Standard-XGE-Header ist 32 Bytes lang. Event-spezifische Felder beginnen bei Offset 32.
+XAverius-Events verwenden X Generic Events (XGE). Der Standard-XGE-Header ist 32 Bytes lang. Event-spezifische Felder beginnen bei Offset 32. Im XGE-Header enthält `extension` den dynamisch zugewiesenen XAverius-Major-Opcode und `evtype` die statische CARD16-Event-Type-ID aus der Event-Registry. Der Core-Eventcode ist `GenericEvent = 35`; XAverius besitzt kein eigenes serverseitig zugewiesenes XGE-Event-Base.
 
-Das XGE-Feld `length` zählt Vierbyteeinheiten nach dem ersten 32-Byte-Header.
+Das XGE-Feld `length` zählt Vierbyteeinheiten nach dem ersten 32-Byte-Header. Vor dem Versand eines längeren Events muss der Server wissen, dass der empfangende Client XGE unterstützt. XAverius verlangt daher erfolgreiche XGE-1.0-Aushandlung pro Verbindung vor dem Erzeugen eines logischen Devices oder vor `SelectEvents`; die request-spezifischen Regeln stehen in [Events](events.md).
 
 ## Primitive Typen
 
