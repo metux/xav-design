@@ -203,4 +203,4 @@ Ein Ressourcen-Request muss prüfen:
 4. Ressourcenzustand,
 5. Request-spezifische Vulkan-Bedingungen.
 
-Die exakte Reihenfolge und Zuordnung der X11-Fehler muss requestweise festgelegt werden.
+Die allgemeine XID-Fehlerzuordnung ist in [Errors and error mapping](errors.md) verbindlich festgelegt. Request-spezifische Zusatzregeln dürfen diese Grundzuordnung nur ausdrücklich erweitern, nicht stillschweigend überschreiben.
