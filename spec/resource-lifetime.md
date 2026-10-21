@@ -105,15 +105,7 @@ Das gilt auch für indirekte Abhängigkeiten, die über Descriptor Set → Buffe
 
 Das logische Device und der Eigentümer werden aus der adressierten Ressource ermittelt. Der Request darf nur eine live Ressource adressieren, die dem aufrufenden Client gehört. Es gibt kein zusätzliches `device_xid`-Feld; dadurch kann der Request keine Ressource eines anderen Clients oder Devices umdeuten.
 
-In v0.1 ist `DestroyResource` ausschließlich für diese eigenständigen Ressourcentypen vorgesehen:
-
-- Buffer
-- Shader Module
-- Descriptor Set Layout
-- Pipeline Layout
-- Pipeline
-- Fence
-- Semaphore
+In v0.1 ist `DestroyResource` ausschließlich für Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline vorgesehen.
 
 Der Request ist nicht für Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets, Memory, Fences oder Semaphores zulässig. Diese Typen besitzen eigene Lebensdauer- beziehungsweise Kaskadenregeln und müssen über `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence` oder `DestroySemaphore` behandelt werden. Ein `DestroyResource` auf einem ausgeschlossenen Typ wird mit `BadMatch` abgewiesen. Diese Ausschlüsse sind normativ; Implementierungen dürfen nicht stillschweigend einen anderen Destroy-Pfad wählen.
 
