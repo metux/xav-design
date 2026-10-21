@@ -148,6 +148,18 @@ def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
             result[opcode] = (name, kind)
     return result
 
+def check_request_document_coverage(c: Check) -> None:
+    """Keep every registered request represented in error and conformance guidance."""
+    registry = parse_request_registry(read("registries/request-subopcodes.md"))
+    errors = read("spec/errors.md")
+    conformance = read("spec/conformance.md")
+    for opcode, (name, _kind) in sorted(registry.items()):
+        c.require(f"`{name}`" in errors,
+                  f"request {opcode} ({name}): missing from request-specific/central error guidance")
+        c.require(f"`{name}`" in conformance,
+                  f"request {opcode} ({name}): missing from conformance checklist")
+
+
 def check_reply_matrix(c: Check) -> None:
     registry = parse_request_registry(read("registries/request-subopcodes.md"))
     audit = read("spec/request-audit.md")
@@ -635,6 +647,7 @@ def check_reply_formula_vectors(c: Check) -> None:
 def main() -> int:
     c = Check()
     check_events(c)
+    check_request_document_coverage(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
     check_reply_formula_vectors(c)
