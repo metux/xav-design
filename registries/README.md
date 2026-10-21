@@ -10,7 +10,7 @@ The automated wire-layout checker validates uniqueness and expected ranges for t
 | [Errors](errors.md) | XAverius error offset from X11 `first_error` | Assigned |
 | [Descriptor types](descriptor-types.md) | `descriptor_type` values | v0.1 storage-buffer type assigned |
 | [Shader stages](shader-stages.md) | shader-stage bit masks | v0.1 compute stage assigned |
-| [Queue flags](queue-flags.md) | physical-device queue capability bits | Assigned from the device chapter |
+| [Queue flags](queue-flags.md) | physical-device queue capability bits | Bits 0–4 assigned; bits 5–31 reserved |
 | [Physical-device types](device-types.md) | `PHYSICALDEVICEINFO.device_type` | Assigned |
 | [Event types and fields](event-types.md) | XGE event type IDs and event-local enums | Event type IDs and SelectEvents layout assigned |
 | [Feature IDs](feature-ids.md) | `DEVICEFEATUREREQUEST.feature_id` | v0.1 has no optional feature assignments |
