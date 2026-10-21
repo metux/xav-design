@@ -120,3 +120,6 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - SelectEvents CONNECTION requires all target fields to be zero; DEVICE requires zero queue indices; QUEUE identifies a requested queue by device XID and family/index tuple.
 - SelectEvents rejects a queue tuple that does not identify a requested queue, and rejects resources owned by another client without changing the previous mask.
 - A closed client connection or failed event send does not prevent an accepted submission from reaching its internal terminal state or releasing safe backend resources.
+
+- CreateDevice, CreateDefaultDevice, and SelectEvents before successful GEQueryVersion negotiation are rejected with BadMatch; no target XID or event-mask change is left behind.
+- After XGE 1.0 negotiation, long XAverius XGE events are framed with GenericEvent (35), the XAverius major opcode in extension, and the registered CARD16 evtype.
