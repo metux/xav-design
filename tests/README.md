@@ -18,6 +18,9 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   event IDs, reserved bytes, and malformed raw event framing.
 - `test_reply_vectors.py` checks standard reply framing, fixed reply fields,
   variable payload lengths, record boundaries, padding, and malformed headers.
+- `test_reply_spec_coverage.py` derives status sets, memory-count limits/formulas,
+  and ReadBuffer alignment expectations from the normative chapters, then requires
+  golden fixtures for every status in both byte orders and maximum memory counts.
 - `check-wire-layout.py` validates reply vectors against the 32-byte X11
   framing contract, declared lengths, enumeration/memory record formulas, fixed reply field offsets and status values,
   reserved fields, padding, required endian coverage, and intentionally malformed negative reply fixtures.
@@ -25,7 +28,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 Run all fixture tests from the repository root:
 
 ```sh
-python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_reply_vectors.py
+python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
 python3 tools/check-wire-layout.py
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
