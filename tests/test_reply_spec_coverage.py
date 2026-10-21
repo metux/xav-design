@@ -134,7 +134,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
         fence_statuses = assignments(sync, {"UNSIGNALED", "PENDING", "SIGNALED", "FAILED"})
         self.assertEqual(set(fence_statuses.values()), {0, 1, 2, 3})
         memory = section(self.memory, "GetPhysicalDeviceMemoryProperties")
-        limits = re.search(r"maximal\\s+(\\d+)\\s+Memory Types und\\s+(\\d+)\\s+Memory Heaps", memory, re.I)
+        limits = re.search(r"maximal\s+(\d+)\s+Memory Types und\s+(\d+)\s+Memory Heaps", memory, re.I)
         self.assertIsNotNone(limits)
         max_types, max_heaps = map(int, limits.groups())
         for rule, offset, limit in (("memory-type-count-range", 32, max_types),
