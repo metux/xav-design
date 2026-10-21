@@ -20,7 +20,7 @@ Der Common-Header ist vier Bytes groß; der gesamte feste XAverius-Request-Heade
 
 Die X11-Verbindungsbyteordnung gilt für sämtliche mehrbyteigen Wire-Felder.
 
-Der X-Server weist die Extension-Major-Opcode zu. Für XAverius v0.1 ist das X11-Request-Header-Feld `data` immer null; die Request-Identität steht ausschließlich im `subopcode`-Feld bei Offset 4. Der `subopcode` ist zentral registriert. In einem standardmäßigen X11-Error-Packet wird dieser Wert zero-extended in `minorCode` eingetragen. `majorCode` enthält den Extension-Major-Opcode. Clients dürfen `data` nicht als Subopcode interpretieren.
+Der X-Server weist die Extension-Major-Opcode zu. Für XAverius v0.1 ist das X11-Request-Header-Feld `data` immer null; die Request-Identität steht ausschließlich im `subopcode`-Feld bei Offset 4. Der `subopcode` ist zentral registriert; Wert `0` ist reserviert. Bereits vergebene Subopcodes sind stabil und dürfen bei späteren Erweiterungen nicht neu vergeben oder verschoben werden. Nicht definierte Requests besitzen keinen impliziten Wert. In einem standardmäßigen X11-Error-Packet wird dieser Wert zero-extended in `minorCode` eingetragen. `majorCode` enthält den Extension-Major-Opcode. Clients dürfen `data` nicht als Subopcode interpretieren.
 
 ## Längen, Padding und BIG-REQUESTS
 
