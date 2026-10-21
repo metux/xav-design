@@ -182,7 +182,7 @@ Die Queue-Anzahl muss mindestens 1 betragen. Alle Prioritäten müssen endlich u
 
 ## `DestroyDevice`
 
-`DestroyDevice` ist ein Void-Request mit fester Gesamtlänge von 12 Bytes: Device-XID bei Offset 8. Die XID muss ein logisches Device sein, das dieser Client-Verbindung gehört. Bei ungültigem XID oder falschem Typ wird ein Standard-X11-Fehler gemeldet; eine fremde Ownership wird mit `BadMatch` abgewiesen. Bei Device Loss darf die Bereinigung nach den Lebensdauerregeln fortgesetzt werden.
+`DestroyDevice` ist ein Void-Request mit fester Gesamtlänge von 12 Bytes: Device-XID bei Offset 8. Die XID muss ein logisches Device sein, das dieser Client-Verbindung gehört. Eine unbekannte/nicht-live XID ergibt `BadValue`; ein falscher live Ressourcentyp oder fremde Ownership ergibt `BadMatch`. Bei Device Loss darf die Bereinigung nach den Lebensdauerregeln fortgesetzt werden.
 
 Bei erfolgreichem Request werden die öffentliche Device-XID und alle öffentlichen XIDs seiner Ressourcen sofort ungültig.
 
