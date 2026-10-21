@@ -114,6 +114,14 @@ class GoldenReplyVectorTests(unittest.TestCase):
             name_length = int.from_bytes(payload[28:30], vector["byte_order"])
             self.assertEqual(name_length, 4)
             self.assertEqual(payload[32:36], b"GPU0")
+            self.assertEqual(int.from_bytes(payload[0:4], vector["byte_order"]), 0x10203040)
+            self.assertEqual(int.from_bytes(payload[4:8], vector["byte_order"]), 2)
+            self.assertEqual(int.from_bytes(payload[8:12], vector["byte_order"]), 0x1002)
+            self.assertEqual(int.from_bytes(payload[12:16], vector["byte_order"]), 0x2003)
+            self.assertEqual(int.from_bytes(payload[16:20], vector["byte_order"]), 0x403000)
+            self.assertEqual(int.from_bytes(payload[20:24], vector["byte_order"]), 0x10002)
+            self.assertEqual(int.from_bytes(payload[24:28], vector["byte_order"]), 1)
+            self.assertEqual(payload[30:32], bytes(2))
 
     def test_queue_family_enumeration_record_lengths(self):
         for vector in self.vectors:
