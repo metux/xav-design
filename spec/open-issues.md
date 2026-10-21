@@ -2,7 +2,7 @@
 
 The following questions were open in the consolidated draft and remain open. Moving them here does not resolve them.
 
-1. Numeric subopcode allocation for all requests. The inventory is maintained in [the central request subopcode registry](../registries/request-subopcodes.md); numeric assignments remain open.
+1. Future subopcode allocations as new requests are defined. The current 39 requests have stable assignments in [the central request subopcode registry](../registries/request-subopcodes.md); event-selection requests remain excluded until their wire layouts are specified. Existing assignments must not be renumbered.
 2. Event-selection request layouts and event registration.
 3. Complete property-name/Atom registry.
 4. Numeric registries for descriptor types, shader stages, feature IDs, device types, and queue flags.
