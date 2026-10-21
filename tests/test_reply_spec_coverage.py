@@ -151,6 +151,15 @@ class ReplySpecCoverageTests(unittest.TestCase):
                     count = int.from_bytes(wire[offset:offset + 4], order)
                     self.assertGreater(count, limit, f"{case['name']} does not exceed normative limit {limit}")
 
+    def test_fixed_reply_reserved_fields_are_covered_per_kind(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        vectors = fixture["vectors"]
+        for kind in ("GetFenceStatus", "WaitForFence", "WaitSemaphores-timeout"):
+            for order in ("little", "big"):
+                self.assertTrue(any(v["kind"] == kind and v["byte_order"] == order
+                                    and v["violates"] == "reserved-zero" for v in vectors),
+                                f"{kind} reserved-field negative vector missing in {order}-endian")
+
     def test_registered_property_shapes_match_registry(self):
         registry = (ROOT / "registries/physical-device-properties.md").read_text(encoding="utf-8")
         self.assertIn("Exactly 16 raw bytes", registry)
