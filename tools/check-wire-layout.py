@@ -121,8 +121,6 @@ def check_events(c: Check) -> None:
         c.require(name in reg_ids, f"event registry: missing {name}")
     header_checks = [
         (r"response_type\s*=\s*GenericEvent\s*\(35\)", "GenericEvent response_type 35"),
-        (r"QueryExtension", "dynamic major opcode discovery via QueryExtension"),
-        (r"128–255", "X11 extension major opcode range 128–255"),
         (r"\|\s*2\s*\|\s*CARD16\s*\|[^\n]*Sequenznummer", "16-bit X11 event sequence at offset 2"),
         (r"\|\s*1\s*\|[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
         (r"\|\s*4\s*\|[^\n]*XGE `length`", "XGE length at offset 4"),
@@ -132,6 +130,13 @@ def check_events(c: Check) -> None:
     ]
     for pattern, label in header_checks:
         c.require(re.search(pattern, event_doc, re.I) is not None, f"events.md: missing {label}")
+    wire_protocol = read("spec/wire-protocol.md")
+    protocol_checks = [
+        (r"QueryExtension", "dynamic major opcode discovery via QueryExtension"),
+        (r"128–255", "X11 extension major opcode range 128–255"),
+    ]
+    for pattern, label in protocol_checks:
+        c.require(re.search(pattern, wire_protocol, re.I) is not None, f"wire-protocol.md: missing {label}")
 
 
 def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
