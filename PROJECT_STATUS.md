@@ -21,7 +21,7 @@
 
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
 - Verify XGE event framing and standard X11 extension-opcode lookup during the ABI review.
-- Continue final ABI review of reply layouts, XGE event framing, wait-stage masks, timeout boundaries, and backend conformance.
+- Continue final ABI review of reply layouts and XGE event framing; review timeout boundaries, scheduling guarantees, and backend conformance.
 - Keep request-specific error mappings and conformance cases synchronized as protocol decisions evolve; the v0.1 feature/extension/property registry cross-check is complete.
 
 ## End-to-end compute-path audit — 2026-10-21
@@ -33,7 +33,7 @@ The audit found no request-length arithmetic contradiction in the reviewed concr
 - A submission always has one internal terminal outcome; delivery of its completion/failure event depends on event selection and the connection remaining alive.
 - In v0.1, `ReadBuffer` waits for all previously accepted submissions on the same logical device and relevant prior writes to the requested range. A prior failed submission must not be treated as successful; read data is not guaranteed correct if failed work could have modified that range.
 
-The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially complete error mapping and final wait-stage masks.
+The queue-crossing scope of the successful `WriteBuffer` visibility guarantee is now settled as a device-wide ordering boundary and documented in [Memory und Buffers](spec/memory-buffers.md#56-writebuffer), [queue submission and ordering](spec/queue-submission.md), [DECISIONS.md](DECISIONS.md), and the conformance tests. Other implementation blockers remain listed in [open issues](spec/open-issues.md), especially timeout/scheduling semantics and backend conformance. The wait-stage mask mapping is now specified and covered by conformance cases.
 
 This is an internal consistency and compute-workflow audit, not a claim of full Vulkan-spec conformance or a frozen v0.1 wire protocol.
 
