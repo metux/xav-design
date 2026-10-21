@@ -67,13 +67,17 @@ Wait-Modi:
 
 Die Anzahl muss mindestens 1 sein. Alle Semaphoren müssen Timeline-Semaphoren desselben Devices sein; doppelte XIDs sind unzulässig.
 
-Timeout:
+### Timeout-Semantik
 
-- 0: nicht blockierend
-- `UINT64_MAX`: unendlich
-- sonst: Nanosekunden
+Für `timeout_ns` gilt:
 
-Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status` mit `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 12–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
+- `0`: nicht blockierend; der Server prüft den Zustand einmal und antwortet sofort.
+- `UINT64_MAX`: unbegrenzt warten, bis die Bedingung erfüllt ist oder das Device verloren geht.
+- Jeder andere Wert: Timeout in Nanosekunden, gemessen mit einer monotonen, nicht durch Systemzeitkorrekturen verstellten Uhr. Die Frist beginnt, sobald der Server diesen Request zur Ausführung übernimmt.
+
+Der Server darf eine endliche Wartefrist intern in mehrere Warteabschnitte aufteilen, muss aber die ursprüngliche Frist beibehalten. Scheduler-Verzögerungen dürfen die Frist nicht absichtlich neu starten. Ist die Bedingung bei der abschließenden Zustandsprüfung erfüllt, wird `SUCCESS` zurückgegeben; andernfalls nach Ablauf der Frist `TIMEOUT`. Der Server muss keine Antwort exakt am Nanosekunden-Grenzpunkt liefern; die tatsächliche Antwort darf durch Scheduling verzögert eintreffen.
+
+Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status` mit `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 12–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler. Ein Timeout verändert weder Semaphore-Counter noch Queue-, Fence- oder Semaphore-Zustände. Ein durch Device Loss unmöglich gewordener Wait wird mit `DEVICE_LOST` als normalem X11-Fehler beendet, nicht als `TIMEOUT` maskiert.
 
 ## `SignalSemaphore`
 
@@ -151,7 +155,7 @@ Reply-Status:
 - `EXECUTION_FAILED = 2`
 - `DEVICE_LOST = 3`
 
-Timeout und Ausführungsfehler werden als normale Reply-Statuswerte zurückgegeben. Für `timeout_ns` gilt: 0 bedeutet nicht blockierend, `UINT64_MAX` bedeutet unbegrenzt, alle anderen Werte sind Nanosekunden.
+Timeout und Ausführungsfehler werden als normale Reply-Statuswerte zurückgegeben. Für `timeout_ns` gilt dieselbe monotone Fristsemantik wie bei `WaitSemaphores`: 0 bedeutet sofortige Zustandsprüfung ohne Warten, `UINT64_MAX` bedeutet unbegrenzt, alle anderen Werte sind Nanosekunden ab Übernahme des Requests zur Ausführung. Scheduler-Verzögerungen dürfen die Frist nicht neu starten; eine Antwort kann nach Fristablauf eintreffen. Wenn Fence-Zustand und Fristablauf konkurrieren, gewinnt `SUCCESS` beziehungsweise `EXECUTION_FAILED`, falls der Fence bei der abschließenden Zustandsprüfung bereits terminal ist; andernfalls wird `TIMEOUT` zurückgegeben. Bei Device Loss wird `DEVICE_LOST` zurückgegeben. Ein Timeout verändert den Fence-Zustand nicht.
 
 ## `ResetFence`
 
