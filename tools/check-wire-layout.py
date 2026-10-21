@@ -502,7 +502,7 @@ def check_reply_golden_vectors(c: Check) -> None:
         negative = __import__("json").loads(read("tests/reply-negative-vectors.json"))
         c.require(negative.get("schema_version") == 1, "negative reply vectors: schema_version must be 1")
         items = negative.get("vectors", [])
-        c.require(len(items) >= 20, "negative reply vectors: expected at least 20 cases")
+        c.require(len(items) >= 28, "negative reply vectors: expected at least 28 cases")
         for item in items:
             try:
                 wire = bytes.fromhex(item["wire_hex"])
@@ -514,6 +514,12 @@ def check_reply_golden_vectors(c: Check) -> None:
                 if rule == "standard-header": invalid = len(wire) < 32 or len(wire) % 4 != 0 or wire[0] != 1 or 32 + declared * 4 != len(wire)
                 elif rule == "fence-status": invalid = kind == "GetFenceStatus" and wire[1] not in (0, 1, 2, 3)
                 elif rule == "wait-status": invalid = kind == "WaitSemaphores-timeout" and int.from_bytes(wire[8:12], order) not in (0, 1)
+                elif rule == "wait-for-fence-status": invalid = kind == "WaitForFence" and int.from_bytes(wire[8:12], order) not in (0, 1, 2, 3)
+                elif rule == "property-padding-zero":
+                    value_length = int.from_bytes(wire[16:20], order)
+                    invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
+                elif rule == "memory-type-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[32:36], order) > 32
+                elif rule == "memory-heap-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[36:40], order) > 16
                 elif rule == "property-failure-zero": invalid = kind == "GetPhysicalDeviceProperty-not-supported" and (wire[12:20] != bytes(8) or wire[32:] or declared != 0)
                 elif rule == "queue-record-reserved": invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire), 12))
                 elif rule == "memory-heap-reserved": invalid = kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap" and wire[68:72] != bytes(4)
