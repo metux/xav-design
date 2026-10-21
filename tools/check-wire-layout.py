@@ -83,7 +83,9 @@ def check_events(c: Check) -> None:
         "SUBMISSION_COMPLETE": (5, 56, 6),
         "SUBMISSION_FAILED": (6, 56, 6),
     }
-    event_type_table = registry.split("## Event type IDs", 1)[1].split("\n## ", 1)[0]
+    event_type_parts = registry.split("## Event type IDs", 1)
+    c.require(len(event_type_parts) == 2, "event registry: missing Event type IDs section")
+    event_type_table = event_type_parts[1].split("\n## ", 1)[0] if len(event_type_parts) == 2 else ""
     event_rows = [
         (int(value), name)
         for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$", event_type_table, re.M)
@@ -245,7 +247,9 @@ def check_other_numeric_registries(c: Check) -> None:
               "v0.1 shader-stage registry must assign only COMPUTE at bit 0")
 
     devices = read("spec/devices.md")
-    property_table = devices.split("Normative XAverius-Property-Type-IDs:", 1)[1].split("\n## ", 1)[0]
+    property_parts = devices.split("Normative XAverius-Property-Type-IDs:", 1)
+    c.require(len(property_parts) == 2, "devices.md: missing normative physical-property type table")
+    property_table = property_parts[1].split("\n## ", 1)[0] if len(property_parts) == 2 else ""
     property_rows = [
         (int(value), symbol)
         for value, symbol in re.findall(
