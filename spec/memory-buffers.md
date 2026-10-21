@@ -12,7 +12,7 @@ Gesamtlänge: 32 Bytes.
 | 24 | CARD32 | `usage_flags` |
 | 28 | CARD32 | `reserved = 0` |
 
-Die Größe muss positiv sein. Buffer-Erstellung alloziert und bindet noch keinen Speicher.
+Die Größe muss positiv sein und mindestens ein unterstütztes `usage_flags`-Bit muss gesetzt sein. Unbekannte Bits oder `usage_flags = 0` werden mit `BadValue` abgewiesen. Buffer-Erstellung alloziert und bindet noch keinen Speicher.
 
 Usage-Bits:
 
