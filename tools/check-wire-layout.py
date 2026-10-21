@@ -518,8 +518,18 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "property-padding-zero":
                     value_length = int.from_bytes(wire[16:20], order)
                     invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
+                elif rule == "device-name-padding-zero":
+                    name_length = int.from_bytes(wire[60:62], order) if len(wire) >= 64 else 0
+                    padded = (name_length + 3) & ~3
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 + padded and wire[64 + name_length:64 + padded] != bytes(padded - name_length)
+                elif rule == "device-record-length":
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and 32 + ((int.from_bytes(wire[60:62], order) + 3) & ~3) != len(wire) - 32
                 elif rule == "memory-type-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[32:36], order) > 32
                 elif rule == "memory-heap-count-range": invalid = kind == "GetPhysicalDeviceMemoryProperties" and len(wire) >= 40 and int.from_bytes(wire[36:40], order) > 16
+                elif rule == "memory-type-heap-index-range":
+                    type_count = int.from_bytes(wire[32:36], order) if len(wire) >= 36 else 0
+                    heap_count = int.from_bytes(wire[36:40], order) if len(wire) >= 40 else 0
+                    invalid = kind == "GetPhysicalDeviceMemoryProperties" and type_count > 0 and len(wire) >= 56 and int.from_bytes(wire[52:56], order) >= heap_count
                 elif rule == "property-failure-zero": invalid = kind == "GetPhysicalDeviceProperty-not-supported" and (wire[12:20] != bytes(8) or wire[32:] or declared != 0)
                 elif rule == "queue-record-reserved": invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire), 12))
                 elif rule == "memory-heap-reserved": invalid = kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap" and wire[68:72] != bytes(4)
