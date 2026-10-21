@@ -19,11 +19,10 @@
 
 ## Immediate next steps
 
-- Review chapter boundaries and links.
-- Re-audit the defined request inventory against every request/reply layout, length formula, request kind, and error mapping.
-- Record and fix cross-chapter contradictions before numeric subopcode allocation.
-- Allocate subopcodes only for defined requests; keep event-selection requests unassigned until their layouts are specified.
-- Resolve the remaining questions in [open issues](spec/open-issues.md) and add conformance tests as decisions are made.
+- Continue centralizing numeric registries that can be derived from already-settled protocol semantics.
+- Define event-selection request layouts and their validation rules before assigning new request subopcodes.
+- Complete the v0.1 feature/extension support set and property/Atom registry when their semantics are specified.
+- Continue checking cross-chapter consistency and add conformance cases with each protocol decision.
 
 ## End-to-end compute-path audit — 2026-10-21
 
