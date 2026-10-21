@@ -3,12 +3,11 @@
 The following questions were open in the consolidated draft and remain open. Moving them here does not resolve them.
 
 1. Central numeric subopcode registry for all requests.
-2. Final request layouts for Shader Modules, Command Pools, generic destruction, and Descriptor Set Layouts.
+2. Final request layouts for generic destruction and Descriptor Set Layouts; define/reset command-buffer operation coverage for the `RESET_COMMAND_BUFFER` pool flag.
 3. Event-selection request layouts and event registration.
 4. Complete property-name/Atom registry.
 5. Numeric registries for descriptor types, shader stages, feature IDs, device types, and queue flags.
 6. Complete request-specific X11 error mapping, including invalid-resource and wrong-type cases.
-7. Recovery behavior if a later CommandBufferData chunk fails.
 8. Semantics of `memory_properties_flags`.
 9. Error representation for unsupported device features and extensions in `CreateDevice`.
 10. Final wire layouts for submission completion/failure events and behavior when event delivery is impossible.
