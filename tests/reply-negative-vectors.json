@@ -365,6 +365,62 @@
       "byte_order": "big",
       "wire_hex": "010012340000000a00000000000000000000000000000000000000000000000000000001000000010000000000000000000000010000000000001000000010000000000200000000",
       "violates": "memory-heap-flags-range"
+    },
+    {
+      "name": "memory-properties-flags-nonzero-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "01003412080000000000000000000000000000000000000000000000000000000100000001000000010000000000000000100000001000000100000000000000",
+      "violates": "memory-properties-flags-zero"
+    },
+    {
+      "name": "memory-reserved-nonzero-isolated-little",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "little",
+      "wire_hex": "01003412080000000000000000000000000000000000000000000000000000000100000001000000000000000100000000100000001000000100000000000000",
+      "violates": "memory-reserved-zero"
+    },
+    {
+      "name": "read-buffer-payload-length-mismatch-little",
+      "kind": "ReadBuffer-1-bytes",
+      "byte_order": "little",
+      "wire_hex": "0100341202000000000000000000000000000000000000000000000000000000aa000000bb000000",
+      "violates": "read-buffer-payload-length"
+    },
+    {
+      "name": "property-not-available-fields-nonzero-little",
+      "kind": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "little",
+      "wire_hex": "01003412050000000000000000000000000000000000000000000000000000000200000001000000000000000000000000000000",
+      "violates": "property-failure-zero"
+    },
+    {
+      "name": "memory-properties-flags-nonzero-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "01001234000000080000000000000000000000000000000000000000000000000000000100000001000000010000000000001000000010000000000100000000",
+      "violates": "memory-properties-flags-zero"
+    },
+    {
+      "name": "memory-reserved-nonzero-isolated-big",
+      "kind": "GetPhysicalDeviceMemoryProperties",
+      "byte_order": "big",
+      "wire_hex": "01001234000000080000000000000000000000000000000000000000000000000000000100000001000000000000000100001000000010000000000100000000",
+      "violates": "memory-reserved-zero"
+    },
+    {
+      "name": "read-buffer-payload-length-mismatch-big",
+      "kind": "ReadBuffer-1-bytes",
+      "byte_order": "big",
+      "wire_hex": "0100123400000002000000000000000000000000000000000000000000000000aa000000bb000000",
+      "violates": "read-buffer-payload-length"
+    },
+    {
+      "name": "property-not-available-fields-nonzero-big",
+      "kind": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "big",
+      "wire_hex": "01001234000000050000000000000000000000000000000000000000000000000000000200000001000000000000000000000000",
+      "violates": "property-failure-zero"
     }
   ]
 }
