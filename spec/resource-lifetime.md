@@ -113,6 +113,18 @@ Wird ein logisches Device als verloren erkannt, gilt für alle darauf angenommen
 
 Nach erkanntem Device Loss schlagen Requests, die weitere Vulkan-Arbeit erfordern, mit `DEVICE_LOST` fehl. Requests zur Statusabfrage und zur logischen Bereinigung dürfen weiterhin verarbeitet werden, soweit ihr jeweiliger Vertrag dies zulässt. Der genaue Fehlerpfad für fehlgeschlagene Backend-Teardown-Schritte bleibt ein offener Implementierungsaspekt.
 
+## Descriptor Pools und Sets
+
+`DestroyDescriptorPool` ist atomar. Der Request wird abgewiesen, wenn ein enthaltenes Set pending verwendet wird oder von einem `RECORDING`-Command-Buffer referenziert wird. Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert. Andernfalls werden der Pool und alle enthaltenen Sets öffentlich invalidiert; nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`.
+
+`FreeDescriptorSets` folgt denselben Regeln für die ausgewählten Sets: pending Verwendung oder Referenz durch einen `RECORDING`-Command-Buffer führt zur atomaren Ablehnung. Bei Erfolg werden die ausgewählten Sets invalidiert und nicht-pending `EXECUTABLE`-Command-Buffer, die sie referenzieren, `INVALID`. Ein Set darf nicht gleichzeitig über einen expliziten Free-Request und die Pool-Kaskade freigegeben werden; eine bereits invalidierte Set-XID ist für weitere Free-Requests ungültig.
+
+## Pipelines und Synchronisationsobjekte
+
+`DestroyPipeline` und `DestroyPipelineLayout` werden abgewiesen, solange eine angenommene Submission die jeweilige Ressource verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`.
+
+`DestroyFence` wird abgewiesen, solange die Fence einer nicht-terminalen Submission zugeordnet ist. `DestroySemaphore` wird abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine noch laufende serverseitige Host-Operation die Semaphore verwendet. Diese Ablehnungen sind atomar und verwenden `INVALID_SYNCHRONIZATION_STATE`. Nach Device Loss darf die Device-weite Kaskadeninvalidierung diese normalen Ablehnungen umgehen, während interne Referenzen bis zum Ende möglicher Backend-Zugriffe bestehen bleiben.
+
 ## Command Buffer und Descriptor Sets
 
 Ein pending Command Buffer darf in v0.1 nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden.
