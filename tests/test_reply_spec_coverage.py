@@ -124,7 +124,9 @@ class ReplySpecCoverageTests(unittest.TestCase):
             "property-failure-zero", "property-padding-zero", "queue-record-reserved",
             "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
             "device-name-padding-zero", "device-record-length", "memory-type-heap-index-range",
-            "queue-record-length", "read-buffer-padding-zero", "reserved-zero",
+            "queue-record-length", "queue-flags-reserved", "read-buffer-padding-zero",
+            "device-record-reserved", "memory-payload-length", "memory-reserved-zero",
+            "memory-type-flags-range", "memory-heap-flags-range", "reserved-zero",
         }
         for rule in sorted(required_rules):
             for order in ("little", "big"):
