@@ -33,6 +33,14 @@ Der Server muss sicherstellen, dass die Descriptoren zum Shader passen, statisch
 Eine Implementierung sollte mindestens folgende Fälle testen:
 
 - Exakte Request-Längen, Counts und Padding
+- `ShaderModuleData`: Einzelrequest CREATE|FINAL, mehrteiliger Upload, exakte Konkatenation ohne Paddingbytes, gültige Flag-Kombinationen und Null-Padding
+- Fehler in einem Shader-Chunk verwirft das gesamte Assembly; FINAL-Fehler hinterlässt kein live Shader Module; ABORT gibt Assembly-Speicher frei
+- Upload-Grenzen und aggregierte Assembly-Speicherlimits werden vor Allokation geprüft
+- `CreateCommandPool` prüft Queue-Family-Index und reservierte Pool-Flags; `DestroyCommandPool` invalidiert alle Kinder atomar
+- `CommandBufferData` validiert alle Entries eines Chunks vor dem Anhängen; bei einem ungültigen Chunk wird nichts aus diesem Chunk angehängt
+- Nach fehlgeschlagenem CommandBufferData-Chunk bleiben zuvor akzeptierte Chunks erhalten; ein korrigierter Chunk kann folgen oder ABORT setzt den Buffer auf INITIAL zurück
+- Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
+- ABORT ist bei INITIAL, EXECUTABLE, INVALID oder PENDING unzulässig und ändert keinen Zustand
 - Byteordnung und feste Wire-Feldbreiten
 - Reservierte Felder und unbekannte Flags
 - Ungültige XIDs, Ressourcentypen und Ownership
