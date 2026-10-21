@@ -17,14 +17,9 @@ This audit compares the currently defined request inventory in [the central requ
 An outdated sentence in `DECISIONS.md` incorrectly included Fence and Semaphore in the eligible targets for `DestroyResource`. The normative lifetime chapter, error mapping, conformance cases, and request registry consistently exclude those types and require `DestroyFence` and `DestroySemaphore`. The decision log now matches the normative rule. The project status next steps were also refreshed to remove an obsolete BIG-REQUESTS/64-KiB reconciliation task.
 
 ## Known exclusions and unresolved items
-
-These are not silently treated as defined requests or settled protocol behavior:
-
-1. `SelectEvents` is included as subopcode 40; its wire layout and scope semantics are defined in `events.md`. The XGE major opcode is discovered through the standard X11 extension query; final ABI verification of event framing remains.
-2. Numeric registries for feature IDs, device extensions, and property identifiers remain incomplete. Descriptor types, shader stages, device types, queue flags, command entries, event types, and XAverius error offsets already have dedicated registries; their v0.1 support definitions still need cross-checking against every use.
-3. The exact v0.1 supported feature/extension set, `memory_properties_flags`, timeout/scheduling boundaries, final Vulkan wait-stage mapping, and final ABI verification of XGE event framing remain open as listed in [open issues](open-issues.md).
-4. This audit does not establish full Vulkan-spec conformance, implementation feasibility, or final v0.1 freeze.
-
+1. `SelectEvents` is included as subopcode 40. Its wire layout, scope semantics, XGE negotiation prerequisite, and event framing are specified; final ABI verification remains.
+2. The v0.1 feature-ID and device-extension registries are explicitly empty, and the physical-device property/Atom-name registry defines four properties. Their basic error mapping and conformance cases are now covered.
+3. Timeout boundaries, scheduling guarantees, the final Vulkan wait-stage mapping, and implementation-level backend conformance remain open as listed in [open issues](open-issues.md).
 ## Subopcode allocation policy
 
 The 40 requests in the central registry are assigned explicit values 1 through 40. Value 0 is reserved and MUST NOT identify a request. These numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` uses the next unused value, 40; assignments 1 through 39 were not changed.
