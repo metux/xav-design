@@ -465,6 +465,33 @@ def check_reply_golden_vectors(c: Check) -> None:
     for kind in sorted(required):
         c.require(kind in present, f"reply golden vectors: missing required sample {kind}")
 
+    # Negative vectors must demonstrably violate the named ABI invariant.
+    try:
+        negative = __import__("json").loads(read("tests/reply-negative-vectors.json"))
+        c.require(negative.get("schema_version") == 1, "negative reply vectors: schema_version must be 1")
+        items = negative.get("vectors", [])
+        c.require(len(items) >= 20, "negative reply vectors: expected at least 20 cases")
+        for item in items:
+            try:
+                wire = bytes.fromhex(item["wire_hex"])
+                order = item["byte_order"]
+                kind = item["kind"]
+                rule = item["violates"]
+                declared = int.from_bytes(wire[4:8], order) if len(wire) >= 8 else 0
+                invalid = False
+                if rule == "standard-header": invalid = len(wire) < 32 or len(wire) % 4 != 0 or wire[0] != 1 or 32 + declared * 4 != len(wire)
+                elif rule == "fence-status": invalid = kind == "GetFenceStatus" and wire[1] not in (0, 1, 2, 3)
+                elif rule == "wait-status": invalid = kind == "WaitSemaphores-timeout" and int.from_bytes(wire[8:12], order) not in (0, 1)
+                elif rule == "property-failure-zero": invalid = kind == "GetPhysicalDeviceProperty-not-supported" and (wire[12:20] != bytes(8) or wire[32:] or declared != 0)
+                elif rule == "queue-record-reserved": invalid = kind == "GetPhysicalDeviceQueueFamilyProperties-two-records" and any(wire[o+8:o+12] != bytes(4) for o in range(32, len(wire), 12))
+                elif rule == "memory-heap-reserved": invalid = kind == "GetPhysicalDeviceMemoryProperties-one-type-one-heap" and wire[68:72] != bytes(4)
+                elif rule == "reserved-zero": invalid = ((kind == "GetPhysicalDeviceProperty-success" and wire[20:32] != bytes(12)) or (kind == "GetBufferMemoryRequirements" and wire[28:32] != bytes(4)) or (kind == "GetSemaphoreCounterValue" and wire[16:32] != bytes(16)) or (kind == "GetFenceStatus" and wire[8:32] != bytes(24)))
+                c.require(invalid, f"{item.get('name')}: negative vector does not violate {rule}")
+            except (KeyError, TypeError, ValueError, IndexError) as exc:
+                c.require(False, f"negative reply vector malformed: {exc}")
+    except (ValueError, KeyError) as exc:
+        c.require(False, f"negative reply vectors: invalid JSON fixture: {exc}")
+
 def check_reply_formula_vectors(c: Check) -> None:
     """Exercise boundary values for every documented variable reply/request formula."""
     pad4 = lambda n: (n + 3) & ~3
