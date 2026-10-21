@@ -1,6 +1,6 @@
 # Event type and event-local value registries
 
-XAverius events use XGE. These numeric identifiers are separate from request subopcodes and from XAverius error offsets.
+XAverius events use XGE. The XGE `extension` field carries the dynamically assigned XAverius extension major opcode; `evtype` carries the static event type ID below. XGE uses core event code `GenericEvent = 35`; XAverius has no separate server-assigned XGE event base. Event type IDs are separate from request subopcodes and XAverius error offsets.
 
 ## Event type IDs
 
