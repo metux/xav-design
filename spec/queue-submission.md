@@ -18,7 +18,8 @@ Request-Layout:
 | 26 | CARD16 | Wait-Semaphore-Count |
 | 28 | CARD16 | Signal-Semaphore-Count |
 | 30 | CARD16 | `reserved = 0` |
-| 32 | variable | Command-Buffer-XIDs, Wait-Entries, Signal-Entries |
+| 32 | CARD64 | `submission_token` |
+| 40 | variable | Command-Buffer-XIDs, Wait-Entries, Signal-Entries |
 
 Jeder Wait-Entry ist 16 Bytes groß:
 
@@ -37,7 +38,11 @@ Für Binary-Semaphoren muss `signal_value = 0` sein. Für Timeline-Semaphoren is
 
 Gesamtlänge:
 
-`32 + 4*C + 16*W + 12*S`
+`40 + 4*C + 16*W + 12*S`
+
+`submission_token` wird vom Client vergeben und als undurchsichtiger 64-Bit-Wert behandelt. Er muss innerhalb derselben X11-Client-Verbindung für jede `QueueSubmit`-Anforderung eindeutig sein; Wiederverwendung ist auch nach Abschluss einer Submission nicht zulässig, solange die Verbindung besteht. Der Wert `0` ist reserviert und ungültig. Tokens müssen keiner Reihenfolge folgen und haben keine zeitliche oder numerische Bedeutung. Ein Zeitstempel oder Hash ist zulässig, sofern der Client die Eindeutigkeit tatsächlich sicherstellt.
+
+Der Server übernimmt den Token unverändert in das zugehörige `SUBMISSION_COMPLETE`- oder `SUBMISSION_FAILED`-Event sowie in submissionbezogene `ASYNC_ERROR`-Events. Die X11-Event-Sequence-Number ist davon unabhängig und identifiziert nicht die Submission.
 
 Vorgesehene Wait-Stage-Bits:
 
@@ -55,7 +60,7 @@ Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig. Dieselbe Semaphore 
 
 **Atomaritätsgarantie:** Wird der Request abgelehnt, wird keine Submission angelegt und kein Synchronisationszustand verändert. Bei Annahme bedeutet der Request nur, dass die Arbeit eingereiht wurde; nicht, dass sie bereits abgeschlossen ist.
 
-`QueueSubmit` ist ein Void-Request.
+`QueueSubmit` ist ein Void-Request. Die Annahme oder Ablehnung wird synchron über die normalen X11-Fehlerregeln signalisiert; der Token dient ausschließlich der Korrelation späterer asynchroner Ergebnisse.
 
 ## Semaphore references
 

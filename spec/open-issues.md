@@ -14,7 +14,6 @@ The following questions were open in the consolidated draft and remain open. Mov
 10. Semantics of `memory_properties_flags`.
 11. Error representation for unsupported device features and extensions in `CreateDevice`.
 12. Exact pending signal/wait rules for binary semaphores.
-13. Assignment, uniqueness, and wrap behavior of `submission_id`.
 14. Exact completion/failure event delivery rules.
 15. Timeout boundaries and scheduling guarantees.
 16. Device destruction behavior when asynchronous teardown fails.
@@ -24,6 +23,5 @@ The following questions were open in the consolidated draft and remain open. Mov
 20. Final Vulkan stage mapping and valid wait-stage masks.
 21. Complete normative definition of the central resource state machine.
 22. Exact Vulkan lifetime validation for all resource combinations before the specification is considered stable.
-23. Define how clients learn and correlate `submission_id`; `QueueSubmit` currently is a Void request while completion/failure events carry a server-generated ID.
-24. Specify host-side `SignalSemaphore` completion/error behavior and its ordering relative to subsequent requests.
-25. Define the X11 request-header `data` byte semantics and how XAverius `subopcode` is represented in standard X11 error packets (`minorCode`).
+23. Specify host-side `SignalSemaphore` completion/error behavior and its ordering relative to subsequent requests.
+24. Define the X11 request-header `data` byte semantics and how XAverius `subopcode` is represented in standard X11 error packets (`minorCode`).

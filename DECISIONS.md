@@ -13,6 +13,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Images are outside the initial v0.1 compute path.
 - `WriteBuffer` uses independent requests rather than an upload transaction.
 - Acceptance of `QueueSubmit` is distinct from GPU completion.
+- `QueueSubmit` carries a client-generated 64-bit `submission_token`; it must be nonzero and unique for the lifetime of that X11 client connection, but has no ordering semantics. The server echoes it in submission-related events.
 - Asynchronous failures are reported through XAverius events and synchronization state.
 - Public resource XIDs become invalid on successful destruction; internal Vulkan objects may remain alive until safe release.
 - Descriptor sets may not be updated or freed while pending use is possible.
@@ -31,4 +32,4 @@ This file tracks the status and rationale of design decisions. The historical dr
 
 ## Open decisions
 
-See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, submission IDs, semaphore state rules, and Vulkan lifetime validation.
+See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, submission-token correlation, semaphore state rules, and Vulkan lifetime validation.

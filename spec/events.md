@@ -11,7 +11,7 @@ Gesamtlänge: 60 Bytes; XGE `length = 7`.
 | 32 | XID | Device-XID, null falls nicht gerätebezogen |
 | 36 | CARD32 | `error_code`, zentraler XAverius-Fehleroffset |
 | 40 | CARD32 | `origin` |
-| 44 | CARD64 | `submission_id`, null falls nicht submissionbezogen |
+| 44 | CARD64 | `submission_token`, 0 falls nicht submissionbezogen |
 | 52 | XID | betroffene Ressourcen-XID, null falls keine |
 | 56 | CARD32 | `reserved = 0` |
 
