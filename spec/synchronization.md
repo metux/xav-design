@@ -73,7 +73,7 @@ Timeout:
 - `UINT64_MAX`: unendlich
 - sonst: Nanosekunden
 
-Der Reply ist genau 32 Bytes lang. Byte 1 (X11-Reply-Feld `data`) enthält den Status `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 8–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
+Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status` mit `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 12–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler.
 
 ## `SignalSemaphore`
 
@@ -140,7 +140,7 @@ Request: 24 Bytes.
 - Offset 12: Fence-XID
 - Offset 16: `CARD64 timeout_ns`
 
-Der Reply ist genau 32 Bytes lang. Byte 1 (X11-Reply-Feld `data`) enthält den Status. Offsets 8–31 sind null und `reply.length = 0`.
+Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status`; Offsets 12–31 sind null und `reply.length = 0`.
 
 Reply-Status:
 
