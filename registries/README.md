@@ -2,6 +2,8 @@
 
 All wire-visible numeric identifiers are defined centrally. Chapter-local tables may explain semantics but must not independently allocate values. Values in one namespace are not interchangeable with values in another namespace.
 
+The automated wire-layout checker validates uniqueness and expected ranges for the current request, event, error, command-entry, descriptor-type, device-type, queue-flag, shader-stage, and physical-property type assignments. It also checks that the v0.1 optional feature-ID and device-extension sets remain explicitly empty. These checks guard documentation consistency; they do not freeze the protocol or replace semantic review.
+
 | Registry | Namespace | Status |
 |---|---|---|
 | [Request subopcodes](request-subopcodes.md) | X11 request subopcode | 40 current requests assigned; append-only |
