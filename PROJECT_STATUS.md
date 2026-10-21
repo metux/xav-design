@@ -21,7 +21,7 @@
 
 - Review chapter boundaries and links.
 - Reconcile the 64 KiB request/segmentation proposal with the historical BIG-REQUESTS wording before making either normative.
-- Finalize request/reply layouts and registry ownership.
+- Finalize remaining request/reply layouts and registry ownership.
 - Resolve the questions in [open issues](spec/open-issues.md).
 - Add conformance tests as protocol decisions are made.
 
@@ -47,3 +47,8 @@ The former open issue on cross-queue visibility is closed. A successful `WriteBu
 3. Every later accepted submission on any queue sees the written bytes.
 
 The contract applies to the full written range and does not require client semaphore/barrier operations solely for upload visibility. It is scoped to one logical device, not all devices on a physical GPU. To avoid a dispatcher deadlock, a later `SignalSemaphore` on the same connection may run while `WriteBuffer` waits for earlier work; later `QueueSubmit` requests must remain deferred until the upload completes. A conservative implementation may fully synchronize the device. Device loss or transfer failure must not produce a successful reply. Conformance cases cover these ordering and progress requirements.
+
+
+## Shader and command-recording wire decisions — 2026-10-21
+
+The working draft now defines the `ShaderModuleData` chunk layout and `CREATE`/`FINAL`/`ABORT` flags, including atomic final creation and cleanup of failed/incomplete assemblies. It also defines fixed `CreateCommandPool`/`DestroyCommandPool` layouts and deterministic recovery from failed `CommandBufferData` chunks: a chunk is atomic, previously accepted chunks remain, and ABORT returns a non-pending recording buffer to `INITIAL`. Conformance cases and request-specific error guidance were added. These decisions are documented but the v0.1 protocol and registries remain unfrozen.
