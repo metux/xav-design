@@ -42,3 +42,59 @@ The following items were identified by comparing the request inventory, defining
 6. **Audit metadata drift:** this audit's earlier registry-completeness statement became stale as registries were added. Its scope and unresolved list must describe the current branch rather than an earlier snapshot.
 
 These are protocol-documentation corrections, not user-level design changes. Any newly exposed ambiguity that requires choosing new semantics remains an open issue rather than being guessed. The descriptor-type check is a confirmed consistency result, not a defect.
+
+
+## Per-request contract matrix
+
+The following matrix is the per-request checklist used for the second pass. Lengths are total request bytes, including the 8-byte X11/XAverius header. Variable byte payloads are padded to four bytes; formulas use the counts named by the defining chapter. The registry is authoritative for request kind; chapter links in the central registry identify the authoritative field layouts.
+
+| Subopcode | Request | Kind | Total request length |
+|---:|---|---|---|
+| 1 | `EnumeratePhysicalDevices` | Reply | 8 |
+| 2 | `GetPhysicalDeviceProperty` | Reply | 16 |
+| 3 | `GetPhysicalDeviceQueueFamilyProperties` | Reply | 12 |
+| 4 | `CreateDevice` | Void | `24 + Σ(8 + 4*queue_count_i) + 8*feature_request_count + Σ(4 + pad4(name_length_j))` |
+| 5 | `CreateDefaultDevice` | Void | `16 + 4*queue_count` |
+| 6 | `DestroyDevice` | Void | 12 |
+| 7 | `GetPhysicalDeviceMemoryProperties` | Reply | 12 |
+| 8 | `CreateBuffer` | Void | 32 |
+| 9 | `GetBufferMemoryRequirements` | Reply | 16 |
+| 10 | `AllocateMemory` | Void | 32 |
+| 11 | `FreeMemory` | Void | 16 |
+| 12 | `BindBufferMemory` | Void | 28 |
+| 13 | `WriteBuffer` | Reply | `28 + pad4(data_length)` |
+| 14 | `ReadBuffer` | Reply | 28 |
+| 15 | `ShaderModuleData` | Void | `20 + pad4(data_length)`; ABORT has zero data and exactly 20 bytes |
+| 16 | `CreateDescriptorSetLayout` | Void | `24 + 16*binding_count` |
+| 17 | `CreateDescriptorPool` | Void | `24 + 8*pool_size_count` |
+| 18 | `DestroyDescriptorPool` | Void | 16 |
+| 19 | `AllocateDescriptorSets` | Void | `20 + 8*descriptor_set_count` |
+| 20 | `UpdateDescriptorSets` | Void | `20 + 36*write_count` |
+| 21 | `FreeDescriptorSets` | Void | `20 + 4*descriptor_set_count` |
+| 22 | `CreatePipelineLayout` | Void | `20 + 4*set_layout_count + 12*push_constant_range_count` |
+| 23 | `CreateComputePipeline` | Void | `28 + pad4(entry_point_length)` |
+| 24 | `CreateCommandPool` | Void | 24 |
+| 25 | `DestroyCommandPool` | Void | 16 |
+| 26 | `ResetCommandBuffer` | Void | 16 |
+| 27 | `CommandBufferData` | Void | At least 16; ABORT exactly 16; other payloads contain whole entries |
+| 28 | `QueueSubmit` | Void + async events | `40 + 4*C + 16*W + 12*S` |
+| 29 | `CreateSemaphore` | Void | 28 |
+| 30 | `GetSemaphoreCounterValue` | Reply | 16 |
+| 31 | `WaitSemaphores` | Reply | `28 + 12*semaphore_count` |
+| 32 | `SignalSemaphore` | Void | 24 |
+| 33 | `DestroySemaphore` | Void | 16 |
+| 34 | `CreateFence` | Void | 24 |
+| 35 | `GetFenceStatus` | Reply | 16 |
+| 36 | `WaitForFence` | Reply | 24 |
+| 37 | `ResetFence` | Void | 16 |
+| 38 | `DestroyFence` | Void | 16 |
+| 39 | `DestroyResource` | Void | 12 |
+
+Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
+
+## Cross-chapter consistency results
+
+- **Request kind:** all 39 inventory kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
+- **Reply lengths:** discovery reply formulas and property status values are now explicit; fixed replies use `reply.length = 0` when all data fits in the standard 32-byte reply header. Variable data begins at byte 32 and `reply.length` counts four-byte units after that header.
+- **Descriptor/stage values:** v0.1 supports `STORAGE_BUFFER = 1` only and the XAverius stage bit `COMPUTE = 0x00000001`; examples must not substitute native Vulkan enum names.
+- **Error mapping:** the central error chapter governs XID liveness, live-type mismatch, ownership, Atom validation, Create-XID choice, validation order, and atomic rejection. Request-specific tables define the specialized state and backend failures. A final ABI review is still required for full implementation readiness; this matrix does not close feature/extension, property-registry, timeout, or event-selection decisions.
