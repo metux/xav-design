@@ -19,7 +19,7 @@
 
 ## Immediate next steps
 
-- Continue centralizing numeric registries that can be derived from already-settled protocol semantics; the checker now verifies unique contiguous request/event/error assignments.
+- Continue centralizing numeric registries that can be derived from already-settled protocol semantics; the checker now verifies request/event/error assignments plus command-entry, descriptor-type, device-type, queue-flag, shader-stage, and physical-property type registries.
 - Run implementation-level interoperability tests for `QueryExtension`, XGE framing, and `SelectEvents` when a live X11/XGE implementation is available; current checks are specification/reference tests only.
 - Validate the specified queue-ordering and `WriteBuffer` visibility contracts against backend behavior once a server implementation exists.
 - Continue request-specific error-mapping and conformance review; the checker now requires all 40 registered requests to be represented in both documents, and the `SelectEvents` mapping is explicit. The v0.1 feature/extension/property registry cross-check is complete.
