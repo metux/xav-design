@@ -47,6 +47,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateSemaphore` hat exakt 28 Bytes und akzeptiert nur `BINARY = 0` oder `TIMELINE = 1`; bei Binary muss `initial_value = 0` sein. Ungültige Felder ergeben `BadValue`, Ziel-XID-Kollision `BadIDChoice`, Backend-Allokationsfehler `ALLOCATION_FAILED`.
 - `CreateFence` hat exakt 24 Bytes, `create_flags = 0` und `reserved = 0`; der Anfangszustand ist `UNSIGNALED`. Ungültige Felder ergeben `BadValue`, Ziel-XID-Kollision `BadIDChoice`, Backend-Allokationsfehler `ALLOCATION_FAILED`.
 - `SelectEvents` hat exakt 32 Bytes und erfordert vorherige erfolgreiche XGE-1.0-Aushandlung; Scope-/Masken- und ungenutzte Feldkombinationen werden validiert. Jeder Fehler erhält die vorherige Event-Auswahl atomar unverändert.
+- Nach erfolgreicher Verarbeitung von `DestroyDevice` werden keine neuen Events mit dessen zerstörter `device_xid` mehr erzeugt oder zugestellt; bereits zuvor in den X11-Ausgabestrom eingereihte Events bleiben unberührt. Die interne terminale Abwicklung angenommener Submissions und Backend-Referenzen bleibt unabhängig von dieser Event-Unterdrückung erhalten.
 - `CreateBuffer` weist `usage_flags = 0` und unbekannte Usage-Bits mit `BadValue` ab
 - `CreateDescriptorPool`, `AllocateDescriptorSets` und `FreeDescriptorSets` weisen Count null mit `BadValue` ab
 - Alle Create-Ziel-XIDs werden getrennt von Eingabe-XIDs geprüft: ungültige/belegte Ziel-XIDs ergeben `BadIDChoice`; Batch-Erzeugung hinterlässt bei Kollision keine Teilmenge
