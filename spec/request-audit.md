@@ -170,3 +170,8 @@ The descriptor-set allocation request already had atomic-batch semantics and bas
 ## FreeDescriptorSets atomicity and device-state follow-up — 2026-10-22
 
 `FreeDescriptorSets` already rejected pending/recording references, but the normative section did not spell out all-or-nothing behavior for a batch containing an invalid set, nor did it state unavailable/lost-device outcomes. The request chapter, central mapping, conformance checklist, and static checker now require `BadValue` for unknown/non-live XIDs, `BadMatch` for wrong live types/ownership/pool mismatch, `DEVICE_UNAVAILABLE` / `DEVICE_LOST` for device state, and `INVALID_SYNCHRONIZATION_STATE` for prohibited references. Any rejection frees no subset of the requested sets.
+
+
+## UpdateDescriptorSets descriptor-type validation — 2026-10-22
+
+The descriptor update path previously described descriptor-type incompatibility as `BadMatch` without clearly separating unassigned wire values from a registered type that conflicts with a layout binding. The normative chapter now maps zero/unassigned `descriptor_type` values and duplicate writes to one slot to `BadValue`, while a registered but incompatible type remains `BadMatch`. The central error table, conformance checklist and static checker now assert this distinction. This is a specification-level validation correction; backend runtime behavior is not yet tested.
