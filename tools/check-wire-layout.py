@@ -535,13 +535,13 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: ABORT must validate exact command-pool ownership",
     )
     c.require(
-        "prüft die Ziel-XID vor der Pool-XID" in errors
+        "zuerst die Ziel-XID und danach die Pool-XID" in errors
         and "CREATE mit ungültiger/belegter Ziel-XID ergibt" in errors
         and "ohne CREATE ergeben unbekannte Buffer-XIDs" in errors,
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
     c.require(
-        "deklarierte Länge über das Request-Ende hinaus ergibt" in errors
+        "dessen deklarierte Länge über das Request-Ende hinausreicht" in errors
         and "Länge null oder kleiner als der Entry-Header" in errors
         and "unbekannte Command-ID" in errors,
         "CommandBufferData: malformed entry length and unknown command ID errors must be explicit",
