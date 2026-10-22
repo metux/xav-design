@@ -145,3 +145,7 @@ The central error map had two summaries for `AllocateMemory`: the detailed memor
 ## CreateDescriptorPool device-state error-map follow-up — 2026-10-22
 
 The `CreateDescriptorPool` request mapping listed input validation and backend allocation failure but omitted wrong-live-type/foreign-ownership and unavailable/lost-device outcomes. The normative descriptor-pool section now specifies `BadValue`, `BadMatch`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED` separately, and states that failure leaves the target Pool XID unallocated. The central mapping, conformance checklist and static checker now guard the same contract. Runtime backend error injection remains untested.
+
+## Semaphore/fence creation error-map follow-up — 2026-10-22
+
+The `CreateSemaphore` and `CreateFence` error map omitted wrong-live-type/foreign-ownership and unavailable/lost-device outcomes, and their normative request sections did not state the atomic target-XID guarantee. The synchronization chapter, central mapping and conformance checklist now consistently distinguish `BadValue`, `BadMatch`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED`; failed creation leaves no public semaphore/fence XID. Static checks now guard these rules. Backend runtime error paths remain untested.
