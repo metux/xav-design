@@ -25,16 +25,19 @@ Binary-Semaphoren folgen den Vulkan-Signal-/Wait-Regeln.
 - Pending Signal-/Wait-Zustände müssen atomar validiert werden.
 - Ein Signal und ein Wait müssen nach den geltenden Vulkan-Regeln zusammenpassen.
 
-In v0.1 darf für eine Binary-Semaphore höchstens eine Signaloperation und höchstens eine Wait-Operation gleichzeitig pending sein. Ein einzelner pending Wait darf auf ein Signal warten, das noch nicht eingereiht wurde; ebenso darf ein Signal pending sein, bevor der passende Wait eingereiht wird. Sobald ein Signal durch einen Wait konsumiert wurde, kann die Semaphore erneut verwendet werden. Eine zweite pending Signaloperation oder eine zweite pending Wait-Operation auf derselben Binary-Semaphore wird bei `QueueSubmit` atomar mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Ein erfolgreicher Wait konsumiert das Signal genau einmal.
+In v0.1 darf für eine Binary-Semaphore höchstens eine Signaloperation und höchstens eine Wait-Operation gleichzeitig pending sein. Ein einzelner pending Wait darf auf ein Signal warten, das noch nicht eingereiht wurde; ebenso darf ein Signal pending sein, bevor der passende Wait eingereiht wird. Der Server verfolgt dafür getrennt den Signalzustand (kein Signal verfügbar, Signaloperation pending, Signal verfügbar) und die Referenzen auf angenommene Wait-/Signaloperationen. Die Annahme eines Waits konsumiert das Signal nicht sofort: konsumiert wird es erst, wenn der Wait auf GPU-/Backend-Seite erfolgreich erfüllt ist. Erst nach dieser Konsumption darf ein neuer Signalzyklus beginnen; eine bloß angenommene oder noch pending Wait-Operation gibt das Signal nicht frei. Ein Signal, dessen Operation erfolgreich abgeschlossen wurde, bleibt verfügbar, bis genau ein Wait es konsumiert. Eine zweite Signaloperation wird abgewiesen, solange ein Signal bereits verfügbar ist oder eine Signaloperation pending ist; eine zweite pending Wait-Operation wird abgewiesen, solange ein vorheriger Wait noch nicht erfüllt/abgeschlossen ist. Solche Ablehnungen bei `QueueSubmit` erfolgen atomar mit `INVALID_SYNCHRONIZATION_STATE`. Ein Fehler oder Device Loss darf ein Signal nicht als erfolgreich verfügbar oder konsumiert markieren, wenn das nicht tatsächlich eingetreten ist; beim Device Loss werden betroffene Submissions fehlgeschlagen und das Semaphore-Objekt folgt den Device-Loss-Regeln.
 
 ## Timeline-Semaphoren
 
 Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
-- Ein Wait ist erfüllt, sobald der Counter mindestens den angeforderten Wert erreicht.
+- Ein Wait ist erfüllt, sobald der beobachtbare Counter mindestens den angeforderten Wert erreicht.
 - Ein Wait darf eingereiht werden, bevor das Signal eingereiht wurde, das ihn erfüllt.
-- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein.
+- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein. Zur atomaren Validierung zählt ein angenommenes, noch nicht terminales Signal als pending, auch wenn sein Counter-Wert noch nicht erreicht ist; neue Signalwerte müssen größer als alle bereits reservierten pending Signalwerte derselben Semaphore sein.
+- Der beobachtbare Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde. Die bloße Annahme einer `QueueSubmit`-Anforderung reserviert den Signalwert, erhöht aber nicht vorzeitig den Counter.
+- Ein erfolgreich ausgeführtes Signal erfüllt alle bereits eingereihten Waits, deren Werte dadurch erreicht werden; ein Wait verändert den Counter nicht.
 - Mehrere Signal-Entries derselben Timeline-Semaphore in einem einzelnen `QueueSubmit` sind in v0.1 nicht erlaubt.
+- Nach fehlgeschlagener Submission oder Device Loss darf ein nur reservierter, aber nicht erfolgreich signalisierter Wert nicht als erreicht ausgegeben werden. Reservierungen werden erst aufgehoben, wenn die zugehörige Operation terminal ist; bei Device Loss gelten keine weiteren normalen Signaloperationen für das Device.
 
 ## `GetSemaphoreCounterValue`
 
