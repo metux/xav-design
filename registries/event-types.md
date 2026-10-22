@@ -47,7 +47,7 @@ Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unass
 | 1 | `UNAVAILABLE` |
 | 2 | `REMOVED` |
 
-`REMOVED` is terminal for a physical-device XID; the XID must never be reassigned to another physical device.
+`REMOVED` is terminal for a physical-device XID. After emitting `new_status = REMOVED`, the server MUST NOT emit another `DEVICE_STATUS_CHANGED` event for that XID; the XID must never be reassigned to another physical device.
 
 ## `DEVICE_MEMORY_PRESSURE.pressure_level`
 
