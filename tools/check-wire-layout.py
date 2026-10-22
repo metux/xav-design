@@ -703,7 +703,7 @@ def check_reply_layouts(c: Check) -> None:
             (r"Reply-Payload-Länge ist null", "fixed 32-byte reply"),
         ]),
         "WriteBuffer": ("memory", [
-            (r"Gesamtlänge:\s*\n+\x60?28 \+ \(\(data_length \+ 3\) & ~3\)", "request payload length formula"),
+            (r"Gesamtlänge:\s*\n+\x60?28 \+ \(\(uint64\(data_length\) \+ 3\) & ~uint64\(3\)\)", "request payload length formula"),
             (r"Byte-Payload", "byte payload"),
             (r"Null-Padding bis zur nächsten Vierbytegrenze", "request zero padding"),
             (r"Reply von 32 Bytes", "empty standard reply on success"),
@@ -712,7 +712,7 @@ def check_reply_layouts(c: Check) -> None:
         "ReadBuffer": ("memory", [
             (r"Gesamtlänge: 28 Bytes", "fixed 28-byte request"),
             (r"Reply enthält nach dem 32-Byte-Header.*?ab Offset 32", "payload begins at reply offset 32"),
-            (r"reply\.length = ceil\(data_length / 4\)", "readback reply.length formula"),
+            (r"reply\.length = floor\(\(uint64\(data_length\) \+ 3\) / 4\)", "readback reply.length formula"),
             (r"Null-Padding auf vier Bytes", "readback zero padding"),
         ]),
         "GetSemaphoreCounterValue": ("sync", [
