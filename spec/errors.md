@@ -22,6 +22,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Live-Ressource gehört einem anderen Client, obwohl kein Sharing-Pfad definiert ist | `BadMatch` |
 | Device nicht verfügbar | `DEVICE_UNAVAILABLE` |
 | Device verloren | `DEVICE_LOST` |
+| Logisches Device regulär zerstört, während ein Host-Wait offen ist | `DEVICE_DESTROYED` |
 | Ungültiger Synchronisationszustand | `INVALID_SYNCHRONIZATION_STATE` |
 | Synchroner Transferfehler | `TRANSFER_FAILED` |
 | Synchroner Allokationsfehler | `ALLOCATION_FAILED` |
@@ -173,6 +174,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - Unbekannte/nicht-live Semaphore-/Fence-XIDs: `BadValue`; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
 - `WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status und keinen X11-Fehler.
 - Device Loss während `WaitSemaphores` wird als `DEVICE_LOST`-X11-Fehler gemeldet; bei `WaitForFence` wird `DEVICE_LOST` als normaler Reply-Status zurückgegeben.
+- Verarbeitung von `DestroyDevice` beendet offene `WaitSemaphores`-Requests mit `DEVICE_DESTROYED`; offene `WaitForFence`-Requests erhalten den Reply-Status `DEVICE_DESTROYED`. Dies ist von `DEVICE_LOST` getrennt.
 
 ### Fence-Requests
 
