@@ -68,7 +68,8 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 ### `WriteBuffer`
 
 - Falsche Request-Länge: `BadLength`
-- Länge null oder ungültige reservierte Felder: `BadValue`
+- Länge null, nicht-null Padding oder ungültige reservierte Felder: `BadValue`
+- Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
 - Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
@@ -81,7 +82,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Falsche Request-Länge: `BadLength`
 - Länge null oder ungültige reservierte Felder: `BadValue`
 - Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, ungültiger Bereich: `BadMatch`
+- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, Bereich außerhalb des Buffers: `BadMatch`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
 - Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
