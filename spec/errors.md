@@ -74,6 +74,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
 - Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
+- Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`
 
 ### `ReadBuffer`
 
@@ -84,6 +85,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
 - Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
+- Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`
 
 ### `ShaderModuleData`
 
