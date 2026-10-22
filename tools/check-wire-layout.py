@@ -510,6 +510,14 @@ def check_request_document_coverage(c: Check) -> None:
         and "bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt" in read("spec/shaders-pipelines.md"),
         "error mapping: CreateComputePipeline must define device-state and atomic creation behavior",
     )
+    c.require(
+        "### `CreateCommandPool`" in errors
+        and "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
+        and "Bei Ablehnung bleibt die Pool-XID unangelegt" in errors
+        and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/command-recording.md"),
+        "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
