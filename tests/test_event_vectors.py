@@ -416,14 +416,13 @@ class GoldenXGEEventTests(unittest.TestCase):
         for document, label in ((events, "event chapter"), (event_registry, "event registry")):
             with self.subTest(document=label):
                 self.assertIn("first_error + offset", document)
-                self.assertIn("not", document.lower())
-                self.assertIn("synchron", document.lower())
                 self.assertIn("QueueSubmit", document)
                 self.assertIn("SUBMISSION_FAILED", document)
+                self.assertIn("ASYNC_ERROR", document)
 
         offsets = {
             int(value)
-            for value in re.findall(r"^\\|\\s*(\\d+)\\s*\\|\\s*`[A-Z_]+`\\s*\\|", error_registry, re.M)
+            for value in re.findall(r"^\|\s*(\d+)\s*\|\s*`[A-Z_]+`\s*\|", error_registry, re.M)
         }
         self.assertEqual(offsets, set(range(9)))
         self.assertIn("For an accepted `QueueSubmit`", error_spec)
