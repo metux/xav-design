@@ -377,7 +377,7 @@
       "name": "property-not-available-fields-nonzero-little",
       "kind": "GetPhysicalDeviceProperty-not-available",
       "byte_order": "little",
-      "wire_hex": "01003412050000000000000000000000000000000000000000000000000000000200000001000000000000000000000000000000",
+      "wire_hex": "01003412050000000200000000000000000000000000000000000000000000000200000001000000000000000000000000000000",
       "violates": "property-failure-zero"
     },
     {
@@ -405,7 +405,7 @@
       "name": "property-not-available-fields-nonzero-big",
       "kind": "GetPhysicalDeviceProperty-not-available",
       "byte_order": "big",
-      "wire_hex": "01001234000000050000000000000000000000000000000000000000000000000000000200000001000000000000000000000000",
+      "wire_hex": "01001234000000050000000200000000000000000000000000000000000000000000000200000001000000000000000000000000",
       "violates": "property-failure-zero"
     },
     {
