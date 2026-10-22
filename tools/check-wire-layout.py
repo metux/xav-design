@@ -488,6 +488,28 @@ def check_request_document_coverage(c: Check) -> None:
         and "bei jedem Fehler bleibt die Fence-XID unangelegt" in read("spec/synchronization.md"),
         "error mapping: CreateSemaphore/CreateFence must define device-state errors and atomic XID behavior",
     )
+    c.require(
+        "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
+        and "falscher live Ressourcentyp, fremde Device-Ownership oder Cross-Device-Ressource: `BadMatch`" in errors,
+        "error mapping: CreateDescriptorSetLayout must distinguish device, ownership and allocation errors",
+    )
+    c.require(
+        "`CreatePipelineLayout`:" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
+        and "Kein Pipeline Layout bleibt bei Ablehnung live" in errors
+        and "Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt" in read("spec/shaders-pipelines.md"),
+        "error mapping: CreatePipelineLayout must define device-state and atomic creation behavior",
+    )
+    c.require(
+        "`CreateComputePipeline`:" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
+        and "Kein Pipeline-Objekt bleibt bei Ablehnung live" in errors
+        and "bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt" in read("spec/shaders-pipelines.md"),
+        "error mapping: CreateComputePipeline must define device-state and atomic creation behavior",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
