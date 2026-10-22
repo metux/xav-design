@@ -138,6 +138,11 @@ def check_events(c: Check) -> None:
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
     c.require(re.search(r"interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
+    submissions = read("spec/queue-submission.md")
+    c.require(re.search(r"terminales Ausgang.*DestroyDevice.*unterdrückt", submissions, re.S) is not None,
+              "QueueSubmit: terminal event delivery must respect DestroyDevice lifecycle suppression")
+    c.require(re.search(r"terminales Event vorgesehen.*Lifecycle-Regeln für `DestroyDevice` unterdrückt", submissions, re.S) is not None,
+              "QueueSubmit/device loss: terminal event requirement must not contradict DestroyDevice suppression")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
