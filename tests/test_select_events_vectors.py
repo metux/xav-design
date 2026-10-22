@@ -546,5 +546,13 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Interne Ressourcen und zugehörige Speicher werden in Quarantäne gehalten", lifetime)
         self.assertIn("müssen trotzdem genau einmal terminalisiert werden", lifetime)
 
+    def test_write_buffer_device_loss_never_claims_upload_visibility(self):
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
+        self.assertIn("Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden.", memory)
+        self.assertIn("Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.", memory)
+        self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
+        self.assertIn("danach werden zurückgestellte Requests in normaler Request-Reihenfolge verarbeitet", memory.lower())
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
