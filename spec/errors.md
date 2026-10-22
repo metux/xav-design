@@ -204,7 +204,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `DestroyDescriptorPool` oder `FreeDescriptorSets`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein betroffenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird.
 - `DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`, solange die Fence einer nicht-terminalen Submission zugeordnet ist.
 - `DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`, solange Queue- oder Host-Operationen die Semaphore pending verwenden.
-- `FreeMemory`: `BadMatch`, solange ein Buffer an die Allokation gebunden ist; `INVALID_SYNCHRONIZATION_STATE`, solange angenommene Arbeit auf die Allokation zugreift.
+- `FreeMemory`: `BadMatch`, solange irgendein intern noch lebender Buffer an die Allokation gebunden ist, auch wenn dessen öffentliche XID bereits invalidiert wurde; `INVALID_SYNCHRONIZATION_STATE`, solange angenommene Arbeit auf die Allokation zugreift.
 - Ein Destroy-Request, der wegen Lebensdauerregeln abgewiesen wird, lässt alle öffentlichen XIDs und Command-Buffer-Zustände unverändert.
 - Device-weite Kaskadeninvalidierung ist von diesen normalen Pending-Use-Ablehnungen ausgenommen; interne Referenzen müssen trotzdem sicher erhalten bleiben.
 
@@ -243,7 +243,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 - `GetBufferMemoryRequirements`: falsche Request-Länge `BadLength`; unbekannte/nicht-live Device- oder Buffer-XID `BadValue`; falscher live Ressourcentyp oder Buffer eines anderen Devices `BadMatch`.
 - `AllocateMemory`: falsche Request-Länge `BadLength`; nicht-positive Allokationsgröße, reserviertes Feld ungleich null oder nicht existierender Memory-Type-Index `BadValue`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler `ALLOCATION_FAILED`. Bei jedem Fehler bleibt die angeforderte `memory_xid` unangelegt.
-- `FreeMemory`: falsche Request-Länge `BadLength`; unbekannte/nicht-live Device- oder Memory-XID `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Nutzung `BadMatch`; noch gebundener Buffer `BadMatch`; angenommene GPU-Arbeit mit Zugriff auf die Allokation `INVALID_SYNCHRONIZATION_STATE`. Bei Ablehnung bleibt die Allokation unverändert.
+- `FreeMemory`: falsche Request-Länge `BadLength`; unbekannte/nicht-live Device- oder Memory-XID `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Nutzung `BadMatch`; irgendein intern noch lebender, gebundener Buffer `BadMatch` (auch bei bereits invalidierter Buffer-XID); angenommene GPU-Arbeit mit Zugriff auf die Allokation `INVALID_SYNCHRONIZATION_STATE`. Bei Ablehnung bleibt die Allokation unverändert.
 - `BindBufferMemory`: falsche Request-Länge `BadLength`; unbekannte/nicht-live Device-, Buffer- oder Memory-XID `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Nutzung `BadMatch`; inkompatibler Memory-Type, bereits gebundener Buffer, ungültiges Alignment oder unzureichende Allokationsgrenzen `BadMatch`. Bei Ablehnung bleibt der Buffer ungebunden.
 
 ### `BindBufferMemory`
