@@ -33,6 +33,7 @@ Der Server muss sicherstellen, dass die Descriptoren zum Shader passen, statisch
 Eine Implementierung sollte mindestens folgende Fälle testen:
 
 - Exakte Request-Längen, Counts und Padding
+- `ReadBuffer` wartet auf frühere angenommene Schreibzugriffe desselben logischen Devices auf den angeforderten Bereich, einschließlich anderer Queues; ein früherer Submission-Fehler verhindert den Read nicht allein, garantiert aber keine vom fehlgeschlagenen Schreibzugriff erwarteten Daten; bei Device Loss muss `ReadBuffer` mit `DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden
 - `EnumeratePhysicalDevices` ist ein 8-Byte-Reply-Request; `DestroyDevice` ist ein 12-Byte-Void-Request
 - `EnumeratePhysicalDevices.reply.length` entspricht der Summe der gepaddeten `PHYSICALDEVICEINFO`-Record-Längen geteilt durch vier; ohne Records ist es null
 - `GetPhysicalDeviceQueueFamilyProperties.reply.length` entspricht `3 * queue_family_count`; die Payload-Länge muss durch 12 teilbar sein
