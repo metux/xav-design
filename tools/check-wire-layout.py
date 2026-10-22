@@ -425,6 +425,11 @@ def check_other_numeric_registries(c: Check) -> None:
         and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in descriptor_conformance,
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
+    c.require(
+        "Queue-Family-Index außerhalb des Device-Profils oder ohne Command-Buffer-Unterstützung `BadValue`" in errors
+        and "ungültige Queue Family oder ungültiges Device `BadMatch` beziehungsweise `BadValue`" not in errors,
+        "error mapping: CreateCommandPool queue-family errors must be consistent across duplicate summaries",
+    )
     command_recording = read("spec/command-recording.md")
     decisions = read("DECISIONS.md")
     c.require(
