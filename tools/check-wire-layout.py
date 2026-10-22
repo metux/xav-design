@@ -154,18 +154,18 @@ def check_events(c: Check) -> None:
               "synchronization: semaphore waits must terminate on device loss")
     c.require(re.search(r"Semaphore- und Fence-Objekte bleiben intern erhalten.*solange Backend-Zugriffe", sync, re.S) is not None,
               "synchronization: backend references must outlive device-loss public invalidation")
-    c.require(re.search(r"Ein Signal wird genau einmal konsumiert.*erfüllt.*neuer Signalzyklus", sync, re.S) is not None,
+    c.require(re.search(r"Erst nach dieser Konsumption darf ein neuer Signalzyklus beginnen", sync, re.S) is not None,
               "synchronization: binary semaphore reuse must follow actual wait consumption")
     c.require(re.search(r"Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde", sync, re.S) is not None,
               "synchronization: timeline counter must not advance at submission acceptance")
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
     submissions = read("spec/queue-submission.md")
-    c.require(re.search(r"alle Semaphore-Wait/Signal-Reservierungen und internen Referenzen.*atomar", submissions, re.S) is not None,
+    c.require(re.search(r"Reservierungen und interne Referenzen sind atomar mit der Submission-Annahme verbunden", submissions, re.S) is not None,
               "QueueSubmit: semaphore reservations and references must commit atomically")
     c.require(re.search(r"exakte interne Semaphore-Identität.*XID.*wiederverwendet", submissions, re.S) is not None,
               "QueueSubmit: semaphore references must not follow a reused XID")
-    c.require(re.search(r"Backend-Referenzen.*freigegeben werden können", submissions, re.S) is not None,
+    c.require(re.search(r"Backend keinen Zugriff mehr ausführen kann", submissions, re.S) is not None,
               "QueueSubmit: semaphore backend references must survive until safe release")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
