@@ -608,5 +608,17 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("`ALLOCATION_FAILED`", errors)
         self.assertIn("`BindBufferMemory`", errors)
 
+
+    def test_freememory_respects_internal_buffer_lifetime(self):
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        free = memory.split("## 5.5 `FreeMemory`", 1)[1].split("## 5.6 ", 1)[0]
+        self.assertIn("Seine interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen", lifetime)
+        self.assertIn("auch dann mit `BadMatch` abgewiesen werden", lifetime)
+        self.assertIn("irgendein intern noch lebender Buffer", free)
+        self.assertIn("öffentliche XID bereits durch `DestroyResource` invalidiert", free)
+        self.assertIn("auch bei bereits invalidierter Buffer-XID", errors)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
