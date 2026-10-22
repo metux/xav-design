@@ -68,7 +68,7 @@ Wait-Modi:
 - `WAIT_ANY = 0`
 - `WAIT_ALL = 1`
 
-Die Anzahl muss mindestens 1 sein. Alle Semaphoren müssen Timeline-Semaphoren desselben Devices sein; doppelte XIDs sind unzulässig.
+Die Request-Länge muss exakt `28 + 12 * semaphore_count` Bytes betragen; eine Längenabweichung oder ein arithmetischer Überlauf ergibt `BadLength`. `semaphore_count = 0` ergibt `BadValue`. Unbekannte/nicht-live Device- oder Semaphore-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergibt `BadMatch`. Alle Semaphoren müssen Timeline-Semaphoren desselben Devices sein; doppelte XIDs und ungültige `wait_mode`-Werte ergeben `BadValue`. Diese Prüfungen erfolgen vor Registrierung des Waits. Bei Device Loss wird der Wait mit `DEVICE_LOST` als X11-Fehler beendet; wird `DestroyDevice` verarbeitet, solange der Wait noch offen ist, ergibt sich `DEVICE_DESTROYED`.
 
 ### Timeout-Semantik
 
