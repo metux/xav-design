@@ -125,6 +125,11 @@ def check_events(c: Check) -> None:
               "event registry: REMOVED must prohibit subsequent status events for that XID")
     c.require(re.search(r"heap_index.*UINT32_MAX.*kleiner als.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
               "DEVICE_MEMORY_PRESSURE: heap_index must be a valid heap index or UINT32_MAX")
+    lifetime = read("spec/resource-lifetime.md")
+    c.require(re.search(r"Nach erfolgreicher Verarbeitung von `DestroyDevice`.*keine neuen XAverius-Events mehr erzeugen oder zustellen", lifetime, re.S) is not None,
+              "DestroyDevice: must suppress later events for the destroyed logical device")
+    c.require(re.search(r"Die Unterdrückung der Zustellung.*internen terminalen Ausgang.*Backend-Referenzen", lifetime, re.S) is not None,
+              "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
