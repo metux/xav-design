@@ -1107,7 +1107,7 @@ def check_xge_abi(c: Check) -> None:
         (r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", "failed request preserves prior mask"),
         (r"ASYNC_ERROR.*DEVICE_LOST.*nicht maskierbar", "unmaskable events"),
         (r"erfolgreich GEQueryVersion", "XGE version negotiation prerequisite"),
-        (r"ohne ausgehandelte XGE-Unterstützung.*BadMatch", "pre-negotiation rejection"),
+        (r"ohne ausgehandelte XGE-Unterst(?:ü|ue)tzung.*BadMatch", "pre-negotiation rejection"),
     ]:
         c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
                   f"SelectEvents/XGE: missing {label}")
