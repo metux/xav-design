@@ -14,7 +14,7 @@ Typen:
 - `BINARY = 0`
 - `TIMELINE = 1`
 
-Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled. In `QueueSubmit` müssen die `wait_value`- und `signal_value`-Felder für Binary-Semaphoren ebenfalls null sein.
+Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled. In `QueueSubmit` müssen die `wait_value`- und `signal_value`-Felder für Binary-Semaphoren ebenfalls null sein. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Bei einem nicht verfügbaren oder verlorenen logischen Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Backend-Allokationsfehler ergeben `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Semaphore-XID unangelegt.
 
 ## Binary-Semaphoren
 
@@ -132,6 +132,8 @@ Gesamtlänge: 24 Bytes.
 - Offset 12: Fence-XID
 - Offset 16: `CARD32 create_flags = 0`
 - Offset 20: `CARD32 reserved = 0`
+
+Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Bei einem nicht verfügbaren oder verlorenen logischen Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Backend-Allokationsfehler ergeben `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Fence-XID unangelegt.
 
 ## `GetFenceStatus`
 
