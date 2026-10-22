@@ -68,7 +68,7 @@ Der Request muss exakt die durch `binding_count` bestimmte Länge haben. Die Ges
 
 `descriptor_type` und `stage_flags` verwenden ausschließlich die normativen [Descriptor-Type-Registry](../registries/descriptor-types.md) und [Shader-Stage-Registry](../registries/shader-stages.md). Jeder verwendete Wert muss in v0.1 unterstützt sein. Die Stage-Maske darf keine unbekannten oder nicht unterstützten Bits enthalten und muss mindestens eine unterstützte Stage enthalten. Nicht unterstützte Descriptor-Typen werden abgewiesen; die numerischen Werte werden nicht lokal in diesem Kapitel vergeben.
 
-`flags` muss null sein. Nicht-null Flags werden mit `BadValue` abgewiesen; v0.1 akzeptiert keine implizit ignorierten Layout-Flags. Der Server prüft zusätzlich Device-Ownership, unbenutzte Create-XID, Descriptor- und Stage-Unterstützung sowie Geräte-Limits. Die Erstellung ist atomar: Bei einem Fehler wird kein Descriptor Set Layout öffentlich angelegt.
+`flags` muss null sein. Nicht-null Flags werden mit `BadValue` abgewiesen; v0.1 akzeptiert keine implizit ignorierten Layout-Flags. Der Server prüft zusätzlich Device-Ownership, unbenutzte Create-XID, Descriptor- und Stage-Unterstützung sowie Geräte-Limits. Die Erstellung ist atomar: Bei einem Fehler wird kein Descriptor Set Layout öffentlich angelegt. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`.
 
 Im initialen Compute-Test werden Bindings 0, 1 und 2 jeweils als `STORAGE_BUFFER`, Anzahl 1 und `COMPUTE` angelegt.
 
@@ -183,7 +183,7 @@ Jeder Push-Constant-Range-Record enthält:
 
 Die Gesamtlänge des Requests beträgt `20 + 4 * set_layout_count + 12 * push_constant_range_count` Bytes.
 
-Der Server prüft Device-Ownership, Set-Layout- und Push-Constant-Limits, Stage-Masks, Offsets, Größen und Vulkan-Kompatibilitätsregeln.
+Der Server prüft Device-Ownership, Set-Layout- und Push-Constant-Limits, Stage-Masks, Offsets, Größen und Vulkan-Kompatibilitätsregeln. Unbekannte/nicht-live Device- oder Set-Layout-XIDs ergeben `BadValue`; falsche live Ressourcentypen, fremde Ownership oder Cross-Device-Layouts ergeben `BadMatch`. Ein nicht verfügbares/verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; Backend-Allokationsfehler ergeben `ALLOCATION_FAILED`. Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt.
 
 Nach erfolgreicher Erstellung darf das Descriptor Set Layout öffentlich zerstört werden. Die internen Referenzen müssen den tatsächlichen Vulkan-Lebensdauerregeln entsprechen.
 
@@ -201,4 +201,4 @@ Nach erfolgreicher Erstellung darf das Descriptor Set Layout öffentlich zerstö
 - Offset 26: `CARD16 reserved = 0`
 - Offset 28: ASCII-Entry-Point ohne NUL, auf vier Bytes gepaddet
 
-Der Entry-Point muss nichtleer sein und ausschließlich ASCII-Bytes enthalten; NUL ist nicht erlaubt. Padding-Bytes müssen null sein. Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen; `entry_point_length` muss positiv sein. Specialization Constants werden in v0.1 nicht unterstützt. Die Erstellung ist atomar; bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt.
+Der Entry-Point muss nichtleer sein und ausschließlich ASCII-Bytes enthalten; NUL ist nicht erlaubt. Padding-Bytes müssen null sein. Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen; `entry_point_length` muss positiv sein. Specialization Constants werden in v0.1 nicht unterstützt. Die Erstellung ist atomar; bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt. Unbekannte/nicht-live Device-, Shader- oder Layout-XIDs ergeben `BadValue`; falsche live Ressourcentypen, fremde Ownership oder Cross-Device-Objekte ergeben `BadMatch`. Ein nicht verfügbares/verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; Backend-Allokationsfehler ergeben `ALLOCATION_FAILED`.
