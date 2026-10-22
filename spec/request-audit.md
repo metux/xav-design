@@ -161,3 +161,7 @@ The command-pool chapter specified queue-family and flag validation but did not 
 ## AllocateDescriptorSets error-map follow-up — 2026-10-22
 
 The descriptor-set allocation request already had atomic-batch semantics and basic XID mapping, but its error table omitted unavailable/lost-device outcomes and did not fully separate unknown input XIDs from wrong live types/foreign ownership. The normative descriptor-set section, central mapping, and conformance checklist now distinguish `BadValue`, `BadMatch`, `BadIDChoice`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED`; rejection leaves no partial set allocation. Static checker coverage was added. Runtime Vulkan allocation failure injection remains untested.
+
+## FreeDescriptorSets atomicity and device-state follow-up — 2026-10-22
+
+`FreeDescriptorSets` already rejected pending/recording references, but the normative section did not spell out all-or-nothing behavior for a batch containing an invalid set, nor did it state unavailable/lost-device outcomes. The request chapter, central mapping, conformance checklist, and static checker now require `BadValue` for unknown/non-live XIDs, `BadMatch` for wrong live types/ownership/pool mismatch, `DEVICE_UNAVAILABLE` / `DEVICE_LOST` for device state, and `INVALID_SYNCHRONIZATION_STATE` for prohibited references. Any rejection frees no subset of the requested sets.
