@@ -243,6 +243,42 @@ def parse_request_registry(markdown: str) -> dict[int, tuple[str, str]]:
             result[opcode] = (name, kind)
     return result
 
+
+def check_reason_code_registry(c: Check) -> None:
+    registry = read("registries/reason-codes.md")
+    rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\\|\\s*(\\d+)\\s*\\|\\s*\\x60([A-Z_]+)\\x60\\s*\\|\\s*$",
+            registry, re.M,
+        )
+    ]
+    expected = [
+        (0, "REASON_UNSPECIFIED"),
+        (1, "HOTPLUG_REMOVAL"),
+        (2, "DRIVER_FAILURE"),
+        (3, "VULKAN_DEVICE_LOST"),
+        (4, "SERVER_POLICY"),
+        (5, "SERVER_SHUTDOWN"),
+    ]
+    c.require(rows == expected,
+              "device reason-code registry must assign shared values 0 through 5 exactly as specified")
+    c.require("append-only" in registry.lower() and "MUST NOT be renumbered" in registry,
+              "device reason-code registry must explicitly be append-only and prohibit renumbering")
+    events = read("spec/events.md")
+    event_registry = read("registries/event-types.md")
+    for source_name, source in (("spec/events.md", events),
+                                ("registries/event-types.md", event_registry)):
+        c.require("reason-codes.md" in source,
+                  f"{source_name}: must reference the shared device reason-code registry")
+    c.require("DEVICE_LOST.reason_code" in event_registry and
+              "DEVICE_STATUS_CHANGED.reason_code" in event_registry,
+              "event registry must declare shared reason-code namespace for both events")
+    issues = read("spec/open-issues.md")
+    c.require(re.search(r"10\\. Closed:.*DEVICE_STATUS_CHANGED\\.reason_code.*shared append-only", issues, re.S) is not None,
+              "open issue 10 must be closed in favor of the shared reason-code registry")
+
+
 def check_error_registry(c: Check) -> None:
     """Check that centrally assigned XAverius error offsets are unique and used."""
     registry = read("registries/errors.md")
@@ -934,6 +970,7 @@ def check_reply_formula_vectors(c: Check) -> None:
 def main() -> int:
     c = Check()
     check_events(c)
+    check_reason_code_registry(c)
     check_error_registry(c)
     check_other_numeric_registries(c)
     check_request_document_coverage(c)
