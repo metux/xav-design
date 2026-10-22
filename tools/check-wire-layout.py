@@ -1090,7 +1090,7 @@ def check_xge_abi(c: Check) -> None:
     select_start = events.find(select_marker)
     c.require(select_start >= 0, "events.md: missing SelectEvents ABI section")
     select_body = events[select_start + len(select_marker):] if select_start >= 0 else ""
-    c.require(re.search(r"feste Gesamtlänge von 32 Bytes", select_body, re.I) is not None,
+    c.require(re.search(r"fest(?:e|er) Gesamtlänge von 32 Bytes", select_body, re.I) is not None,
               "SelectEvents: request must be exactly 32 bytes")
     c.require(re.search(r"Common-Header-Feld `flags` bei Offset 5 muss 0 sein", select_body, re.I) is not None,
               "SelectEvents: common request flags at offset 5 must be zero")
