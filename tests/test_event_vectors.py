@@ -342,29 +342,29 @@ class GoldenXGEEventTests(unittest.TestCase):
         )
         for event, registry_heading in cases:
             registry_match = re.search(
-                r"^## \\x60" + re.escape(registry_heading)
-                + r"\\x60\\s*$([\\s\\S]*?)(?=^## |\\Z)",
+                r"^## \x60" + re.escape(registry_heading)
+                + r"\x60\s*$([\s\S]*?)(?=^## |\Z)",
                 registry, re.M,
             )
             self.assertIsNotNone(registry_match, f"missing registry section {registry_heading}")
             expected = [
                 (int(value), symbol)
                 for value, symbol in re.findall(
-                    r"^\\|\\s*(\\d+)\\s*\\|\\s*\\x60([A-Z_]+)\\x60\\s*\\|",
+                    r"^\|\s*(\d+)\s*\|\s*\x60([A-Z_]+)\x60\s*\|",
                     registry_match.group(1), re.M,
                 )
             ]
 
             event_match = re.search(
-                r"^## \\x60" + re.escape(event) + r"\\x60\\s*$"
-                + r"([\\s\\S]*?)(?=^## |\\Z)",
+                r"^## \x60" + re.escape(event) + r"\x60\s*$"
+                + r"([\s\S]*?)(?=^## |\Z)",
                 events, re.M,
             )
             self.assertIsNotNone(event_match, f"missing event chapter {event}")
             actual = [
                 (int(value), symbol)
                 for value, symbol in re.findall(
-                    r"^\\s*-\\s*(\\d+):\\s*\\x60([A-Z_]+)\\x60\\s*$",
+                    r"^\s*-\s*(\d+):\s*\x60([A-Z_]+)\x60\s*$",
                     event_match.group(1), re.M,
                 )
             ]
@@ -375,8 +375,8 @@ class GoldenXGEEventTests(unittest.TestCase):
         # than defining a second, potentially divergent local enumeration.
         for event in ("DEVICE_LOST", "DEVICE_STATUS_CHANGED"):
             event_match = re.search(
-                r"^## \\x60" + re.escape(event) + r"\\x60\\s*$"
-                + r"([\\s\\S]*?)(?=^## |\\Z)",
+                r"^## \x60" + re.escape(event) + r"\x60\s*$"
+                + r"([\s\S]*?)(?=^## |\Z)",
                 events, re.M,
             )
             self.assertIsNotNone(event_match)
