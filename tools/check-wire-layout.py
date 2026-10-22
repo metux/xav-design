@@ -152,6 +152,18 @@ def check_events(c: Check) -> None:
               "XGE delivery: send failure must not block backend work or duplicate terminal events")
     c.require(re.search(r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", event_doc) is not None,
               "SelectEvents: failed validation must preserve the previous event selection")
+    c.require(re.search(r"Unbekannte/nicht-live XIDs ergeben `BadValue`.*falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`", event_doc, re.S) is not None,
+              "SelectEvents: unknown XIDs must map to BadValue, wrong type/foreign ownership to BadMatch")
+    c.require(re.search(r"nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`", event_doc) is not None,
+              "SelectEvents: nonexistent queue on a valid device must map to BadValue")
+    c.require(re.search(r"ohne ausgehandelte XGE-Unterstützung werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unverändert", event_doc) is not None,
+              "SelectEvents: missing XGE negotiation must return BadMatch without changing prior selection")
+    c.require(re.search(r"Der Request ersetzt atomar die bisherige Maske für genau einen Scope", event_doc) is not None,
+              "SelectEvents: successful replacement must be atomic and scoped")
+    errors = read("spec/errors.md")
+    c.require(re.search(r"Eine erforderliche XAverius-XID, die keine live Ressource.*ergibt `BadValue`", errors, re.S) is not None and
+              re.search(r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`", errors) is not None,
+              "error mapping: unknown XIDs and live wrong-type XIDs must remain distinct")
     c.require(re.search(r"Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen", event_doc) is not None,
               "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
