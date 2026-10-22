@@ -424,5 +424,30 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_async_event_decision_is_linearized_with_mask_changes_and_destroy(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event",
+            events,
+        )
+        self.assertIn(
+            "Der erfolgreiche `SelectEvents`-Request wirkt ab seinem Linearisierungspunkt; ein Submission-Abschluss wertet die dann geltende Queue-Maske aus.",
+            events,
+        )
+        self.assertIn(
+            "Wird der Submission-Abschluss zuerst linearisiert und das Event eingereiht, bleibt dieses bereits eingereihte Event unberührt; wird `DestroyDevice` zuerst erfolgreich linearisiert, wird kein neues Event für dessen zerstörte Device-XID eingereiht.",
+            events,
+        )
+        self.assertIn(
+            "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen.",
+            events,
+        )
+        self.assertIn(
+            "Die Event-Zuordnung muss an die konkrete X11-Verbindung und interne Ressourcenidentität gebunden bleiben, nicht nur an eine numerische XID.",
+            lifetime,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
