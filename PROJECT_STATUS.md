@@ -22,7 +22,8 @@
 - Continue centralizing numeric registries that can be derived from already-settled protocol semantics; the checker now verifies request/event/error assignments plus command-entry, descriptor-type, device-type, queue-flag, shader-stage, and physical-property type registries.
 - Run implementation-level interoperability tests for `QueryExtension`, XGE framing, and `SelectEvents` when a live X11/XGE implementation is available; static checks do not prove runtime interoperability.
 - Validate queue-ordering and `WriteBuffer` visibility against backend behavior once a server implementation exists.
-- Continue the systematic request-specific error-mapping, lifetime, and conformance review. All 40 registered requests are represented in the central error guidance and conformance checklist, but presence checks do not prove every mapping is exhaustive.
+- Continue the systematic request-specific error-mapping, lifetime, and conformance review. The specialized `DestroyFence`/`DestroySemaphore` mappings now explicitly cover request length, XID/type/ownership, open host waits, terminal-wait release, atomic rejection, and device-loss teardown.
+- The current GitHub Actions run passes both `tools/check-wire-layout.py` (2,203 checks) and all 90 golden-wire unit tests. This verifies static spec consistency and reference vectors only; live X11/XGE interoperability and Vulkan backend behavior remain unverified.
 - The shared `DEVICE_STATUS_CHANGED.reason_code` / `DEVICE_LOST.reason_code` registry is defined in [reason-codes](registries/reason-codes.md); it is not an open design item. The only currently listed v0.1 validation issue is live XGE interoperability, as tracked in [open issues](spec/open-issues.md).
 
 ## End-to-end compute-path audit — 2026-10-21
