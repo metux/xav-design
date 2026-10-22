@@ -463,6 +463,20 @@
       "byte_order": "big",
       "wire_hex": "0100123400000000000000000100000000000000000000000000000000000000",
       "violates": "reserved-zero"
+    },
+    {
+      "name": "property-success-invalid-status-little",
+      "kind": "GetPhysicalDeviceProperty-success",
+      "byte_order": "little",
+      "wire_hex": "010034120100000001000000010000000400000000000000000000000000000078563412",
+      "violates": "property-success-status"
+    },
+    {
+      "name": "property-success-invalid-status-big",
+      "kind": "GetPhysicalDeviceProperty-success",
+      "byte_order": "big",
+      "wire_hex": "010012340000000100000001000000010000000400000000000000000000000012345678",
+      "violates": "property-success-status"
     }
   ]
 }
