@@ -738,6 +738,7 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "fence-status": invalid = kind == "GetFenceStatus" and wire[1] not in (0, 1, 2, 3)
                 elif rule == "wait-status": invalid = kind == "WaitSemaphores-timeout" and int.from_bytes(wire[8:12], order) not in (0, 1)
                 elif rule == "wait-for-fence-status": invalid = kind == "WaitForFence" and int.from_bytes(wire[8:12], order) not in (0, 1, 2, 3)
+                elif rule == "property-success-status": invalid = kind == "GetPhysicalDeviceProperty-success" and int.from_bytes(wire[8:12], order) != 0
                 elif rule == "property-padding-zero":
                     value_length = int.from_bytes(wire[16:20], order)
                     invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
