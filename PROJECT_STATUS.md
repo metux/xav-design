@@ -149,3 +149,7 @@ The current pass tightened the central error mapping and conformance coverage fo
 
 
 The command-buffer audit passes CI on branch `docs/restructure-2026-10-21`: [run 39825028342](https://github.com/metux/xav-design/actions/runs/39825028342) completed successfully, including the golden wire-vector tests (2,221 static checks).
+
+## Descriptor update validation audit — 2026-10-22
+
+Clarified `UpdateDescriptorSets` error semantics: zero/unassigned descriptor-type values and duplicate writes to one slot yield `BadValue`; a registered descriptor type incompatible with a binding yields `BadMatch`. The normative request chapter, central error map, conformance checklist, and static checker now agree. CI for the command-buffer pass succeeded at [run 39825028342](https://github.com/metux/xav-design/actions/runs/39825028342); the descriptor-update pass is awaiting its own CI result.
