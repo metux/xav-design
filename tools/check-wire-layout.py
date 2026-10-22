@@ -503,6 +503,15 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: FreeDescriptorSets must retain atomic pending/recording rejection",
     )
 
+    c.require(
+        "`DestroyDescriptorPool`: falsche Request-Länge `BadLength`" in errors
+        and "unbekannte/nicht-live Pool-XID `BadValue`" in errors
+        and "falscher live Ressourcentyp oder fremde Client-/Device-Ownership `BadMatch`" in errors
+        and "wenn ein Kind-Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird, `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "Pool, Sets und Referenzen bleiben unverändert" in errors,
+        "error mapping: DestroyDescriptorPool must define XID, ownership, pending-use, and atomicity outcomes",
+    )
+
 
 def check_reply_matrix(c: Check) -> None:
     registry_text = read("registries/request-subopcodes.md")
