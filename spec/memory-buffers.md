@@ -102,7 +102,7 @@ Gesamtlänge: 32 Bytes.
 - Offset 24: `CARD32 memory_type_index`
 - Offset 28: `CARD32 reserved = 0`
 
-Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss für das Physical Device des logischen Devices existieren. `AllocateMemory` reserviert genau `allocation_size` Bytes und bindet keinen Buffer. Der Server darf die angeforderte Größe nicht stillschweigend aufrunden; notwendige interne Backend-Ausrichtung muss ohne Änderung der öffentlich sichtbaren Allokationsgröße umgesetzt werden. Kann die Allokation nicht bereitgestellt werden, wird `ALLOCATION_FAILED` gemeldet und die `memory_xid` bleibt unangelegt.
+Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss für das Physical Device des logischen Devices existieren. `AllocateMemory` reserviert genau `allocation_size` Bytes und bindet keinen Buffer. Der Server darf die angeforderte Größe nicht stillschweigend aufrunden; notwendige interne Backend-Ausrichtung muss ohne Änderung der öffentlich sichtbaren Allokationsgröße umgesetzt werden. Kann die Allokation nicht bereitgestellt werden, wird `ALLOCATION_FAILED` gemeldet und die `memory_xid` bleibt unangelegt. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Bei einem nicht verfügbaren oder verlorenen logischen Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Der Request ist atomar: bei jedem Fehler bleibt die `memory_xid` unangelegt und es bleibt keine teilweise angelegte Allokation zurück.
 
 ## 5.5 `FreeMemory`
 
