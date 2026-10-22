@@ -407,6 +407,30 @@ class GoldenXGEEventTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "error offset"):
                 validate_event_wire(bytes(wire), order)
 
+    def test_async_error_semantics_match_event_chapter_and_registries(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        event_registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        error_registry = (ROOT / "registries" / "errors.md").read_text(encoding="utf-8")
+        error_spec = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+
+        for document, label in ((events, "event chapter"), (event_registry, "event registry")):
+            with self.subTest(document=label):
+                self.assertIn("first_error + offset", document)
+                self.assertIn("not", document.lower())
+                self.assertIn("synchron", document.lower())
+                self.assertIn("QueueSubmit", document)
+                self.assertIn("SUBMISSION_FAILED", document)
+
+        offsets = {
+            int(value)
+            for value in re.findall(r"^\\|\\s*(\\d+)\\s*\\|\\s*`[A-Z_]+`\\s*\\|", error_registry, re.M)
+        }
+        self.assertEqual(offsets, set(range(9)))
+        self.assertIn("For an accepted `QueueSubmit`", error_spec)
+        self.assertIn("MUST NOT be reported as a delayed X11 request error", error_spec)
+        self.assertIn("not den absoluten X11-Fehlercode", events)
+        self.assertIn("not the absolute X11 error code", event_registry)
+
     def test_async_error_codes_match_central_error_registry(self):
         registry = (ROOT / "registries" / "errors.md").read_text(encoding="utf-8")
         offsets = {
