@@ -197,7 +197,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ oder Device: `BadMatch`
 - Ungültiger Reset-/Destroy-Zustand: `INVALID_SYNCHRONIZATION_STATE`
-- Timeout und asynchroner Ausführungsfehler bei `WaitForFence`: normaler Reply-Status
+- `WaitForFence`: falsche Länge `BadLength`; unbekannte/nicht-live Device- oder Fence-XIDs `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Verwendung `BadMatch`; Timeout, Ausführungsfehler, Device Loss und `DestroyDevice` werden als normale Reply-Statuswerte zurückgegeben
 
 ### `DestroyResource`
 
