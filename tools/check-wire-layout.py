@@ -518,6 +518,40 @@ def check_request_document_coverage(c: Check) -> None:
         and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
     )
+    command_recording = read("spec/command-recording.md")
+    c.require(
+        all(token in command_recording for token in (
+            "| 0 | 0 | 0 | Entries an einen bereits aufzeichnenden Buffer anhängen |",
+            "| 0 | 1 | 0 | Letzte Entries anhängen und Recording beenden |",
+            "| 1 | 0 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |",
+            "| 1 | 1 | 0 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |",
+            "| 0 | 0 | 1 | Recording abbrechen; keine Entries erlaubt |",
+        )),
+        "CommandBufferData: the five permitted CREATE/FINAL/ABORT combinations must remain explicit",
+    )
+    c.require(
+        "muss auch bei" in command_recording and "ABORT" in command_recording
+        and "exakt der Eltern-Pool" in errors,
+        "CommandBufferData: ABORT must validate exact command-pool ownership",
+    )
+    c.require(
+        "prüft die Ziel-XID vor der Pool-XID" in errors
+        and "CREATE mit ungültiger/belegter Ziel-XID ergibt" in errors
+        and "ohne CREATE ergeben unbekannte Buffer-XIDs" in errors,
+        "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
+    )
+    c.require(
+        "deklarierte Länge über das Request-Ende hinaus ergibt" in errors
+        and "Länge null oder kleiner als der Entry-Header" in errors
+        and "unbekannte Command-ID" in errors,
+        "CommandBufferData: malformed entry length and unknown command ID errors must be explicit",
+    )
+    c.require(
+        "Ein fehlgeschlagener FINAL-Chunk lässt den Buffer" in errors
+        and "Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer" in conformance
+        and "Request-Länge und XIDs vor Zustandsänderungen" in conformance,
+        "command-buffer recovery: failed CREATE/FINAL and reset atomicity must be covered",
+    )
     c.require(
         "`AllocateDescriptorSets`:" in errors
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
