@@ -254,7 +254,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertRegex(events, r"falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`")
         self.assertRegex(events, r"nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`")
         self.assertRegex(events, r"(?i)ohne ausgehandelte XGE-Unterst(?:ützung|uetzung) werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen")
-        self.assertRegex(events, r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert")
+        self.assertRegex(events, r"(?i)Bei jedem Fehler bleibt die vorherige Auswahl unver(?:ändert|aendert)")
         self.assertRegex(events, r"Der Request ersetzt atomar die bisherige Maske für genau einen Scope")
         self.assertRegex(errors, r"Eine erforderliche XAverius-XID, die keine live Ressource.*ergibt `BadValue`")
         self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
