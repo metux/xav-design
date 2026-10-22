@@ -45,14 +45,7 @@ Gesamtlänge: 48 Bytes; XGE `length = 4`.
 - Offset 36: `CARD32 reason_code`
 - Offset 40: `CARD64 device_generation`
 
-Reason-Codes:
-
-- 0: `REASON_UNSPECIFIED`
-- 1: `HOTPLUG_REMOVAL`
-- 2: `DRIVER_FAILURE`
-- 3: `VULKAN_DEVICE_LOST`
-- 4: `SERVER_POLICY`
-- 5: `SERVER_SHUTDOWN`
+The `reason_code` values are defined by the shared [device reason-code registry](../registries/reason-codes.md).
 
 ## `DEVICE_STATUS_CHANGED`
 
@@ -68,6 +61,8 @@ Status:
 - 0: `AVAILABLE`
 - 1: `UNAVAILABLE`
 - 2: `REMOVED`
+
+The `reason_code` field uses the shared [device reason-code registry](../registries/reason-codes.md). The reason is informational and does not change the status-transition rules.
 
 `REMOVED` ist für diesen XID endgültig. Nach einem Event mit `new_status = REMOVED` darf der Server für diese XID kein weiteres `DEVICE_STATUS_CHANGED`-Event mehr senden. Die XID wird nie einem anderen Device zugewiesen.
 
