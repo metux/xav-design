@@ -41,7 +41,7 @@ Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
 ## `GetSemaphoreCounterValue`
 
-Request: 16 Bytes; Device-XID bei Offset 8, Semaphore-XID bei Offset 12.
+Request: exakt 16 Bytes; Device-XID bei Offset 8, Semaphore-XID bei Offset 12. Eine andere Gesamtlänge ergibt `BadLength`. Unbekannte/nicht-live Device- oder Semaphore-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergeben `BadMatch`.
 
 Nur für Timeline-Semaphoren. Bei einem bereits als verloren erkannten logischen Device wird der Request mit `DEVICE_LOST` abgewiesen: Das Wire-Reply besitzt kein Statusfeld, mit dem ein Fehler sicher von einem Counter-Wert unterschieden werden könnte. Der Server darf keinen vermeintlich aktuellen Counter als erfolgreichen Reply ausgeben.
 
