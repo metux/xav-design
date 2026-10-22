@@ -329,6 +329,60 @@ class GoldenXGEEventTests(unittest.TestCase):
             else:
                 self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
 
+    def test_event_local_enum_values_match_normative_chapters(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+
+        cases = (
+            ("ASYNC_ERROR", "ASYNC_ERROR.origin"),
+            ("DEVICE_STATUS_CHANGED", "DEVICE_STATUS_CHANGED.new_status"),
+            ("DEVICE_MEMORY_PRESSURE", "DEVICE_MEMORY_PRESSURE.pressure_level"),
+            ("DEVICE_IDLE", "DEVICE_IDLE.idle_reason"),
+            ("SUBMISSION_FAILED", "SUBMISSION_FAILED.failure_class"),
+        )
+        for event, registry_heading in cases:
+            registry_match = re.search(
+                r"^## \\x60" + re.escape(registry_heading)
+                + r"\\x60\\s*$([\\s\\S]*?)(?=^## |\\Z)",
+                registry, re.M,
+            )
+            self.assertIsNotNone(registry_match, f"missing registry section {registry_heading}")
+            expected = [
+                (int(value), symbol)
+                for value, symbol in re.findall(
+                    r"^\\|\\s*(\\d+)\\s*\\|\\s*\\x60([A-Z_]+)\\x60\\s*\\|",
+                    registry_match.group(1), re.M,
+                )
+            ]
+
+            event_match = re.search(
+                r"^## \\x60" + re.escape(event) + r"\\x60\\s*$"
+                + r"([\\s\\S]*?)(?=^## |\\Z)",
+                events, re.M,
+            )
+            self.assertIsNotNone(event_match, f"missing event chapter {event}")
+            actual = [
+                (int(value), symbol)
+                for value, symbol in re.findall(
+                    r"^\\s*-\\s*(\\d+):\\s*\\x60([A-Z_]+)\\x60\\s*$",
+                    event_match.group(1), re.M,
+                )
+            ]
+            with self.subTest(event=event):
+                self.assertEqual(actual, expected, f"{event} enum differs from central registry")
+
+        # Both events deliberately share the same reason-code namespace rather
+        # than defining a second, potentially divergent local enumeration.
+        for event in ("DEVICE_LOST", "DEVICE_STATUS_CHANGED"):
+            event_match = re.search(
+                r"^## \\x60" + re.escape(event) + r"\\x60\\s*$"
+                + r"([\\s\\S]*?)(?=^## |\\Z)",
+                events, re.M,
+            )
+            self.assertIsNotNone(event_match)
+            self.assertIn("shared", event_match.group(1).lower())
+            self.assertIn("reason-code registry", event_match.group(1).lower())
+
     def test_memory_pressure_heap_index_uses_physical_device_heap_count(self):
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
