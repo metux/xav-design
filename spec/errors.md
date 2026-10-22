@@ -130,7 +130,7 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Falsche Request-Länge: `BadLength`
 - Unbekannte Pool-Flags oder nicht-null reservierte Bits: `BadValue`; ungültige/belegte Pool-XID: `BadIDChoice`
 - Unbekannte/nicht-live Device-XID: `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership: `BadMatch`
-- Queue-Family-Index außerhalb des Device-Profils: `BadValue`
+- Queue-Family-Index außerhalb des Device-Profils oder Queue Family ohne Command-Buffer-Unterstützung: `BadValue`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler: `ALLOCATION_FAILED`
 - Bei Ablehnung bleibt die Pool-XID unangelegt.
 
