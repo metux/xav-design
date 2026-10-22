@@ -213,7 +213,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 - `CreateBuffer`: falsche feste Länge `BadLength`; nicht-positive Größe, unbekannte Usage-Bits oder nicht-null reservierte Felder `BadValue`; ungültige oder bereits belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp oder fremdes Device `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; fehlgeschlagene Backend-Erstellung wegen Speicherknappheit `ALLOCATION_FAILED`; kein Buffer bleibt bei Ablehnung live.
 - `GetBufferMemoryRequirements`: falsche Länge `BadLength`; unbekannte/nicht-live Buffer-/Device-XID `BadValue`; falscher Ressourcentyp oder Cross-Device-Zugriff `BadMatch`.
-- `AllocateMemory`: falsche Länge `BadLength`; ungültige Größe, Memory-Type-Index oder reserviertes Feld `BadValue`; ungültige oder belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`.
+- `AllocateMemory`: falsche Länge `BadLength`; ungültige Größe, Memory-Type-Index oder reserviertes Feld `BadValue`; ungültige oder belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; fehlgeschlagene Backend-Allokation `ALLOCATION_FAILED`; bei Ablehnung bleibt die Ziel-XID unangelegt.
 - `FreeMemory`: siehe die Lebensdauerregeln unten; bei Ablehnung bleibt die Allokation öffentlich gültig.
 - `BindBufferMemory`: siehe die spezifische Zuordnung unten.
 
