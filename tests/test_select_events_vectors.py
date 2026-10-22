@@ -533,6 +533,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Signal-Entries aus zurückgestellten Submissions nicht als angenommene oder verfügbare Signale", memory)
         self.assertIn("`WriteBuffer` mit `DEPENDENCY_FAILED` beenden", memory)
         self.assertIn("Der zurückgestellte `QueueSubmit` wird danach normal verarbeitet", queue)
+        self.assertIn("Solange er zurückgestellt ist, gilt er nicht als angenommen", queue)
+        self.assertIn("vollständige Validierung und atomare Zustandsübernahme erfolgen erst nach Abschluss des `WriteBuffer`", memory)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
