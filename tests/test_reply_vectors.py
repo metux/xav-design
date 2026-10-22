@@ -39,8 +39,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if status not in (0, 1): errors.append("wait-status")
         if status in (0, 1) and status != (1 if kind.endswith("timeout") else 0): errors.append("wait-status-match")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
-    elif kind == "WaitForFence":
-        if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3): errors.append("wait-for-fence-status")
+    elif kind.startswith("WaitForFence"):
+        if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3, 4): errors.append("wait-for-fence-status")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("GetPhysicalDeviceProperty-success"):
         if int.from_bytes(wire[8:12], byte_order) != 0: errors.append("property-success-status")
@@ -149,7 +149,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 62)
+        self.assertEqual(len(self.vectors), 64)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -180,10 +180,10 @@ class GoldenReplyVectorTests(unittest.TestCase):
                 )
                 self.assertEqual(wire[1], expected)
                 self.assertEqual(wire[8:32], bytes(24))
-            elif vector["event"] == "WaitForFence":
-                expected = 0 if vector["name"] == f"WaitForFence-{order}" else (
+            elif vector["event"].startswith("WaitForFence"):
+                expected = 4 if "-device-destroyed-" in vector["name"] else (0 if vector["name"] == f"WaitForFence-{order}" else (
                     1 if "-timeout-" in vector["name"] else 2 if "-execution-failed-" in vector["name"] else 3
-                )
+                ))
                 self.assertEqual(int.from_bytes(wire[8:12], order), expected)
                 self.assertEqual(wire[12:32], bytes(20))
             elif vector["event"] == "GetSemaphoreCounterValue":
