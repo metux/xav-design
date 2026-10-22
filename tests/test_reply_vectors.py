@@ -41,6 +41,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3): errors.append("wait-for-fence-status")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("GetPhysicalDeviceProperty-success"):
+        if int.from_bytes(wire[8:12], byte_order) != 0: errors.append("property-success-status")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
         value_length = int.from_bytes(wire[16:20], byte_order)
         expected_words = (value_length + 3) // 4
