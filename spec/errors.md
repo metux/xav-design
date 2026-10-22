@@ -161,9 +161,9 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `BindBufferMemory`: falscher Ressourcentyp, Client-/Device-Ownership passt nicht, Buffer bereits gebunden, Memory-Type nicht erlaubt, Alignment falsch oder Allocation zu klein | `BadMatch` |
 | `BindBufferMemory`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `UpdateDescriptorSets`: falsche Gesamtlänge oder Payload passt nicht zu `write_count` | `BadLength` |
-| `UpdateDescriptorSets`: `write_count = 0`, reservierte Felder ungleich null oder ungültige Werte/Flags | `BadValue` |
+| `UpdateDescriptorSets`: `write_count = 0`, reservierte Felder ungleich null, doppelte Writes desselben Slots, ungültige Werte/Flags oder nicht zugewiesener `descriptor_type` | `BadValue` |
 | `UpdateDescriptorSets`: ungültige/nicht-live Device-, Set- oder Buffer-XID | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `UpdateDescriptorSets`: falscher Typ, fremde Client-/Device-Ownership, Layout/Binding/Array-Slot/Descriptor-Typ inkompatibel, Buffer ungebunden oder Bereich/Alignment ungültig | `BadMatch` |
+| `UpdateDescriptorSets`: falscher live Typ, fremde Client-/Device-Ownership, Layout/Binding/Array-Slot oder registrierter Descriptor-Typ inkompatibel, Buffer ungebunden oder Bereich/Alignment ungültig | `BadMatch` |
 | `UpdateDescriptorSets`: betroffenes Set wird von angenommener Arbeit verwendet | `INVALID_SYNCHRONIZATION_STATE` |
 | `UpdateDescriptorSets`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
