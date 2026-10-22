@@ -39,6 +39,12 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
         offset, allowed = EVENT_VALUE_RANGES[event_type]
         if int.from_bytes(wire[offset:offset + 4], byte_order) not in allowed:
             raise ValueError("event-local value is outside its registered range")
+    # ASYNC_ERROR permits zero for a non-device-related error and absent resource.
+    for offset in (32,) if event_type in (1, 2, 3, 4, 5, 6) else ():
+        if int.from_bytes(wire[offset:offset + 4], byte_order) == 0:
+            raise ValueError("required event XID must be nonzero")
+    if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(8):
+        raise ValueError("XAverius error offset is outside the error registry")
     for offset in EVENT_RESERVED_OFFSETS.get(event_type, ()):
         if wire[offset:offset + 4] != bytes(4):
             raise ValueError("reserved event field must be zero")
@@ -239,6 +245,29 @@ class GoldenXGEEventTests(unittest.TestCase):
                 with self.subTest(event=event, order=order):
                     with self.assertRaisesRegex(ValueError, "reserved event field"):
                         validate_event_wire(bytes(wire), order)
+
+    def test_required_event_xids_are_nonzero(self):
+        for event in ("DEVICE_LOST", "DEVICE_STATUS_CHANGED", "DEVICE_MEMORY_PRESSURE",
+                      "DEVICE_IDLE", "SUBMISSION_COMPLETE", "SUBMISSION_FAILED"):
+            for order in ("little", "big"):
+                vector = next(v for v in self.vectors if v["event"] == event and v["byte_order"] == order)
+                wire = bytearray(encode_event(vector))
+                wire[32:36] = bytes(4)
+                with self.subTest(event=event, order=order):
+                    with self.assertRaisesRegex(ValueError, "required event XID"):
+                        validate_event_wire(bytes(wire), order)
+
+    def test_async_error_xids_are_optional_but_error_offset_is_registered(self):
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
+            wire = bytearray(encode_event(vector))
+            wire[32:36] = bytes(4)
+            wire[52:56] = bytes(4)
+            validate_event_wire(bytes(wire), order)
+            wire[36:40] = (8).to_bytes(4, order)
+            with self.subTest(order=order):
+                with self.assertRaisesRegex(ValueError, "error offset"):
+                    validate_event_wire(bytes(wire), order)
 
     def test_rejects_nonzero_reserved_field(self):
         import copy
