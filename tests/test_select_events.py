@@ -61,6 +61,44 @@ def encode_select_events(byte_order: str, *, extension_opcode: int = 200,
     return bytes(wire)
 
 
+class SelectionRaceModel:
+    """Small executable model of the normative event-selection linearization rules."""
+
+    def __init__(self):
+        self.connection_mask = 0
+        self.device_masks = {}
+        self.queue_masks = {}
+        self.destroyed_devices = set()
+        self.queued_events = []
+        self.terminal_tokens = set()
+
+    def select_queue(self, device, family, queue, mask):
+        if device in self.destroyed_devices:
+            raise ValueError("device is destroyed")
+        key = (device, family, queue)
+        if mask:
+            self.queue_masks[key] = mask
+        else:
+            self.queue_masks.pop(key, None)
+
+    def destroy_device(self, device):
+        self.destroyed_devices.add(device)
+        self.device_masks.pop(device, None)
+        self.queue_masks = {key: value for key, value in self.queue_masks.items()
+                            if key[0] != device}
+
+    def terminal(self, device, family, queue, token, outcome):
+        if token in self.terminal_tokens:
+            raise ValueError("submission already terminal")
+        self.terminal_tokens.add(token)
+        if device in self.destroyed_devices:
+            return
+        mask = self.queue_masks.get((device, family, queue), 0)
+        bit = 1 if outcome == "complete" else 2
+        if mask & bit:
+            self.queued_events.append((device, token, outcome))
+
+
 class SelectEventsContractTests(unittest.TestCase):
     def test_wire_layout_and_length_in_both_byte_orders(self):
         for order in ("little", "big"):
@@ -154,6 +192,42 @@ class SelectEventsContractTests(unittest.TestCase):
         for clause in required:
             with self.subTest(clause=clause):
                 self.assertIn(clause, EVENTS)
+
+    def test_race_destroy_before_terminal_suppresses_event_and_clears_scopes(self):
+        state = SelectionRaceModel()
+        state.device_masks[11] = 3
+        state.select_queue(11, 0, 0, 3)
+        state.destroy_device(11)
+        state.terminal(11, 0, 0, 101, "complete")
+        self.assertEqual(state.queued_events, [])
+        self.assertNotIn(11, state.device_masks)
+        self.assertFalse(any(key[0] == 11 for key in state.queue_masks))
+
+    def test_race_terminal_before_destroy_preserves_already_queued_event(self):
+        state = SelectionRaceModel()
+        state.select_queue(11, 0, 0, 3)
+        state.terminal(11, 0, 0, 102, "complete")
+        state.destroy_device(11)
+        self.assertEqual(state.queued_events, [(11, 102, "complete")])
+
+    def test_mask_update_before_terminal_uses_new_mask_and_zero_disables(self):
+        state = SelectionRaceModel()
+        state.select_queue(11, 0, 0, 1)
+        state.select_queue(11, 0, 0, 2)
+        state.terminal(11, 0, 0, 103, "complete")
+        state.terminal(11, 0, 0, 104, "failed")
+        self.assertEqual(state.queued_events, [(11, 104, "failed")])
+        state.select_queue(11, 0, 0, 0)
+        state.terminal(11, 0, 0, 105, "failed")
+        self.assertEqual(len(state.queued_events), 1)
+
+    def test_one_submission_cannot_emit_two_terminal_events(self):
+        state = SelectionRaceModel()
+        state.select_queue(11, 0, 0, 3)
+        state.terminal(11, 0, 0, 106, "complete")
+        with self.assertRaisesRegex(ValueError, "already terminal"):
+            state.terminal(11, 0, 0, 106, "failed")
+        self.assertEqual(state.queued_events, [(11, 106, "complete")])
 
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
         self.assertIn("Nach erfolgreicher Verarbeitung von `DestroyDevice`", EVENTS)
