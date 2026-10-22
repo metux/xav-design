@@ -446,6 +446,57 @@ def check_request_document_coverage(c: Check) -> None:
                   f"request {opcode} ({name}): missing from conformance checklist")
 
 
+    # Keep generic and resource-specific destruction paths aligned across chapters.
+    lifetime = read("spec/resource-lifetime.md")
+    destroy_section = re.search(
+        r"^## `DestroyResource`\n(.*?)(?=^## )",
+        lifetime, re.M | re.S,
+    )
+    c.require(destroy_section is not None,
+              "resource lifetime: missing normative DestroyResource section")
+    if destroy_section:
+        generic = destroy_section.group(1)
+        c.require(
+            "ausschließlich für Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline" in generic,
+            "DestroyResource: eligible generic resource types changed or are incomplete",
+        )
+        c.require(
+            "Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets, Memory, Fences oder Semaphores" in generic,
+            "DestroyResource: excluded resource types must remain explicit",
+        )
+        c.require(
+            "`DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence` oder `DestroySemaphore`" in generic,
+            "DestroyResource: specialized destruction paths must be named",
+        )
+
+    registry_text = read("registries/request-subopcodes.md")
+    c.require(
+        re.search(
+            r"\| `DestroyResource` \| 39 \| Void \| Generic destroy for Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, and Pipeline; synchronization objects use dedicated destroy requests\.",
+            registry_text,
+        ) is not None,
+        "request registry: DestroyResource scope must match normative eligible types",
+    )
+    c.require(
+        re.search(
+            r"`DestroyResource` accepts only Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout and Pipeline;.*?Fence and Semaphore.*?`DestroyFence`.*?`DestroySemaphore`",
+            conformance, re.S,
+        ) is not None,
+        "conformance: generic and specialized destruction paths must be explicit",
+    )
+    c.require(
+        "Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen" in lifetime
+        and "bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden" in lifetime
+        and "interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen" in lifetime,
+        "resource lifetime: stale descriptor slots must retain Buffer and bound Memory",
+    )
+    c.require(
+        "`FreeDescriptorSets`: falsche Länge `BadLength`" in errors
+        and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors,
+        "error mapping: FreeDescriptorSets must retain atomic pending/recording rejection",
+    )
+
+
 def check_reply_matrix(c: Check) -> None:
     registry_text = read("registries/request-subopcodes.md")
     registry_rows = [
