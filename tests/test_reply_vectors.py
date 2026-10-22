@@ -116,6 +116,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
                     if heap_flags & ~0x1: errors.append("memory-heap-flags-range")
                     if entry[12:16] != bytes(4): errors.append("memory-heap-reserved")
     elif kind == "GetBufferMemoryRequirements":
+        if int.from_bytes(wire[8:16], byte_order) == 0: errors.append("buffer-requirements-size-positive")
+        if int.from_bytes(wire[16:24], byte_order) == 0: errors.append("buffer-requirements-alignment-positive")
         if wire[28:32] != bytes(4): errors.append("reserved-zero")
     elif kind == "GetSemaphoreCounterValue":
         if wire[16:32] != bytes(16): errors.append("reserved-zero")
