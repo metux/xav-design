@@ -206,3 +206,7 @@ A focused audit of the `QueueSubmit` path found that duplicate wait/signal entri
 ## Fence status/reset validation audit — 2026-10-22
 
 `GetFenceStatus` and `ResetFence` now explicitly define exact request length, Device/Fence XID validation, wrong-live-type/ownership/cross-device errors, and behavior after Device Loss. The central error map, conformance checklist and static checker guard the same contracts. CI passed in [run 39829069365](https://github.com/metux/xav-design/actions/runs/39829069365). No runtime backend behavior is claimed.
+
+## GetSemaphoreCounterValue request-validation audit — 2026-10-22
+
+`GetSemaphoreCounterValue` now specifies its exact 16-byte request length, Device/Semaphore XID and ownership validation, Timeline-only constraint, and post-Device-Loss `DEVICE_LOST` behavior. The central error map, conformance checklist and static checker cover these rules. CI passed in [run 39829221170](https://github.com/metux/xav-design/actions/runs/39829221170), including golden wire-vector tests. Runtime backend behavior remains untested.
