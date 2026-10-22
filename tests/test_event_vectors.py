@@ -12,8 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "event-vectors.json"
 
 
-def validate_event_wire(wire: bytes, byte_order: str) -> None:
-    """Validate raw XGE framing, including the common reserved header bytes."""
+def validate_event_wire(
+    wire: bytes, byte_order: str, *, expected_extension_opcode: int | None = None
+) -> None:
+    """Validate raw XGE framing and, when known, connection-specific opcode binding."""
     if len(wire) < 32:
         raise ValueError("truncated XGE header")
     if len(wire) % 4:
@@ -24,6 +26,8 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
         raise ValueError("response_type must be GenericEvent (35)")
     if wire[1] < 128:
         raise ValueError("extension major opcode must be in 128..255")
+    if expected_extension_opcode is not None and wire[1] != expected_extension_opcode:
+        raise ValueError("XGE extension opcode does not match negotiated XAverius opcode")
     declared = int.from_bytes(wire[4:8], byte_order)
     if 32 + declared * 4 != len(wire):
         raise ValueError("XGE length does not match wire bytes")
@@ -326,6 +330,27 @@ class GoldenXGEEventTests(unittest.TestCase):
         wire[1] = 127
         with self.assertRaisesRegex(ValueError, "extension major opcode"):
             validate_event_wire(bytes(wire), vector["byte_order"])
+
+    def test_raw_event_must_use_the_connection_xa_verius_opcode(self):
+        for vector in self.vectors:
+            order = vector["byte_order"]
+            wire = bytearray(encode_event(vector))
+            validate_event_wire(bytes(wire), order, expected_extension_opcode=vector["extension_opcode"])
+            wire[1] = 255 if vector["extension_opcode"] != 255 else 254
+            with self.subTest(event=vector["event"], order=order):
+                with self.assertRaisesRegex(ValueError, "does not match negotiated XAverius opcode"):
+                    validate_event_wire(bytes(wire), order, expected_extension_opcode=vector["extension_opcode"])
+
+    def test_every_event_type_rejects_a_wrong_total_length(self):
+        for event in EVENT_IDS:
+            for order in ("little", "big"):
+                vector = next(v for v in self.vectors if v["event"] == event and v["byte_order"] == order)
+                wire = bytearray(encode_event(vector))
+                del wire[-4:]
+                wire[4:8] = ((len(wire) - 32) // 4).to_bytes(4, order)
+                with self.subTest(event=event, order=order):
+                    with self.assertRaisesRegex(ValueError, "total length does not match event type"):
+                        validate_event_wire(bytes(wire), order)
 
     def test_rejects_raw_event_reserved_payload_fields(self):
         cases = (("ASYNC_ERROR", 56), ("DEVICE_STATUS_CHANGED", 44),
