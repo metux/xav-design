@@ -1,5 +1,9 @@
 # Request catalogue and wire-contract audit — 2026-10-21
 
+## CommandBufferData and ResetCommandBuffer follow-up — 2026-10-22
+
+The command-recording pass made the five permitted CREATE/FINAL/ABORT combinations explicit in conformance coverage and tightened deterministic error handling: malformed/incomplete entry headers versus invalid entry lengths, CREATE target-XID collisions versus missing input buffers, and the exact parent-pool check even for ABORT. It also records the required recovery guarantees: failed chunks are atomic, failed FINAL leaves the buffer RECORDING, failed CREATE leaves no public buffer or pool-child entry, and rejected ResetCommandBuffer preserves state and references. Static checks now guard these cross-chapter statements. These are documentation and static consistency checks only; runtime server behavior remains untested.
+
 ## Scope
 
 This audit compares the currently defined request inventory in [the central request subopcode registry](../registries/request-subopcodes.md) with the defining chapters for wire layout, exact or formula-based request length, request kind, common framing, and request-specific error behavior. It is a cross-chapter consistency review, not a claim of complete Vulkan conformance or a frozen v0.1 protocol.
