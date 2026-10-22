@@ -268,5 +268,14 @@ class ReplySpecCoverageTests(unittest.TestCase):
                     else:
                         self.assertIn(0, name)
 
+    def test_physical_device_xid_must_be_nonzero(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        for order in ("little", "big"):
+            cases = [v for v in fixture["vectors"] if v["violates"] == "device-xid-nonzero" and v["byte_order"] == order]
+            self.assertTrue(cases, f"zero physical-device XID vector missing in {order}-endian")
+            for case in cases:
+                wire = bytes.fromhex(case["wire_hex"])
+                self.assertEqual(int.from_bytes(wire[32:36], order), 0)
+
 if __name__ == "__main__":
     unittest.main()
