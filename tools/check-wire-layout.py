@@ -540,6 +540,19 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
 
+    lifetime = read("spec/resource-lifetime.md")
+    c.require(
+        "offene WaitForFence-Registrierung" in lifetime
+        and "offene WaitSemaphores-Registrierung" in lifetime
+        and "terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply" in lifetime,
+        "lifetime: fence/semaphore destroy matrix must include open waits and terminal release",
+    )
+    c.require(
+        "offene WaitForFence-Registrierung" in errors
+        and "offene WaitSemaphores-Registrierung" in errors
+        and "ein noch nicht versendeter Reply ist kein Hindernis" in errors,
+        "error mapping: summary must agree with specialized fence/semaphore destroy rules",
+    )
     c.require(
         "`DestroyFence`: falsche Länge `BadLength`" in errors
         and "offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert" in errors
