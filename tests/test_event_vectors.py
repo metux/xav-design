@@ -227,6 +227,25 @@ class GoldenXGEEventTests(unittest.TestCase):
         self.assertEqual(set(seen), set(EVENT_IDS))
         self.assertTrue(all(orders == {"little", "big"} for orders in seen.values()))
 
+    def test_rejects_invalid_raw_xge_common_header(self):
+        vector = self.vectors[0]
+        wire = bytearray(encode_event(vector))
+        wire[0] = 34
+        with self.assertRaisesRegex(ValueError, "GenericEvent"):
+            validate_event_wire(bytes(wire), vector["byte_order"])
+
+        wire = bytearray(encode_event(vector))
+        wire[8:10] = (7).to_bytes(2, vector["byte_order"])
+        with self.assertRaisesRegex(ValueError, "unknown XAverius event type"):
+            validate_event_wire(bytes(wire), vector["byte_order"])
+
+        with self.assertRaisesRegex(ValueError, "truncated XGE header"):
+            validate_event_wire(bytes(31), "little")
+        with self.assertRaisesRegex(ValueError, "divisible by four"):
+            validate_event_wire(bytes(33), "little")
+        with self.assertRaisesRegex(ValueError, "unknown byte order"):
+            validate_event_wire(encode_event(vector), "native")
+
     def test_rejects_raw_reserved_header_byte(self):
         wire = bytearray(encode_event(self.vectors[0]))
         wire[31] = 1
