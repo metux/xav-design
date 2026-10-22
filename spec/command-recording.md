@@ -28,7 +28,7 @@ Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören
 | 8 | XID | `device_xid` |
 | 12 | XID | `command_buffer_xid` |
 
-Der Buffer muss zum angegebenen logischen Device gehören. Der Server prüft das `RESET_COMMAND_BUFFER`-Flag des zugehörigen Pools. Fehlt es, wird der Request mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Ein pending Buffer kann niemals zurückgesetzt werden und führt ebenfalls zu `INVALID_SYNCHRONIZATION_STATE`. Diese Prüfungen erfolgen vor jeder Zustandsänderung.
+Das angegebene logische Device und der Command Buffer müssen live sein und zusammengehören. Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-Ownership oder Cross-Device-Verwendung ergibt `BadMatch`. Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device `DEVICE_UNAVAILABLE` und ein verlorenes Device `DEVICE_LOST`. Erst danach prüft der Server das `RESET_COMMAND_BUFFER`-Flag des zugehörigen Pools und den Buffer-Zustand. Fehlt das Flag oder ist der Buffer pending, wird der Request mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Sämtliche Prüfungen erfolgen vor jeder Zustandsänderung.
 
 Bei Erfolg setzt `ResetCommandBuffer` einen Buffer aus `INITIAL`, `RECORDING`, `EXECUTABLE` oder `INVALID` auf `INITIAL` zurück. Alle aufgezeichneten Entries und ihre Ressourcenreferenzen werden verworfen. Bei Ablehnung bleiben Zustand, Entries und Referenzen unverändert. Das Zurücksetzen eines `RECORDING`-Buffers verwirft damit auch eine noch nicht finalisierte Aufzeichnung.
 
