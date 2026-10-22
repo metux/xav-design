@@ -136,13 +136,14 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 
 ### `CommandPool` und `CommandBufferData`
 
-- Falsche Request-Länge oder unvollständiger Entry: `BadLength`
-- Reservierte Bits/Felder, ungültige Flag-Kombination, fehlerhaftes Padding oder ungültige Entry-Länge: `BadValue`
-- Falscher live Ressourcentyp, ungültiger Queue-Family-Index oder Cross-Device-Objekt: `BadMatch`; ein ungültiger/belegter Command-Buffer-Ziel-XID bei `CREATE` ergibt `BadIDChoice`. Ohne `CREATE` muss der Buffer im Zustand `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`.
-- ABORT bei einem Buffer, der nicht `RECORDING` ist, oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`
-- `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER`-Pool-Flag oder bei einem pending Buffer: `INVALID_SYNCHRONIZATION_STATE`; Ablehnung lässt Zustand und Ressourcenreferenzen unverändert
-- `ResetCommandBuffer` mit unbekannter/nicht-live XID: `BadValue`; falscher live Ressourcentyp oder Cross-Device-Verwendung: `BadMatch`
-- Fehlerhafte Entries eines `CommandBufferData`-Chunks werden atomar abgewiesen; der aktuelle Chunk wird nicht teilweise angehängt. Bereits vorher akzeptierte Chunks bleiben bis zu einem erfolgreichen Retry oder ABORT erhalten.
+- Falsche Request-Länge oder ein Entry, dessen deklarierte Länge über das Request-Ende hinausreicht bzw. dessen Header unvollständig ist: `BadLength`
+- Reservierte Bits/Felder, ungültige Flag-Kombination, fehlerhaftes Padding, unbekannte Command-ID oder eine ungültige Entry-Länge (insbesondere null oder kleiner als der Entry-Header): `BadValue`
+- Für `CommandBufferData` wird nach erfolgreicher Wire-Strukturprüfung zuerst die Ziel-XID und danach die Pool-XID gemäß der Feldreihenfolge geprüft. Bei `CREATE` ergibt eine ungültige oder bereits belegte Ziel-XID `BadIDChoice`; ohne `CREATE` ergeben unbekannte/nicht-live Buffer-XIDs `BadValue` und ein falscher live Ressourcentyp `BadMatch`.
+- Unbekannte/nicht-live Pool-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-Ownership oder eine Cross-Device-/falsche Pool-Zuordnung ergibt `BadMatch`. Der angegebene Pool muss auch bei `ABORT` exakt der Eltern-Pool des Buffers sein.
+- Ohne `CREATE` muss der Buffer im Zustand `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`. Das gilt für Append- und FINAL-Chunks sowie für `ABORT`; ABORT auf einem nicht aufzeichnenden Buffer ist unzulässig.
+- `ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`; unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Verwendung ergeben `BadMatch`.
+- `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER`-Pool-Flag oder bei einem pending Buffer ergibt `INVALID_SYNCHRONIZATION_STATE`. Die Ablehnung lässt Zustand, Entries und Ressourcenreferenzen unverändert.
+- Fehlerhafte Entries eines `CommandBufferData`-Chunks werden atomar abgewiesen; der aktuelle Chunk wird nicht teilweise angehängt. Bereits vorher akzeptierte Chunks bleiben bis zu einem erfolgreichen Retry oder ABORT erhalten. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer `RECORDING`; ein fehlgeschlagener CREATE hinterlässt weder eine öffentliche Buffer-XID noch einen Kind-Eintrag im Pool.
 
 ### Einheitliche XID- und Zustandszuordnung für ausgewählte Requests
 
