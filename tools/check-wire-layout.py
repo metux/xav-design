@@ -491,7 +491,10 @@ def check_request_document_coverage(c: Check) -> None:
         "resource lifetime: stale descriptor slots must retain Buffer and bound Memory",
     )
     c.require(
-        "`DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client` `BadMatch`" in errors,
+        re.search(
+            r"\|\s*`DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client\s*\|\s*`BadMatch`\s*\|",
+            errors,
+        ) is not None,
         "error mapping: disallowed DestroyResource types and foreign ownership must map to BadMatch",
     )
     c.require(
