@@ -1094,11 +1094,11 @@ def check_xge_abi(c: Check) -> None:
     for value in ("CONNECTION = 0", "DEVICE = 1", "QUEUE = 2"):
         c.require(value in select_body, f"SelectEvents: missing scope value {value}")
     expected_masks = [
-        (r"CONNECTION\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_STATUS_CHANGED", "CONNECTION bit 0"),
-        (r"DEVICE\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_MEMORY_PRESSURE", "DEVICE bit 0"),
-        (r"DEVICE\s*\|\s*1\s*\|\s*" + chr(96) + r"DEVICE_IDLE", "DEVICE bit 1"),
-        (r"QUEUE\s*\|\s*0\s*\|\s*" + chr(96) + r"SUBMISSION_COMPLETE", "QUEUE bit 0"),
-        (r"QUEUE\s*\|\s*1\s*\|\s*" + chr(96) + r"SUBMISSION_FAILED", "QUEUE bit 1"),
+        (r"CONNECTION" + chr(96) + r"\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_STATUS_CHANGED", "CONNECTION bit 0"),
+        (r"DEVICE" + chr(96) + r"\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_MEMORY_PRESSURE", "DEVICE bit 0"),
+        (r"DEVICE" + chr(96) + r"\s*\|\s*1\s*\|\s*" + chr(96) + r"DEVICE_IDLE", "DEVICE bit 1"),
+        (r"QUEUE" + chr(96) + r"\s*\|\s*0\s*\|\s*" + chr(96) + r"SUBMISSION_COMPLETE", "QUEUE bit 0"),
+        (r"QUEUE" + chr(96) + r"\s*\|\s*1\s*\|\s*" + chr(96) + r"SUBMISSION_FAILED", "QUEUE bit 1"),
     ]
     for pattern, label in expected_masks:
         c.require(re.search(pattern, select_body) is not None, f"SelectEvents: missing {label}")
