@@ -449,5 +449,29 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_backend_completion_keeps_original_connection_and_resource_identity(self):
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Jeder beim Backend registrierte Callback oder Completion-Datensatz muss die unveränderliche interne Identität der konkreten Submission beziehungsweise Ressource und die Identität der ursprünglichen X11-Verbindung mitführen.",
+            lifetime,
+        )
+        self.assertIn(
+            "Beim Abschluss darf der Server die Zielressource nicht anhand einer numerischen XID erneut aus der aktuellen XID-Tabelle auflösen.",
+            lifetime,
+        )
+        self.assertIn(
+            "Vor einer Event-Einreihung muss er prüfen, dass genau die ursprüngliche Verbindung noch aktiv und zustellbar ist",
+            lifetime,
+        )
+        self.assertIn(
+            "Eine geschlossene Verbindung, eine zerstörte Device-Identität oder eine inzwischen wiederverwendete XID darf niemals auf ein neues Objekt oder eine andere Verbindung umgebogen werden.",
+            lifetime,
+        )
+        self.assertIn(
+            "interne Submission-, Fence-/Semaphore- und Backend-Aufräumzustände müssen trotzdem genau einmal terminalisiert werden.",
+            lifetime,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
