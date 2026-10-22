@@ -317,5 +317,112 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_select_events_error_mapping_matches_error_registry(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        section = re.search(r"^### `SelectEvents`\s*$([\s\S]*?)(?=^### |\Z)", errors, re.M)
+        self.assertIsNotNone(section)
+        error_body = section.group(1)
+        for text in (
+            "Falsche Request-Länge: `BadLength`.",
+            "Erfolgreicher `GEQueryVersion`-Austausch mindestens mit XGE 1.0 fehlt: `BadMatch`.",
+            "Unbekannter Scope, nicht-null Flags/reservierte Felder, ungültige Maskenbits oder nicht-null Felder außerhalb des ausgewählten Scopes: `BadValue`.",
+            "Unbekannte/nicht-live Device-XID oder ungültiger Queue-Family-/Queue-Index: `BadValue`; falscher live Ressourcentyp oder fremde Client-Ownership: `BadMatch`.",
+            "Ein Fehler muss die bisherige Event-Auswahl unverändert lassen; eine erfolgreiche Anfrage ersetzt atomar nur die Auswahl für den angegebenen Scope.",
+        ):
+            self.assertIn(text, error_body)
+        self.assertIn("Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`.", events)
+        self.assertIn("Bei jedem Fehler bleibt die vorherige Auswahl unverändert.", events)
+
+    def test_event_mask_mapping_and_scope_reset_are_exhaustive(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        section = re.search(r"^## Event-Auswahl: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", events, re.M)
+        self.assertIsNotNone(section)
+        body = section.group(1)
+        expected = [
+            ("CONNECTION", 0, "DEVICE_STATUS_CHANGED"),
+            ("DEVICE", 0, "DEVICE_MEMORY_PRESSURE"),
+            ("DEVICE", 1, "DEVICE_IDLE"),
+            ("QUEUE", 0, "SUBMISSION_COMPLETE"),
+            ("QUEUE", 1, "SUBMISSION_FAILED"),
+        ]
+        actual = [
+            (scope, int(bit), event)
+            for scope, bit, event in re.findall(
+                r"^\| `(CONNECTION|DEVICE|QUEUE)` \| (\d+) \| `([A-Z_]+)` \|$",
+                body, re.M,
+            )
+        ]
+        self.assertEqual(actual, expected)
+        self.assertIn("`event_mask = 0` hebt die Auswahl für den angegebenen Scope auf.", body)
+        self.assertIn("Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes.", body)
+        self.assertIn("eine Connection-Auswahl bleibt bestehen", body)
+        self.assertIn("Alle anderen Bits sind reserviert und müssen abgewiesen werden.", body)
+
+    def test_disconnect_cleans_selections_and_prevents_cross_connection_delivery(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung.",
+            lifetime,
+        )
+        self.assertIn(
+            "ihre Event-Auswahlen sowie die öffentlichen XID-Zuordnungen aus dem aktiven Verbindungszustand entfernen",
+            lifetime,
+        )
+        self.assertIn(
+            "Asynchrone Backend-Abschlüsse dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden.",
+            lifetime,
+        )
+        self.assertIn(
+            "Die Event-Zuordnung muss an die konkrete X11-Verbindung und interne Ressourcenidentität gebunden bleiben, nicht nur an eine numerische XID.",
+            lifetime,
+        )
+        self.assertIn(
+            "Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert.",
+            events,
+        )
+
+    def test_unmaskable_events_obey_destroy_device_lifetime_and_scrub_async_error_xids(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt",
+            events,
+        )
+        self.assertIn(
+            "Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden",
+            events,
+        )
+        self.assertIn(
+            "bei `ASYNC_ERROR` darf die zerstörte Device-XID nicht als `device_xid` oder `resource_xid` ausgegeben werden",
+            lifetime,
+        )
+        self.assertIn(
+            "Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event für die bereits zerstörte `device_xid` erzeugt oder zugestellt",
+            lifetime,
+        )
+
+    def test_submission_event_delivery_failure_does_not_change_terminal_state(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.",
+            events,
+        )
+        self.assertIn(
+            "Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.",
+            events,
+        )
+        self.assertIn(
+            "Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt",
+            lifetime,
+        )
+        self.assertIn(
+            "Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions",
+            lifetime,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
