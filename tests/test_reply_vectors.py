@@ -79,6 +79,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
             if pos + record_length > len(wire):
                 errors.append("device-record-length")
                 break
+            if int.from_bytes(wire[pos + 4:pos + 8], byte_order) not in range(5):
+                errors.append("device-type-range")
             if wire[pos + 30:pos + 32] != bytes(2):
                 errors.append("device-record-reserved")
             pad_start = pos + 32 + name_length
