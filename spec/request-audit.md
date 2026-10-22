@@ -180,4 +180,5 @@ The descriptor update path previously described descriptor-type incompatibility 
 
 ## Descriptor contents and command-buffer references — 2026-10-22
 
+CI passed in [run 39826027013](https://github.com/metux/xav-design/actions/runs/39826027013), with 2,225 static checks and the golden wire-vector tests.
 A cross-chapter lifetime review found that the spec tracked indirect Buffer references from recorded command buffers but did not explicitly say how those references react when a Descriptor Set is updated while not pending. The contract now states that command buffers retain the Descriptor Set object rather than a snapshot of its contents; successful `UpdateDescriptorSets` atomically refreshes indirect Buffer references for all non-pending command buffers referencing the set. An executable command buffer uses the current set contents at submission and is not invalidated solely by the update. The decision record, command-recording chapter, lifetime chapter, conformance checklist and static checker are aligned. Backend execution behavior remains untested.
