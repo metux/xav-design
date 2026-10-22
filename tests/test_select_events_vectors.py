@@ -283,7 +283,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_scope_cleanup_and_event_lifetime_contract(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         queue_scope = re.search(
-            r"- `QUEUE = 2`:[^\\n]*",
+            r"- `QUEUE = 2`:.*",
             events,
         )
         self.assertIsNotNone(queue_scope)
