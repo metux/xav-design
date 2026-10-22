@@ -1088,7 +1088,7 @@ def check_xge_abi(c: Check) -> None:
         (16, "CARD32", "queue_family_index"), (20, "CARD32", "queue_index"),
         (24, "CARD32", "event_mask"), (28, "CARD32", "reserved = 0"),
     ]
-    actual_select = [(int(off), typ, field.strip()) for off, typ, field in re.findall(
+    actual_select = [(int(off), typ, field.strip().replace(chr(96), "")) for off, typ, field in re.findall(
         r"^\|\s*(\d+)\s*\|\s*([A-Z0-9]+)\s*\|\s*([^|]+?)\s*\|", select_body, re.M)]
     c.require(actual_select == expected_select, f"SelectEvents: fixed request layout changed: {actual_select!r}")
     for value in ("CONNECTION = 0", "DEVICE = 1", "QUEUE = 2"):
