@@ -427,7 +427,7 @@ class GoldenXGEEventTests(unittest.TestCase):
         self.assertEqual(offsets, set(range(9)))
         self.assertIn("For an accepted `QueueSubmit`", error_spec)
         self.assertIn("MUST NOT be reported as a delayed X11 request error", error_spec)
-        self.assertIn("not den absoluten X11-Fehlercode", events)
+        self.assertIn("nicht den absoluten X11-Fehlercode", events)
         self.assertIn("not the absolute X11 error code", event_registry)
 
     def test_async_error_codes_match_central_error_registry(self):
