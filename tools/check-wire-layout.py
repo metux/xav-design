@@ -612,7 +612,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "Ein fehlgeschlagener FINAL-Chunk lässt den Buffer" in errors
         and "Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer" in conformance
-        and "Request-Länge und XIDs vor Zustandsänderungen" in conformance,
+        and "prüft Request-Länge, XIDs, Typ, Ownership und Cross-Device-Zuordnung vor Zustandsänderungen" in conformance,
         "command-buffer recovery: failed CREATE/FINAL and reset atomicity must be covered",
     )
     c.require(
