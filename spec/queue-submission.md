@@ -72,7 +72,7 @@ Für den Compute-only-Referenzablauf sind `COMPUTE_SHADER`, `TRANSFER` und `ALL_
 
 Vor der Annahme werden alle Command Buffer und Synchronisationsobjekte geprüft. Alle Ressourcen müssen zum angegebenen Device gehören. Jeder Command Buffer muss ausführbar sein. Eine angegebene Fence muss `UNSIGNALED` sein und darf nicht bereits pending sein.
 
-Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig. Dieselbe Semaphore darf in einer Submission nicht gleichzeitig im Wait- und Signal-Array stehen.
+Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig und ergeben `BadValue`. Dieselbe Semaphore darf in einer Submission nicht gleichzeitig im Wait- und Signal-Array stehen; auch dieser Konflikt ergibt `BadValue`.
 
 **Atomaritätsgarantie:** Wird der Request abgelehnt, wird keine Submission angelegt und kein Synchronisationszustand verändert. Bei Annahme bedeutet der Request nur, dass die Arbeit eingereiht wurde; nicht, dass sie bereits abgeschlossen ist.
 
