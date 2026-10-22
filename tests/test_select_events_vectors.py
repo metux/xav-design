@@ -562,7 +562,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
         self.assertIn("vor diesem Request angenommenen `QueueSubmit`-Submissions", read)
         self.assertIn("vor diesem Request eingereihten `WriteBuffer`-Transfers", read)
-        self.assertIn("spätere `QueueSubmit`-Requests", read)
+        self.assertIn("späteren `QueueSubmit`-Requests", read)
         self.assertIn("Daten-Snapshot", read)
         self.assertIn("`DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden", read)
         self.assertIn("Der Inhalt des Zielbereichs ist dann nicht garantiert", memory)
