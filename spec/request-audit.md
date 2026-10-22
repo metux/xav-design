@@ -202,3 +202,7 @@ A focused audit of the `QueueSubmit` path found that duplicate wait/signal entri
 ## GetFenceStatus request-validation audit — 2026-10-22
 
 `GetFenceStatus` now explicitly defines exact request length, XID/type/ownership validation, and the requirement to return the stored fence state after Device Loss. The central error map, conformance checklist and static checker now guard this contract. CI passed in [run 39828908220](https://github.com/metux/xav-design/actions/runs/39828908220), including the golden wire-vector tests. Runtime backend behavior remains untested.
+
+## Fence status/reset validation audit — 2026-10-22
+
+`GetFenceStatus` and `ResetFence` now explicitly define exact request length, Device/Fence XID validation, wrong-live-type/ownership/cross-device errors, and behavior after Device Loss. The central error map, conformance checklist and static checker guard the same contracts. CI passed in [run 39829069365](https://github.com/metux/xav-design/actions/runs/39829069365). No runtime backend behavior is claimed.
