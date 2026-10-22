@@ -233,7 +233,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 ### Synchronisations-Requests
 
-- `CreateSemaphore` und `CreateFence`: falsche Länge `BadLength`; ungültige Typen, Werte, Flags oder reservierte Felder `BadValue`; ungültige/belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; Backend-Allokationsfehler `ALLOCATION_FAILED`.
+- `CreateSemaphore` und `CreateFence`: falsche Länge `BadLength`; ungültige Typen, Werte, Flags oder reservierte Felder `BadValue`; ungültige/belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler `ALLOCATION_FAILED`; bei Ablehnung bleibt die jeweilige Ziel-XID unangelegt.
 - `GetSemaphoreCounterValue`: nur für Timeline-Semaphoren; falscher Typ `BadMatch`, unbekannte/nicht-live XID `BadValue`.
 - `SignalSemaphore`: nur für Timeline-Semaphoren; unbekannte/nicht-live XID `BadValue`; falscher Typ oder Device `BadMatch`; Signalwert, der nicht größer als der aktuelle Counter oder mit pending Signalen inkonsistent ist, `INVALID_SYNCHRONIZATION_STATE`. Bei synchroner Ablehnung wird kein Host-Signal teilweise ausgeführt.
 - `WaitSemaphores`: unbekannte/nicht-live XID `BadValue`; falscher live Typ oder falsches Device `BadMatch`; doppelte Semaphore-XID, ungültiger Wait-Modus oder ungültige Werte `BadValue`. `TIMEOUT` ist ausschließlich ein normaler Reply-Status.
