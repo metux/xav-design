@@ -119,6 +119,10 @@ def check_events(c: Check) -> None:
         c.require(sorted(local_values) == list(range(len(local_values))),
                   f"event-local registry {heading} must assign values contiguously from zero")
     doc_sections = dict(sections(event_doc))
+    c.require(re.search(r"Nach einem Event.*new_status = REMOVED.*kein weiteres.*DEVICE_STATUS_CHANGED", doc_sections.get("DEVICE_STATUS_CHANGED", ""), re.I) is not None,
+              "DEVICE_STATUS_CHANGED: REMOVED must prohibit subsequent status events for that XID")
+    c.require(re.search(r"After emitting.*new_status = REMOVED.*MUST NOT emit another.*DEVICE_STATUS_CHANGED", registry, re.I) is not None,
+              "event registry: REMOVED must prohibit subsequent status events for that XID")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
