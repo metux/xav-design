@@ -218,3 +218,9 @@ A cross-chapter pass found that ResetCommandBuffer defined XID/type/ownership an
 ## Duplicate CreateCommandPool error-map reconciliation — 2026-10-22
 
 The cross-chapter pass found that the detailed CreateCommandPool mapping and command-recording chapter correctly classified a queue-family index outside the logical Device profile as BadValue, while a later summary line ambiguously classified an invalid Queue Family as BadMatch or BadValue. The duplicate summary now agrees with the detailed rule: unknown/non-live Device XID is BadValue; wrong live type or foreign Device ownership is BadMatch; a Queue-Family index outside the Device profile or lacking command-buffer support is BadValue. The static wire-layout checker now guards against reintroducing the conflicting summary wording. The change is committed, but no CI result is available for this commit yet.
+
+## WaitForFence reply-status ABI correction — 2026-10-22
+
+A renewed cross-check found a real mismatch: the normative `WaitForFence` status table defines `DEVICE_DESTROYED = 4`, but the golden-reply validator and its positive status-coverage test only accepted values 0–3. The negative vectors also incorrectly treated 4 as invalid. The validator and tests now accept all five defined statuses, the negative vectors use 5 as the out-of-range value, and Little-/Big-Endian golden replies cover `DEVICE_DESTROYED`. The reply-spec coverage test now extracts and verifies all five status assignments. `GetFenceStatus` remains a separate four-value namespace (0–3); it was intentionally not widened.
+
+This correction aligns the reply ABI tests with the existing normative synchronization and error chapters; it does not change the protocol assignment. The updated commits have been saved on `docs/restructure-2026-10-21`. CI status could not be confirmed through the available status interfaces, so this audit note does not claim a passing run.
