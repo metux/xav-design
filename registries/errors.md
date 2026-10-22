@@ -12,5 +12,6 @@ Error codes are offsets relative to the X11 extension's `first_error`.
 | 5 | `ALLOCATION_FAILED` |
 | 6 | `DEPENDENCY_FAILED` |
 | 7 | `INTERNAL_SERVER_ERROR` |
+| 8 | `DEVICE_DESTROYED` |
 
 The absolute X11 error code is `first_error + offset`. Do not allocate new values ad hoc. Detailed packet and request-specific rules are defined in [the error chapter](../spec/errors.md).
