@@ -58,8 +58,8 @@ class ReplySpecCoverageTests(unittest.TestCase):
     def test_wait_for_fence_statuses_follow_normative_table(self):
         body = section(self.sync, "WaitForFence")
         status_part = body.split("Reply-Status:", 1)[-1]
-        statuses = assignments(status_part, {"SUCCESS", "TIMEOUT", "EXECUTION_FAILED", "DEVICE_LOST"})
-        self.assertEqual(statuses, {"SUCCESS": 0, "TIMEOUT": 1, "EXECUTION_FAILED": 2, "DEVICE_LOST": 3})
+        statuses = assignments(status_part, {"SUCCESS", "TIMEOUT", "EXECUTION_FAILED", "DEVICE_LOST", "DEVICE_DESTROYED"})
+        self.assertEqual(statuses, {"SUCCESS": 0, "TIMEOUT": 1, "EXECUTION_FAILED": 2, "DEVICE_LOST": 3, "DEVICE_DESTROYED": 4})
         self.assert_values_covered_in_both_orders(
             "WaitForFence", set(statuses.values()),
             lambda vector, order: int.from_bytes(bytes.fromhex(vector["wire_hex"])[8:12], order),
