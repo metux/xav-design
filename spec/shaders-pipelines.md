@@ -116,7 +116,7 @@ Jeder Allocation-Entry ist acht Bytes groß und enthält Descriptor-Set-XID sowi
 
 Gesamtlänge: `20 + 8 * descriptor_set_count`; `descriptor_set_count` muss positiv sein.
 
-Die Allokation ist atomar. Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben.
+Die Allokation ist atomar. Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben. Unbekannte/nicht-live Device-, Pool- oder Layout-XIDs ergeben `BadValue`; falsche live Ressourcentypen, fremde Client-/Device-Ownership oder Pool-/Layout-Inkompatibilität ergeben `BadMatch`. Ungültige, bereits belegte oder innerhalb des Requests doppelte Ziel-Set-XIDs ergeben `BadIDChoice`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; erschöpfte Pool-Kapazität oder ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`. Reservierte Felder müssen null sein.
 
 ## 6.5 `UpdateDescriptorSets`
 
