@@ -69,7 +69,7 @@ Status:
 - 1: `UNAVAILABLE`
 - 2: `REMOVED`
 
-`REMOVED` ist für diesen XID endgültig. Die XID wird nie einem anderen Device zugewiesen.
+`REMOVED` ist für diesen XID endgültig. Nach einem Event mit `new_status = REMOVED` darf der Server für diese XID kein weiteres `DEVICE_STATUS_CHANGED`-Event mehr senden. Die XID wird nie einem anderen Device zugewiesen.
 
 ## `DEVICE_MEMORY_PRESSURE`
 
