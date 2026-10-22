@@ -372,8 +372,8 @@ class GoldenReplyVectorTests(unittest.TestCase):
             order = vector["byte_order"]
             if vector["event"] == "GetFenceStatus":
                 self.assertIn(wire[1], (0, 1, 2, 3))
-            elif vector["event"] == "WaitForFence":
-                self.assertIn(int.from_bytes(wire[8:12], order), (0, 1, 2, 3))
+            elif vector["event"].startswith("WaitForFence"):
+                self.assertIn(int.from_bytes(wire[8:12], order), (0, 1, 2, 3, 4))
             elif vector["event"] in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
                 self.assertIn(int.from_bytes(wire[8:12], order), (0, 1))
 
