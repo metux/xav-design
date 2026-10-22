@@ -111,9 +111,9 @@ Gesamtlänge: 16 Bytes.
 - Offset 8: Device-XID
 - Offset 12: Memory-XID
 
-Der Memory-Block muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn irgendein Buffer noch an diese Allokation gebunden ist (`BadMatch`) oder angenommene GPU-Arbeit auf die Allokation zugreift (`INVALID_SYNCHRONIZATION_STATE`). Bei Ablehnung bleiben Memory-XID und Allokation unverändert.
+Der Memory-Block muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn irgendein intern noch lebender Buffer an diese Allokation gebunden ist (`BadMatch`) oder angenommene GPU-Arbeit auf die Allokation zugreift (`INVALID_SYNCHRONIZATION_STATE`). Das gilt auch für Buffer, deren öffentliche XID bereits durch `DestroyResource` invalidiert wurde, deren internes Objekt aber wegen Descriptor-Slots, interner Referenzen oder möglicher Backend-Zugriffe noch nicht freigegeben werden darf. Bei Ablehnung bleiben Memory-XID und Allokation unverändert.
 
-XAverius v0.1 unterstützt kein Unbind/Rebind. Daher müssen alle an die Allokation gebundenen Buffer vor `FreeMemory` erfolgreich zerstört werden. Bei Erfolg wird die öffentliche Memory-XID sofort ungültig; die interne Allokation darf erst freigegeben werden, wenn keine internen Referenzen oder Backend-Zugriffe mehr bestehen.
+XAverius v0.1 unterstützt kein Unbind/Rebind. Daher müssen alle an die Allokation gebundenen Buffer vor `FreeMemory` erfolgreich zerstört werden. Bei Erfolg wird die öffentliche Memory-XID sofort ungültig; die interne Allokation darf erst freigegeben werden, wenn keine internen Referenzen oder Backend-Zugriffe mehr bestehen. Ein erfolgreicher `FreeMemory` setzt voraus, dass keine lebende interne Buffer-Identität mehr an die Allokation gebunden ist.
 
 ## 5.6 `BindBufferMemory`
 
