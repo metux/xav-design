@@ -161,3 +161,7 @@ Descriptor-set updates now have explicit reference-graph semantics across chapte
 ## QueueSubmit semaphore-entry validation — 2026-10-22
 
 Duplicate wait/signal semaphore entries and using the same semaphore in both arrays now have explicit `BadValue` mappings. Conformance coverage checks Binary semaphore values, Timeline signal reservations, and that rejected submissions reserve neither the token nor synchronization slots. Static checker guards are in place. CI passed on validation commit `5e6fb4d2f41942ef60413856a758364069684a7d`: [run 39828130540](https://github.com/metux/xav-design/actions/runs/39828130540). Runtime backend behavior remains untested until an XAverius server implementation exists.
+
+## SignalSemaphore error-precedence audit — 2026-10-22
+
+`SignalSemaphore` now explicitly specifies exact request length, unknown-XID versus wrong-live-type/ownership errors, and unavailable/lost-device outcomes before validating the Timeline counter and pending signal reservations. The central mapping, conformance checklist and static checker agree. CI passed on checker commit `b9fa01aafd25dff9a32d1b02c2306b06b6549562`: [run 39828317685](https://github.com/metux/xav-design/actions/runs/39828317685). Runtime behavior remains untested until a server implementation exists.
