@@ -176,3 +176,8 @@ The descriptor-set allocation request already had atomic-batch semantics and bas
 
 CI passed on the reviewed branch in [run 39825499901](https://github.com/metux/xav-design/actions/runs/39825499901), including all 2,223 static checks and the golden wire-vector tests.
 The descriptor update path previously described descriptor-type incompatibility as `BadMatch` without clearly separating unassigned wire values from a registered type that conflicts with a layout binding. The normative chapter now maps zero/unassigned `descriptor_type` values and duplicate writes to one slot to `BadValue`, while a registered but incompatible type remains `BadMatch`. The central error table, conformance checklist and static checker now assert this distinction. This is a specification-level validation correction; backend runtime behavior is not yet tested.
+
+
+## Descriptor contents and command-buffer references — 2026-10-22
+
+A cross-chapter lifetime review found that the spec tracked indirect Buffer references from recorded command buffers but did not explicitly say how those references react when a Descriptor Set is updated while not pending. The contract now states that command buffers retain the Descriptor Set object rather than a snapshot of its contents; successful `UpdateDescriptorSets` atomically refreshes indirect Buffer references for all non-pending command buffers referencing the set. An executable command buffer uses the current set contents at submission and is not invalidated solely by the update. The decision record, command-recording chapter, lifetime chapter, conformance checklist and static checker are aligned. Backend execution behavior remains untested.
