@@ -198,3 +198,7 @@ A focused audit of the `QueueSubmit` path found that duplicate wait/signal entri
 ## WaitForFence request-validation audit — 2026-10-22
 
 `WaitForFence` now explicitly specifies its fixed 24-byte request length, XID/type/ownership checks before wait registration, and the normal reply statuses for timeout, execution failure, device loss, and device destruction. The central error map, conformance checklist and static checker were aligned. An initial checker run exposed that the older ABI guard required the literal phrase “Request: 24 Bytes”; the normative wording and assertion were aligned, and CI passed in [run 39828776699](https://github.com/metux/xav-design/actions/runs/39828776699). No runtime server behavior is claimed.
+
+## GetFenceStatus request-validation audit — 2026-10-22
+
+`GetFenceStatus` now explicitly defines exact request length, XID/type/ownership validation, and the requirement to return the stored fence state after Device Loss. The central error map, conformance checklist and static checker now guard this contract. CI passed in [run 39828908220](https://github.com/metux/xav-design/actions/runs/39828908220), including the golden wire-vector tests. Runtime backend behavior remains untested.
