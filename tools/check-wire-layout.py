@@ -418,6 +418,13 @@ def check_other_numeric_registries(c: Check) -> None:
         "UpdateDescriptorSets: error map and conformance cases must agree on descriptor type validation",
     )
     lifetime = read("spec/resource-lifetime.md")
+    c.require(
+        "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in errors
+        and "ein nicht verfügbares oder verlorenes logisches Device `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`" in errors
+        and "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
+        and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in read("spec/conformance.md"),
+        "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
+    )
     command_recording = read("spec/command-recording.md")
     decisions = read("DECISIONS.md")
     c.require(
