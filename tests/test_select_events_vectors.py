@@ -157,6 +157,21 @@ class GoldenSelectEventsTests(unittest.TestCase):
         registry = (ROOT / "registries" / "request-subopcodes.md").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"^\| `SelectEvents` \| 40 \| Void \|", registry, re.M)), 1)
 
+    def test_zero_mask_is_valid_for_each_scope_and_byte_order(self):
+        import copy
+        for order in ("little", "big"):
+            for scope in SCOPES:
+                vector = copy.deepcopy(next(
+                    v for v in self.vectors
+                    if v["fields"]["scope"] == scope and v["byte_order"] == order
+                ))
+                vector["fields"]["event_mask"] = 0
+                wire = encode_select_events(vector)
+                validate_select_events_wire(wire, order)
+                self.assertEqual(wire[24:28], bytes(4))
+        document = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        self.assertIn("event_mask = 0", document)
+
     def test_rejects_invalid_scope_masks_and_reserved_bytes(self):
         vector = self.vectors[0]
         wire = bytearray(encode_select_events(vector))
