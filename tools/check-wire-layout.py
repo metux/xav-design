@@ -419,10 +419,10 @@ def check_other_numeric_registries(c: Check) -> None:
     )
     lifetime = read("spec/resource-lifetime.md")
     c.require(
-        "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in errors
-        and "ein nicht verfügbares oder verlorenes logisches Device `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`" in errors
+        "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in descriptor_errors
+        and "ein nicht verfügbares oder verlorenes logisches Device `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`" in descriptor_errors
         and "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
-        and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in read("spec/conformance.md"),
+        and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in descriptor_conformance,
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
     command_recording = read("spec/command-recording.md")
