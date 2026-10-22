@@ -125,7 +125,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         section = re.search(r"^## Event-Auswahl: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", document, re.M)
         self.assertIsNotNone(section)
         body = section.group(1)
-        self.assertRegex(body, r"feste Gesamtlänge von 32 Bytes")
+        self.assertRegex(body, r"fest(?:e|er) Gesamtlänge von 32 Bytes")
         expected = [
             (8, "CARD32", "scope"), (12, "XID", "device_xid"),
             (16, "CARD32", "queue_family_index"), (20, "CARD32", "queue_index"),
