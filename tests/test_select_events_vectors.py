@@ -44,7 +44,7 @@ def encode_select_events(vector: dict) -> bytes:
         raise ValueError("connection scope requires zero device and queue fields")
     if scope == 1 and (fields["device_xid"] == 0 or fields["queue_family_index"] != 0 or fields["queue_index"] != 0):
         raise ValueError("device scope requires device XID and zero queue fields")
-    if scope == 2 and (fields["device_xid"] == 0 or fields["queue_family_index"] == 0xFFFFFFFF or fields["queue_index"] == 0xFFFFFFFF):
+    if scope == 2 and fields["device_xid"] == 0:
         raise ValueError("queue scope requires device XID and concrete queue indices")
 
     data = bytearray(32)
@@ -68,6 +68,8 @@ def validate_select_events_wire(wire: bytes, byte_order: str) -> None:
     if len(wire) != 32:
         raise ValueError("SelectEvents must be exactly 32 bytes")
     endian = "<" if byte_order == "little" else ">"
+    if wire[0] not in range(128, 256):
+        raise ValueError("extension major opcode must be in 128..255")
     if wire[1] != 0:
         raise ValueError("X11 data byte must be zero")
     if struct.unpack_from(endian + "H", wire, 2)[0] != 8:
@@ -136,6 +138,22 @@ class GoldenSelectEventsTests(unittest.TestCase):
             )
         ]
         self.assertEqual(actual, expected)
+        for scope, value in (("CONNECTION", 0), ("DEVICE", 1), ("QUEUE", 2)):
+            self.assertRegex(body, rf"`{scope} = {value}`")
+        mask_rows = [
+            (scope, int(bit), event)
+            for scope, bit, event in re.findall(
+                r"^\|\s*`(CONNECTION|DEVICE|QUEUE)`\s*\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|",
+                body, re.M,
+            )
+        ]
+        self.assertEqual(mask_rows, [
+            ("CONNECTION", 0, "DEVICE_STATUS_CHANGED"),
+            ("DEVICE", 0, "DEVICE_MEMORY_PRESSURE"),
+            ("DEVICE", 1, "DEVICE_IDLE"),
+            ("QUEUE", 0, "SUBMISSION_COMPLETE"),
+            ("QUEUE", 1, "SUBMISSION_FAILED"),
+        ])
         registry = (ROOT / "registries" / "request-subopcodes.md").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"^\| `SelectEvents` \| 40 \| Void \|", registry, re.M)), 1)
 
