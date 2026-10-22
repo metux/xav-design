@@ -452,6 +452,12 @@ def check_request_document_coverage(c: Check) -> None:
         c.require(f"`{name}`" in conformance,
                   f"request {opcode} ({name}): missing from conformance checklist")
 
+    c.require(
+        "`EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`" in errors
+        and "wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig" in errors,
+        "error mapping: EnumeratePhysicalDevices must define length failure and empty-result behavior",
+    )
+
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
     lifetime = read("spec/resource-lifetime.md")
