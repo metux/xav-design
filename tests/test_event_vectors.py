@@ -158,6 +158,41 @@ class GoldenXGEEventTests(unittest.TestCase):
                 self.assertEqual(int.from_bytes(actual[8:10], vector["byte_order"]), vector["event_type"])
                 self.assertEqual(actual[10:32], bytes(22))
 
+    def test_golden_field_layouts_match_normative_event_chapters(self):
+        document = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
+        for event, fields in EVENT_FIELDS.items():
+            match = re.search(
+                r"^## `" + re.escape(event) + r"`\s*$([\s\S]*?)(?=^## |\Z)",
+                document, re.M,
+            )
+            self.assertIsNotNone(match, f"missing normative event section {event}")
+            body = match.group(1)
+            expected = sorted((offset, size) for offset, size in fields.values())
+            actual = []
+            for line in body.splitlines():
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|", line)
+                if row:
+                    actual.append((int(row.group(1)), sizes[row.group(2)]))
+                    continue
+                bullet = re.match(r"^\s*- Offset (\d+):\s*(.*)$", line)
+                if bullet:
+                    offset, tail = int(bullet.group(1)), bullet.group(2)
+                    if re.search(r"\bCARD64\b", tail):
+                        size = 8
+                    elif re.search(r"\bCARD32\b|\bXID\b|Device-XID|Physical-Device-XID", tail):
+                        size = 4
+                    else:
+                        continue
+                    actual.append((offset, size))
+            self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
+            length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
+            if not length:
+                length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
+            if length:
+                self.assertEqual(int(length.group(1)), max(offset + size for offset, size in expected))
+                self.assertEqual(int(length.group(2)), (int(length.group(1)) - 32) // 4)
+
     def test_each_event_has_both_byte_orders(self):
         seen = {}
         for vector in self.vectors:
