@@ -61,6 +61,41 @@ def encode_select_events(byte_order: str, *, extension_opcode: int = 200,
     return bytes(wire)
 
 
+def decode_select_events(wire: bytes, byte_order: str, *, extension_opcode: int = 200):
+    """Validate and decode an actual SelectEvents wire packet, not just arguments."""
+    if byte_order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if len(wire) != 32:
+        raise ValueError("wrong packet size")
+    endian = "<" if byte_order == "little" else ">"
+    major, minor, words = struct.unpack_from(endian + "BBH", wire, 0)
+    if major != extension_opcode or not 128 <= major <= 255:
+        raise ValueError("wrong extension opcode")
+    if minor != 0 or words != 8:
+        raise ValueError("wrong X11 request framing")
+    subopcode, flags, reserved_header = struct.unpack_from(endian + "BBH", wire, 4)
+    if subopcode != SUBOPCODE:
+        raise ValueError("wrong subopcode")
+    if flags or reserved_header:
+        raise ValueError("reserved header field must be zero")
+    scope, device_xid, family, queue, mask, reserved_payload = struct.unpack_from(
+        endian + "IIIIII", wire, 8
+    )
+    if reserved_payload:
+        raise ValueError("reserved payload field must be zero")
+    # Reuse the canonical field constraints after parsing the bytes. Encoding
+    # also rejects invalid scope-specific fields and masks.
+    encode_select_events(
+        byte_order, extension_opcode=major, scope=scope, device_xid=device_xid,
+        queue_family_index=family, queue_index=queue, event_mask=mask,
+        flags=flags, reserved_header=reserved_header, reserved_payload=reserved_payload,
+    )
+    return {
+        "scope": scope, "device_xid": device_xid,
+        "queue_family_index": family, "queue_index": queue, "event_mask": mask,
+    }
+
+
 class SelectionRaceModel:
     """Small executable model of the normative event-selection linearization rules."""
 
@@ -116,6 +151,38 @@ class SelectEventsContractTests(unittest.TestCase):
                 self.assertEqual(struct.unpack_from(endian + "IIIII", wire, 8),
                                  (2, 0x10203040, 2, 1, 3))
                 self.assertEqual(wire[28:32], bytes(4))
+
+    def test_raw_wire_decoder_rejects_malformed_framing_and_payload(self):
+        valid = bytearray(encode_select_events(
+            "little", scope=SCOPE_QUEUE, device_xid=9,
+            queue_family_index=1, queue_index=2, event_mask=3,
+        ))
+        malformed = []
+        packet = bytearray(valid); packet[0] = 127; malformed.append(("major", packet))
+        packet = bytearray(valid); packet[1] = 1; malformed.append(("minor", packet))
+        packet = bytearray(valid); struct.pack_into("<H", packet, 2, 7); malformed.append(("length", packet))
+        packet = bytearray(valid); packet[4] = 39; malformed.append(("subopcode", packet))
+        packet = bytearray(valid); packet[5] = 1; malformed.append(("flags", packet))
+        packet = bytearray(valid); packet[6] = 1; malformed.append(("reserved header", packet))
+        packet = bytearray(valid); struct.pack_into("<I", packet, 28, 1); malformed.append(("reserved payload", packet))
+        for label, packet in malformed:
+            with self.subTest(label=label), self.assertRaises(ValueError):
+                decode_select_events(bytes(packet), "little")
+        with self.assertRaisesRegex(ValueError, "packet size"):
+            decode_select_events(bytes(valid[:-4]), "little")
+        with self.assertRaisesRegex(ValueError, "packet size"):
+            decode_select_events(bytes(valid) + bytes(4), "little")
+
+    def test_raw_wire_decoder_accepts_both_byte_orders_and_zero_mask(self):
+        for order in ("little", "big"):
+            with self.subTest(byte_order=order):
+                wire = encode_select_events(
+                    order, scope=SCOPE_DEVICE, device_xid=0x10203040, event_mask=0,
+                )
+                self.assertEqual(decode_select_events(wire, order), {
+                    "scope": SCOPE_DEVICE, "device_xid": 0x10203040,
+                    "queue_family_index": 0, "queue_index": 0, "event_mask": 0,
+                })
 
     def test_rejects_reserved_fields_invalid_scope_and_mask_bits(self):
         bad = (
