@@ -174,6 +174,9 @@ def check_events(c: Check) -> None:
     sync = read("spec/synchronization.md")
     c.require(re.search(r"GetFenceStatus.*nach Device Loss.*gespeicherten Zustand", sync, re.S) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
+    c.require(re.search(r"`GetFenceStatus`.*Request: exakt 16 Bytes.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*gespeicherten Fence-Zustand zurück", sync, re.S) is not None and
+              re.search(r"`GetFenceStatus`: falsche Länge `BadLength`.*nach Device Loss", errors, re.S) is not None,
+              "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
     c.require(re.search(r"WaitForFence.*liefert dagegen `DEVICE_LOST`.*sobald das Device als verloren erkannt wurde", sync, re.S) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
     c.require(re.search(r"keine offene `WaitForFence`-Registrierung.*`INVALID_SYNCHRONIZATION_STATE` abgewiesen", sync, re.S) is not None,
