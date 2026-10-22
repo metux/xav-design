@@ -13,6 +13,7 @@ The automated wire-layout checker validates uniqueness and expected ranges for t
 | [Queue flags](queue-flags.md) | physical-device queue capability bits | Bits 0–4 assigned; bits 5–31 reserved |
 | [Physical-device types](device-types.md) | `PHYSICALDEVICEINFO.device_type` | Assigned |
 | [Event types and fields](event-types.md) | XGE event type IDs and event-local enums | Event type IDs and SelectEvents layout assigned |
+| [Device reason codes](reason-codes.md) | Shared `DEVICE_LOST` and `DEVICE_STATUS_CHANGED` reason codes | Values 0–5 assigned; append-only |
 | [Feature IDs](feature-ids.md) | `DEVICEFEATUREREQUEST.feature_id` | v0.1 has no optional feature assignments |
 | [Device extensions](device-extensions.md) | `DEVICEEXTENSIONREQUEST` names | v0.1 has no optional device extensions |
 | [Physical-device properties](physical-device-properties.md) | Canonical Atom names and property wire types | Four v0.1 properties registered; Atom numbers remain server-assigned |
