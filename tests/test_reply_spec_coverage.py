@@ -212,7 +212,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
 
     def test_read_buffer_boundary_fixtures_follow_wire_formula(self):
         body = section(self.memory, "ReadBuffer")
-        self.assertRegex(body, r"reply\\.length\\s*=\\s*floor\\(\\(uint64\\(data_length\\)\\s*\\+\\s*3\\)\\s*/\\s*4\\)")
+        self.assertRegex(body, r"reply\.length\s*=\s*floor\(\(uint64\(data_length\)\s*\+\s*3\)\s*/\s*4\)")
         sizes = set()
         for vector in self.vectors:
             match = re.fullmatch(r"ReadBuffer-(\d+)-bytes", vector["event"])
