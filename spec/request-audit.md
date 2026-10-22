@@ -186,3 +186,7 @@ A cross-chapter lifetime review found that the spec tracked indirect Buffer refe
 ## QueueSubmit semaphore-entry validation — 2026-10-22
 
 A focused audit of the `QueueSubmit` path found that duplicate wait/signal entries and a semaphore appearing in both arrays were prohibited normatively, but their synchronous error code was not explicit. The queue-submission chapter and central error map now define these conflicts as `BadValue`. The conformance checklist also covers Binary semaphore zero values, Timeline signal reservation checks, rejected-submit atomicity, and the guarantee that a rejected request reserves neither its token nor semaphore operation slots. Static checks guard the normative prohibition and the new conformance cases. CI passed in [run 39828130540](https://github.com/metux/xav-design/actions/runs/39828130540). This is protocol/specification validation; no live Vulkan backend is available to test runtime behavior.
+
+## SignalSemaphore error-precedence audit — 2026-10-22
+
+`SignalSemaphore` had detailed Timeline counter rules, but its own request section did not explicitly spell out exact-length, XID/ownership, and unavailable/lost-device errors. The synchronization chapter, central error map, conformance checklist, and static checker now cover those outcomes and require device/XID checks before counter/reservation validation. CI passed in [run 39828317685](https://github.com/metux/xav-design/actions/runs/39828317685). This is a specification/static-check result; no runtime backend test is claimed.
