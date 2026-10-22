@@ -69,7 +69,7 @@ Memory-Type-Flags:
 
 Heap-Flag-Bit 0 bezeichnet `DEVICE_LOCAL`. Andere Bits sind reserviert.
 
-Es gelten maximal 32 Memory Types und 16 Memory Heaps. Indizes beginnen bei null und bleiben für die Lebensdauer der Physical-Device-XID beziehungsweise ihrer Gerätegeneration stabil; alle logischen Devices auf diesem Physical Device verwenden dieselbe Zuordnung. Jeder Heap-Index muss gültig sein.
+Es gelten maximal 32 Memory Types und 16 Memory Heaps. Indizes beginnen bei null und bleiben für die Lebensdauer der Physical-Device-XID beziehungsweise ihrer Gerätegeneration stabil; alle logischen Devices auf diesem Physical Device verwenden dieselbe Zuordnung. Jeder Heap-Index muss gültig sein. `memory_type_count` und `memory_heap_count` dürfen ihre jeweiligen Obergrenzen nicht überschreiten. Jeder `property_flags`-Wert darf nur definierte Bits enthalten; reservierte Bits müssen null sein. `heap_index` muss kleiner als `memory_heap_count` sein. Bei null Memory Types beziehungsweise null Memory Heaps darf kein entsprechender Record folgen.
 
 `memory_properties_flags` besitzt noch keine festgelegte Semantik; bis zur Zuweisung einer Registry-Definition muss das Feld null sein.
 
@@ -90,7 +90,7 @@ Reply:
 | 24 | CARD32 | `memory_type_bits` |
 | 28 | CARD32 | `reserved = 0` |
 
-Reply-Payload-Länge ist null. Größe und Alignment müssen positiv sein. Bits außerhalb der Anzahl unterstützter Memory Types müssen null sein.
+Reply-Payload-Länge ist null. Größe und Alignment müssen positiv sein. `memory_type_bits` ist eine Bitmaske: Bit N erlaubt `memory_type_index = N`; Bits außerhalb von `memory_type_count` müssen null sein. Für einen erfolgreich abgefragten Buffer muss mindestens ein unterstützter Memory-Type-Bit gesetzt sein. Die Werte beziehen sich auf das Physical Device des angegebenen logischen Devices und bleiben für dessen Lebensdauer stabil.
 
 ## 5.4 `AllocateMemory`
 
@@ -102,7 +102,7 @@ Gesamtlänge: 32 Bytes.
 - Offset 24: `CARD32 memory_type_index`
 - Offset 28: `CARD32 reserved = 0`
 
-Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss existieren.
+Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss für das Physical Device des logischen Devices existieren. `AllocateMemory` reserviert genau `allocation_size` Bytes und bindet keinen Buffer. Der Server darf die angeforderte Größe nicht stillschweigend aufrunden; notwendige interne Backend-Ausrichtung muss ohne Änderung der öffentlich sichtbaren Allokationsgröße umgesetzt werden. Kann die Allokation nicht bereitgestellt werden, wird `ALLOCATION_FAILED` gemeldet und die `memory_xid` bleibt unangelegt.
 
 ## 5.5 `FreeMemory`
 
@@ -126,7 +126,7 @@ Gesamtlänge: 28 Bytes.
 
 Buffer und Memory müssen zum angegebenen Device gehören. In v0.1 darf ein Buffer nur einmal gebunden werden.
 
-Der Memory-Type muss durch `memory_type_bits` erlaubt sein. Der Offset muss ein Vielfaches des gemeldeten Alignments sein.
+Der `memory_type_index` der Allokation muss kleiner als `memory_type_count` sein und das entsprechende Bit in `memory_type_bits` muss gesetzt sein (`(memory_type_bits & (1u << memory_type_index)) != 0`). Der Offset ist in Bytes angegeben und muss ein Vielfaches des gemeldeten `alignment` sein. Für die Bindungsgrenze ist `requirements.size` maßgeblich, nicht lediglich die logische Buffer-Größe; die Allokation muss also den vollständigen vom Backend benötigten Bereich abdecken.
 
 Die Bounds-Prüfung muss überlaufsicher erfolgen:
 
