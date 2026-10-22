@@ -130,6 +130,8 @@ def check_events(c: Check) -> None:
               "DestroyDevice: must suppress later events for the destroyed logical device")
     c.require(re.search(r"Die Unterdrückung der Zustellung.*internen terminalen Ausgang.*Backend-Referenzen", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
+    c.require(re.search(r"Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert", lifetime, re.S) is not None,
+              "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
     c.require(re.search(r"Ein Client-Disconnect beendet die Event-Zustellung.*genau diese X11-Verbindung", lifetime, re.S) is not None,
               "Client disconnect: event delivery must stop for that exact X11 connection")
     c.require(re.search(r"weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt", lifetime, re.S) is not None,
