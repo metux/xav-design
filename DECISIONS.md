@@ -28,6 +28,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - If backend quiescence cannot be proven after Device Loss/teardown failure, the device is isolated and internal resources are quarantined rather than freed or reused; quarantine lasts until backend quiescence is proven or the server process exits.
 - The server tracks direct and indirect resource references recorded by command buffers. Destroying a referenced resource is rejected while a command buffer is recording; executable command buffers that reference a destroyed resource become invalid and must be recorded again.
 - Descriptor sets may not be updated or freed while pending use is possible.
+- Command buffers retain Descriptor Set object references, not frozen descriptor contents. A successful non-pending `UpdateDescriptorSets` atomically refreshes the indirect Buffer-reference graph for all non-pending command buffers referencing the affected sets; an `EXECUTABLE` command buffer uses the set's current contents when submitted and is not invalidated solely by the update.
 - Unassigned registry values must not be guessed.
 
 ## Settled wire-protocol constraints
