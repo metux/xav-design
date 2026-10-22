@@ -160,6 +160,12 @@ def check_events(c: Check) -> None:
               "synchronization: timeline counter must not advance at submission acceptance")
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
+    c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
+              "synchronization: host timeline signals must not jump over pending GPU signal reservations")
+    c.require(re.search(r"WaitSemaphores` darf den X11-Request-Dispatcher nicht synchron blockieren", sync) is not None,
+              "synchronization: host waits must not block later signals or submissions on the same connection")
+    c.require(re.search(r"Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter", sync) is not None,
+              "synchronization: wait timeout must continue while later requests are processed")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"all semaphore wait/signal reservations and internal references are committed atomically", submissions, re.S) is not None,
               "QueueSubmit: semaphore reservations and references must commit atomically")
