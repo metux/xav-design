@@ -533,6 +533,34 @@
       "byte_order": "big",
       "wire_hex": "0100123400000000000000000000100000000000000000000000000300000000",
       "violates": "buffer-requirements-alignment-positive"
+    },
+    {
+      "name": "WaitSemaphores-timeout-wrong-status-little",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000000000000000000000000000000000000000000000000000",
+      "violates": "wait-status-match"
+    },
+    {
+      "name": "WaitSemaphores-timeout-wrong-status-big",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000000000000000000000000000000000000000000",
+      "violates": "wait-status-match"
+    },
+    {
+      "name": "WaitSemaphores-success-wrong-status-little",
+      "kind": "WaitSemaphores-success",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000010000000000000000000000000000000000000000000000",
+      "violates": "wait-status-match"
+    },
+    {
+      "name": "WaitSemaphores-success-wrong-status-big",
+      "kind": "WaitSemaphores-success",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000010000000000000000000000000000000000000000",
+      "violates": "wait-status-match"
     }
   ]
 }
