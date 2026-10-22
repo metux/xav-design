@@ -468,7 +468,7 @@ def check_request_document_coverage(c: Check) -> None:
         and "falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`" in errors
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "bei Ablehnung bleibt die Ziel-XID unangelegt" in errors
-        and "Bei jedem Fehler bleibt die `memory_xid` unangelegt" in read("spec/memory-buffers.md"),
+        and "die `memory_xid` bleibt unangelegt" in read("spec/memory-buffers.md"),
         "error mapping: AllocateMemory must define device-state errors and atomic create-XID behavior",
     )
 
