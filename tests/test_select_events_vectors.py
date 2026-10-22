@@ -554,5 +554,20 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
         self.assertIn("danach werden zurückgestellte Requests in normaler Request-Reihenfolge verarbeitet", memory.lower())
 
+
+    def test_read_buffer_has_ordered_snapshot_and_explicit_failure_semantics(self):
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
+        self.assertIn("vor diesem Request angenommenen `QueueSubmit`-Submissions", read)
+        self.assertIn("vor diesem Request eingereihten `WriteBuffer`-Transfers", read)
+        self.assertIn("spätere `QueueSubmit`-Requests", read)
+        self.assertIn("Daten-Snapshot", read)
+        self.assertIn("`DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden", read)
+        self.assertIn("Der Inhalt des Zielbereichs ist dann nicht garantiert", memory)
+        self.assertIn("`DEVICE_LOST`", errors)
+        self.assertIn("Quarantäne gehalten", lifetime)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
