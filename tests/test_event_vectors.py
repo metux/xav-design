@@ -58,6 +58,11 @@ def validate_event_wire(
             raise ValueError("required event XID must be nonzero")
     if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(9):
         raise ValueError("XAverius error offset is outside the error registry")
+    if event_type == 0:
+        origin = int.from_bytes(wire[40:44], byte_order)
+        submission_token = int.from_bytes(wire[44:52], byte_order)
+        if origin == 1 and submission_token == 0:
+            raise ValueError("ORIGIN_QUEUE_SUBMIT requires a nonzero submission_token")
     if event_type == 3 and memory_heap_count is not None:
         if not 0 <= memory_heap_count <= 0xFFFFFFFF:
             raise ValueError("memory_heap_count must be a CARD32")
@@ -400,6 +405,17 @@ class GoldenXGEEventTests(unittest.TestCase):
             # Without device properties the structural validator cannot reject
             # an index based on a heap count it does not know.
             validate_event_wire(bytes(wire), order)
+
+    def test_async_error_queue_submit_origin_requires_token(self):
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors
+                          if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
+            wire = bytearray(encode_event(vector))
+            wire[40:44] = (1).to_bytes(4, order)  # ORIGIN_QUEUE_SUBMIT
+            wire[44:52] = bytes(8)
+            with self.subTest(order=order):
+                with self.assertRaisesRegex(ValueError, "ORIGIN_QUEUE_SUBMIT"):
+                    validate_event_wire(bytes(wire), order)
 
     def test_rejects_invalid_event_local_values(self):
         cases = (
