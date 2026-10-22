@@ -981,9 +981,171 @@ def check_reply_formula_vectors(c: Check) -> None:
                   f"WaitSemaphores count {count} must yield {expected}-byte request")
 
 
+
+def check_xge_abi(c: Check) -> None:
+    """Check XGE framing, event-specific ABI, registries, and SelectEvents."""
+    events = read("spec/events.md")
+    wire = read("spec/wire-protocol.md")
+    registry = read("registries/event-types.md")
+    requests = read("registries/request-subopcodes.md")
+    devices = read("spec/devices.md")
+    conformance = read("spec/conformance.md")
+
+    header = events.split("## " + chr(96) + "ASYNC_ERROR" + chr(96), 1)[0]
+    header_fields = [
+        (0, "CARD8", r"response_type\s*=\s*GenericEvent\s*\(35\)"),
+        (1, "CARD8", r"extension.*dynamisch zugewiesener XAverius-Major-Opcode"),
+        (2, "CARD16", r"X11-Event-Sequenznummer"),
+        (4, "CARD32", r"XGE.*length"),
+        (8, "CARD16", r"evtype.*Event-Type-ID"),
+    ]
+    for offset, typ, pattern in header_fields:
+        c.require(re.search(rf"^\|\s*{offset}\s*\|\s*{typ}\s*\|[^\n]*{pattern}", header, re.M | re.I) is not None,
+                  f"XGE header: missing or changed {typ} field at offset {offset}")
+    c.require(re.search(r"^\|\s*10–31\s*\|\s*—\s*\|[^|]*null", header, re.M | re.I) is not None,
+              "XGE header: reserved bytes 10–31 must be zero")
+    c.require(re.search(r"Gesamtlänge ist exakt.*32.*4.*length", header, re.I) is not None,
+              "XGE header: exact total-size formula missing")
+    c.require(re.search(r"Verbindung-byte-order gilt auch für Header und Payload", header, re.I) is not None,
+              "XGE header: connection byte order must apply to header and payload")
+    c.require(re.search(r"GenericEvent\s*=\s*35", wire) is not None and
+              re.search(r"kein eigenes serverseitig zugewiesenes XGE-Event-Base", wire, re.I) is not None,
+              "wire protocol: GenericEvent code and no separate XAverius event base must be explicit")
+
+    expected = {
+        "ASYNC_ERROR": (0, 60, 7, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD64"), (52, "XID"), (56, "CARD32")]),
+        "DEVICE_LOST": (1, 48, 4, [(32, "XID"), (36, "CARD32"), (40, "CARD64")]),
+        "DEVICE_STATUS_CHANGED": (2, 48, 4, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32")]),
+        "DEVICE_MEMORY_PRESSURE": (3, 48, 4, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32")]),
+        "DEVICE_IDLE": (4, 48, 4, [(32, "XID"), (36, "CARD32"), (40, "CARD64")]),
+        "SUBMISSION_COMPLETE": (5, 56, 6, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32"), (48, "CARD64")]),
+        "SUBMISSION_FAILED": (6, 56, 6, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32"), (48, "CARD64")]),
+    }
+    type_rows = [(int(v), n) for v, n in re.findall(r"^\|\s*(\d+)\s*\|\s*" + chr(96) + r"([A-Z_]+)" + chr(96) + r"\s*\|", registry, re.M)]
+    c.require(len(type_rows) == 7, f"XGE registry: expected 7 event IDs, found {len(type_rows)}")
+    c.require(len({v for v, _ in type_rows}) == len(type_rows), "XGE registry: duplicate event type IDs")
+    c.require(len({n for _, n in type_rows}) == len(type_rows), "XGE registry: duplicate event names")
+    c.require(dict((n, v) for v, n in type_rows) == {n: spec[0] for n, spec in expected.items()},
+              "XGE registry: event IDs differ from the seven ABI assignments")
+    c.require("Event type IDs are stable and MUST NOT be renumbered" in registry,
+              "XGE registry: stable event IDs must be documented")
+    request_rows = parse_request_registry(requests)
+    c.require(request_rows.get(40, (None, None))[0] == "SelectEvents",
+              "XGE ABI: SelectEvents must remain assigned subopcode 40")
+
+    doc_sections = dict(sections(events))
+    field_sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
+    for name, (event_id, total, xge_length, fields) in expected.items():
+        body = doc_sections.get(name, "")
+        c.require(bool(body), f"{name}: missing event ABI section")
+        if not body:
+            continue
+        declaration = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE.*length\s*=\s*(\d+)", body)
+        c.require(bool(declaration), f"{name}: missing total/XGE length declaration")
+        if declaration:
+            actual_total, actual_length = map(int, declaration.groups())
+            c.require((actual_total, actual_length) == (total, xge_length),
+                      f"{name}: expected total/length {(total, xge_length)}, got {(actual_total, actual_length)}")
+            c.require(actual_total == 32 + 4 * actual_length, f"{name}: total does not match XGE length")
+        parsed = event_field_records(body)
+        actual_layout = [(off, typ) for off, _size, typ, _field in parsed]
+        c.require(actual_layout == fields,
+                  f"{name}: payload field offsets/types changed: {actual_layout!r}")
+        c.require(all(off + field_sizes[typ] <= total for off, typ in fields),
+                  f"{name}: payload field extends past event size")
+        c.require(all(off % min(field_sizes[typ], 4) == 0 for off, typ in fields),
+                  f"{name}: payload field is misaligned")
+
+    local_expected = {
+        "ASYNC_ERROR.origin": [(0, "ORIGIN_UNSPECIFIED"), (1, "ORIGIN_QUEUE_SUBMIT"),
+                               (2, "ORIGIN_WRITE_BUFFER"), (3, "ORIGIN_READ_BUFFER"),
+                               (4, "ORIGIN_SEMAPHORE"), (5, "ORIGIN_FENCE"), (6, "ORIGIN_DEVICE")],
+        "DEVICE_STATUS_CHANGED.new_status": [(0, "AVAILABLE"), (1, "UNAVAILABLE"), (2, "REMOVED")],
+        "DEVICE_MEMORY_PRESSURE.pressure_level": [(0, "NORMAL"), (1, "LOW"), (2, "MEDIUM"), (3, "HIGH")],
+        "DEVICE_IDLE.idle_reason": [(0, "IDLE_REASON_UNSPECIFIED"), (1, "NO_PENDING_WORK"), (2, "WORK_COMPLETED")],
+        "SUBMISSION_FAILED.failure_class": [(0, "EXECUTION_FAILED"), (1, "DEVICE_LOST")],
+    }
+    for section_name, wanted in local_expected.items():
+        heading = "## " + chr(96) + section_name + chr(96)
+        section_match = re.search(r"^" + re.escape(heading) + r"\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
+        c.require(bool(section_match), f"event registry: missing local value registry {section_name}")
+        if section_match:
+            found = [(int(v), s) for v, s in re.findall(
+                r"^\|\s*(\d+)\s*\|\s*" + chr(96) + r"([A-Z_]+)" + chr(96) + r"\s*\|",
+                section_match.group(1), re.M)]
+            c.require(found == wanted, f"event registry: {section_name} values changed: {found!r}")
+    c.require("reason-codes.md" in registry and "DEVICE_LOST.reason_code" in registry and
+              "DEVICE_STATUS_CHANGED.reason_code" in registry,
+              "event registry: device reason_code fields must use shared reason-code registry")
+
+    select = re.search(r"^## Event-Auswahl: " + chr(96) + r"SelectEvents" + chr(96) + r"([\s\S]*?)(?=^## |\Z)", events, re.M)
+    c.require(bool(select), "events.md: missing SelectEvents ABI section")
+    select_body = select.group(1) if select else ""
+    c.require(re.search(r"feste Gesamtlänge von 32 Bytes", select_body, re.I) is not None,
+              "SelectEvents: request must be exactly 32 bytes")
+    expected_select = [
+        (8, "CARD32", "scope"), (12, "XID", "device_xid"),
+        (16, "CARD32", "queue_family_index"), (20, "CARD32", "queue_index"),
+        (24, "CARD32", "event_mask"), (28, "CARD32", "reserved = 0"),
+    ]
+    actual_select = [(int(off), typ, field.strip()) for off, typ, field in re.findall(
+        r"^\|\s*(\d+)\s*\|\s*([A-Z0-9]+)\s*\|\s*([^|]+?)\s*\|", select_body, re.M)]
+    c.require(actual_select == expected_select, f"SelectEvents: fixed request layout changed: {actual_select!r}")
+    for value in ("CONNECTION = 0", "DEVICE = 1", "QUEUE = 2"):
+        c.require(value in select_body, f"SelectEvents: missing scope value {value}")
+    expected_masks = [
+        (r"CONNECTION\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_STATUS_CHANGED", "CONNECTION bit 0"),
+        (r"DEVICE\s*\|\s*0\s*\|\s*" + chr(96) + r"DEVICE_MEMORY_PRESSURE", "DEVICE bit 0"),
+        (r"DEVICE\s*\|\s*1\s*\|\s*" + chr(96) + r"DEVICE_IDLE", "DEVICE bit 1"),
+        (r"QUEUE\s*\|\s*0\s*\|\s*" + chr(96) + r"SUBMISSION_COMPLETE", "QUEUE bit 0"),
+        (r"QUEUE\s*\|\s*1\s*\|\s*" + chr(96) + r"SUBMISSION_FAILED", "QUEUE bit 1"),
+    ]
+    for pattern, label in expected_masks:
+        c.require(re.search(pattern, select_body) is not None, f"SelectEvents: missing {label}")
+    for pattern, label in [
+        (r"atomar die bisherige Maske", "atomic mask replacement"),
+        (r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", "failed request preserves prior mask"),
+        (r"ASYNC_ERROR.*DEVICE_LOST.*nicht maskierbar", "unmaskable events"),
+        (r"erfolgreich GEQueryVersion", "XGE version negotiation prerequisite"),
+        (r"ohne ausgehandelte XGE-Unterstützung.*BadMatch", "pre-negotiation rejection"),
+    ]:
+        c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
+                  f"SelectEvents/XGE: missing {label}")
+    c.require(re.search(r"CreateDevice.*CreateDefaultDevice.*SelectEvents.*BadMatch", devices, re.S) is not None,
+              "device creation: XGE negotiation prerequisite and BadMatch must be explicit")
+    c.require(re.search(r"SelectEvents.*XGE.*framed|XGE.*SelectEvents", conformance, re.I | re.S) is not None,
+              "conformance checklist: must cover SelectEvents/XGE ABI")
+
+    # Exercise the XGE length and reserved-header rules in both byte orders.
+    import struct
+    for order_name, endian in (("little", "<"), ("big", ">")):
+        for name, (event_id, total, xge_length, _fields) in expected.items():
+            frame = bytearray(total)
+            frame[0], frame[1] = 35, 0xA7  # fixture-only dynamic major opcode
+            struct.pack_into(endian + "H", frame, 2, 0x1234)
+            struct.pack_into(endian + "I", frame, 4, xge_length)
+            struct.pack_into(endian + "H", frame, 8, event_id)
+            def valid_xge(candidate: bytes) -> bool:
+                return (len(candidate) >= 32 and len(candidate) % 4 == 0 and
+                        candidate[0] == 35 and
+                        len(candidate) == 32 + 4 * struct.unpack_from(endian + "I", candidate, 4)[0] and
+                        candidate[10:32] == bytes(22))
+            c.require(valid_xge(bytes(frame)), f"XGE frame ({name}/{order_name}): valid frame rejected")
+            bad_length = bytearray(frame)
+            struct.pack_into(endian + "I", bad_length, 4, xge_length + 1)
+            c.require(not valid_xge(bytes(bad_length)), f"XGE negative ({name}/{order_name}): bad length accepted")
+            bad_reserved = bytearray(frame)
+            bad_reserved[31] = 1
+            c.require(not valid_xge(bytes(bad_reserved)), f"XGE negative ({name}/{order_name}): nonzero reserved byte accepted")
+            bad_response = bytearray(frame)
+            bad_response[0] = 2
+            c.require(not valid_xge(bytes(bad_response)), f"XGE negative ({name}/{order_name}): wrong response type accepted")
+
+
 def main() -> int:
     c = Check()
     check_events(c)
+    check_xge_abi(c)
     check_reason_code_registry(c)
     check_error_registry(c)
     check_other_numeric_registries(c)
