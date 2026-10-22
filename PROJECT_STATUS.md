@@ -177,3 +177,7 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## GetFenceStatus request-validation audit — 2026-10-22
 
 `GetFenceStatus` now has explicit request length, XID/type/ownership, and post-Device-Loss state-query semantics across the normative chapter, central error map, conformance checklist and static checker. CI passed on checker commit `a9bc31667ee52385f325548a9ae82df51aa97fd7`: [run 39828908220](https://github.com/metux/xav-design/actions/runs/39828908220), including golden wire vectors. No runtime backend test is claimed.
+
+## Fence status/reset validation audit — 2026-10-22
+
+`GetFenceStatus` and `ResetFence` now have explicit request-length, XID/type/ownership, state and Device-Loss rules across the normative chapter, error map, conformance checklist and checker. CI passed on checker commit `74879a43c8c5e7d96da4fe27f40a2d38757a7bec`: [run 39829069365](https://github.com/metux/xav-design/actions/runs/39829069365). Runtime Vulkan behavior remains untested.
