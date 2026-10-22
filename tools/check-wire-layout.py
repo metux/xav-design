@@ -536,8 +536,8 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "zuerst die Ziel-XID und danach die Pool-XID" in errors
-        and "Bei `CREATE` ergibt eine ungültige oder bereits belegte Ziel-XID" in errors
-        and "ohne CREATE ergeben unbekannte Buffer-XIDs" in errors,
+        and "ungültige oder bereits belegte Ziel-XID" in errors
+        and "unbekannte/nicht-live Buffer-XIDs" in errors,
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
     c.require(
