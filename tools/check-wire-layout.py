@@ -457,6 +457,12 @@ def check_request_document_coverage(c: Check) -> None:
         and "wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig" in errors,
         "error mapping: EnumeratePhysicalDevices must define length failure and empty-result behavior",
     )
+    c.require(
+        "`CreateBuffer`: falsche feste Länge `BadLength`" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "fehlgeschlagene Backend-Erstellung wegen Speicherknappheit `ALLOCATION_FAILED`" in errors,
+        "error mapping: CreateBuffer must distinguish device state from backend allocation failure",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
