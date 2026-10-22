@@ -1078,11 +1078,21 @@ def check_xge_abi(c: Check) -> None:
               "DEVICE_STATUS_CHANGED.reason_code" in registry,
               "event registry: device reason_code fields must use shared reason-code registry")
 
+    request_registry = parse_request_registry(requests)
+    c.require(request_registry.get(40) == ("SelectEvents", "Void"),
+              "request registry: SelectEvents must remain Void subopcode 40")
+    c.require(sum(1 for name, _kind in request_registry.values() if name == "SelectEvents") == 1,
+              "request registry: SelectEvents must be registered exactly once")
+
     select = re.search(r"^## Event-Auswahl: " + chr(96) + r"SelectEvents" + chr(96) + r"([\s\S]*?)(?=^## |\Z)", events, re.M)
     c.require(bool(select), "events.md: missing SelectEvents ABI section")
     select_body = select.group(1) if select else ""
     c.require(re.search(r"feste Gesamtlänge von 32 Bytes", select_body, re.I) is not None,
               "SelectEvents: request must be exactly 32 bytes")
+    c.require(re.search(r"Common-Header-Feld `flags` bei Offset 5 muss 0 sein", select_body, re.I) is not None,
+              "SelectEvents: common request flags at offset 5 must be zero")
+    c.require(re.search(r"Common-Header-Feld bei Offset 6 muss ebenfalls 0 sein", select_body, re.I) is not None,
+              "SelectEvents: common request reserved field at offset 6 must be zero")
     expected_select = [
         (8, "CARD32", "scope"), (12, "XID", "device_xid"),
         (16, "CARD32", "queue_family_index"), (20, "CARD32", "queue_index"),
