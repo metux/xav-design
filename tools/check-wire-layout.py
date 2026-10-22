@@ -471,6 +471,14 @@ def check_request_document_coverage(c: Check) -> None:
         and "die `memory_xid` bleibt unangelegt" in read("spec/memory-buffers.md"),
         "error mapping: AllocateMemory must define device-state errors and atomic create-XID behavior",
     )
+    c.require(
+        "`CreateDescriptorPool`: falsche Länge" in errors
+        and "falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "bei Ablehnung bleibt die Pool-XID unangelegt" in errors
+        and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/shaders-pipelines.md"),
+        "error mapping: CreateDescriptorPool must define device-state errors and atomic create-XID behavior",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
