@@ -535,6 +535,20 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
 
+    c.require(
+        "`DestroyFence`: falsche Länge `BadLength`" in errors
+        and "offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert" in errors
+        and "terminal festgestellte Wait-Registrierung blockiert die Zerstörung nicht" in errors,
+        "error mapping: DestroyFence must cover length, open waits, and terminal wait release",
+    )
+    c.require(
+        "`DestroySemaphore`: falsche Länge `BadLength`" in errors
+        and "offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität" in errors
+        and "andere laufende Host-Operation" in errors
+        and "Device Loss darf die Device-weite Kaskadeninvalidierung" in errors,
+        "error mapping: DestroySemaphore must cover length, host waits, identity, and device-loss teardown",
+    )
+
 def check_reply_matrix(c: Check) -> None:
     registry_text = read("registries/request-subopcodes.md")
     registry_rows = [
