@@ -190,3 +190,7 @@ A focused audit of the `QueueSubmit` path found that duplicate wait/signal entri
 ## SignalSemaphore error-precedence audit — 2026-10-22
 
 `SignalSemaphore` had detailed Timeline counter rules, but its own request section did not explicitly spell out exact-length, XID/ownership, and unavailable/lost-device errors. The synchronization chapter, central error map, conformance checklist, and static checker now cover those outcomes and require device/XID checks before counter/reservation validation. CI passed in [run 39828317685](https://github.com/metux/xav-design/actions/runs/39828317685). This is a specification/static-check result; no runtime backend test is claimed.
+
+## Host semaphore wait/signal error audit — 2026-10-22
+
+`SignalSemaphore` now explicitly maps request length, XID/ownership, and device-state errors before validating Timeline counter/reservation rules. `WaitSemaphores` now explicitly maps its exact count-derived length, zero count, duplicate XIDs, invalid mode, XID/type/ownership and cross-device errors, and distinguishes Device Loss from `DestroyDevice` termination. The central error map, conformance checklist and static checker cover the same behavior. CI passed in [run 39828507464](https://github.com/metux/xav-design/actions/runs/39828507464). Runtime backend behavior remains untested.
