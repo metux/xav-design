@@ -36,6 +36,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `ReadBuffer` wartet auf frühere angenommene Schreibzugriffe desselben logischen Devices auf den angeforderten Bereich, einschließlich anderer Queues; ein früherer Submission-Fehler verhindert den Read nicht allein, garantiert aber keine vom fehlgeschlagenen Schreibzugriff erwarteten Daten; bei Device Loss muss `ReadBuffer` mit `DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden
 - `EnumeratePhysicalDevices` ist ein 8-Byte-Reply-Request; `DestroyDevice` ist ein 12-Byte-Void-Request
 - `EnumeratePhysicalDevices.reply.length` entspricht der Summe der gepaddeten `PHYSICALDEVICEINFO`-Record-Längen geteilt durch vier; ohne Records ist es null
+- `EnumeratePhysicalDevices` mit Request-Länge ungleich 8 Bytes ergibt `BadLength`; eine leere erfolgreiche Reply ist zulässig und darf keine unvollständigen Records enthalten
 - `GetPhysicalDeviceQueueFamilyProperties.reply.length` entspricht `3 * queue_family_count`; die Payload-Länge muss durch 12 teilbar sein
 - `GetPhysicalDeviceProperty` verwendet `SUCCESS = 0`, `NOT_SUPPORTED = 1`, `NOT_AVAILABLE = 2`; bei Nicht-Erfolg sind `property_type`, `value_length` und Payload null und `reply.length = 0`
 - `GetPhysicalDeviceProperty` akzeptiert die vier kanonischen Namen aus der Property-Registry; Atom-IDs bleiben serverseitig vergeben. Unbekannte Atom-IDs ergeben `BadAtom`, gültige aber nicht registrierte Atom-Namen `NOT_SUPPORTED`, registrierte aber nicht verfügbare Properties `NOT_AVAILABLE`
