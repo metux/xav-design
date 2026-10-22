@@ -360,7 +360,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "token must be nonzero"):
                         validate_event_wire(bytes(wire), order)
 
-    def test_async_error_xids_are_optional_but_error_offset_is_registered(self):
+    def test_async_error_xids_are_optional_but_invalid_error_offset_is_rejected(self):
         for order in ("little", "big"):
             vector = next(v for v in self.vectors if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
             wire = bytearray(encode_event(vector))
