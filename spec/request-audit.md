@@ -157,3 +157,7 @@ The audit found inconsistent coverage for `CreateDescriptorSetLayout`, `CreatePi
 ## CreateCommandPool error-map follow-up — 2026-10-22
 
 The command-pool chapter specified queue-family and flag validation but did not explicitly define device-state errors or guarantee that failed creation leaves the target XID unused. The central error map also grouped pool creation with command-buffer stream errors, obscuring the creation-specific cases. `CreateCommandPool` now has a dedicated mapping for `BadLength`, `BadValue`, `BadIDChoice`, `BadMatch`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED`; the normative chapter and conformance checklist require atomic creation. The static checker guards these requirements. No runtime backend test is claimed.
+
+## AllocateDescriptorSets error-map follow-up — 2026-10-22
+
+The descriptor-set allocation request already had atomic-batch semantics and basic XID mapping, but its error table omitted unavailable/lost-device outcomes and did not fully separate unknown input XIDs from wrong live types/foreign ownership. The normative descriptor-set section, central mapping, and conformance checklist now distinguish `BadValue`, `BadMatch`, `BadIDChoice`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED`; rejection leaves no partial set allocation. Static checker coverage was added. Runtime Vulkan allocation failure injection remains untested.
