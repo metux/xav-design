@@ -620,5 +620,23 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("öffentliche XID bereits durch `DestroyResource` invalidiert", free)
         self.assertIn("auch bei bereits invalidierter Buffer-XID", errors)
 
+    def test_destroyed_buffer_descriptor_slot_release_chain(self):
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+
+        # Destroying the public Buffer XID does not silently repair stale sets.
+        buffer_rules = lifetime.split("## Buffer und Memory", 1)[1].split("## Fehler bei ungültigen Lebenszyklusoperationen", 1)[0]
+        self.assertIn("Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen", buffer_rules)
+        self.assertIn("bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden", buffer_rules)
+        self.assertIn("interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen", buffer_rules)
+
+        # Both release paths are atomic and invalidate executable command buffers.
+        self.assertIn("nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`", lifetime)
+        self.assertIn("nicht-pending `EXECUTABLE`-Command-Buffer, die sie referenzieren, `INVALID`", lifetime)
+        self.assertIn("`DestroyDescriptorPool` oder `FreeDescriptorSets`", errors)
+        self.assertIn("irgendein intern noch lebender Buffer", memory)
+        self.assertIn("Bei Ablehnung bleiben Memory-XID und Allokation unverändert", memory)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
