@@ -16,6 +16,10 @@ XAverius events use XGE. The XGE `extension` field carries the dynamically assig
 
 Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unassigned.
 
+## `ASYNC_ERROR.error_code`
+
+The event field is a zero-based offset from the central [XAverius error registry](errors.md), in the range 0–8 for v0.1. It is not the absolute X11 error code (`first_error + offset`) and is not an X11 core error code. `ASYNC_ERROR` reports diagnostics for failures discovered after an operation was accepted; it does not duplicate a synchronous request rejection. For an accepted `QueueSubmit`, `SUBMISSION_FAILED` and synchronization state carry the terminal failure, while `ASYNC_ERROR` is optional supplementary diagnostic information.
+
 ## `ASYNC_ERROR.origin`
 
 | Value | Symbol |
