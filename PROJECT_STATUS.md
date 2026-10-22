@@ -129,3 +129,7 @@ The request-specific error map now distinguishes malformed fields and XID/type f
 ## CreateDescriptorPool error-map audit — 2026-10-22
 
 The normative descriptor-pool section and central error map now distinguish invalid XIDs/fields, wrong live resource type or foreign ownership, unavailable/lost devices, and backend allocation failure. Rejected creation leaves the Pool XID unallocated. The conformance checklist and static checker cover this contract. CI passed on audit commit `245d473b00acb064b374066944927c12d3abc73b`: [run 39821507592](https://github.com/metux/xav-design/actions/runs/39821507592). No live Vulkan runtime test is possible until a server implementation exists.
+
+## Semaphore/fence creation error-map audit — 2026-10-22
+
+`CreateSemaphore` and `CreateFence` now explicitly distinguish invalid/non-live Device XIDs (`BadValue`), wrong live type or foreign ownership (`BadMatch`), unavailable/lost device (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`), and backend allocation failure (`ALLOCATION_FAILED`). Failed creation leaves the target XID unallocated. The synchronization chapter, error map, conformance checklist and static checker agree. CI passed on audit commit `9b0e59d4241eb6bdbd4cb426a564112f2fa0ad94`: [run 39821711263](https://github.com/metux/xav-design/actions/runs/39821711263). Runtime Vulkan error paths remain untested.
