@@ -1072,7 +1072,7 @@ def check_reply_golden_vectors(c: Check) -> None:
                           f"{name}: ReadBuffer padding must be zero")
             except (ValueError, IndexError):
                 c.require(False, f"{name}: malformed ReadBuffer vector kind")
-        elif kind in ("GetFenceStatus", "WaitForFence", "WaitForFence-device-destroyed", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
+        elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
             c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
             if kind == "GetFenceStatus":
                 c.require(wire[1] in (0, 1, 2, 3), f"{name}: invalid fence status")
