@@ -22,7 +22,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Live-Ressource gehört einem anderen Client, obwohl kein Sharing-Pfad definiert ist | `BadMatch` |
 | Device nicht verfügbar | `DEVICE_UNAVAILABLE` |
 | Device verloren | `DEVICE_LOST` |
-| Logisches Device regulär zerstört, während ein Host-Wait offen ist | `DEVICE_DESTROYED` |
+| Logisches Device regulär zerstört, während ein Host-Wait offen ist (`WaitSemaphores`) | `DEVICE_DESTROYED` als X11-Fehler; `WaitForFence` verwendet stattdessen den normalen Reply-Status `DEVICE_DESTROYED = 4` |
 | Ungültiger Synchronisationszustand | `INVALID_SYNCHRONIZATION_STATE` |
 | Synchroner Transferfehler | `TRANSFER_FAILED` |
 | Synchroner Allokationsfehler | `ALLOCATION_FAILED` |
