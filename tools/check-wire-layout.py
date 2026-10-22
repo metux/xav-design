@@ -275,8 +275,8 @@ def check_reason_code_registry(c: Check) -> None:
               "DEVICE_STATUS_CHANGED.reason_code" in event_registry,
               "event registry must declare shared reason-code namespace for both events")
     issues = read("spec/open-issues.md")
-    c.require(re.search(r"10\. Closed:.*DEVICE_STATUS_CHANGED\.reason_code.*shared append-only", issues, re.S) is not None,
-              "open issue 10 must be closed in favor of the shared reason-code registry")
+    c.require(re.search(r"^## Closed items\s*$[\s\S]*?\*\*Shared device reason codes:\*\*.*DEVICE_LOST\.reason_code.*DEVICE_STATUS_CHANGED\.reason_code.*shared append-only", issues, re.M) is not None,
+              "shared device reason codes must remain documented as closed in the issue ledger")
 
 
 def check_error_registry(c: Check) -> None:
