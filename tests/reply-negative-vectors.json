@@ -575,6 +575,20 @@
       "byte_order": "big",
       "wire_hex": "01001234000000020000000000000001000000080000000000000000000000000000000000000000",
       "violates": "property-type-length"
+    },
+    {
+      "name": "device-type-unassigned-little",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "little",
+      "wire_hex": "0100341209000000000000000000000000000000000000000000000000000000403020100500000002100000032000000030400002000100010000000400000047505530",
+      "violates": "device-type-range"
+    },
+    {
+      "name": "device-type-unassigned-big",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "big",
+      "wire_hex": "0100123400000009000000000000000000000000000000000000000000000000102030400000000500001002000020030040300000010002000000010004000047505530",
+      "violates": "device-type-range"
     }
   ]
 }
