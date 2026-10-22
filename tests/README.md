@@ -8,6 +8,9 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   byte orders. Fixture values for the extension opcode and event sequence are
   deliberately fixed test values; real connections supply their negotiated
   extension opcode and current sequence number.
+- `select-events-vectors.json` covers `SelectEvents` for connection, device and
+  queue scopes in both byte orders. Its tests compare field offsets, scope IDs,
+  scope-specific masks and the subopcode against the normative chapters/registry.
 - `reply-vectors.json` covers fixed fence/semaphore replies, padded ReadBuffer, variable one- and two-record physical-device enumeration,
   data, empty and populated physical-device enumeration, queue-family and memory-property
   records, property success, NOT_SUPPORTED/NOT_AVAILABLE failures, buffer requirements, WriteBuffer success, and
@@ -15,7 +18,13 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 - `test_wire_vectors.py` checks request encoding, declared lengths, padding,
   and malformed request framing.
 - `test_event_vectors.py` checks XGE header and payload encoding, total size,
-  event IDs, reserved bytes, and malformed raw event framing.
+  event IDs, reserved bytes, malformed raw event framing, and compares every
+  encoded field offset/size against the normative event chapters. It also checks
+  the full central error-offset range, including offset 8.
+- `test_select_events_vectors.py` checks golden request bytes, common-header
+  reserved fields, all three scopes, valid mask bits, and the normative layout
+  and subopcode registry. Negative cases cover invalid scope, masks, flags and
+  reserved fields.
 - `test_reply_vectors.py` checks standard reply framing, fixed reply fields,
   variable payload lengths, record boundaries, padding, and malformed headers.
 - `test_reply_spec_coverage.py` derives status sets, memory-count limits/formulas,
@@ -29,7 +38,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 Run all fixture tests from the repository root:
 
 ```sh
-python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
+python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
 python3 tools/check-wire-layout.py
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
