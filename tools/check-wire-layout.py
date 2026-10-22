@@ -210,6 +210,11 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"zurückgestellten Requests.*Timeline-Signal-Entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
               "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
     conformance = read("spec/conformance.md")
+    c.require(
+        "`DestroyFence` und `DestroySemaphore` prüfen die feste Request-Länge vor XID-Auflösung" in conformance
+        and "Nach terminal festgestelltem Wait-Ergebnis blockiert ein noch ausstehender Reply die Zerstörung nicht" in conformance,
+        "conformance: specialized destroy tests must cover error precedence and terminal wait release",
+    )
     c.require(re.search(r"`WriteBuffer`.*zurückgestellter `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
               "conformance: WriteBuffer dependency-cycle case must be covered")
     submissions = read("spec/queue-submission.md")
