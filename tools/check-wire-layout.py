@@ -198,6 +198,9 @@ def check_events(c: Check) -> None:
               "synchronization: pending timeline signal values must be reserved monotonically")
     c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
+    c.require(re.search(r"`SignalSemaphore`.*Gesamtlänge muss exakt 24 Bytes.*`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", sync, re.S) is not None and
+              re.search(r"`SignalSemaphore`: falsche Länge `BadLength`.*`DEVICE_UNAVAILABLE` / `DEVICE_LOST`", errors, re.S) is not None,
+              "SignalSemaphore: request length, XID/ownership, and device-state errors must be explicit")
     c.require(re.search(r"WaitSemaphores` darf den X11-Request-Dispatcher nicht synchron blockieren", sync) is not None,
               "synchronization: host waits must not block later signals or submissions on the same connection")
     c.require(re.search(r"Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter", sync) is not None,
