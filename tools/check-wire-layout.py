@@ -398,7 +398,7 @@ def check_other_numeric_registries(c: Check) -> None:
     c.require(
         "nicht als unveränderlicher Snapshot" in command_recording
         and "aktualisiert atomar die abgeleiteten Buffer-Referenzen" in command_recording
-        and "bei Submission die aktuellen Inhalte" in descriptor_updates,
+        and "bei der späteren Submission die dann aktuellen Descriptor-Inhalte" in descriptor_updates,
         "descriptor updates: command buffers must observe current set contents and refresh indirect references",
     )
     c.require(
