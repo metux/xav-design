@@ -525,5 +525,14 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_write_buffer_detects_deferred_binary_and_timeline_signal_cycles(self):
+        queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        self.assertIn("einen Binary- oder Timeline-Signal-Entry", queue)
+        self.assertIn("bei Binary-Semaphoren muss es sich um dieselbe Semaphore handeln", queue)
+        self.assertIn("Signal-Entries aus zurückgestellten Submissions nicht als angenommene oder verfügbare Signale", memory)
+        self.assertIn("`WriteBuffer` mit `DEPENDENCY_FAILED` beenden", memory)
+        self.assertIn("Der zurückgestellte `QueueSubmit` wird danach normal verarbeitet", queue)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
