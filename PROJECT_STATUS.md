@@ -165,3 +165,7 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## SignalSemaphore error-precedence audit — 2026-10-22
 
 `SignalSemaphore` now explicitly specifies exact request length, unknown-XID versus wrong-live-type/ownership errors, and unavailable/lost-device outcomes before validating the Timeline counter and pending signal reservations. The central mapping, conformance checklist and static checker agree. CI passed on checker commit `b9fa01aafd25dff9a32d1b02c2306b06b6549562`: [run 39828317685](https://github.com/metux/xav-design/actions/runs/39828317685). Runtime behavior remains untested until a server implementation exists.
+
+## Host semaphore wait/signal error audit — 2026-10-22
+
+`SignalSemaphore` and `WaitSemaphores` now have explicit request-specific error precedence across the normative synchronization chapter, central error map, conformance checklist and static checker. CI passed on checker commit `12df57b95b8ffb8067b2f15cd8063a476937b76e`: [run 39828507464](https://github.com/metux/xav-design/actions/runs/39828507464). This remains a spec/static-check pass, not a runtime Vulkan test.
