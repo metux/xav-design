@@ -125,7 +125,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Atomare Create-, Update- und Submit-Operationen
 - Überlauf- und Grenzfälle bei Buffer-Bereichen
 - `BindBufferMemory`: ungültige XIDs, falscher Typ/Ownership, bereits gebundener Buffer, Alignment, Memory-Type und Bounds werden jeweils dem festgelegten Fehlerpfad zugeordnet; bei Ablehnung bleibt der Buffer ungebunden
-- `UpdateDescriptorSets`: Count null ergibt `BadValue`, Payload-Längenfehler `BadLength`, inkompatible Ressourcen `BadMatch`, Pending-Use `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung keine Teiländerung
+- `UpdateDescriptorSets`: Count null, doppelte Writes desselben Slots, `descriptor_type = 0` und nicht zugewiesene Descriptor-Typ-Werte ergeben `BadValue`; Payload-Längenfehler `BadLength`; registrierter, aber zum Binding inkompatibler Descriptor-Typ sowie inkompatible Ressourcen ergeben `BadMatch`; Pending-Use ergibt `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung keine Teiländerung
 - `ResetFence`: nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden; andere Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`, verlorenes Device `DEVICE_LOST`, Ablehnung erhält den Zustand
 - Unbekannte/nicht-live XAverius-XIDs ergeben `BadValue`, falsche live Ressourcentypen und Cross-Client-/Cross-Device-Ownership `BadMatch`, ungültige Atoms `BadAtom` und belegte Create-XIDs `BadIDChoice`; dies gilt auch für `DestroyResource`, `BindBufferMemory`, `UpdateDescriptorSets`, `QueueSubmit` und `ResetFence`
 - Memory-Alignment und Memory-Type-Kompatibilität
