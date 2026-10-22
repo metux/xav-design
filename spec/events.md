@@ -76,7 +76,7 @@ Status:
 Gesamtlänge: 48 Bytes; XGE `length = 4`.
 
 - Offset 32: Device-XID
-- Offset 36: `CARD32 heap_index`; `UINT32_MAX` bedeutet kein bestimmter Heap
+- Offset 36: `CARD32 heap_index`; `UINT32_MAX` bedeutet kein bestimmter Heap. Jeder andere Wert MUSS kleiner als `memory_heap_count` aus `GetPhysicalDeviceMemoryProperties` des physischen Devices sein, auf dem das logische Device basiert; andernfalls darf dieses Event nicht gesendet werden.
 - Offset 40: `CARD32 pressure_level`
 - Offset 44: `CARD32 reserved = 0`
 
