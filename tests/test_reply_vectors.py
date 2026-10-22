@@ -45,7 +45,11 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     elif kind.startswith("GetPhysicalDeviceProperty-success"):
         if int.from_bytes(wire[8:12], byte_order) != 0: errors.append("property-success-status")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
+        property_type = int.from_bytes(wire[12:16], byte_order)
         value_length = int.from_bytes(wire[16:20], byte_order)
+        fixed_widths = {1: 4, 2: 8, 3: 4}
+        if property_type not in range(1, 8) or (property_type in fixed_widths and value_length != fixed_widths[property_type]) or (property_type == 6 and value_length % 4) or (property_type == 7 and value_length % 8):
+            errors.append("property-type-length")
         expected_words = (value_length + 3) // 4
         if declared != expected_words or len(wire) != 32 + expected_words * 4: errors.append("property-payload-length")
         if len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length): errors.append("property-padding-zero")
