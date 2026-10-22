@@ -111,6 +111,8 @@ Gesamtlänge: 56 Bytes; XGE `length = 6`.
 - Offset 44: `CARD32 reserved = 0`
 - Offset 48: `CARD64 submission_token`, der vom Client in `QueueSubmit` angegebene Token. Er ist ungleich null und innerhalb der zugehörigen X11-Client-Verbindung eindeutig; die Regeln aus [QueueSubmit](queue-submission.md) gelten unverändert.
 
+Die Felder `queue_family_index` und `queue_index` bezeichnen exakt die Queue, an die diese Submission mit `QueueSubmit` übergeben wurde. Sie sind keine globalen Queue-IDs und müssen eine für das angegebene logische Device tatsächlich erstellte Queue identifizieren. Er ist ungleich null und innerhalb der zugehörigen X11-Client-Verbindung eindeutig; die Regeln aus [QueueSubmit](queue-submission.md) gelten unverändert.
+
 ## `SUBMISSION_FAILED`
 
 Gesamtlänge: 56 Bytes; XGE `length = 6`.
