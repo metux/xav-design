@@ -198,6 +198,15 @@ class SelectEventsContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "packet size"):
             decode_select_events(bytes(valid) + bytes(4), "little")
 
+        semantic_bad = []
+        packet = bytearray(valid); struct.pack_into("<I", packet, 8, 3); semantic_bad.append(("scope", packet))
+        packet = bytearray(valid); struct.pack_into("<I", packet, 24, 4); semantic_bad.append(("mask", packet))
+        packet = bytearray(valid); struct.pack_into("<I", packet, 12, 0); semantic_bad.append(("device XID", packet))
+        packet = bytearray(valid); struct.pack_into("<I", packet, 16, 0xFFFFFFFF); semantic_bad.append(("queue family", packet))
+        for label, packet in semantic_bad:
+            with self.subTest(label=label), self.assertRaises(ValueError):
+                decode_select_events(bytes(packet), "little")
+
     def test_raw_wire_decoder_accepts_both_byte_orders_and_zero_mask(self):
         for order in ("little", "big"):
             with self.subTest(byte_order=order):
