@@ -240,5 +240,16 @@ class ReplySpecCoverageTests(unittest.TestCase):
                 self.assertNotEqual(int.from_bytes(wire[16:20], order), 4)
 
 
+    def test_device_type_registry_rejects_unassigned_values(self):
+        registry = (ROOT / "registries/device-types.md").read_text(encoding="utf-8")
+        self.assertIn("Values 5 and above are unassigned in v0.1", registry)
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        for order in ("little", "big"):
+            cases = [v for v in fixture["vectors"] if v["violates"] == "device-type-range" and v["byte_order"] == order]
+            self.assertTrue(cases, f"unassigned device-type negative vector missing in {order}-endian")
+            for case in cases:
+                wire = bytes.fromhex(case["wire_hex"])
+                self.assertGreaterEqual(int.from_bytes(wire[36:40], order), 5)
+
 if __name__ == "__main__":
     unittest.main()
