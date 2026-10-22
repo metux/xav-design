@@ -46,6 +46,19 @@ python3 tools/check-wire-layout.py
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
+## Live X11/XGE interoperability (implementation prerequisite)
+
+The fixture suite above is intentionally offline. Once a XAverius server and client exist, run a separate live test against an X server that actually supports XGE (Xvfb is suitable only when the XAverius server extension is loaded into that server):
+
+- Discover the XAverius major opcode with `QueryExtension`; do not hard-code it. Negotiate XGE with `GEQueryVersion` and verify that versions below 1.0 or failed negotiation prevent device creation and `SelectEvents` as specified.
+- Send `SelectEvents` for each supported scope, then verify on the socket that the emitted packet has `response_type = GenericEvent (35)`, `extension` equal to the negotiated XAverius major opcode, the registered static `evtype`, exact `length` and total byte count, and zero reserved header/payload fields.
+- Exercise every event type with known field values and decode the received bytes using the connection's byte order. In particular check the 60-byte `ASYNC_ERROR`, all five 48-byte device events, and both 56-byte terminal submission events.
+- Check connection/device/queue mask isolation, zero-mask deselection, replacement rather than accumulation, failed-`SelectEvents` atomicity, unmaskable events, and that event delivery is suppressed after successful `DestroyDevice` while already queued events remain untouched.
+- Race terminal submission completion against successful `SelectEvents` replacement and `DestroyDevice`; repeat enough times to expose duplicate terminal events, delivery after destruction, or use of a stale connection/resource identity.
+- Run with at least one little-endian and one big-endian client if available; otherwise record the missing byte-order coverage as an explicit limitation.
+
+Capture the raw event bytes and the server/Xlib event-decoder result for each case. Do not mark this item complete based solely on fixture tests or on a client library's decoded event structure: the raw XGE header and framing must be checked independently.
+
 A passing fixture suite proves consistency between the reference encoders and
 the committed expected bytes. It does not establish interoperability with an
 unimplemented client or server; a future implementation should consume these
