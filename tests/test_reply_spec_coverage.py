@@ -228,5 +228,17 @@ class ReplySpecCoverageTests(unittest.TestCase):
         self.assertTrue({1, 4, 5, 8}.issubset(sizes), "ReadBuffer alignment boundary samples missing")
 
 
+    def test_property_type_width_negative_vectors_cover_both_byte_orders(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        vectors = fixture["vectors"]
+        for order in ("little", "big"):
+            cases = [v for v in vectors if v["violates"] == "property-type-length" and v["byte_order"] == order]
+            self.assertTrue(cases, f"property type/length mismatch vector missing in {order}-endian")
+            for case in cases:
+                wire = bytes.fromhex(case["wire_hex"])
+                self.assertEqual(int.from_bytes(wire[12:16], order), 1)
+                self.assertNotEqual(int.from_bytes(wire[16:20], order), 4)
+
+
 if __name__ == "__main__":
     unittest.main()
