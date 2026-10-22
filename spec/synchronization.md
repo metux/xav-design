@@ -157,6 +157,8 @@ Request: exakt 24 Bytes; eine andere Gesamtlänge ergibt `BadLength`.
 - Offset 12: Fence-XID
 - Offset 16: `CARD64 timeout_ns`
 
+Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergeben `BadMatch`. Diese Prüfungen erfolgen vor dem Anlegen einer Wait-Registrierung.
+
 Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status`; Offsets 12–31 sind null und `reply.length = 0`.
 
 Reply-Status:
