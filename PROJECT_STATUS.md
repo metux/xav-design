@@ -157,3 +157,7 @@ Clarified `UpdateDescriptorSets` error semantics: zero/unassigned descriptor-typ
 ## Descriptor-set contents and command-buffer references — 2026-10-22
 
 Descriptor-set updates now have explicit reference-graph semantics across chapters: command buffers reference the set object, not a frozen descriptor snapshot; successful updates atomically refresh indirect Buffer references for all non-pending command buffers that use the set. An executable command buffer observes current descriptor contents when submitted and is not invalidated by the update alone. The conformance checklist and static checker cover the rule. CI passed in [run 39826027013](https://github.com/metux/xav-design/actions/runs/39826027013), including 2,225 static checks and the golden wire-vector tests.
+
+## QueueSubmit semaphore-entry validation — 2026-10-22
+
+Duplicate wait/signal semaphore entries and using the same semaphore in both arrays now have explicit `BadValue` mappings. Conformance coverage checks Binary semaphore values, Timeline signal reservations, and that rejected submissions reserve neither the token nor synchronization slots. Static checker guards are in place. CI passed on validation commit `5e6fb4d2f41942ef60413856a758364069684a7d`: [run 39828130540](https://github.com/metux/xav-design/actions/runs/39828130540). Runtime backend behavior remains untested until an XAverius server implementation exists.
