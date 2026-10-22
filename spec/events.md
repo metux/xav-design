@@ -37,6 +37,8 @@ Origin-Werte:
 - 5: `ORIGIN_FENCE`
 - 6: `ORIGIN_DEVICE`
 
+`error_code` enthält den numerischen **Offset** aus der zentralen XAverius-Fehler-Registry, nicht den absoluten X11-Fehlercode (`first_error + offset`) und keinen Core-X11-Fehlercode. `ASYNC_ERROR` ist eine Diagnose für einen Fehler nach Annahme einer Operation; ein vor Annahme erkannter Fehler wird synchron als X11-Fehler oder ausdrücklich definierter normaler Reply gemeldet und darf nicht zusätzlich als `ASYNC_ERROR` für dieselbe Ablehnung ausgegeben werden. Insbesondere darf ein angenommener `QueueSubmit` nach einem Ausführungsfehler keinen verspäteten X11-Request-Fehler erzeugen: sein terminaler Ausgang wird über `SUBMISSION_FAILED` und Synchronisationszustände gemeldet; `ASYNC_ERROR` darf ergänzende Diagnose liefern.
+
 ## `DEVICE_LOST`
 
 Gesamtlänge: 48 Bytes; XGE `length = 4`.
