@@ -125,6 +125,15 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`
 - Jeder Fehler lässt das Descriptor Set Layout unangelegt; Teilresultate sind unzulässig.
 
+### `CreateCommandPool`
+
+- Falsche Request-Länge: `BadLength`
+- Unbekannte Pool-Flags oder nicht-null reservierte Bits: `BadValue`; ungültige/belegte Pool-XID: `BadIDChoice`
+- Unbekannte/nicht-live Device-XID: `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership: `BadMatch`
+- Queue-Family-Index außerhalb des Device-Profils: `BadValue`
+- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler: `ALLOCATION_FAILED`
+- Bei Ablehnung bleibt die Pool-XID unangelegt.
+
 ### `CommandPool` und `CommandBufferData`
 
 - Falsche Request-Länge oder unvollständiger Entry: `BadLength`
