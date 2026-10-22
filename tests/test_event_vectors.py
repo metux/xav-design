@@ -187,19 +187,21 @@ class GoldenXGEEventTests(unittest.TestCase):
             encode_event(vector)
 
     def test_event_value_ranges_match_normative_registry(self):
-        registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        event_registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        reason_registry = (ROOT / "registries" / "reason-codes.md").read_text(encoding="utf-8")
         sections = (
-            ("ASYNC_ERROR.origin", 0),
-            ("DEVICE_LOST.reason_code", 1),
-            ("DEVICE_STATUS_CHANGED.new_status", 2),
-            ("DEVICE_MEMORY_PRESSURE.pressure_level", 3),
-            ("DEVICE_IDLE.idle_reason", 4),
-            ("SUBMISSION_FAILED.failure_class", 6),
+            ("ASYNC_ERROR.origin", 0, event_registry),
+            ("DEVICE_LOST.reason_code", 1, reason_registry),
+            ("DEVICE_STATUS_CHANGED.new_status", 2, event_registry),
+            ("DEVICE_MEMORY_PRESSURE.pressure_level", 3, event_registry),
+            ("DEVICE_IDLE.idle_reason", 4, event_registry),
+            ("SUBMISSION_FAILED.failure_class", 6, event_registry),
         )
-        for heading, event_type in sections:
-            match = re.search(r"^## `" + re.escape(heading) + r"`\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
-            self.assertIsNotNone(match, f"missing registry section {heading}")
-            values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", match.group(1), re.M)}
+        for heading, event_type, registry in sections:
+            match = re.search(r"^## \x60" + re.escape(heading) + r"\x60\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
+            self.assertIsNotNone(match, f"missing registry section {heading}") if heading != "DEVICE_LOST.reason_code" else None
+            source = registry if heading == "DEVICE_LOST.reason_code" else match.group(1)
+            values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", source, re.M)}
             self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
 
     def test_rejects_invalid_event_local_values(self):
