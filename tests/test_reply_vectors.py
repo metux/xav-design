@@ -37,7 +37,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     elif kind in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
         status = int.from_bytes(wire[8:12], byte_order)
         if status not in (0, 1): errors.append("wait-status")
-        if status != (1 if kind.endswith("timeout") else 0): errors.append("wait-status-match")
+        if status in (0, 1) and status != (1 if kind.endswith("timeout") else 0): errors.append("wait-status-match")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind == "WaitForFence":
         if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3): errors.append("wait-for-fence-status")
