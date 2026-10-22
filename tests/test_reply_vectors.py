@@ -81,6 +81,13 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
                 break
             if int.from_bytes(wire[pos + 4:pos + 8], byte_order) not in range(5):
                 errors.append("device-type-range")
+            name_bytes = wire[pos + 32:pos + 32 + name_length]
+            try:
+                decoded_name = name_bytes.decode("utf-8", errors="strict")
+                if "\\x00" in decoded_name:
+                    errors.append("device-name-no-nul")
+            except UnicodeDecodeError:
+                errors.append("device-name-utf8")
             if wire[pos + 30:pos + 32] != bytes(2):
                 errors.append("device-record-reserved")
             pad_start = pos + 32 + name_length
