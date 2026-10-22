@@ -269,6 +269,18 @@ class GoldenXGEEventTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "error offset"):
                     validate_event_wire(bytes(wire), order)
 
+    def test_async_error_codes_match_central_error_registry(self):
+        registry = (ROOT / "registries" / "errors.md").read_text(encoding="utf-8")
+        offsets = {
+            int(value)
+            for value in re.findall(r"^\|\s*(\d+)\s*\|\s*\x60[A-Z_]+\x60\s*\|\s*$", registry, re.M)
+        }
+        self.assertEqual(offsets, set(range(8)))
+        for vector in self.vectors:
+            if vector["event"] == "ASYNC_ERROR":
+                with self.subTest(vector=vector["name"]):
+                    self.assertIn(vector["fields"]["error_code"], offsets)
+
     def test_rejects_nonzero_reserved_field(self):
         import copy
         vector = copy.deepcopy(next(v for v in self.vectors if v["event"] == "SUBMISSION_COMPLETE"))
