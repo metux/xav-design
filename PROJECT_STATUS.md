@@ -141,3 +141,8 @@ The normative shader/pipeline chapter, central error map and conformance checkli
 ## Descriptor-set allocation/free audit — 2026-10-22
 
 `AllocateDescriptorSets` now explicitly maps unknown input XIDs, wrong live types/ownership, device unavailable/lost, and pool/backend allocation failures, while guaranteeing no partial set allocation. `FreeDescriptorSets` now guarantees all-or-nothing batch behavior, defines the same device-state distinction, and rejects pending or recording references without freeing any requested set. The central error map, conformance checklist, request audit, and static checker were updated. CI passed on audit commit `b37527d303f3dfb9d8d7146935363379c8a4f48d`: [run 39823296844](https://github.com/metux/xav-design/actions/runs/39823296844). Runtime Vulkan backend failure injection remains untested.
+
+
+## Command-buffer contract audit — 2026-10-22
+
+The current pass tightened the central error mapping and conformance coverage for `CommandBufferData` and `ResetCommandBuffer`: the five legal `CREATE`/`FINAL`/`ABORT` combinations, target-XID versus input-XID precedence, malformed entry lengths, exact parent-pool validation including `ABORT`, and atomic failed-chunk recovery are now cross-checked by the static checker. Failed `FINAL` preserves `RECORDING`; failed `CREATE` leaves no public buffer or pool-child entry; rejected reset preserves state and references. This remains a specification/static-check pass, not a live server test.
