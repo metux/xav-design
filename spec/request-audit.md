@@ -194,3 +194,7 @@ A focused audit of the `QueueSubmit` path found that duplicate wait/signal entri
 ## Host semaphore wait/signal error audit — 2026-10-22
 
 `SignalSemaphore` now explicitly maps request length, XID/ownership, and device-state errors before validating Timeline counter/reservation rules. `WaitSemaphores` now explicitly maps its exact count-derived length, zero count, duplicate XIDs, invalid mode, XID/type/ownership and cross-device errors, and distinguishes Device Loss from `DestroyDevice` termination. The central error map, conformance checklist and static checker cover the same behavior. CI passed in [run 39828507464](https://github.com/metux/xav-design/actions/runs/39828507464). Runtime backend behavior remains untested.
+
+## WaitForFence request-validation audit — 2026-10-22
+
+`WaitForFence` now explicitly specifies its fixed 24-byte request length, XID/type/ownership checks before wait registration, and the normal reply statuses for timeout, execution failure, device loss, and device destruction. The central error map, conformance checklist and static checker were aligned. An initial checker run exposed that the older ABI guard required the literal phrase “Request: 24 Bytes”; the normative wording and assertion were aligned, and CI passed in [run 39828776699](https://github.com/metux/xav-design/actions/runs/39828776699). No runtime server behavior is claimed.
