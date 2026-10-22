@@ -287,7 +287,7 @@ class GoldenXGEEventTests(unittest.TestCase):
             int(value)
             for value in re.findall(r"^\|\s*(\d+)\s*\|\s*\x60[A-Z_]+\x60\s*\|\s*$", registry, re.M)
         }
-        self.assertEqual(offsets, set(range(8)))
+        self.assertEqual(offsets, set(range(9)))
         for vector in self.vectors:
             if vector["event"] == "ASYNC_ERROR":
                 with self.subTest(vector=vector["name"]):
