@@ -191,6 +191,8 @@ Die Länge muss positiv sein. Der Buffer muss gebunden sein, `TRANSFER_SRC` besi
 
 Der Reply enthält nach dem 32-Byte-Header die gelesenen Bytes ab Offset 32, mit Null-Padding auf vier Bytes. `reply.length = ceil(data_length / 4)`.
 
-Der Reply darf erst gesendet werden, wenn die angeforderten Daten bereit sind und relevante vorherige GPU-Schreibzugriffe sowie erforderliche Host-Visibility- und Cache-Operationen abgeschlossen sind.
+Der Reply darf erst gesendet werden, wenn die angeforderten Daten bereit sind und relevante vorherige GPU-Schreibzugriffe sowie erforderliche Host-Visibility- und Cache-Operationen abgeschlossen sind. Als relevant gelten alle vor diesem `ReadBuffer` angenommenen Submissions desselben logischen Devices, die den angeforderten Bereich direkt oder über eine andere gebundene Ressource tatsächlich schreiben können. Der Server muss ihre Schreibzugriffe auf diesen Bereich vor dem Lesen ordnen; bloße Queue-Reihenfolge auf einer einzelnen Queue reicht nicht aus, wenn andere Queues beteiligt sind.
 
-Eine konservative Implementierung darf für v0.1 das Device vollständig synchronisieren, wenn keine feinere Abhängigkeitsverfolgung vorhanden ist.
+Ein früherer Submission-Fehler verhindert `ReadBuffer` nicht allein, solange das Device weiterhin verwendbar ist. Der Reply enthält dann die tatsächlich lesbaren Bytes, aber XAverius garantiert nicht, dass ein Bereich, dessen beabsichtigter Schreibzugriff fehlgeschlagen ist, die vom fehlgeschlagenen Shader oder Transfer erwarteten Daten enthält. Der Server darf aus einem fehlgeschlagenen Submission-Status keine erfolgreiche Ausführung oder Datenintegrität ableiten. Ist das logische Device verloren, muss `ReadBuffer` mit `DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden.
+
+Eine konservative Implementierung darf für v0.1 das Device vollständig synchronisieren, wenn keine feinere Abhängigkeitsverfolgung vorhanden ist. Sie muss dabei weiterhin die oben genannten Regeln für Submission-Fehler und Device Loss einhalten.
