@@ -382,7 +382,7 @@ def check_other_numeric_registries(c: Check) -> None:
     c.require(
         "nicht zugewiesene Werte ergeben `BadValue`" in descriptor_updates
         and "registrierter Descriptor-Typ" in descriptor_updates
-        and "doppelte Writes desselben Descriptor-Slots" in descriptor_updates,
+        and "Mehrere Writes desselben Descriptor-Slots" in descriptor_updates,
         "UpdateDescriptorSets: normative text must distinguish invalid types, incompatible registered types, and duplicate slots",
     )
     c.require(
