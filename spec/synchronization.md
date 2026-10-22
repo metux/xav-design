@@ -40,7 +40,7 @@ Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
 Request: 16 Bytes; Device-XID bei Offset 8, Semaphore-XID bei Offset 12.
 
-Nur für Timeline-Semaphoren.
+Nur für Timeline-Semaphoren. Bei einem bereits als verloren erkannten logischen Device wird der Request mit `DEVICE_LOST` abgewiesen: Das Wire-Reply besitzt kein Statusfeld, mit dem ein Fehler sicher von einem Counter-Wert unterschieden werden könnte. Der Server darf keinen vermeintlich aktuellen Counter als erfolgreichen Reply ausgeben.
 
 Reply:
 
@@ -169,4 +169,6 @@ Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDIN
 
 Eine Fence darf nur zerstört werden, wenn sie nicht `PENDING` ist. Der Destroy-Request wird andernfalls mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen und lässt die XID sowie den Fence-Zustand unverändert. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten dürfen bis zum Ende noch möglicher Serverzugriffe erhalten bleiben. Eine Fence im Zustand `FAILED` darf zerstört werden.
 
-Bei Device Loss werden Fences aus nicht-terminalen Submissions nach `FAILED` überführt. Sie dürfen anschließend normal zerstört werden; die Device-weite Kaskadeninvalidierung bleibt unabhängig davon zulässig.
+Bei Device Loss werden Fences aus nicht-terminalen Submissions nach `FAILED` überführt. Fences, die keiner betroffenen nicht-terminalen Submission zugeordnet sind, behalten ihren letzten normativen Zustand; insbesondere wird ein nicht eingereichter Fence nicht künstlich als fehlgeschlagen markiert. `GetFenceStatus` bleibt nach Device Loss als reine Zustandsabfrage zulässig und liefert den gespeicherten Zustand (`FAILED` für die von Device Loss fehlgeschlagenen Submissions). `WaitForFence` liefert dagegen `DEVICE_LOST`, sobald das Device als verloren erkannt wurde, auch wenn der Fence bereits `FAILED` ist; dadurch wird kein blockierender Wait auf einem verlorenen Device fortgesetzt. `ResetFence` und neue Arbeit bleiben mit `DEVICE_LOST` abgewiesen. Fences im Zustand `FAILED` dürfen anschließend normal zerstört werden; die Device-weite Kaskadeninvalidierung bleibt unabhängig davon zulässig.
+
+Nach Device Loss werden keine ausstehenden Semaphore-Signal-/Wait-Operationen weiter als erfolgreich behandelt. Timeline-Counter-Abfragen über `GetSemaphoreCounterValue`, Host-Signale über `SignalSemaphore` und neue `QueueSubmit`-Operationen schlagen mit `DEVICE_LOST` fehl. `WaitSemaphores` wird mit `DEVICE_LOST` beendet, statt weiter auf einen Counter zu warten oder `TIMEOUT` zurückzugeben. Ein Semaphore-Zustand oder Counter darf nicht als erfolgreich fortgeschritten ausgegeben werden, nur weil eine Submission nach Device Loss intern terminalisiert wurde. Die Semaphore- und Fence-Objekte bleiben intern erhalten, solange Backend-Zugriffe oder serverseitige Operationen noch darauf verweisen; öffentliche XIDs dürfen bei der Device-weiten Kaskadeninvalidierung sofort ungültig werden.
