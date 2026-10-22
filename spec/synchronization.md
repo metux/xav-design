@@ -139,7 +139,7 @@ Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourc
 
 ## `GetFenceStatus`
 
-Request: 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12.
+Request: exakt 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12. Andere Längen ergeben `BadLength`. Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergeben `BadMatch`. Die Abfrage gibt den serverseitig gespeicherten Fence-Zustand zurück, auch nach Device Loss.
 
 Reply: 32 Bytes.
 
