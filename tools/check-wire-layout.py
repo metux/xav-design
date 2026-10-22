@@ -512,6 +512,20 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
     c.require(
+        "`DestroyCommandPool`: falsche Länge `BadLength`" in errors
+        and "mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "Ablehnung ist atomar" in errors,
+        "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
+    )
+    c.require(
+        "`DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "`DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "solange die Fence einer nicht-terminalen Submission zugeordnet ist" in errors
+        and "solange Queue- oder Host-Operationen die Semaphore pending verwenden" in errors,
+        "error mapping: fence/semaphore destruction must preserve pending-use guards",
+    )
+
+    c.require(
         "`DestroyDescriptorPool`: falsche Request-Länge `BadLength`" in errors
         and "unbekannte/nicht-live Pool-XID `BadValue`" in errors
         and "falscher live Ressourcentyp oder fremde Client-/Device-Ownership `BadMatch`" in errors
