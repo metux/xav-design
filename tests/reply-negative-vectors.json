@@ -143,10 +143,10 @@
       "violates": "reserved-zero"
     },
     {
-      "name": "wait-for-fence-invalid-status-little",
+      "name": "wait-for-fence-out-of-range-status-little",
       "kind": "WaitForFence",
       "byte_order": "little",
-      "wire_hex": "0100341200000000040000000000000000000000000000000000000000000000",
+      "wire_hex": "0100341200000000050000000000000000000000000000000000000000000000",
       "violates": "wait-for-fence-status"
     },
     {
@@ -171,10 +171,10 @@
       "violates": "memory-heap-count-range"
     },
     {
-      "name": "wait-for-fence-invalid-status-big",
+      "name": "wait-for-fence-out-of-range-status-big",
       "kind": "WaitForFence",
       "byte_order": "big",
-      "wire_hex": "0100123400000000000000040000000000000000000000000000000000000000",
+      "wire_hex": "0100123400000000000000050000000000000000000000000000000000000000",
       "violates": "wait-for-fence-status"
     },
     {
