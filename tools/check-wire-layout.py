@@ -376,6 +376,22 @@ def check_other_numeric_registries(c: Check) -> None:
               "descriptor-type registry must define reserved 0 and STORAGE_BUFFER 1")
     c.require(len({symbol for _value, symbol in descriptor_rows}) == len(descriptor_rows),
               "descriptor-type registry contains duplicate symbols")
+    descriptor_updates = read("spec/shaders-pipelines.md")
+    descriptor_errors = read("spec/errors.md")
+    descriptor_conformance = read("spec/conformance.md")
+    c.require(
+        "nicht zugewiesene Werte ergeben `BadValue`" in descriptor_updates
+        and "registrierter Descriptor-Typ" in descriptor_updates
+        and "doppelte Writes desselben Slots" in descriptor_updates,
+        "UpdateDescriptorSets: normative text must distinguish invalid types, incompatible registered types, and duplicate slots",
+    )
+    c.require(
+        "nicht zugewiesener `descriptor_type`" in descriptor_errors
+        and "registrierter Descriptor-Typ inkompatibel" in descriptor_errors
+        and "doppelte Writes desselben Slots" in descriptor_errors
+        and "`descriptor_type = 0` und nicht zugewiesene Descriptor-Typ-Werte ergeben `BadValue`" in descriptor_conformance,
+        "UpdateDescriptorSets: error map and conformance cases must agree on descriptor type validation",
+    )
 
     device_rows = [
         (int(value), symbol)
