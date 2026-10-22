@@ -479,7 +479,7 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         re.search(
-            r"`DestroyResource` accepts only Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout and Pipeline;.*?Fence and Semaphore.*?`DestroyFence`.*?`DestroySemaphore`",
+            r"`DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline;.*?Fence und Semaphore ausschließlich über `DestroyFence` beziehungsweise `DestroySemaphore` zerstört",
             conformance, re.S,
         ) is not None,
         "conformance: generic and specialized destruction paths must be explicit",
