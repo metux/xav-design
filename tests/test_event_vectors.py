@@ -193,6 +193,25 @@ class GoldenXGEEventTests(unittest.TestCase):
                 self.assertEqual(int(length.group(1)), max(offset + size for offset, size in expected))
                 self.assertEqual(int(length.group(2)), (int(length.group(1)) - 32) // 4)
 
+    def test_event_ids_and_vector_field_sets_match_registry(self):
+        registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        section = re.search(r"^## Event type IDs\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
+        self.assertIsNotNone(section)
+        rows = {
+            name: int(value)
+            for value, name in re.findall(r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|", section.group(1), re.M)
+        }
+        self.assertEqual(rows, EVENT_IDS)
+        for vector in self.vectors:
+            with self.subTest(vector=vector["name"]):
+                event = vector["event"]
+                self.assertEqual(vector["event_type"], EVENT_IDS[event])
+                self.assertEqual(set(vector["fields"]), set(EVENT_FIELDS[event]))
+                self.assertEqual(vector["total_bytes"], max(
+                    offset + size for offset, size in EVENT_FIELDS[event].values()
+                ))
+                self.assertEqual(vector["xge_length"], (vector["total_bytes"] - 32) // 4)
+
     def test_each_event_has_both_byte_orders(self):
         seen = {}
         for vector in self.vectors:
