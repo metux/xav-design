@@ -536,5 +536,15 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Solange er zurückgestellt ist, gilt er nicht als angenommen", queue)
         self.assertIn("vollständige Validierung und atomare Zustandsübernahme erfolgen erst nach Abschluss des `WriteBuffer`", memory)
 
+    def test_device_loss_terminalization_preserves_sync_and_backend_lifetime(self):
+        queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
+        sync = (ROOT / "spec" / "synchronization.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        self.assertIn("Ein Device-Loss-Übergang muss alle zu diesem Zeitpunkt noch nicht-terminalen Submissions auf `FAILED/DEVICE_LOST` setzen", queue)
+        self.assertIn("darf ein späterer Erfolg weder `SIGNALED` setzen noch den Timeline-Counter erhöhen", queue)
+        self.assertIn("Kann der Server nach einem angenommenen, fehlgeschlagenen Backend-Vorgang nicht sicher nachweisen, ob eine Binary-Semaphore-Signal- oder Wait-Operation wirksam wurde, muss er die Binary-Semaphore als `UNTRUSTED` markieren.", sync)
+        self.assertIn("Interne Ressourcen und zugehörige Speicher werden in Quarantäne gehalten", lifetime)
+        self.assertIn("müssen trotzdem genau einmal terminalisiert werden", lifetime)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
