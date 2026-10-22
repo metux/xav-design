@@ -491,6 +491,10 @@ def check_request_document_coverage(c: Check) -> None:
         "resource lifetime: stale descriptor slots must retain Buffer and bound Memory",
     )
     c.require(
+        "`DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client` `BadMatch`" in errors,
+        "error mapping: disallowed DestroyResource types and foreign ownership must map to BadMatch",
+    )
+    c.require(
         "`FreeDescriptorSets`: falsche Länge `BadLength`" in errors
         and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors,
         "error mapping: FreeDescriptorSets must retain atomic pending/recording rejection",
