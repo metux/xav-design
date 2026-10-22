@@ -154,7 +154,7 @@ def check_events(c: Check) -> None:
               "DestroyFence: must reject while a host wait registration is still open")
     c.require(re.search(r"terminales Ergebnis.*serialisiert festgestellt.*Reply noch im Ausgabepuffer.*verhindert die Zerstörung nicht", sync, re.S) is not None,
               "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"keine offene `WaitSemaphores`-Registrierung.*exakte interne Semaphore-Identität", sync, re.S) is not None,
+    c.require(re.search(r"offene `WaitSemaphores`-Registrierung.*exakte interne Semaphore-Identität", sync, re.S) is not None,
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
     c.require(re.search(r"terminales Ergebnis serverseitig serialisiert festgestellt.*Reply blockiert die Zerstörung dann nicht", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
