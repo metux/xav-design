@@ -153,3 +153,7 @@ The command-buffer audit passes CI on branch `docs/restructure-2026-10-21`: [run
 ## Descriptor update validation audit — 2026-10-22
 
 Clarified `UpdateDescriptorSets` error semantics: zero/unassigned descriptor-type values and duplicate writes to one slot yield `BadValue`; a registered descriptor type incompatible with a binding yields `BadMatch`. The normative request chapter, central error map, conformance checklist, and static checker now agree. CI passed at [run 39825499901](https://github.com/metux/xav-design/actions/runs/39825499901), including 2,223 static checks and the golden wire-vector tests.
+
+## Descriptor-set contents and command-buffer references — 2026-10-22
+
+Descriptor-set updates now have explicit reference-graph semantics across chapters: command buffers reference the set object, not a frozen descriptor snapshot; successful updates atomically refresh indirect Buffer references for all non-pending command buffers that use the set. An executable command buffer observes current descriptor contents when submitted and is not invalidated by the update alone. The conformance checklist and static checker cover the rule; the corresponding CI run is being verified.
