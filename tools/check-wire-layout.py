@@ -140,6 +140,20 @@ def check_events(c: Check) -> None:
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
     c.require(re.search(r"interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
+    c.require(re.search(r"`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar.*unabhängig von `SelectEvents`", event_doc, re.S) is not None,
+              "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
+    c.require(re.search(r"`DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt", event_doc) is not None,
+              "XGE delivery: DEVICE_STATUS_CHANGED must use the connection mask only")
+    c.require(re.search(r"Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist", event_doc) is not None,
+              "XGE delivery: submission event mask must be sampled at terminal outcome")
+    c.require(re.search(r"Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden", event_doc) is not None,
+              "XGE delivery: a submission cannot deliver both terminal events")
+    c.require(re.search(r"Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen", event_doc) is not None,
+              "XGE delivery: send failure must not block backend work or duplicate terminal events")
+    c.require(re.search(r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", event_doc) is not None,
+              "SelectEvents: failed validation must preserve the previous event selection")
+    c.require(re.search(r"Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen", event_doc) is not None,
+              "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"Submission erhält intern genau einen terminalen Ausgang.*DestroyDevice.*unterdrückt", submissions, re.S) is not None,
               "QueueSubmit: terminal event delivery must respect DestroyDevice lifecycle suppression")
