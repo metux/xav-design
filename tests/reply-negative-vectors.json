@@ -589,6 +589,34 @@
       "byte_order": "big",
       "wire_hex": "0100123400000009000000000000000000000000000000000000000000000000102030400000000500001002000020030040300000010002000000010004000047505530",
       "violates": "device-type-range"
+    },
+    {
+      "name": "device-name-invalid-utf8-little",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "little",
+      "wire_hex": "01003412090000000000000000000000000000000000000000000000000000004030201002000000021000000320000000304000020001000100000004000000ff505530",
+      "violates": "device-name-utf8"
+    },
+    {
+      "name": "device-name-embedded-nul-little",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "little",
+      "wire_hex": "0100341209000000000000000000000000000000000000000000000000000000403020100200000002100000032000000030400002000100010000000400000047005530",
+      "violates": "device-name-no-nul"
+    },
+    {
+      "name": "device-name-invalid-utf8-big",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "big",
+      "wire_hex": "01001234000000090000000000000000000000000000000000000000000000001020304000000002000010020000200300403000000100020000000100040000ff505530",
+      "violates": "device-name-utf8"
+    },
+    {
+      "name": "device-name-embedded-nul-big",
+      "kind": "EnumeratePhysicalDevices",
+      "byte_order": "big",
+      "wire_hex": "0100123400000009000000000000000000000000000000000000000000000000102030400000000200001002000020030040300000010002000000010004000047005530",
+      "violates": "device-name-no-nul"
     }
   ]
 }
