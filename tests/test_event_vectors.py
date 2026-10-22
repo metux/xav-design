@@ -13,9 +13,14 @@ FIXTURES = ROOT / "tests" / "event-vectors.json"
 
 
 def validate_event_wire(
-    wire: bytes, byte_order: str, *, expected_extension_opcode: int | None = None
+    wire: bytes,
+    byte_order: str,
+    *,
+    expected_extension_opcode: int | None = None,
+    memory_heap_count: int | None = None,
 ) -> None:
-    """Validate raw XGE framing and, when known, connection-specific opcode binding."""
+    """Validate XGE framing and fields; validate heap index when device properties are known."""
+
     if len(wire) < 32:
         raise ValueError("truncated XGE header")
     if len(wire) % 4:
@@ -53,6 +58,12 @@ def validate_event_wire(
             raise ValueError("required event XID must be nonzero")
     if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(9):
         raise ValueError("XAverius error offset is outside the error registry")
+    if event_type == 3 and memory_heap_count is not None:
+        if not 0 <= memory_heap_count <= 0xFFFFFFFF:
+            raise ValueError("memory_heap_count must be a CARD32")
+        heap_index = int.from_bytes(wire[36:40], byte_order)
+        if heap_index != 0xFFFFFFFF and heap_index >= memory_heap_count:
+            raise ValueError("heap_index is outside the device memory heap registry")
     if event_type in (5, 6) and int.from_bytes(wire[48:56], byte_order) == 0:
         raise ValueError("terminal submission event token must be nonzero")
     for offset in EVENT_RESERVED_OFFSETS.get(event_type, ()):
@@ -201,9 +212,9 @@ class GoldenXGEEventTests(unittest.TestCase):
             length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
             if not length:
                 length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
-            if length:
-                self.assertEqual(int(length.group(1)), max(offset + size for offset, size in expected))
-                self.assertEqual(int(length.group(2)), (int(length.group(1)) - 32) // 4)
+            self.assertIsNotNone(length, f"{event} is missing its normative total-length declaration")
+            self.assertEqual(int(length.group(1)), max(offset + size for offset, size in expected))
+            self.assertEqual(int(length.group(2)), (int(length.group(1)) - 32) // 4)
 
     def test_event_ids_and_vector_field_sets_match_registry(self):
         registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
@@ -295,6 +306,24 @@ class GoldenXGEEventTests(unittest.TestCase):
                 self.assertEqual(values, set(EVENT_SECONDARY_VALUE_RANGES[event_type][0][1]), heading)
             else:
                 self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
+
+    def test_memory_pressure_heap_index_uses_physical_device_heap_count(self):
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors
+                          if v["event"] == "DEVICE_MEMORY_PRESSURE" and v["byte_order"] == order)
+            wire = bytearray(encode_event(vector))
+            # UINT32_MAX is the normative sentinel for an unspecified heap.
+            validate_event_wire(bytes(wire), order, memory_heap_count=1)
+            # A concrete index is valid only if it is below memory_heap_count.
+            wire[36:40] = (0).to_bytes(4, order)
+            validate_event_wire(bytes(wire), order, memory_heap_count=1)
+            wire[36:40] = (1).to_bytes(4, order)
+            with self.subTest(order=order):
+                with self.assertRaisesRegex(ValueError, "heap_index"):
+                    validate_event_wire(bytes(wire), order, memory_heap_count=1)
+            # Without device properties the structural validator cannot reject
+            # an index based on a heap count it does not know.
+            validate_event_wire(bytes(wire), order)
 
     def test_rejects_invalid_event_local_values(self):
         cases = (
