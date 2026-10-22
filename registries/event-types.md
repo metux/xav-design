@@ -28,16 +28,8 @@ Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unass
 | 5 | `ORIGIN_FENCE` |
 | 6 | `ORIGIN_DEVICE` |
 
-## `DEVICE_LOST.reason_code`
+Both `DEVICE_LOST.reason_code` and `DEVICE_STATUS_CHANGED.reason_code` use the shared append-only [device reason-code registry](reason-codes.md); their lifecycle semantics remain specific to each event.
 
-| Value | Symbol |
-|---:|---|
-| 0 | `REASON_UNSPECIFIED` |
-| 1 | `HOTPLUG_REMOVAL` |
-| 2 | `DRIVER_FAILURE` |
-| 3 | `VULKAN_DEVICE_LOST` |
-| 4 | `SERVER_POLICY` |
-| 5 | `SERVER_SHUTDOWN` |
 
 ## `DEVICE_STATUS_CHANGED.new_status`
 
