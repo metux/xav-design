@@ -117,3 +117,7 @@ Ergänzend zur statischen Markdown-Prüfung gibt es jetzt `tests/wire-vectors.js
 ## Physical-device enumeration error-map audit — 2026-10-22
 
 The central error map now explicitly assigns `BadLength` to `EnumeratePhysicalDevices` requests whose total size is not exactly 8 bytes, and explicitly permits a successful empty result (`reply.length = 0`) when no physical devices are available. The conformance checklist and static checker guard these requirements. CI passed on commit `4c2428cc1e547283aba5b110215a34de097b7ab5`: [run 39820302380](https://github.com/metux/xav-design/actions/runs/39820302380). This is still static documentation and golden-wire validation, not live X11/XGE interoperability.
+
+## CreateBuffer backend error-map audit — 2026-10-22
+
+The request-specific error map now distinguishes malformed fields and XID/type failures from unavailable/lost-device errors and memory-related backend creation failure for `CreateBuffer`. The conformance checklist and static checker guard the mapping. CI passed on commit `e27bf276b6ae6b1592effa522c3d3afec6811f99`: [run 39820652069](https://github.com/metux/xav-design/actions/runs/39820652069). This remains static specification and golden-wire validation; Vulkan runtime error-path tests await an implementation.
