@@ -35,8 +35,12 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
     expected_lengths = {0: 60, 1: 48, 2: 48, 3: 48, 4: 48, 5: 56, 6: 56}
     if len(wire) != expected_lengths[event_type]:
         raise ValueError("event total length does not match event type")
+    value_ranges = []
     if event_type in EVENT_VALUE_RANGES:
-        offset, allowed = EVENT_VALUE_RANGES[event_type]
+        value_ranges.append(EVENT_VALUE_RANGES[event_type])
+    if event_type in EVENT_SECONDARY_VALUE_RANGES:
+        value_ranges.extend(EVENT_SECONDARY_VALUE_RANGES[event_type])
+    for offset, allowed in value_ranges:
         if int.from_bytes(wire[offset:offset + 4], byte_order) not in allowed:
             raise ValueError("event-local value is outside its registered range")
     # ASYNC_ERROR permits zero for a non-device-related error and absent resource.
@@ -99,6 +103,9 @@ EVENT_VALUE_RANGES = {
     3: (40, (0, 1, 2, 3)),            # DEVICE_MEMORY_PRESSURE.pressure_level
     4: (36, (0, 1, 2)),              # DEVICE_IDLE.idle_reason
     6: (44, (0, 1)),                 # SUBMISSION_FAILED.failure_class
+}
+EVENT_SECONDARY_VALUE_RANGES = {
+    2: ((40, tuple(range(6))),),  # DEVICE_STATUS_CHANGED.reason_code
 }
 EVENT_RESERVED_OFFSETS = {0: (56,), 2: (44,), 3: (44,), 5: (44,)}
 
@@ -255,8 +262,9 @@ class GoldenXGEEventTests(unittest.TestCase):
         )
         for heading, event_type, registry in sections:
             match = re.search(r"^## \x60" + re.escape(heading) + r"\x60\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
-            self.assertIsNotNone(match, f"missing registry section {heading}") if heading != "DEVICE_LOST.reason_code" else None
-            source = registry if heading in ("DEVICE_LOST.reason_code", "DEVICE_STATUS_CHANGED.reason_code") else match.group(1)
+            is_reason_code = heading.endswith(".reason_code")
+            self.assertIsNotNone(match, f"missing registry section {heading}") if not is_reason_code else None
+            source = registry if is_reason_code else match.group(1)
             values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", source, re.M)}
             if heading.endswith(".reason_code"):
                 self.assertEqual(values, set(range(6)), heading)
