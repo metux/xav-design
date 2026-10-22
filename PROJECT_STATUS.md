@@ -125,3 +125,7 @@ The request-specific error map now distinguishes malformed fields and XID/type f
 ## AllocateMemory error-map audit — 2026-10-22
 
 `AllocateMemory` now has consistent request-specific behavior across the normative memory chapter, central error map and conformance checklist: invalid/non-live Device XIDs use `BadValue`, wrong live type or foreign ownership uses `BadMatch`, unavailable/lost devices use `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and backend allocation failure uses `ALLOCATION_FAILED`. All failure paths leave the target XID unallocated. The checker guards these distinctions. CI passed on checker fix commit `ba23938eef28fa496856a3bac685fb8d268dead9`: [run 39821251825](https://github.com/metux/xav-design/actions/runs/39821251825). Earlier checker failures on this audit were caused by an over-specific wording assertion; the assertion was corrected to match the normative text, and the full run now passes.
+
+## CreateDescriptorPool error-map audit — 2026-10-22
+
+The normative descriptor-pool section and central error map now distinguish invalid XIDs/fields, wrong live resource type or foreign ownership, unavailable/lost devices, and backend allocation failure. Rejected creation leaves the Pool XID unallocated. The conformance checklist and static checker cover this contract. CI passed on audit commit `245d473b00acb064b374066944927c12d3abc73b`: [run 39821507592](https://github.com/metux/xav-design/actions/runs/39821507592). No live Vulkan runtime test is possible until a server implementation exists.
