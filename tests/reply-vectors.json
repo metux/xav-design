@@ -683,6 +683,28 @@
       "payload_hex": "10203040000000020000100200002003004030000001000200000001000100004100000050607080000000010000123400005678010000000000000200000002000500004750552d30000000",
       "total_bytes": 108,
       "wire_hex": "010012340000001300000000000000000000000000000000000000000000000010203040000000020000100200002003004030000001000200000001000100004100000050607080000000010000123400005678010000000000000200000002000500004750552d30000000"
+    },
+    {
+      "name": "WaitForFence-device-destroyed-little",
+      "event": "WaitForFence-device-destroyed",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100341200000000040000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "WaitForFence-device-destroyed-big",
+      "event": "WaitForFence-device-destroyed",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 0,
+      "payload_hex": "",
+      "total_bytes": 32,
+      "wire_hex": "0100123400000000000000040000000000000000000000000000000000000000"
     }
   ]
 }
