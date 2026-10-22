@@ -19,12 +19,15 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   and malformed request framing.
 - `test_event_vectors.py` checks XGE header and payload encoding, total size,
   event IDs, reserved bytes, malformed raw event framing, and compares every
-  encoded field offset/size against the normative event chapters. It also checks
-  the full central error-offset range, including offset 8.
+  encoded field offset/size against the normative event chapters. Event-local
+  values, including both uses of the shared device reason-code registry, are
+  checked against their registries. It also checks the full central error-offset
+  range, including acceptance of offset 8 and rejection of offset 9.
 - `test_select_events_vectors.py` checks golden request bytes, common-header
-  reserved fields, all three scopes, valid mask bits, and the normative layout
-  and subopcode registry. Negative cases cover invalid scope, masks, flags and
-  reserved fields.
+  reserved fields, all three scopes, valid mask bits, zero-mask deselection, and
+  the normative layout and subopcode registry. Negative raw-wire cases cover
+  malformed common headers and invalid scope/field combinations, as well as
+  invalid scope, masks, flags and reserved fields.
 - `test_reply_vectors.py` checks standard reply framing, fixed reply fields,
   variable payload lengths, record boundaries, padding, and malformed headers.
 - `test_reply_spec_coverage.py` derives status sets, memory-count limits/formulas,
