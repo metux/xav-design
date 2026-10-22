@@ -176,6 +176,44 @@ class GoldenSelectEventsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "event mask"):
             validate_select_events_wire(bytes(wire), vector["byte_order"])
 
+    def test_raw_wire_rejects_invalid_scope_field_combinations(self):
+        cases = (
+            ("connection scope", 8, 0, 12, 1),
+            ("device scope", 8, 1, 12, 0),
+            ("queue scope", 8, 2, 12, 0),
+        )
+        for order in ("little", "big"):
+            endian = "little" if order == "little" else "big"
+            for message, scope_offset, scope, device_offset, device in cases:
+                vector = next(v for v in self.vectors if v["fields"]["scope"] == scope and v["byte_order"] == order)
+                wire = bytearray(encode_select_events(vector))
+                wire[scope_offset:scope_offset + 4] = scope.to_bytes(4, endian)
+                wire[device_offset:device_offset + 4] = device.to_bytes(4, endian)
+                if scope == 0:
+                    wire[12:16] = (1).to_bytes(4, endian)
+                elif scope == 1:
+                    wire[16:20] = (1).to_bytes(4, endian)
+                with self.subTest(order=order, scope=scope):
+                    with self.assertRaisesRegex(ValueError, message):
+                        validate_select_events_wire(bytes(wire), order)
+
+    def test_raw_wire_rejects_invalid_common_header_fields(self):
+        vector = next(v for v in self.vectors if v["byte_order"] == "little")
+        cases = (
+            (1, b"\\x01", "X11 data byte"),
+            (6, b"\\x01\\x00", "common-header reserved"),
+            (4, b"\\x29", "subopcode"),
+            (5, b"\\x01", "flags"),
+            (0, b"\\x7f", "major opcode"),
+            (2, b"\\x07\\x00", "length words"),
+        )
+        for offset, replacement, message in cases:
+            wire = bytearray(encode_select_events(vector))
+            wire[offset:offset + len(replacement)] = replacement
+            with self.subTest(offset=offset):
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_select_events_wire(bytes(wire), "little")
+
     def test_encoder_rejects_invalid_scope_field_combinations(self):
         import copy
         vector = copy.deepcopy(next(v for v in self.vectors if v["fields"]["scope"] == 0))
