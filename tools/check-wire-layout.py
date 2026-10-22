@@ -150,6 +150,10 @@ def check_events(c: Check) -> None:
               "synchronization: GetFenceStatus must remain a state query after device loss")
     c.require(re.search(r"WaitForFence.*liefert dagegen `DEVICE_LOST`.*sobald das Device als verloren erkannt wurde", sync, re.S) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
+    c.require(re.search(r"keine offene `WaitForFence`-Registrierung.*`INVALID_SYNCHRONIZATION_STATE` abgewiesen", sync, re.S) is not None,
+              "DestroyFence: must reject while a host wait registration is still open")
+    c.require(re.search(r"terminales Ergebnis.*serialisiert festgestellt.*Reply noch im Ausgabepuffer.*verhindert die Zerstörung nicht", sync, re.S) is not None,
+              "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
     c.require(re.search(r"GetSemaphoreCounterValue.*mit `DEVICE_LOST` abgewiesen", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
     c.require(re.search(r"WaitSemaphores.*wird mit `DEVICE_LOST` beendet", sync, re.S) is not None,
