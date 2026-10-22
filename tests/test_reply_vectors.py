@@ -84,7 +84,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
             name_bytes = wire[pos + 32:pos + 32 + name_length]
             try:
                 decoded_name = name_bytes.decode("utf-8", errors="strict")
-                if "\\x00" in decoded_name:
+                if chr(0) in decoded_name:
                     errors.append("device-name-no-nul")
             except UnicodeDecodeError:
                 errors.append("device-name-utf8")
