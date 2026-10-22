@@ -169,3 +169,7 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## Host semaphore wait/signal error audit — 2026-10-22
 
 `SignalSemaphore` and `WaitSemaphores` now have explicit request-specific error precedence across the normative synchronization chapter, central error map, conformance checklist and static checker. CI passed on checker commit `12df57b95b8ffb8067b2f15cd8063a476937b76e`: [run 39828507464](https://github.com/metux/xav-design/actions/runs/39828507464). This remains a spec/static-check pass, not a runtime Vulkan test.
+
+## WaitForFence request-validation audit — 2026-10-22
+
+`WaitForFence` now defines exact request length, XID/type/ownership validation, and terminal reply statuses across the normative chapter, central error map, conformance checklist and static checker. CI passed on checker commit `4cceb27230a70489584cba5a163777ed951c2d07`: [run 39828776699](https://github.com/metux/xav-design/actions/runs/39828776699). An earlier guard mismatch was corrected; no runtime backend tests are claimed.
