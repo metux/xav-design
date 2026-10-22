@@ -123,7 +123,7 @@ def check_events(c: Check) -> None:
               "DEVICE_STATUS_CHANGED: REMOVED must prohibit subsequent status events for that XID")
     c.require(re.search(r"After emitting.*new_status = REMOVED.*MUST NOT emit another.*DEVICE_STATUS_CHANGED", registry, re.I) is not None,
               "event registry: REMOVED must prohibit subsequent status events for that XID")
-    c.require(re.search(r"heap_index.*UINT32_MAX.*smaller than.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
+    c.require(re.search(r"heap_index.*UINT32_MAX.*kleiner als.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
               "DEVICE_MEMORY_PRESSURE: heap_index must be a valid heap index or UINT32_MAX")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
