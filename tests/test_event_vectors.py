@@ -266,8 +266,10 @@ class GoldenXGEEventTests(unittest.TestCase):
             self.assertIsNotNone(match, f"missing registry section {heading}") if not is_reason_code else None
             source = registry if is_reason_code else match.group(1)
             values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", source, re.M)}
-            if heading.endswith(".reason_code"):
-                self.assertEqual(values, set(range(6)), heading)
+            if heading == "DEVICE_LOST.reason_code":
+                self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
+            elif heading == "DEVICE_STATUS_CHANGED.reason_code":
+                self.assertEqual(values, set(EVENT_SECONDARY_VALUE_RANGES[event_type][0][1]), heading)
             else:
                 self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
 
