@@ -187,6 +187,8 @@ Die Queue-Anzahl muss mindestens 1 betragen. Alle Prioritäten müssen endlich u
 
 Bei erfolgreichem Request werden die öffentliche Device-XID und alle öffentlichen XIDs seiner Ressourcen sofort ungültig.
 
+Alle noch offenen Host-Waits (`WaitSemaphores` und `WaitForFence`), die diesem logischen Device zugeordnet sind, werden bei Verarbeitung dieses Requests beendet: `WaitSemaphores` liefert den X11-Fehler `DEVICE_DESTROYED`, `WaitForFence` den Reply-Status `DEVICE_DESTROYED`. Dies gilt auch für unbegrenzte Waits. Bereits erfüllte Wait-Bedingungen, deren Ergebnis vor Verarbeitung von `DestroyDevice` feststand, behalten ihr normales Ergebnis. Die Beendigung eines Waits setzt keine GPU-Completion voraus.
+
 Interne Vulkan-Objekte werden erst freigegeben, wenn die Vulkan-Lebensdauerregeln und alle ausstehenden Abhängigkeiten dies erlauben.
 
 Die erfolgreiche Zerstörung bedeutet weder, dass die GPU-Arbeit abgeschlossen ist, noch dass das Device auf ein anderes Physical Device umgeleitet wurde.
