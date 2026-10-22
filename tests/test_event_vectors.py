@@ -45,6 +45,8 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
             raise ValueError("required event XID must be nonzero")
     if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(8):
         raise ValueError("XAverius error offset is outside the error registry")
+    if event_type in (5, 6) and int.from_bytes(wire[48:56], byte_order) == 0:
+        raise ValueError("terminal submission event token must be nonzero")
     for offset in EVENT_RESERVED_OFFSETS.get(event_type, ()):
         if wire[offset:offset + 4] != bytes(4):
             raise ValueError("reserved event field must be zero")
@@ -255,6 +257,16 @@ class GoldenXGEEventTests(unittest.TestCase):
                 wire[32:36] = bytes(4)
                 with self.subTest(event=event, order=order):
                     with self.assertRaisesRegex(ValueError, "required event XID"):
+                        validate_event_wire(bytes(wire), order)
+
+    def test_terminal_submission_events_require_nonzero_tokens(self):
+        for event in ("SUBMISSION_COMPLETE", "SUBMISSION_FAILED"):
+            for order in ("little", "big"):
+                vector = next(v for v in self.vectors if v["event"] == event and v["byte_order"] == order)
+                wire = bytearray(encode_event(vector))
+                wire[48:56] = bytes(8)
+                with self.subTest(event=event, order=order):
+                    with self.assertRaisesRegex(ValueError, "token must be nonzero"):
                         validate_event_wire(bytes(wire), order)
 
     def test_async_error_xids_are_optional_but_error_offset_is_registered(self):
