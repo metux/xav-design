@@ -200,12 +200,12 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_raw_wire_rejects_invalid_common_header_fields(self):
         vector = next(v for v in self.vectors if v["byte_order"] == "little")
         cases = (
-            (1, b"\\x01", "X11 data byte"),
-            (6, b"\\x01\\x00", "common-header reserved"),
-            (4, b"\\x29", "subopcode"),
-            (5, b"\\x01", "flags"),
-            (0, b"\\x7f", "major opcode"),
-            (2, b"\\x07\\x00", "length words"),
+            (1, bytes([1]), "X11 data byte"),
+            (6, bytes([1, 0]), "common-header reserved"),
+            (4, bytes([0x29]), "subopcode"),
+            (5, bytes([1]), "flags"),
+            (0, bytes([0x7f]), "major opcode"),
+            (2, bytes([7, 0]), "length words"),
         )
         for offset, replacement, message in cases:
             wire = bytearray(encode_select_events(vector))
