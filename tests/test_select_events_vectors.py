@@ -501,5 +501,29 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_uncertain_binary_semaphore_failure_poisoning_is_explicit(self):
+        synchronization = (ROOT / "spec" / "synchronization.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "muss er die Binary-Semaphore als `UNTRUSTED` markieren.",
+            synchronization,
+        )
+        self.assertIn(
+            "weitere Queue-Waits und Queue-Signals auf dieser Semaphore werden vor Annahme mit `DEPENDENCY_FAILED` abgewiesen.",
+            synchronization,
+        )
+        self.assertIn(
+            "Der Server darf die Semaphore nicht als signalverfügbar oder unsignaled behandeln",
+            synchronization,
+        )
+        self.assertIn(
+            "Ist dagegen nachweisbar, dass die fehlgeschlagene Operation das Semaphore-Payload nicht verändert hat, bleibt der vorherige bestätigte Signalzustand erhalten.",
+            synchronization,
+        )
+        self.assertIn(
+            "Der beobachtbare Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde.",
+            synchronization,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
