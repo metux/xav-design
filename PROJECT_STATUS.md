@@ -121,3 +121,7 @@ The central error map now explicitly assigns `BadLength` to `EnumeratePhysicalDe
 ## CreateBuffer backend error-map audit — 2026-10-22
 
 The request-specific error map now distinguishes malformed fields and XID/type failures from unavailable/lost-device errors and memory-related backend creation failure for `CreateBuffer`. The conformance checklist and static checker guard the mapping. CI passed on commit `e27bf276b6ae6b1592effa522c3d3afec6811f99`: [run 39820652069](https://github.com/metux/xav-design/actions/runs/39820652069). This remains static specification and golden-wire validation; Vulkan runtime error-path tests await an implementation.
+
+## AllocateMemory error-map audit — 2026-10-22
+
+`AllocateMemory` now has consistent request-specific behavior across the normative memory chapter, central error map and conformance checklist: invalid/non-live Device XIDs use `BadValue`, wrong live type or foreign ownership uses `BadMatch`, unavailable/lost devices use `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and backend allocation failure uses `ALLOCATION_FAILED`. All failure paths leave the target XID unallocated. The checker guards these distinctions. CI passed on checker fix commit `ba23938eef28fa496856a3bac685fb8d268dead9`: [run 39821251825](https://github.com/metux/xav-design/actions/runs/39821251825). Earlier checker failures on this audit were caused by an over-specific wording assertion; the assertion was corrected to match the normative text, and the full run now passes.
