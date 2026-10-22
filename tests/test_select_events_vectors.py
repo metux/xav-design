@@ -280,5 +280,42 @@ class GoldenSelectEventsTests(unittest.TestCase):
                         validate_select_events_wire(bytes(candidate), order)
 
 
+    def test_scope_cleanup_and_event_lifetime_contract(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        queue_scope = re.search(
+            r"- `QUEUE = 2`:[^\\n]*",
+            events,
+        )
+        self.assertIsNotNone(queue_scope)
+        self.assertRegex(
+            queue_scope.group(0),
+            r"tatsächlich angeforderte Queue dieses Devices identifizieren",
+        )
+        self.assertRegex(
+            events,
+            r"Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen",
+        )
+        self.assertRegex(
+            events,
+            r"`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt",
+        )
+        self.assertRegex(
+            events,
+            r"Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt",
+        )
+        self.assertRegex(
+            events,
+            r"Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist",
+        )
+        self.assertRegex(
+            events,
+            r"Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände",
+        )
+        self.assertRegex(
+            events,
+            r"Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden",
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
