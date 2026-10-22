@@ -1021,7 +1021,9 @@ def check_xge_abi(c: Check) -> None:
         "SUBMISSION_COMPLETE": (5, 56, 6, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32"), (48, "CARD64")]),
         "SUBMISSION_FAILED": (6, 56, 6, [(32, "XID"), (36, "CARD32"), (40, "CARD32"), (44, "CARD32"), (48, "CARD64")]),
     }
-    type_rows = [(int(v), n) for v, n in re.findall(r"^\|\s*(\d+)\s*\|\s*" + chr(96) + r"([A-Z_]+)" + chr(96) + r"\s*\|", registry, re.M)]
+    type_section_parts = registry.split("## Event type IDs", 1)
+    type_section = type_section_parts[1].split("\n## ", 1)[0] if len(type_section_parts) == 2 else ""
+    type_rows = [(int(v), n) for v, n in re.findall(r"^\|\s*(\d+)\s*\|\s*" + chr(96) + r"([A-Z_]+)" + chr(96) + r"\s*\|", type_section, re.M)]
     c.require(len(type_rows) == 7, f"XGE registry: expected 7 event IDs, found {len(type_rows)}")
     c.require(len({v for v, _ in type_rows}) == len(type_rows), "XGE registry: duplicate event type IDs")
     c.require(len({n for _, n in type_rows}) == len(type_rows), "XGE registry: duplicate event names")
@@ -1084,9 +1086,10 @@ def check_xge_abi(c: Check) -> None:
     c.require(sum(1 for name, _kind in request_registry.values() if name == "SelectEvents") == 1,
               "request registry: SelectEvents must be registered exactly once")
 
-    select = re.search(r"^## Event-Auswahl: " + chr(96) + r"SelectEvents" + chr(96) + r"([\s\S]*?)(?=^## |\Z)", events, re.M)
-    c.require(bool(select), "events.md: missing SelectEvents ABI section")
-    select_body = select.group(1) if select else ""
+    select_marker = "## Event-Auswahl: " + chr(96) + "SelectEvents" + chr(96)
+    select_start = events.find(select_marker)
+    c.require(select_start >= 0, "events.md: missing SelectEvents ABI section")
+    select_body = events[select_start + len(select_marker):] if select_start >= 0 else ""
     c.require(re.search(r"feste Gesamtlänge von 32 Bytes", select_body, re.I) is not None,
               "SelectEvents: request must be exactly 32 bytes")
     c.require(re.search(r"Common-Header-Feld `flags` bei Offset 5 muss 0 sein", select_body, re.I) is not None,
@@ -1116,7 +1119,7 @@ def check_xge_abi(c: Check) -> None:
         (r"atomar die bisherige Maske", "atomic mask replacement"),
         (r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", "failed request preserves prior mask"),
         (r"ASYNC_ERROR.*DEVICE_LOST.*nicht maskierbar", "unmaskable events"),
-        (r"erfolgreich GEQueryVersion", "XGE version negotiation prerequisite"),
+        (r"erfolgreich\s+" + chr(96) + r"?GEQueryVersion" + chr(96) + r"?", "XGE version negotiation prerequisite"),
         (r"ohne ausgehandelte XGE-Unterst(?:ü|ue)tzung.*BadMatch", "pre-negotiation rejection"),
     ]:
         c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
