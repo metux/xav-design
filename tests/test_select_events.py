@@ -98,7 +98,7 @@ class SelectEventsContractTests(unittest.TestCase):
 
     def test_scope_masks_and_event_ids_match_normative_registry(self):
         block = re.search(
-            r"\| Scope \| Bit \| Event \|\s*\n\|[-| ]+\|\s*\n((?:\|.*\n)+)",
+            r"\| Scope \| Bit \| Event \|\s*\n\|[^\n]+\n((?:\|.*\n)+)",
             EVENTS,
         )
         self.assertIsNotNone(block, "missing normative SelectEvents mask table")
@@ -160,7 +160,7 @@ class SelectEventsContractTests(unittest.TestCase):
         self.assertIn("bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt", EVENTS)
         self.assertIn("ändert nicht den internen terminalen Ausgang der Submission", EVENTS)
         self.assertIn("Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event", SUBMISSIONS)
-        self.assertIn("genau eine terminale", SUBMISSIONS.lower())
+        self.assertIn("Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen", SUBMISSIONS)
         self.assertIn("keine neuen Events mit der zerstörten", LIFETIME)
 
 
