@@ -249,7 +249,7 @@ def check_reason_code_registry(c: Check) -> None:
     rows = [
         (int(value), symbol)
         for value, symbol in re.findall(
-            r"^\\|\\s*(\\d+)\\s*\\|\\s*\\x60([A-Z_]+)\\x60\\s*\\|\\s*$",
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$",
             registry, re.M,
         )
     ]
@@ -275,7 +275,7 @@ def check_reason_code_registry(c: Check) -> None:
               "DEVICE_STATUS_CHANGED.reason_code" in event_registry,
               "event registry must declare shared reason-code namespace for both events")
     issues = read("spec/open-issues.md")
-    c.require(re.search(r"10\\. Closed:.*DEVICE_STATUS_CHANGED\\.reason_code.*shared append-only", issues, re.S) is not None,
+    c.require(re.search(r"10\. Closed:.*DEVICE_STATUS_CHANGED\.reason_code.*shared append-only", issues, re.S) is not None,
               "open issue 10 must be closed in favor of the shared reason-code registry")
 
 
