@@ -209,6 +209,28 @@ class GoldenXGEEventTests(unittest.TestCase):
                         continue
                     actual.append((offset, size))
             self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
+            field_labels = {
+                "device_xid": "Device-XID",
+                "error_code": "`error_code`",
+                "origin": "Origin-Werte",
+                "submission_token": "`submission_token`",
+                "resource_xid": "Ressourcen-XID",
+                "reserved": "reserved",
+                "reason_code": "`reason_code`",
+                "device_generation": "`device_generation`",
+                "physical_device_xid": "Physical-Device-XID",
+                "new_status": "`new_status`",
+                "heap_index": "`heap_index`",
+                "pressure_level": "`pressure_level`",
+                "idle_reason": "`idle_reason`",
+                "queue_family_index": "`queue_family_index`",
+                "queue_index": "`queue_index`",
+                "failure_class": "`failure_class`",
+            }
+            for field in fields:
+                label = field_labels[field]
+                with self.subTest(event=event, field=field):
+                    self.assertIn(label, body, f"{event}.{field} missing from normative event chapter")
             length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
             if not length:
                 length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
