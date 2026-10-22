@@ -137,3 +137,7 @@ A request-specific error-map pass found that `EnumeratePhysicalDevices` specifie
 ## CreateBuffer backend error-map follow-up — 2026-10-22
 
 The request-specific mapping for `CreateBuffer` listed backend allocation failure but omitted the distinct `DEVICE_UNAVAILABLE` / `DEVICE_LOST` outcomes and the general wrong-live-type `BadMatch` case. The central mapping now distinguishes invalid input, device state, and memory-related backend creation failure, and states that rejection leaves no live Buffer. The conformance checklist and static checker guard the distinction. Runtime Vulkan error injection remains untested because there is no server implementation.
+
+## AllocateMemory device-state error-map follow-up — 2026-10-22
+
+The central error map had two summaries for `AllocateMemory`: the detailed memory section included wrong-live-type, foreign-ownership and unavailable/lost-device errors, while the earlier request summary omitted them. The normative memory chapter also specified allocation failure but not the device-state/ownership outcomes. The chapter, both error-map entries and conformance checklist now agree: `BadValue` for unknown/non-live device XIDs, `BadMatch` for wrong live type/foreign ownership, `DEVICE_UNAVAILABLE` / `DEVICE_LOST` for device state, and `ALLOCATION_FAILED` for allocation failure. Every rejection leaves the target XID unallocated. The static checker guards this mapping; no backend runtime behavior is claimed.
