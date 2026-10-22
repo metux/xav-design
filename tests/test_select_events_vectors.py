@@ -572,5 +572,20 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Quarantäne gehalten", lifetime)
 
+
+    def test_buffer_wire_lengths_padding_and_bounds_are_overflow_safe(self):
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        write = memory.split("## 5.7 `WriteBuffer`", 1)[1].split("## 5.8 `ReadBuffer`", 1)[0]
+        read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
+        self.assertIn("uint64(data_length)", write)
+        self.assertIn("maximale X11-Request-Länge", write)
+        self.assertIn("nicht-null Padding ergibt `BadValue`", write)
+        self.assertIn("buffer_offset <= buffer_size", write)
+        self.assertIn("data_length <= buffer_size - buffer_offset", write)
+        self.assertIn("floor((uint64(data_length) + 3) / 4)", read)
+        self.assertIn("Das Padding ist Teil des X11-Reply-Transports", read)
+        self.assertIn("Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`", errors)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
