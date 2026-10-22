@@ -204,7 +204,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"`WaitSemaphores`.*Request-Länge muss exakt `28 \+ 12 \* semaphore_count` Bytes.*doppelte XIDs und ungültige `wait_mode`-Werte ergeben `BadValue`", sync, re.S) is not None and
               re.search(r"`WaitSemaphores`: falsche Länge oder Überlauf.*`DEVICE_LOST`.*`DEVICE_DESTROYED`", errors, re.S) is not None,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
-    c.require(re.search(r"`WaitForFence`.*Request: exakt 24 Bytes.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*Cross-Device-Verwendung ergeben `BadMatch`", sync, re.S) is not None and
+    c.require(re.search(r"`WaitForFence`.*Request: 24 Bytes exakt.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*Cross-Device-Verwendung ergeben `BadMatch`", sync, re.S) is not None and
               re.search(r"`WaitForFence`: falsche Länge `BadLength`.*Device Loss und `DestroyDevice`.*Reply-Statuswerte", errors, re.S) is not None,
               "WaitForFence: request length, XID/ownership errors, and reply terminal states must be explicit")
     c.require(re.search(r"WaitSemaphores` darf den X11-Request-Dispatcher nicht synchron blockieren", sync) is not None,
