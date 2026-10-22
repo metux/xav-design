@@ -151,7 +151,7 @@ Reply: 32 Bytes.
 
 ## `WaitForFence`
 
-Request: exakt 24 Bytes; eine andere Gesamtlänge ergibt `BadLength`.
+Request: 24 Bytes exakt; eine andere Gesamtlänge ergibt `BadLength`.
 
 - Offset 8: Device-XID
 - Offset 12: Fence-XID
