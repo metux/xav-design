@@ -141,3 +141,7 @@ The request-specific mapping for `CreateBuffer` listed backend allocation failur
 ## AllocateMemory device-state error-map follow-up — 2026-10-22
 
 The central error map had two summaries for `AllocateMemory`: the detailed memory section included wrong-live-type, foreign-ownership and unavailable/lost-device errors, while the earlier request summary omitted them. The normative memory chapter also specified allocation failure but not the device-state/ownership outcomes. The chapter, both error-map entries and conformance checklist now agree: `BadValue` for unknown/non-live device XIDs, `BadMatch` for wrong live type/foreign ownership, `DEVICE_UNAVAILABLE` / `DEVICE_LOST` for device state, and `ALLOCATION_FAILED` for allocation failure. Every rejection leaves the target XID unallocated. The static checker guards this mapping; no backend runtime behavior is claimed.
+
+## CreateDescriptorPool device-state error-map follow-up — 2026-10-22
+
+The `CreateDescriptorPool` request mapping listed input validation and backend allocation failure but omitted wrong-live-type/foreign-ownership and unavailable/lost-device outcomes. The normative descriptor-pool section now specifies `BadValue`, `BadMatch`, `DEVICE_UNAVAILABLE` / `DEVICE_LOST`, and `ALLOCATION_FAILED` separately, and states that failure leaves the target Pool XID unallocated. The central mapping, conformance checklist and static checker now guard the same contract. Runtime backend error injection remains untested.
