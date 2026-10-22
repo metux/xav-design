@@ -504,6 +504,14 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
     c.require(
+        re.search(
+            r"`DestroyDescriptorPool` ist atomar.*?wenn ein enthaltenes Set pending verwendet wird oder von einem `RECORDING`-Command-Buffer referenziert wird.*?Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert",
+            lifetime, re.S,
+        ) is not None,
+        "resource lifetime: DestroyDescriptorPool must reject pending/recording children atomically",
+    )
+
+    c.require(
         "`DestroyDescriptorPool`: falsche Request-Länge `BadLength`" in errors
         and "unbekannte/nicht-live Pool-XID `BadValue`" in errors
         and "falscher live Ressourcentyp oder fremde Client-/Device-Ownership `BadMatch`" in errors
