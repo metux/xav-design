@@ -477,6 +477,34 @@
       "byte_order": "big",
       "wire_hex": "010012340000000100000001000000010000000400000000000000000000000012345678",
       "violates": "property-success-status"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-supported-invalid-status-little",
+      "kind": "GetPhysicalDeviceProperty-not-supported",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000000000000000000000000000000000000000000000000000",
+      "violates": "property-failure-status"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-supported-invalid-status-big",
+      "kind": "GetPhysicalDeviceProperty-not-supported",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000000000000000000000000000000000000000000",
+      "violates": "property-failure-status"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-available-invalid-status-little",
+      "kind": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000000000000000000000000000000000000000000000000000",
+      "violates": "property-failure-status"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-not-available-invalid-status-big",
+      "kind": "GetPhysicalDeviceProperty-not-available",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000000000000000000000000000000000000000000",
+      "violates": "property-failure-status"
     }
   ]
 }
