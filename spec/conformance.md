@@ -54,6 +54,9 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Alle Create-Ziel-XIDs werden getrennt von Eingabe-XIDs geprüft: ungültige/belegte Ziel-XIDs ergeben `BadIDChoice`; Batch-Erzeugung hinterlässt bei Kollision keine Teilmenge
 - `ShaderModuleData` ohne passendes Upload-Assembly und `CommandBufferData` ohne passenden `RECORDING`-Buffer werden mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen; CREATE-XID-Kollisionen ergeben `BadIDChoice`
 - `CreateDevice` weist null Queue-Family-Records, null Queue-Anzahl und doppelte Queue-Family-Records mit `BadValue` ab; eine nicht unterstützte Queue-Anzahl ergibt `BadMatch`
+- Binary-Semaphore: ein angenommener Wait konsumiert das Signal nicht vor tatsächlicher Erfüllung; das Signal wird genau einmal konsumiert und erst dann kann ein neuer Signalzyklus beginnen; doppelte pending Wait-/Signaloperationen werden atomar abgewiesen
+- Timeline-Semaphore: angenommene, noch nicht terminale Signaloperationen reservieren ihre Werte, erhöhen den beobachtbaren Counter aber erst nach erfolgreicher Ausführung; neue Signalwerte müssen über allen pending reservierten Werten liegen
+- Jede angenommene Queue-Wait-/Signaloperation hält eine Referenz auf die exakte interne Semaphore-Identität bis zum terminalen Operationsausgang und bis das Backend keinen Zugriff mehr ausführen kann; XID-Wiederverwendung darf diese Referenz nicht umleiten
 - Doppelte Pool-Size-Typen, doppelte Descriptor-Updates desselben Slots, doppelte Wait-/Signal-Entries sowie eine Semaphore zugleich in Wait und Signal werden gemäß den Fehlerregeln atomar abgewiesen
 - `CreateComputePipeline` verwendet die normative Länge `28 + ((entry_point_length + 3) & ~3)` und prüft nichtleeren ASCII-Entry-Point sowie Null-Padding
 - `DestroySemaphore` und `DestroyFence` sind jeweils 16-Byte-Void-Requests; `WaitSemaphores` verwendet `28 + 12 * semaphore_count`
