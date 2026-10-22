@@ -526,6 +526,14 @@ def check_request_document_coverage(c: Check) -> None:
         and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md"),
         "error mapping: AllocateDescriptorSets must define device-state and atomic batch behavior",
     )
+    c.require(
+        "`FreeDescriptorSets`:" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "Keine Teilfreigabe bei Ablehnung" in errors
+        and "Die Freigabe ist atomar" in read("spec/shaders-pipelines.md"),
+        "error mapping: FreeDescriptorSets must define device-state and atomic batch behavior",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
