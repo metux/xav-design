@@ -3,6 +3,7 @@
 ## CommandBufferData and ResetCommandBuffer follow-up — 2026-10-22
 
 The command-recording pass made the five permitted CREATE/FINAL/ABORT combinations explicit in conformance coverage and tightened deterministic error handling: malformed/incomplete entry headers versus invalid entry lengths, CREATE target-XID collisions versus missing input buffers, and the exact parent-pool check even for ABORT. It also records the required recovery guarantees: failed chunks are atomic, failed FINAL leaves the buffer RECORDING, failed CREATE leaves no public buffer or pool-child entry, and rejected ResetCommandBuffer preserves state and references. Static checks now guard these cross-chapter statements. These are documentation and static consistency checks only; runtime server behavior remains untested.
+The follow-up's static checker passes on branch `docs/restructure-2026-10-21` in [CI run 39825028342](https://github.com/metux/xav-design/actions/runs/39825028342), including the golden wire-vector tests. The checker currently reports 2,221 checks; this remains static contract coverage rather than runtime Vulkan/X11 interoperability.
 
 ## Scope
 
