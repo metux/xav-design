@@ -120,7 +120,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
         fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
         required_rules = {
-            "standard-header", "fence-status", "wait-status", "wait-for-fence-status", "property-success-status",
+            "standard-header", "fence-status", "wait-status", "wait-for-fence-status", "property-success-status", "property-failure-status",
             "property-failure-zero", "property-padding-zero", "queue-record-reserved",
             "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
             "device-name-padding-zero", "device-record-length", "memory-type-heap-index-range",
