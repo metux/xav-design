@@ -166,6 +166,15 @@ def check_events(c: Check) -> None:
               "synchronization: host waits must not block later signals or submissions on the same connection")
     c.require(re.search(r"Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
+    memory = read("spec/memory-buffers.md")
+    c.require(re.search(r"zurückgestellte `QueueSubmit`-Requests.*Timeline-Wert signalisiert.*`DEPENDENCY_FAILED`", memory, re.S) is not None,
+              "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
+    queue_order = read("spec/queue-submission.md")
+    c.require(re.search(r"zurückgestellten Requests.*Timeline-Signal-Entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
+              "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
+    conformance = read("spec/conformance.md")
+    c.require(re.search(r"`WriteBuffer`.*zurückgestellter `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
+              "conformance: WriteBuffer dependency-cycle case must be covered")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"all semaphore wait/signal reservations and internal references are committed atomically", submissions, re.S) is not None,
               "QueueSubmit: semaphore reservations and references must commit atomically")
