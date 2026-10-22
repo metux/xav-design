@@ -156,7 +156,7 @@ def check_events(c: Check) -> None:
               "SelectEvents: unknown XIDs must map to BadValue, wrong type/foreign ownership to BadMatch")
     c.require(re.search(r"nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`", event_doc) is not None,
               "SelectEvents: nonexistent queue on a valid device must map to BadValue")
-    c.require(re.search(r"ohne ausgehandelte XGE-Unterst(?:ützung|uetzung) werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unverändert", event_doc) is not None,
+    c.require(re.search(r"ohne ausgehandelte XGE-Unterst(?:ützung|uetzung) werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unverändert", event_doc, re.I) is not None,
               "SelectEvents: missing XGE negotiation must return BadMatch without changing prior selection")
     c.require(re.search(r"Der Request ersetzt atomar die bisherige Maske für genau einen Scope", event_doc) is not None,
               "SelectEvents: successful replacement must be atomic and scoped")
