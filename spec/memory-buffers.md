@@ -148,11 +148,11 @@ Request:
 
 Gesamtlänge:
 
-`28 + ((data_length + 3) & ~3)`
+`28 + ((uint64(data_length) + 3) & ~uint64(3))`
 
-`data_length` muss positiv sein.
+`data_length` muss positiv sein. Die Gesamtlänge muss mit breiterer als 32-Bit-Arithmetik berechnet werden. Ist sie nicht ohne Überlauf darstellbar oder größer als die für diese Verbindung geltende maximale X11-Request-Länge, wird der Request mit `BadLength` abgewiesen. Das Padding muss vollständig aus Nullbytes bestehen; nicht-null Padding ergibt `BadValue`.
 
-Der Buffer muss gebunden sein, `TRANSFER_DST` besitzen und den vollständigen Zielbereich abdecken. Bounds werden mit `buffer_offset <= buffer_size` und `data_length <= buffer_size - buffer_offset` geprüft.
+Der Buffer muss gebunden sein, `TRANSFER_DST` besitzen und den vollständigen Zielbereich abdecken. Bounds werden überlaufsicher mit `buffer_offset <= buffer_size` und `data_length <= buffer_size - buffer_offset` geprüft.
 
 Jeder `WriteBuffer`-Request ist ein eigenständiger Schreibvorgang. Es gibt weder Upload-ID noch einen mehrteiligen Upload-Transaktionszustand oder ein Final-Chunk-Flag.
 
@@ -187,9 +187,9 @@ Request:
 
 Gesamtlänge: 28 Bytes.
 
-Die Länge muss positiv sein. Der Buffer muss gebunden sein, `TRANSFER_SRC` besitzen und den angeforderten Bereich abdecken.
+Die Länge muss positiv sein. Der Buffer muss gebunden sein, `TRANSFER_SRC` besitzen und den angeforderten Bereich abdecken. Bounds werden überlaufsicher mit `buffer_offset <= buffer_size` und `data_length <= buffer_size - buffer_offset` geprüft.
 
-Der Reply enthält nach dem 32-Byte-Header die gelesenen Bytes ab Offset 32, mit Null-Padding auf vier Bytes. `reply.length = ceil(data_length / 4)`.
+Der Reply enthält nach dem 32-Byte-Header genau `data_length` gelesene Bytes ab Offset 32 und anschließend Null-Padding auf vier Bytes. `reply.length = floor((uint64(data_length) + 3) / 4)`; die Rechnung erfolgt in mindestens 64-Bit-Arithmetik. Das Padding ist Teil des X11-Reply-Transports und nicht Teil der Buffer-Daten.
 
 `ReadBuffer` definiert einen Snapshot-Ordnungsübergang innerhalb des adressierten logischen Devices. Der Server muss vor dem Snapshot alle vor diesem Request angenommenen `QueueSubmit`-Submissions abwarten, deren Arbeit den angeforderten Bereich direkt oder über eine andere gebundene Ressource schreiben kann, und sicherstellen, dass deren Backend-Zugriffe auf den Bereich beendet sind. Dasselbe gilt für alle vor diesem Request eingereihten `WriteBuffer`-Transfers: Ein erfolgreicher Transfer muss abgeschlossen sein; ein fehlgeschlagener Transfer muss terminal sein und darf den Zielbereich nicht mehr im Backend verändern können. Eine bloße logische Terminalisierung reicht nicht aus, solange Backend-Zugriffe noch möglich sind. Ein fehlgeschlagener früherer `WriteBuffer` liefert keine Sichtbarkeitsgarantie für dessen Zielbereich; `ReadBuffer` darf deshalb nicht so tun, als seien die fehlgeschlagenen Eingabedaten geschrieben worden. Erforderliche Host-Visibility- und Cache-Operationen müssen vor dem Snapshot abgeschlossen sein. Bloße Queue-Reihenfolge auf einer einzelnen Queue reicht nicht aus, wenn andere Queues beteiligt sind.
 
