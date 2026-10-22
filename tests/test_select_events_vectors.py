@@ -428,7 +428,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event",
+            "Die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event",
             events,
         )
         self.assertIn(
@@ -552,7 +552,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden.", memory)
         self.assertIn("Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.", memory)
         self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
-        self.assertIn("danach werden zurückgestellte Requests in normaler Request-Reihenfolge verarbeitet", memory.lower())
+        self.assertIn("danach werden zurückgestellte requests in normaler request-reihenfolge verarbeitet", memory.lower())
 
 
     def test_read_buffer_has_ordered_snapshot_and_explicit_failure_semantics(self):
@@ -566,7 +566,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("späteren `QueueSubmit`-Requests", read)
         self.assertIn("Daten-Snapshot", read)
         self.assertIn("`DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden", read)
-        self.assertIn("Der Inhalt des Zielbereichs ist dann nicht garantiert", memory)
+        self.assertIn("Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`", errors)
