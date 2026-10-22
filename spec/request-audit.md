@@ -133,3 +133,7 @@ A cross-chapter review compared the specialized `DestroyFence` and `DestroySemap
 ## Physical-device enumeration error-map follow-up — 2026-10-22
 
 A request-specific error-map pass found that `EnumeratePhysicalDevices` specified its exact 8-byte request and complete-record reply contract, but did not explicitly name the X11 error for a malformed request. The central mapping now says that any other request length yields `BadLength`, permits an empty successful reply when no physical devices are available, and forbids partial `PHYSICALDEVICEINFO` records. The conformance checklist and static checker now guard this contract. This closes a documentation omission; it does not exercise a live server.
+
+## CreateBuffer backend error-map follow-up — 2026-10-22
+
+The request-specific mapping for `CreateBuffer` listed backend allocation failure but omitted the distinct `DEVICE_UNAVAILABLE` / `DEVICE_LOST` outcomes and the general wrong-live-type `BadMatch` case. The central mapping now distinguishes invalid input, device state, and memory-related backend creation failure, and states that rejection leaves no live Buffer. The conformance checklist and static checker guard the distinction. Runtime Vulkan error injection remains untested because there is no server implementation.
