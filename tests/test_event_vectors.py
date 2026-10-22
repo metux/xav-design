@@ -412,6 +412,9 @@ class GoldenXGEEventTests(unittest.TestCase):
                           if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
             wire = bytearray(encode_event(vector))
             wire[40:44] = (1).to_bytes(4, order)  # ORIGIN_QUEUE_SUBMIT
+            # A QueueSubmit-origin diagnostic with the accepted submission's
+            # token is valid; the same event with token zero is not.
+            validate_event_wire(bytes(wire), order)
             wire[44:52] = bytes(8)
             with self.subTest(order=order):
                 with self.assertRaisesRegex(ValueError, "ORIGIN_QUEUE_SUBMIT"):
