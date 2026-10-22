@@ -587,5 +587,26 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Das Padding ist Teil des X11-Reply-Transports", read)
         self.assertIn("Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`", errors)
 
+
+    def test_buffer_memory_requirements_and_binding_contract(self):
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        props = memory.split("## 5.2 `GetPhysicalDeviceMemoryProperties`", 1)[1].split("## 5.3 ", 1)[0]
+        reqs = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("## 5.4 ", 1)[0]
+        alloc = memory.split("## 5.4 `AllocateMemory`", 1)[1].split("## 5.5 ", 1)[0]
+        bind = memory.split("## 5.6 `BindBufferMemory`", 1)[1].split("## 5.7 ", 1)[0]
+        self.assertIn("memory_type_count", props)
+        self.assertIn("kleiner als `memory_heap_count`", props)
+        self.assertIn("Bits außerhalb von `memory_type_count` müssen null sein", reqs)
+        self.assertIn("mindestens ein unterstützter Memory-Type-Bit gesetzt sein", reqs)
+        self.assertIn("Memory-Type-Index muss für das Physical Device", alloc)
+        self.assertIn("die `memory_xid` bleibt unangelegt", alloc)
+        self.assertIn("(memory_type_bits & (1u << memory_type_index)) != 0", bind)
+        self.assertIn("Vielfaches des gemeldeten `alignment`", bind)
+        self.assertIn("`requirements.size` maßgeblich", bind)
+        self.assertIn("Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.", bind)
+        self.assertIn("`ALLOCATION_FAILED`", errors)
+        self.assertIn("`BindBufferMemory`", errors)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
