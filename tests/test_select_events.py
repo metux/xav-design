@@ -134,6 +134,31 @@ class SelectionRaceModel:
             self.queued_events.append((device, token, outcome))
 
 
+class IdentityBoundCompletionModel:
+    """Model the ABA guard required when a public device XID is reused."""
+
+    def __init__(self):
+        self.next_identity = 1
+        self.live_devices = {}
+        self.queued_events = []
+
+    def create_device(self, xid):
+        identity = self.next_identity
+        self.next_identity += 1
+        self.live_devices[xid] = identity
+        return identity
+
+    def destroy_device(self, xid):
+        self.live_devices.pop(xid, None)
+
+    def completion(self, xid, captured_identity, token):
+        # The callback must carry the original internal identity; it must not
+        # resolve the XID again and accidentally target a replacement device.
+        if self.live_devices.get(xid) != captured_identity:
+            return
+        self.queued_events.append((xid, captured_identity, token))
+
+
 class SelectEventsContractTests(unittest.TestCase):
     def test_wire_layout_and_length_in_both_byte_orders(self):
         for order in ("little", "big"):
@@ -295,6 +320,25 @@ class SelectEventsContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already terminal"):
             state.terminal(11, 0, 0, 106, "failed")
         self.assertEqual(state.queued_events, [(11, 106, "complete")])
+
+    def test_old_completion_cannot_be_redirected_to_reused_device_xid(self):
+        state = IdentityBoundCompletionModel()
+        old_identity = state.create_device(11)
+        state.destroy_device(11)
+        new_identity = state.create_device(11)
+        self.assertNotEqual(old_identity, new_identity)
+        state.completion(11, old_identity, 107)
+        self.assertEqual(state.queued_events, [])
+        state.completion(11, new_identity, 108)
+        self.assertEqual(state.queued_events, [(11, new_identity, 108)])
+
+    def test_resource_lifetime_spec_requires_identity_bound_callbacks(self):
+        self.assertIn("nicht anhand einer numerischen XID erneut aus der aktuellen XID-Tabelle auflösen",
+                      LIFETIME)
+        self.assertIn("Eine wiederverwendete XID bezeichnet eine neue interne Ressourcenidentität",
+                      LIFETIME)
+        self.assertIn("eine inzwischen wiederverwendete XID darf niemals auf ein neues Objekt",
+                      LIFETIME)
 
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
         self.assertIn("Nach erfolgreicher Verarbeitung von `DestroyDevice`", EVENTS)
