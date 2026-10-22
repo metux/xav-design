@@ -43,7 +43,7 @@ def validate_event_wire(wire: bytes, byte_order: str) -> None:
     for offset in (32,) if event_type in (1, 2, 3, 4, 5, 6) else ():
         if int.from_bytes(wire[offset:offset + 4], byte_order) == 0:
             raise ValueError("required event XID must be nonzero")
-    if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(8):
+    if event_type == 0 and int.from_bytes(wire[36:40], byte_order) not in range(9):
         raise ValueError("XAverius error offset is outside the error registry")
     if event_type in (5, 6) and int.from_bytes(wire[48:56], byte_order) == 0:
         raise ValueError("terminal submission event token must be nonzero")
@@ -317,6 +317,16 @@ class GoldenXGEEventTests(unittest.TestCase):
             with self.subTest(order=order):
                 with self.assertRaisesRegex(ValueError, "error offset"):
                     validate_event_wire(bytes(wire), order)
+
+    def test_async_error_accepts_last_registered_error_offset(self):
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
+            wire = bytearray(encode_event(vector))
+            wire[36:40] = (8).to_bytes(4, order)
+            validate_event_wire(bytes(wire), order)
+            wire[36:40] = (9).to_bytes(4, order)
+            with self.assertRaisesRegex(ValueError, "error offset"):
+                validate_event_wire(bytes(wire), order)
 
     def test_async_error_codes_match_central_error_registry(self):
         registry = (ROOT / "registries" / "errors.md").read_text(encoding="utf-8")
