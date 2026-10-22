@@ -89,7 +89,7 @@ Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öf
 
 Jeder Pool-Entry enthält `CARD32 descriptor_type` und `CARD32 descriptor_count`.
 
-`max_sets`, `pool_size_count` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig.
+`max_sets`, `pool_size_count` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Pool-XID unangelegt.
 
 ## 6.3.1 Destroy Descriptor Pool
 
