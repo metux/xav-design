@@ -525,8 +525,9 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "`DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`" in errors
         and "`DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`" in errors
-        and "solange die Fence einer nicht-terminalen Submission zugeordnet ist" in errors
-        and "solange Queue- oder Host-Operationen die Semaphore pending verwenden" in errors,
+        and "solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene" in errors
+        and "angenommener Queue-Wait/-Signal" in errors
+        and "eine andere laufende Host-Operation die Semaphore verwendet" in errors,
         "error mapping: fence/semaphore destruction must preserve pending-use guards",
     )
 
