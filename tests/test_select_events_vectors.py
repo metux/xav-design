@@ -473,5 +473,33 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_submission_terminalization_is_single_winner_and_cleanup_is_idempotent(self):
+        submission = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Der Wechsel einer angenommenen Submission von nicht-terminal zu genau einem terminalen Ergebnis (`COMPLETE` oder `FAILED`) ist ein einmaliger, serialisierter Zustandsübergang.",
+            submission,
+        )
+        self.assertIn(
+            "Erfolgs-Callbacks, Fehler-Callbacks und Device-Loss-Verarbeitung konkurrieren um denselben Übergang; der erste vom Server serialisiert festgestellte gültige Ausgang gewinnt.",
+            submission,
+        )
+        self.assertIn(
+            "Ein Callback, der nach einem bereits festgestellten terminalen Zustand eintrifft, darf weder das Ergebnis, Fence-/Semaphore-Zustände noch Event-Entscheidungen verändern.",
+            submission,
+        )
+        self.assertIn(
+            "darf ein späterer Erfolg weder `SIGNALED` setzen noch den Timeline-Counter erhöhen oder ein Signal als erfolgreich verbraucht markieren.",
+            submission,
+        )
+        self.assertIn(
+            "Jede Wait-/Signal-Reservierung, Fence-Zuordnung, Pending-Referenz und Pending-Markierung des Command Buffers wird höchstens einmal freigegeben beziehungsweise abgeschlossen.",
+            submission,
+        )
+        self.assertIn(
+            "Event-Zustellung ist ein nachgelagerter Effekt der terminalen Entscheidung und kann diese weder zurückrollen noch wiederholen.",
+            submission,
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
