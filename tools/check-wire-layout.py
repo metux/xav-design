@@ -518,6 +518,14 @@ def check_request_document_coverage(c: Check) -> None:
         and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
     )
+    c.require(
+        "`AllocateDescriptorSets`:" in errors
+        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
+        and "keine Teilmenge der angeforderten Sets live" in errors
+        and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md"),
+        "error mapping: AllocateDescriptorSets must define device-state and atomic batch behavior",
+    )
 
 
     # Keep generic and resource-specific destruction paths aligned across chapters.
