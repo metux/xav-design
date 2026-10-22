@@ -245,5 +245,40 @@ class GoldenSelectEventsTests(unittest.TestCase):
             encode_select_events(vector)
 
 
+    def test_semantic_error_matrix_and_atomic_selection_contract(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        # Wire-level failures and runtime resource failures are distinct.
+        self.assertRegex(events, r"Unbekannte Scope-Werte.*ungültige Maskenbits.*BadValue")
+        self.assertRegex(events, r"Unbekannte/nicht-live XIDs ergeben `BadValue`")
+        self.assertRegex(events, r"falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`")
+        self.assertRegex(events, r"nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`")
+        self.assertRegex(events, r"ohne ausgehandelte XGE-Unterstützung werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen")
+        self.assertRegex(events, r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert")
+        self.assertRegex(events, r"Der Request ersetzt atomar die bisherige Maske für genau einen Scope")
+        self.assertRegex(errors, r"Eine erforderliche XAverius-XID, die keine live Ressource.*ergibt `BadValue`")
+        self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
+
+    def test_negative_golden_vectors_cover_each_structural_error_class(self):
+        # Mutate valid golden packets instead of testing only hand-built invalid packets.
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors
+                          if v["fields"]["scope"] == 0 and v["byte_order"] == order)
+            endian = "<" if order == "little" else ">"
+            cases = (
+                (8, struct.pack(endian + "I", 99), "unknown SelectEvents scope"),
+                (24, struct.pack(endian + "I", 0x80000000), "event mask"),
+                (28, struct.pack(endian + "I", 1), "reserved field"),
+                (12, struct.pack(endian + "I", 0x1234), "connection scope"),
+            )
+            valid = encode_select_events(vector)
+            for offset, replacement, expected_error in cases:
+                candidate = bytearray(valid)
+                candidate[offset:offset + len(replacement)] = replacement
+                with self.subTest(order=order, offset=offset):
+                    with self.assertRaisesRegex(ValueError, expected_error):
+                        validate_select_events_wire(bytes(candidate), order)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
