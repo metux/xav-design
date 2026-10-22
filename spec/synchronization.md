@@ -33,7 +33,7 @@ Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
 - Ein Wait ist erfüllt, sobald der beobachtbare Counter mindestens den angeforderten Wert erreicht.
 - Ein Wait darf eingereiht werden, bevor das Signal eingereiht wurde, das ihn erfüllt.
-- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein. Zur atomaren Validierung zählt ein angenommenes, noch nicht terminales Signal als pending, auch wenn sein Counter-Wert noch nicht erreicht ist; neue Signalwerte müssen größer als alle bereits reservierten pending Signalwerte derselben Semaphore sein.
+- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein. Zur atomaren Validierung zählt ein angenommenes, noch nicht terminales Signal als pending, auch wenn sein Counter-Wert noch nicht erreicht ist; neue GPU-Signalwerte müssen größer als alle bereits reservierten pending Signalwerte derselben Semaphore sein. Ein pending GPU-Signal reserviert seinen Wert, erhöht aber den beobachtbaren Counter nicht.
 - Der beobachtbare Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde. Die bloße Annahme einer `QueueSubmit`-Anforderung reserviert den Signalwert, erhöht aber nicht vorzeitig den Counter.
 - Ein erfolgreich ausgeführtes Signal erfüllt alle bereits eingereihten Waits, deren Werte dadurch erreicht werden; ein Wait verändert den Counter nicht.
 - Mehrere Signal-Entries derselben Timeline-Semaphore in einem einzelnen `QueueSubmit` sind in v0.1 nicht erlaubt.
@@ -80,6 +80,8 @@ Für `timeout_ns` gilt:
 
 Der Server darf eine endliche Wartefrist intern in mehrere Warteabschnitte aufteilen, muss aber die ursprüngliche Frist beibehalten. Scheduler-Verzögerungen dürfen die Frist nicht absichtlich neu starten. Ist die Bedingung bei der abschließenden Zustandsprüfung erfüllt, wird `SUCCESS` zurückgegeben; andernfalls nach Ablauf der Frist `TIMEOUT`. Der Server muss keine Antwort exakt am Nanosekunden-Grenzpunkt liefern; die tatsächliche Antwort darf durch Scheduling verzögert eintreffen.
 
+`WaitSemaphores` darf den X11-Request-Dispatcher nicht synchron blockieren. Der Server registriert die Wartebedingung und stellt den Reply später bereit, während er nachfolgende Requests derselben Verbindung weiterverarbeiten kann. Das ist notwendig, damit ein späteres `SignalSemaphore` oder `QueueSubmit` den erwarteten Wert liefern kann. Der Wait-Request selbst ordnet keine nachfolgenden GPU-Submissions und hält sie nicht zurück. Die Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter, wenn nachfolgende Requests verarbeitet werden.
+
 Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status` mit `SUCCESS = 0` oder `TIMEOUT = 1`; Offsets 12–31 sind null und `reply.length = 0`. Ein Timeout ist ein normaler Reply und kein X11-Fehler. Ein Timeout verändert weder Semaphore-Counter noch Queue-, Fence- oder Semaphore-Zustände. Ein durch Device Loss unmöglich gewordener Wait wird mit `DEVICE_LOST` als normalem X11-Fehler beendet, nicht als `TIMEOUT` maskiert.
 
 ## `SignalSemaphore`
@@ -90,7 +92,7 @@ Request: 24 Bytes; Void-Request ohne Reply.
 - Offset 12: Semaphore-XID
 - Offset 16: `CARD64 signal_value`
 
-Nur Timeline-Semaphoren sind erlaubt. Der Signalwert muss größer als der aktuelle Counter und mit allen ausstehenden Signalen konsistent sein. Validierung und Host-Signaloperation bilden eine atomare Request-Operation.
+Nur Timeline-Semaphoren sind erlaubt. Der Signalwert muss größer als der aktuelle Counter sein. Zusätzlich muss er kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert derselben Semaphore sein; andernfalls wird der Request mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Damit kann ein Host-Signal einen niedrigeren Wert liefern, der eine wartende Submission freigibt, ohne über eine niedrigere GPU-Reservierung hinwegzuspringen. Bei fehlenden GPU-Reservierungen ist jeder Wert größer als der aktuelle Counter zulässig. Validierung und Host-Signaloperation bilden eine atomare Request-Operation. Der Server prüft den aktuellen Counter und sämtliche Reservierungen atomar mit der Ausführung des Signals.
 
 Der Server führt das Host-Signal aus, bevor er mit der regulären Verarbeitung des nächsten Requests derselben X11-Verbindung fortfährt. Ausnahme: Während ein früherer `WriteBuffer`-Request auf vorherige Submissions wartet, darf der Server einen späteren `SignalSemaphore`-Request vor Abschluss dieses `WriteBuffer` ausführen, sofern dies erforderlich ist, um die vorherigen Submissions fortschreiten zu lassen. Das Signal muss dabei weiterhin vollständig validiert und atomar ausgeführt werden. Spätere `QueueSubmit`-Requests bleiben bis zum Abschluss des `WriteBuffer` zurückgestellt und dürfen dessen Ordnungsgrenze nicht passieren. Sobald die Signaloperation erfolgreich ausgeführt ist, ist der Counter aktualisiert und jeder dadurch erfüllte Wait darf fortschreiten. Der Server darf den Signal-Request nicht als abgeschlossen behandeln, solange das Host-Signal nicht erfolgreich ausgeführt wurde.
 
