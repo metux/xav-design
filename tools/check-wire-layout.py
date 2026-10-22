@@ -143,6 +143,17 @@ def check_events(c: Check) -> None:
               "QueueSubmit: terminal event delivery must respect DestroyDevice lifecycle suppression")
     c.require(re.search(r"terminales Event vorgesehen.*Lifecycle-Regeln für `DestroyDevice` unterdrückt", submissions, re.S) is not None,
               "QueueSubmit/device loss: terminal event requirement must not contradict DestroyDevice suppression")
+    sync = read("spec/synchronization.md")
+    c.require(re.search(r"GetFenceStatus.*nach Device Loss.*gespeicherten Zustand", sync, re.S) is not None,
+              "synchronization: GetFenceStatus must remain a state query after device loss")
+    c.require(re.search(r"WaitForFence.*liefert dagegen `DEVICE_LOST`.*sobald das Device als verloren erkannt wurde", sync, re.S) is not None,
+              "synchronization: WaitForFence must terminate with DEVICE_LOST")
+    c.require(re.search(r"GetSemaphoreCounterValue.*mit `DEVICE_LOST` abgewiesen", sync, re.S) is not None,
+              "synchronization: counter query must not return an apparently successful value after device loss")
+    c.require(re.search(r"WaitSemaphores.*wird mit `DEVICE_LOST` beendet", sync, re.S) is not None,
+              "synchronization: semaphore waits must terminate on device loss")
+    c.require(re.search(r"Semaphore- und Fence-Objekte bleiben intern erhalten.*solange Backend-Zugriffe", sync, re.S) is not None,
+              "synchronization: backend references must outlive device-loss public invalidation")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
