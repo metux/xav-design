@@ -746,6 +746,8 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "property-padding-zero":
                     value_length = int.from_bytes(wire[16:20], order)
                     invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
+                elif rule == "device-type-range":
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and int.from_bytes(wire[36:40], order) not in range(5)
                 elif rule == "device-record-reserved":
                     invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and wire[62:64] != bytes(2)
                 elif rule == "device-name-padding-zero":
