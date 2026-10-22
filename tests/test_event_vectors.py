@@ -95,6 +95,7 @@ EVENT_VALUE_RANGES = {
     0: (40, (0, 1, 2, 3, 4, 5, 6)),  # ASYNC_ERROR.origin
     1: (36, (0, 1, 2, 3, 4, 5)),     # DEVICE_LOST.reason_code
     2: (36, (0, 1, 2)),              # DEVICE_STATUS_CHANGED.new_status
+    # DEVICE_STATUS_CHANGED.reason_code uses the shared reason-code registry.
     3: (40, (0, 1, 2, 3)),            # DEVICE_MEMORY_PRESSURE.pressure_level
     4: (36, (0, 1, 2)),              # DEVICE_IDLE.idle_reason
     6: (44, (0, 1)),                 # SUBMISSION_FAILED.failure_class
@@ -247,6 +248,7 @@ class GoldenXGEEventTests(unittest.TestCase):
             ("ASYNC_ERROR.origin", 0, event_registry),
             ("DEVICE_LOST.reason_code", 1, reason_registry),
             ("DEVICE_STATUS_CHANGED.new_status", 2, event_registry),
+            ("DEVICE_STATUS_CHANGED.reason_code", 2, reason_registry),
             ("DEVICE_MEMORY_PRESSURE.pressure_level", 3, event_registry),
             ("DEVICE_IDLE.idle_reason", 4, event_registry),
             ("SUBMISSION_FAILED.failure_class", 6, event_registry),
@@ -254,15 +256,19 @@ class GoldenXGEEventTests(unittest.TestCase):
         for heading, event_type, registry in sections:
             match = re.search(r"^## \x60" + re.escape(heading) + r"\x60\s*$([\s\S]*?)(?=^## |\Z)", registry, re.M)
             self.assertIsNotNone(match, f"missing registry section {heading}") if heading != "DEVICE_LOST.reason_code" else None
-            source = registry if heading == "DEVICE_LOST.reason_code" else match.group(1)
+            source = registry if heading in ("DEVICE_LOST.reason_code", "DEVICE_STATUS_CHANGED.reason_code") else match.group(1)
             values = {int(value) for value in re.findall(r"^\|\s*(\d+)\s*\|", source, re.M)}
-            self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
+            if heading.endswith(".reason_code"):
+                self.assertEqual(values, set(range(6)), heading)
+            else:
+                self.assertEqual(values, set(EVENT_VALUE_RANGES[event_type][1]), heading)
 
     def test_rejects_invalid_event_local_values(self):
         cases = (
             ("ASYNC_ERROR", 40, 7),
             ("DEVICE_LOST", 36, 6),
             ("DEVICE_STATUS_CHANGED", 36, 3),
+            ("DEVICE_STATUS_CHANGED", 40, 6),
             ("DEVICE_MEMORY_PRESSURE", 40, 4),
             ("DEVICE_IDLE", 36, 3),
             ("SUBMISSION_FAILED", 44, 2),
@@ -332,7 +338,7 @@ class GoldenXGEEventTests(unittest.TestCase):
             wire[32:36] = bytes(4)
             wire[52:56] = bytes(4)
             validate_event_wire(bytes(wire), order)
-            wire[36:40] = (8).to_bytes(4, order)
+            wire[36:40] = (9).to_bytes(4, order)
             with self.subTest(order=order):
                 with self.assertRaisesRegex(ValueError, "error offset"):
                     validate_event_wire(bytes(wire), order)
