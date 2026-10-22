@@ -48,6 +48,8 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if declared != expected_words or len(wire) != 32 + expected_words * 4: errors.append("property-payload-length")
         if len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length): errors.append("property-padding-zero")
     elif kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available"):
+        expected_status = 1 if kind.endswith("not-supported") else 2
+        if int.from_bytes(wire[8:12], byte_order) != expected_status: errors.append("property-failure-status")
         if wire[12:20] != bytes(8) or wire[32:] or declared: errors.append("property-failure-zero")
         if wire[20:32] != bytes(12): errors.append("reserved-zero")
     elif kind.startswith("ReadBuffer-") and kind.endswith("-bytes"):
