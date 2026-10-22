@@ -146,3 +146,6 @@ The normative shader/pipeline chapter, central error map and conformance checkli
 ## Command-buffer contract audit — 2026-10-22
 
 The current pass tightened the central error mapping and conformance coverage for `CommandBufferData` and `ResetCommandBuffer`: the five legal `CREATE`/`FINAL`/`ABORT` combinations, target-XID versus input-XID precedence, malformed entry lengths, exact parent-pool validation including `ABORT`, and atomic failed-chunk recovery are now cross-checked by the static checker. Failed `FINAL` preserves `RECORDING`; failed `CREATE` leaves no public buffer or pool-child entry; rejected reset preserves state and references. This remains a specification/static-check pass, not a live server test.
+
+
+The command-buffer audit passes CI on branch `docs/restructure-2026-10-21`: [run 39825028342](https://github.com/metux/xav-design/actions/runs/39825028342) completed successfully, including the golden wire-vector tests (2,221 static checks).
