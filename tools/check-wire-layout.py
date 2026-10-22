@@ -226,6 +226,13 @@ def check_events(c: Check) -> None:
               "QueueSubmit: semaphore references must not follow a reused XID")
     c.require(re.search(r"backend can no longer access the semaphore", submissions, re.S) is not None,
               "QueueSubmit: semaphore backend references must survive until safe release")
+    c.require("Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig" in submissions and
+              "Dieselbe Semaphore darf in einer Submission nicht gleichzeitig im Wait- und Signal-Array stehen" in submissions,
+              "QueueSubmit: duplicate semaphore entries and wait/signal aliasing must be rejected")
+    c.require("Binary-Wait-/Signalwerte müssen null sein" in conformance and
+              "doppelte Timeline-Signal-Entries derselben Semaphore" in conformance and
+              "reserviert weder `submission_token` noch Semaphore-Wait-/Signal-Slots" in conformance,
+              "QueueSubmit: semaphore value checks and rejected-submit atomicity must be covered")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
