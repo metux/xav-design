@@ -266,7 +266,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
                         with self.assertRaises(UnicodeDecodeError):
                             name.decode("utf-8", errors="strict")
                     else:
-                        self.assertIn(b"\\x00", name)
+                        self.assertIn(0, name)
 
 if __name__ == "__main__":
     unittest.main()
