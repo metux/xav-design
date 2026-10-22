@@ -130,6 +130,14 @@ def check_events(c: Check) -> None:
               "DestroyDevice: must suppress later events for the destroyed logical device")
     c.require(re.search(r"Die Unterdrückung der Zustellung.*internen terminalen Ausgang.*Backend-Referenzen", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
+    c.require(re.search(r"Ein Client-Disconnect beendet die Event-Zustellung.*genau diese X11-Verbindung", lifetime, re.S) is not None,
+              "Client disconnect: event delivery must stop for that exact X11 connection")
+    c.require(re.search(r"weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt", lifetime, re.S) is not None,
+              "Client disconnect: late backend events must not target a closed or different connection")
+    c.require(re.search(r"bereits angenommene Arbeit.*tatsächlichen terminalen Ausgang", lifetime, re.S) is not None,
+              "Client disconnect: accepted submissions must retain their internal terminal outcome")
+    c.require(re.search(r"Interne Ressourcenreferenzen bleiben.*Backend-Zugriffe", lifetime, re.S) is not None,
+              "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
