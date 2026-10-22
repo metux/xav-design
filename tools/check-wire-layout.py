@@ -192,6 +192,9 @@ def check_events(c: Check) -> None:
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
     c.require(re.search(r"GetSemaphoreCounterValue.*mit `DEVICE_LOST` abgewiesen", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
+    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exakt 16 Bytes.*Unbekannte/nicht-live Device- oder Semaphore-XIDs ergeben `BadValue`.*`DEVICE_LOST` abgewiesen", sync, re.S) is not None and
+              re.search(r"`GetSemaphoreCounterValue`: falsche Länge `BadLength`.*Cross-Device-Verwendung `BadMatch`.*`DEVICE_LOST`", errors, re.S) is not None,
+              "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
     c.require(re.search(r"WaitSemaphores.*wird mit `DEVICE_LOST` beendet", sync, re.S) is not None,
               "synchronization: semaphore waits must terminate on device loss")
     c.require(re.search(r"Semaphore- und Fence-Objekte bleiben intern erhalten.*solange Backend-Zugriffe", sync, re.S) is not None,
