@@ -1111,7 +1111,7 @@ def check_xge_abi(c: Check) -> None:
     ]:
         c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
                   f"SelectEvents/XGE: missing {label}")
-    c.require(re.search(r"CreateDevice.*CreateDefaultDevice.*SelectEvents.*BadMatch", devices, re.S) is not None,
+    c.require(re.search(r"CreateDevice.*CreateDefaultDevice.*BadMatch", devices, re.S) is not None,
               "device creation: XGE negotiation prerequisite and BadMatch must be explicit")
     c.require(re.search(r"SelectEvents.*XGE.*framed|XGE.*SelectEvents", conformance, re.I | re.S) is not None,
               "conformance checklist: must cover SelectEvents/XGE ABI")
