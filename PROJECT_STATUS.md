@@ -185,3 +185,7 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## GetSemaphoreCounterValue request-validation audit — 2026-10-22
 
 `GetSemaphoreCounterValue` now has explicit length, XID/type/ownership, Timeline-only, and post-loss error semantics across the normative chapter, error map, conformance checklist and checker. CI passed on checker commit `afeac993c1fade3de04871aa624dcfa860f52b58`: [run 39829221170](https://github.com/metux/xav-design/actions/runs/39829221170), including golden wire vectors. No runtime backend test is claimed.
+
+## ResetCommandBuffer device-state audit — 2026-10-22
+
+ResetCommandBuffer now specifies unavailable/lost logical Device outcomes consistently across the normative chapter, central error map and conformance checklist, with XID/type/ownership validation taking precedence over device-state and reset-state checks. The static checker guards the cross-chapter contract. CI passed in [run 39830304211](https://github.com/metux/xav-design/actions/runs/39830304211), including 2,234 static checks and 90 golden wire-vector tests. This remains a specification/static-check pass, not a live server test.
