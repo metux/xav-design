@@ -161,11 +161,11 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
     submissions = read("spec/queue-submission.md")
-    c.require(re.search(r"Reservierungen und interne Referenzen sind atomar mit der Submission-Annahme verbunden", submissions, re.S) is not None,
+    c.require(re.search(r"all semaphore wait/signal reservations and internal references are committed atomically", submissions, re.S) is not None,
               "QueueSubmit: semaphore reservations and references must commit atomically")
-    c.require(re.search(r"exakte interne Semaphore-Identität.*XID.*wiederverwendet", submissions, re.S) is not None,
+    c.require(re.search(r"exact internal semaphore identity.*numeric XID.*reuses the same XID", submissions, re.S) is not None,
               "QueueSubmit: semaphore references must not follow a reused XID")
-    c.require(re.search(r"Backend keinen Zugriff mehr ausführen kann", submissions, re.S) is not None,
+    c.require(re.search(r"backend can no longer access the semaphore", submissions, re.S) is not None,
               "QueueSubmit: semaphore backend references must survive until safe release")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
