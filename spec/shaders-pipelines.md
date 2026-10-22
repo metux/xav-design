@@ -160,9 +160,9 @@ Ein Descriptor Set darf nicht aktualisiert werden, solange eine angenommene Subm
 - Offset 18: `CARD16 reserved = 0`
 - Offset 20: Array aus Descriptor-Set-XIDs
 
-Gesamtlänge: `20 + 4 * descriptor_set_count`; `descriptor_set_count` muss positiv sein.
+Gesamtlänge: `20 + 4 * descriptor_set_count`; `descriptor_set_count` muss positiv sein. Das reservierte Feld muss null sein. Unbekannte/nicht-live Device-, Pool- oder Set-XIDs ergeben `BadValue`; falsche live Ressourcentypen, fremde Ownership oder ein Set, das nicht zum angegebenen Pool/Device gehört, ergeben `BadMatch`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`.
 
-Erfolgreich freigegebene Sets werden sofort öffentlich ungültig. Ein Set, das noch ausstehend verwendet wird, darf nicht freigegeben werden.
+Die Freigabe ist atomar: Wenn eine angeforderte XID ungültig ist oder ein betroffenes Set pending verwendet wird beziehungsweise von einem `RECORDING`-Command-Buffer referenziert wird, wird kein Set freigegeben. Solche Zustandskonflikte ergeben `INVALID_SYNCHRONIZATION_STATE`. Bei Erfolg werden alle angeforderten Sets sofort öffentlich ungültig; interne Referenzen bleiben bis zum Ende aller zulässigen Zugriffe erhalten.
 
 ## 6.7 `CreatePipelineLayout`
 
