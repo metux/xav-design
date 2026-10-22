@@ -758,7 +758,7 @@ def check_reply_golden_vectors(c: Check) -> None:
                         invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 + name_length
                 elif rule == "device-name-no-nul":
                     name_length = int.from_bytes(wire[60:62], order) if len(wire) >= 64 else 0
-                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 + name_length and b"\\x00" in wire[64:64 + name_length]
+                    invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 + name_length and bytes([0]) in wire[64:64 + name_length]
                 elif rule == "device-record-reserved":
                     invalid = kind == "EnumeratePhysicalDevices" and len(wire) >= 64 and wire[62:64] != bytes(2)
                 elif rule == "device-name-padding-zero":
