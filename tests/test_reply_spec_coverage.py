@@ -251,5 +251,22 @@ class ReplySpecCoverageTests(unittest.TestCase):
                 wire = bytes.fromhex(case["wire_hex"])
                 self.assertGreaterEqual(int.from_bytes(wire[36:40], order), 5)
 
+    def test_device_name_encoding_negative_vectors_cover_both_byte_orders(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        vectors = fixture["vectors"]
+        for rule in ("device-name-utf8", "device-name-no-nul"):
+            for order in ("little", "big"):
+                cases = [v for v in vectors if v["violates"] == rule and v["byte_order"] == order]
+                self.assertTrue(cases, f"{rule} negative vector missing in {order}-endian")
+                for case in cases:
+                    wire = bytes.fromhex(case["wire_hex"])
+                    name_length = int.from_bytes(wire[60:62], order)
+                    name = wire[64:64 + name_length]
+                    if rule == "device-name-utf8":
+                        with self.assertRaises(UnicodeDecodeError):
+                            name.decode("utf-8", errors="strict")
+                    else:
+                        self.assertIn(b"\\x00", name)
+
 if __name__ == "__main__":
     unittest.main()
