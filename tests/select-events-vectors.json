@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "description": "Golden SelectEvents request bytes. Major opcode 0x90 is a fixture value; real connections use the server-assigned opcode.",
+  "vectors": [
+    {
+      "name": "SelectEvents-connection-little",
+      "byte_order": "little",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 0,
+        "device_xid": 0,
+        "queue_family_index": 0,
+        "queue_index": 0,
+        "event_mask": 1,
+        "reserved": 0
+      },
+      "wire_hex": "9000080028000000000000000000000000000000000000000100000000000000"
+    },
+    {
+      "name": "SelectEvents-device-little",
+      "byte_order": "little",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 1,
+        "device_xid": 16909060,
+        "queue_family_index": 0,
+        "queue_index": 0,
+        "event_mask": 3,
+        "reserved": 0
+      },
+      "wire_hex": "9000080028000000010000000403020100000000000000000300000000000000"
+    },
+    {
+      "name": "SelectEvents-queue-little",
+      "byte_order": "little",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 2,
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "event_mask": 3,
+        "reserved": 0
+      },
+      "wire_hex": "9000080028000000020000000403020101000000020000000300000000000000"
+    },
+    {
+      "name": "SelectEvents-connection-big",
+      "byte_order": "big",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 0,
+        "device_xid": 0,
+        "queue_family_index": 0,
+        "queue_index": 0,
+        "event_mask": 1,
+        "reserved": 0
+      },
+      "wire_hex": "9000000828000000000000000000000000000000000000000000000100000000"
+    },
+    {
+      "name": "SelectEvents-device-big",
+      "byte_order": "big",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 1,
+        "device_xid": 16909060,
+        "queue_family_index": 0,
+        "queue_index": 0,
+        "event_mask": 3,
+        "reserved": 0
+      },
+      "wire_hex": "9000000828000000000000010102030400000000000000000000000300000000"
+    },
+    {
+      "name": "SelectEvents-queue-big",
+      "byte_order": "big",
+      "major_opcode": 144,
+      "subopcode": 40,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "scope": 2,
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "event_mask": 3,
+        "reserved": 0
+      },
+      "wire_hex": "9000000828000000000000020102030400000001000000020000000300000000"
+    }
+  ]
+}
