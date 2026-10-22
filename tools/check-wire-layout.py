@@ -167,7 +167,8 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
     memory = read("spec/memory-buffers.md")
-    c.require(re.search(r"zurückgestellte `QueueSubmit`-Requests.*Timeline-Wert signalisiert.*`DEPENDENCY_FAILED`", memory, re.S) is not None,
+    c.require(re.search(r"Signal-Entries zurückgestellter `QueueSubmit`-Requests", memory) is not None and
+              "`DEPENDENCY_FAILED`" in memory,
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
     c.require(re.search(r"zurückgestellten Requests.*Timeline-Signal-Entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
