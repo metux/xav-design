@@ -25,9 +25,9 @@ An outdated sentence in `DECISIONS.md` incorrectly included Fence and Semaphore 
 The 40 requests in the central registry are assigned explicit values 1 through 40. Value 0 is reserved and MUST NOT identify a request. These numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` uses the next unused value, 40; assignments 1 through 39 were not changed.
 
 
-## Second systematic pass: findings
+## Historical findings from the second systematic pass (resolved)
 
-The following items were identified by comparing the request inventory, defining chapters, central error rules, and conformance checklist:
+The following items were found during an earlier audit pass and have since been addressed in the defining chapters, central error mapping, registries, or conformance checklist. This list is historical context, not a list of currently open defects:
 
 1. **Descriptor support cross-check:** the current descriptor registry and conformance contract both correctly restrict v0.1 to `STORAGE_BUFFER`; uniform buffers and image descriptors remain unsupported. No registry change was needed.
 2. **Shader-stage symbol mismatch:** the central wire registry names the v0.1 bit `COMPUTE`, while the initial example used `COMPUTE_SHADER`. The example must use the XAverius wire symbol, not a native Vulkan spelling.
