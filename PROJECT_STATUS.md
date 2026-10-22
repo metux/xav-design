@@ -173,3 +173,7 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## WaitForFence request-validation audit — 2026-10-22
 
 `WaitForFence` now defines exact request length, XID/type/ownership validation, and terminal reply statuses across the normative chapter, central error map, conformance checklist and static checker. CI passed on checker commit `4cceb27230a70489584cba5a163777ed951c2d07`: [run 39828776699](https://github.com/metux/xav-design/actions/runs/39828776699). An earlier guard mismatch was corrected; no runtime backend tests are claimed.
+
+## GetFenceStatus request-validation audit — 2026-10-22
+
+`GetFenceStatus` now has explicit request length, XID/type/ownership, and post-Device-Loss state-query semantics across the normative chapter, central error map, conformance checklist and static checker. CI passed on checker commit `a9bc31667ee52385f325548a9ae82df51aa97fd7`: [run 39828908220](https://github.com/metux/xav-design/actions/runs/39828908220), including golden wire vectors. No runtime backend test is claimed.
