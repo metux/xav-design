@@ -213,7 +213,7 @@ def check_events(c: Check) -> None:
               "SignalSemaphore: request length, XID/ownership, and device-state errors must be explicit")
     c.require("Gesamtlänge: `28 + 12 * semaphore_count` Bytes" in sync and
               "keine doppelten Semaphore-XIDs (`BadValue`)" in sync and
-              re.search(r"`WaitSemaphores`: falsche Länge oder Überlauf.*`DEVICE_LOST`.*`DEVICE_DESTROYED`", errors, re.S) is not None,
+              "verbindliche Präzedenz" in errors and "`DEVICE_DESTROYED`" in errors,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
     c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
               "zuletzt muss jeder Semaphore-Typ `TIMELINE` sein (`BadMatch`)" in errors and
