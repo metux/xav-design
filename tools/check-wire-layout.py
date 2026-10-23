@@ -989,14 +989,14 @@ def check_request_limit_contract(c: Check) -> None:
     c.require(
         "BIG-REQUESTS wird in v0.1 nicht unterstützt" in wire
         and "length = 0" in wire
-        and "als BadLength zurückweisen" in wire
+        and "`BadLength` zurückweisen" in wire
         and "bevor er Bytes ab Offset 4 als XAverius-Subopcode" in wire,
         "request framing: BIG-REQUESTS length must be rejected before common-header parsing",
     )
     c.require(
         "eine erwartete Länge über 262140 Bytes" in wire
         and "vor Payload-Allokation, XID-Auflösung und Zustandsänderungen" in wire
-        and "Die maximale Länge gilt pro Request" in wire,
+        and "die maximale Länge gilt pro Request" in wire,
         "request framing: checked arithmetic, maximum ordinary request size, and validation order must be normative",
     )
     matrix = read("spec/request-audit.md").split("## Per-request contract matrix", 1)
