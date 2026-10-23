@@ -172,7 +172,8 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `UpdateDescriptorSets`: betroffenes Set wird von angenommener Arbeit verwendet | `INVALID_SYNCHRONIZATION_STATE` |
 | `UpdateDescriptorSets`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
-| `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige numerische Werte, doppelte Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
+| `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige typunabhängige Feldwerte, doppelte rohe Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
+| `QueueSubmit`: typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig, nachdem XID, Typ und Device-Zustand geprüft wurden | `BadValue` |
 | `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
 | `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
 | `QueueSubmit`: Device nicht verfügbar/verloren, nach erfolgreicher XID-/Typ-/Ownership-/Queue-Prüfung und vor veränderlichen Submit-Zustandsprüfungen | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
