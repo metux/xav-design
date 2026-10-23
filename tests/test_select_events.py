@@ -249,6 +249,8 @@ class SelectEventsContractTests(unittest.TestCase):
             ("DEVICE", 1, "DEVICE_IDLE"),
             ("QUEUE", 0, "SUBMISSION_COMPLETE"),
             ("QUEUE", 1, "SUBMISSION_FAILED"),
+            ("QUEUE", 2, "IMAGE_RELEASED"),
+            ("QUEUE", 3, "PRESENTATION_COMPLETE"),
         }
         self.assertEqual(actual, expected)
         registry_section = re.search(
@@ -283,7 +285,7 @@ class SelectEventsContractTests(unittest.TestCase):
             "bei Eintritt des terminalen Submission-Ergebnisses",
             "gemeinsamen serialisierten Serverzustand",
             "Der erfolgreiche `SelectEvents`-Request wirkt ab seinem Linearisierungspunkt",
-            "der dann geltende Queue-Maske",
+            "die dann geltende Queue-Maske",
             "bilden gegenüber `DestroyDevice` eine unteilbare Entscheidung",
             "kein neues Event für dessen zerstörte Device-XID eingereiht",
             "darf diese Entscheidung nicht nachträglich ändern",
