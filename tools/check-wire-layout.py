@@ -1993,8 +1993,13 @@ def check_presentation_profile(c: Check) -> None:
     ):
         c.require(contract in presentation,
                   f"presentation reply ABI: missing fixed reply size/length contract: {contract}")
-    c.require("The command-entry numeric ID is not allocated yet" in presentation,
-              "presentation command entry must remain explicitly unassigned until checked")
+    command_copy_id_assigned = "The presentation-only command-entry ID is 5." in presentation
+    if command_copy_id_assigned:
+        c.require("The command-entry numeric ID is not allocated yet" not in presentation,
+                  "presentation command entry: assigned ID must not still be described as unallocated")
+    else:
+        c.require("The command-entry numeric ID is not allocated yet" in presentation,
+                  "presentation command entry must remain explicitly unassigned until checked")
     presentation_requests = {
         "CreateSurface", "DestroySurface", "GetSurfaceCapabilities", "CreateSwapchain",
         "DestroySwapchain", "AcquireNextImage", "QueuePresent",
@@ -2005,10 +2010,16 @@ def check_presentation_profile(c: Check) -> None:
     c.require(not (presentation_requests & {name for name, _kind in request_rows.values()}),
               "presentation audit: provisional requests must not be assigned subopcodes yet")
     command_rows = re.findall(r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|", command_registry, re.M)
-    c.require([(int(value), name) for value, name in command_rows] == [
+    expected_command_rows = [
         (1, "CMD_BIND_PIPELINE"), (2, "CMD_BIND_DESCRIPTOR_SETS"),
         (3, "CMD_DISPATCH"), (4, "CMD_PUSH_CONSTANTS"),
-    ], "presentation audit: command-entry registry must remain compute-only until the copy ABI is checked")
+    ]
+    if command_copy_id_assigned:
+        expected_command_rows.append((5, "CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE"))
+        c.require("command ID is 5" in command_recording,
+                  "presentation copy command: assigned ID 5 must be stated in the normative chapter")
+    c.require([(int(value), name) for value, name in command_rows] == expected_command_rows,
+              "presentation audit: command-entry registry differs from the reviewed compute/presentation assignments")
     c.require("both may be supplied together" in presentation and
               "each supplied synchronization object is signaled exactly once" in presentation,
               "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
