@@ -760,6 +760,12 @@ def check_request_document_coverage(c: Check) -> None:
         "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
     )
     c.require(
+        "Einzelne ressourcenspezifische Destroy-/Free-Requests sind nach Device Loss nicht pauschal verboten" in lifetime
+        and "`FreeMemory` bleibt gesperrt, solange intern noch ein Buffer gebunden ist" in lifetime
+        and "Einzelne Destroy-/Free-Requests werden nach Device Loss nicht pauschal mit `DEVICE_LOST` abgewiesen" in read("spec/conformance.md"),
+        "device loss: resource-specific cleanup must preserve ordinary lifetime guards and memory safety",
+    )
+    c.require(
         "offene `WaitForFence`-Registrierung" in lifetime
         and "offene `WaitSemaphores`-Registrierung" in lifetime
         and "terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply" in lifetime,
