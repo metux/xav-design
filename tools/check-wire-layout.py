@@ -2010,16 +2010,20 @@ def check_presentation_profile(c: Check) -> None:
     c.require(not (presentation_requests & {name for name, _kind in request_rows.values()}),
               "presentation audit: provisional requests must not be assigned subopcodes yet")
     command_rows = re.findall(r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|", command_registry, re.M)
-    expected_command_rows = [
+    compute_command_rows = [
         (1, "CMD_BIND_PIPELINE"), (2, "CMD_BIND_DESCRIPTOR_SETS"),
         (3, "CMD_DISPATCH"), (4, "CMD_PUSH_CONSTANTS"),
     ]
+    assigned_command_rows = compute_command_rows + [(5, "CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE")]
+    actual_command_rows = [(int(value), name) for value, name in command_rows]
     if command_copy_id_assigned:
-        expected_command_rows.append((5, "CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE"))
+        c.require(actual_command_rows == assigned_command_rows,
+                  "presentation audit: assigned command-entry registry must append copy entry as ID 5")
         c.require("command ID is 5" in command_recording,
                   "presentation copy command: assigned ID 5 must be stated in the normative chapter")
-    c.require([(int(value), name) for value, name in command_rows] == expected_command_rows,
-              "presentation audit: command-entry registry differs from the reviewed compute/presentation assignments")
+    else:
+        c.require(actual_command_rows in (compute_command_rows, assigned_command_rows),
+                  "presentation audit: command-entry registry has an invalid or non-append-only assignment")
     c.require("both may be supplied together" in presentation and
               "each supplied synchronization object is signaled exactly once" in presentation,
               "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
