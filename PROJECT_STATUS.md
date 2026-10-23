@@ -374,3 +374,9 @@ The seven presentation request subopcodes remain unassigned; the central request
 A Surface may now reference only a live core X11 Window owned by the requesting X11 client connection. Unknown/destroyed/non-Window XIDs use core `BadWindow`; a live Window owned by another client is rejected with `BadMatch`. The error map, conformance cases, and checker enforce this ownership boundary. `CreateSwapchain` mixed-failure precedence is also explicit and checked: scalar fields, Device XID, target create-XID, Surface XID, then capability/status evaluation.
 
 CI passed in [run 39972296604](https://github.com/metux/xav-design/actions/runs/39972296604). Presentation command-entry ID 5 is assigned and validated. Presentation request subopcodes remain unassigned in the central registry; the current assigned request matrix remains 1–40. `master` remains unchanged.
+
+
+## Presentation wire-layout follow-up — 2026-10-23
+
+The latest audit found one stale conformance bullet that still used the pre-queue-family `GetSurfaceCapabilities` reply formula. It now includes the 8-byte queue-family records and their exact count/ordering invariant, matching the normative chapter, request-audit matrix, and static checker. The spec index now distinguishes defined provisional wire layouts from unassigned request subopcodes. Request IDs 41–47 remain intentionally unallocated pending final cross-chapter review; command-entry ID 5 is already assigned to the presentation-only copy command and the checker contains presentation-profile assertions.
+
