@@ -263,6 +263,7 @@ The following cases apply only when the presentation-capable profile is advertis
 
 - `CreateSurface` rejects a bad target XID with `BadIDChoice`, and an invalid/non-Window core X11 Window XID with `BadWindow`; failure allocates no Surface and retains no window reference.
 - `DestroySurface` is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while any live Swapchain references it.
+- `DestroySwapchain` is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while a recording command buffer, pending acquire, accepted queue work, accepted presentation, or possible backend access still references its images; acquired-but-idle images alone do not block destruction. The resource-lifetime matrix must state the same rule.
 - `GetSurfaceCapabilities` uses exactly the defined 64-byte fixed reply prefix plus 8 bytes per format/color-space pair and 4 bytes per present mode; `reply.length = 8 + 2 * format_pair_count + present_mode_count`. Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified.
 - `CreateSwapchain` succeeds only when it can provide the exact requested image count. Every non-success status leaves the target Swapchain XID unallocated.
 - `AcquireNextImage` timeout, not-ready, out-of-date, surface-lost, and device-lost results neither signal the supplied semaphore/fence nor change image state; a pending acquire prevents destruction of its referenced objects.
