@@ -208,9 +208,11 @@ def check_events(c: Check) -> None:
               "synchronization: pending timeline signal values must be reserved monotonically")
     c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
-    c.require(re.search(r"`SignalSemaphore`.*Gesamtlänge muss exakt 24 Bytes.*`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", sync, re.S) is not None and
-              re.search(r"`SignalSemaphore`: falsche Länge `BadLength`.*`DEVICE_UNAVAILABLE` / `DEVICE_LOST`", errors, re.S) is not None,
-              "SignalSemaphore: request length, XID/ownership, and device-state errors must be explicit")
+    c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
+              "verbindliche Präzedenz: falsche Länge `BadLength`" in errors and
+              "gemischten Fehlern gewinnt die frühere Phase" in read("spec/conformance.md") and
+              "Counter sowie Reservierungen bleiben unverändert" in errors,
+              "SignalSemaphore: validation precedence and atomic rejection must be explicit")
     c.require("Gesamtlänge: `28 + 12 * semaphore_count` Bytes" in sync and
               "keine doppelten Semaphore-XIDs (`BadValue`)" in sync and
               "verbindliche Präzedenz" in errors and "`DEVICE_DESTROYED`" in errors,
