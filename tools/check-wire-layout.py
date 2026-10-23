@@ -1561,7 +1561,7 @@ def check_xge_abi(c: Check) -> None:
     # Semantic negative cases that cannot be inferred from field offsets alone.
     c.require("`origin = ORIGIN_QUEUE_SUBMIT` erfordert einen nicht-null Token" in conformance and
               "`ASYNC_ERROR`" in events and
-              re.search(r"Bei `origin = ORIGIN_QUEUE_SUBMIT` daher ungleich null", events) is not None and
+              re.search(r"Bei `origin = ORIGIN_QUEUE_SUBMIT` MUSS `submission_token` daher ungleich null sein", events) is not None and
               re.search(r"ein nicht-null Token darf niemals eine abgewiesene `QueueSubmit`-Anforderung bezeichnen", events) is not None,
               "XGE ASYNC_ERROR: origin/token relationship and rejected-submit exclusion must be normative and tested")
     c.require("unbekannte `origin`-Werte" in conformance and
@@ -1576,7 +1576,7 @@ def check_xge_abi(c: Check) -> None:
               "SelectEvents: malformed scope/mask/unused fields must reject atomically")
     c.require("nicht angeforderter Queue-Kombination" in conformance and
               "fremder Ownership" in conformance and
-              "eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`" in select_body,
+              "Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`" in select_body,
               "SelectEvents: queue lookup and ownership failures must be distinguished")
     c.require("nicht maskierbare `DEVICE_LOST`- und `ASYNC_ERROR`-Events" in conformance and
               "resource_xid" in conformance and
@@ -1584,7 +1584,7 @@ def check_xge_abi(c: Check) -> None:
               "XGE event delivery: DestroyDevice suppression must cover all event XID fields")
     c.require("gemeinsamen serialisierten Linearisierungspunkt" in conformance and
               "gemeinsamen serialisierten Serverzustand" in events and
-              "späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern" in events,
+              "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern" in events,
               "XGE event delivery: SelectEvents/DestroyDevice/completion race must be serialized")
     c.require("höchstens eines von `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED`" in conformance and
               "Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED`" in events,
