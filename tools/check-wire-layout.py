@@ -2221,6 +2221,8 @@ def check_presentation_profile(c: Check) -> None:
         "returns `DEVICE_LOST` before `SURFACE_LOST`, `SURFACE_LOST` before `OUT_OF_DATE`",
         "lifecycle outcomes precede timeout polling",
         "Zero token, duplicate wait XIDs, and accepted-token reuse are `BadValue`",
+        "Device loss beats Surface loss and accepted-token reuse",
+        "accepted-token reuse returns `BadValue` before image-state and semaphore-eligibility checks",
         "Acceptance atomically reserves the token and all wait slots",
     )
     for contract in conformance_precedence_contracts:
