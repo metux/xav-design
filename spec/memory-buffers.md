@@ -133,7 +133,7 @@ Die Bounds-Prüfung muss überlaufsicher erfolgen:
 - `memory_offset <= allocation_size`
 - `requirements.size <= allocation_size - memory_offset`
 
-Cross-Device-Nutzung, unpassender Memory-Type, doppeltes Binden, ungültiges Alignment oder unzureichender Speicher ergeben `BadMatch`. Unbekannte/nicht-live Device-, Buffer- oder Memory-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp ergibt `BadMatch`. Bei nicht verfügbarem oder verlorenem Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.
+`BindBufferMemory` prüft in dieser Reihenfolge: (1) exakte Wire-Länge (`BadLength`); (2) Auflösung von Device-, Buffer- und Memory-XID in Wire-Reihenfolge, wobei unbekannte/nicht-live XIDs `BadValue` ergeben; (3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zuordnung (`BadMatch`); (4) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (5) bindungsabhängige Prüfungen: bereits gebundener Buffer, inkompatibler Memory-Type, ungültiges Alignment oder unzureichende Allocation ergeben `BadMatch`. Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen, aber nicht vor einem früheren XID- oder Ownership-Fehler. Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.
 
 ## 5.7 `WriteBuffer`
 
