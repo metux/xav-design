@@ -849,6 +849,91 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: DestroySemaphore must cover length, host waits, identity, and device-loss teardown",
     )
 
+def normalize_length_formula(value: str) -> str:
+    """Normalize insignificant whitespace/backticks in documented ABI formulas."""
+    value = value.replace("`", "").replace(" ", "").replace("\\t", "")
+    return value.replace("uint64(", "").replace("~uint64(3)", "~3")
+
+
+def request_normative_section(document: str, request: str) -> str:
+    """Return the defining H2 section for a request, including numbered headings."""
+    lines = document.splitlines()
+    heading_indexes = [
+        i for i, line in enumerate(lines)
+        if re.match(r"^##\\s+", line) and request in line
+    ]
+    if heading_indexes:
+        start = heading_indexes[0]
+    else:
+        # A few chapters use a descriptive heading (e.g. Compute Pipeline); find
+        # the first request declaration and anchor it to its containing H2.
+        occurrences = [i for i, line in enumerate(lines) if request in line]
+        if not occurrences:
+            return ""
+        occurrence = occurrences[0]
+        prior = [i for i in range(occurrence + 1) if re.match(r"^##\\s+", lines[i])]
+        if not prior:
+            return ""
+        start = prior[-1]
+    end = next((i for i in range(start + 1, len(lines))
+                if re.match(r"^##\\s+", lines[i])), len(lines))
+    return "\\n".join(lines[start:end])
+
+
+def check_request_matrix_normative_lengths(c: Check) -> None:
+    """Cross-check every variable-length matrix formula against its defining chapter."""
+    audit = read("spec/request-audit.md")
+    registry_text = read("registries/request-subopcodes.md")
+    registry_rows = {
+        name: responsibility
+        for name, _opcode, _kind, responsibility in re.findall(
+            r"^\\|\\s*`([^`]+)`\\s*\\|\\s*(\\d+)\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|",
+            registry_text, re.M,
+        )
+    }
+    matrix = audit.split("## Per-request contract matrix", 1)
+    c.require(len(matrix) == 2, "request matrix: missing normative cross-check matrix")
+    if len(matrix) != 2:
+        return
+    rows = re.findall(
+        r"^\\|\\s*(\\d+)\\s*\\|\\s*`([^`]+)`\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|",
+        matrix[1], re.M,
+    )
+    formula_overrides = {
+        "CreateDevice": "24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))",
+        "CreateDefaultDevice": "16 + 4 * queue_count",
+        "WriteBuffer": "28 + ((uint64(data_length) + 3) & ~uint64(3))",
+        "ShaderModuleData": "20 + ((data_length + 3) & ~3)",
+        "CreateDescriptorSetLayout": "24 + 16 * binding_count",
+        "CreateDescriptorPool": "24 + 8 * pool_size_count",
+        "AllocateDescriptorSets": "20 + 8 * descriptor_set_count",
+        "UpdateDescriptorSets": "20 + 36 * write_count",
+        "FreeDescriptorSets": "20 + 4 * descriptor_set_count",
+        "CreatePipelineLayout": "20 + 4 * set_layout_count + 12 * push_constant_range_count",
+        "CreateComputePipeline": "28 + ((entry_point_length + 3) & ~3)",
+        "QueueSubmit": "40 + 4*C + 16*W + 12*S",
+        "WaitSemaphores": "28 + 12 * semaphore_count",
+    }
+    c.require(len(rows) == 40, f"request matrix: expected 40 rows, found {len(rows)}")
+    for _opcode, request, _kind, matrix_length in rows:
+        if request not in formula_overrides:
+            continue
+        responsibility = registry_rows.get(request, "")
+        link = re.search(r"\\.\\./spec/([^)]*\\.md)", responsibility)
+        c.require(link is not None, f"{request}: registry lacks a defining normative chapter link")
+        if not link:
+            continue
+        chapter = read("spec/" + link.group(1))
+        section = request_normative_section(chapter, request)
+        c.require(bool(section), f"{request}: cannot locate defining normative section")
+        expected = normalize_length_formula(formula_overrides[request])
+        normative = normalize_length_formula(section)
+        c.require(expected in normative,
+                  f"{request}: matrix length formula is not stated in its normative section; expected {formula_overrides[request]!r}")
+        c.require(normalize_length_formula(matrix_length).replace("pad4(data_length)", expected if request == "WriteBuffer" else "pad4(data_length)") == normalize_length_formula(matrix_length),
+                  f"{request}: malformed matrix length expression")
+
+
 def check_reply_matrix(c: Check) -> None:
     registry_text = read("registries/request-subopcodes.md")
     registry_rows = [
@@ -1912,6 +1997,7 @@ def main() -> int:
     check_error_registry(c)
     check_other_numeric_registries(c)
     check_request_document_coverage(c)
+    check_request_matrix_normative_lengths(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
     check_reply_formula_vectors(c)
