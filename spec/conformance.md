@@ -330,3 +330,22 @@ The following cases apply only when the presentation-capable profile is advertis
 - Fehlerpräzedenz für Create-/Batch-Requests: `AllocateDescriptorSets` prüft zuerst Länge und Feldsyntax, dann Ziel-Set-XIDs in Array-Reihenfolge (`BadIDChoice`), dann Device-/Pool-/Layout-Eingabe-XIDs in Wire-Reihenfolge (`BadValue`), danach Typ/Ownership (`BadMatch`) und Device-Zustand (`DEVICE_LOST`/`DEVICE_UNAVAILABLE`) vor Pool-Kapazität und Backend-Allokation. `CreatePipelineLayout` und `CreateComputePipeline` prüfen Feldsyntax vor Ziel-XID, Ziel-XID vor Eingabe-XIDs, dann Typ/Ownership und Device-Zustand vor geräteabhängigen Kompatibilitäts- bzw. Backend-Prüfungen. Jeder Fehler lässt alle Ziel-XIDs unangelegt.
 
 - `ResetFence`-Fehlerpräzedenz: falsche Länge schlägt alle weiteren Prüfungen; unbekannte Device-/Fence-XIDs ergeben `BadValue`, falscher live Typ/Ownership/Cross-Device `BadMatch`; nach gültigen XIDs und Ownership gewinnt `DEVICE_LOST` vor `INVALID_SYNCHRONIZATION_STATE` für einen nicht zurücksetzbaren Fence-Zustand. Jede Ablehnung erhält den gespeicherten Fence-Zustand.
+
+
+## Presentation request wire-layout audit (provisional profile)
+
+The request/reply framing matrix is cross-checked against [the presentation chapter](presentation.md#cross-request-wire-length-audit). Request sizes include the 8-byte X11/XAverius header; reply sizes include the 32-byte X11 reply header.
+
+| Request | Request bytes | Normal reply bytes | Reply length field |
+|---|---:|---:|---:|
+| CreateSurface | 16 | none | — |
+| DestroySurface | 12 | none | — |
+| GetSurfaceCapabilities | 16 | 64 + variable records | 8 + 2×format_pair_count + present_mode_count + 2×queue_family_count |
+| CreateSwapchain | 48 | 40 | 2 |
+| DestroySwapchain | 12 | none | — |
+| AcquireNextImage | 32 | 44 | 3 |
+| QueuePresent | 40 + 4×wait_semaphore_count | 36 | 1 |
+
+Conformance tests MUST verify every fixed request at exact length and at one four-byte unit shorter/longer, plus QueuePresent count/length mismatch and arithmetic overflow. Reply tests verify the X11 reply length field against the actual serialized byte count, zero reserved fields, and status-dependent fields. In particular, GetSurfaceCapabilities has a 64-byte minimum reply; each variable record contributes exactly the bytes specified in presentation.md. CreateSwapchain has a 48-byte request but a 40-byte reply; these lengths must not be conflated. AcquireNextImage's request is 32 bytes and its reply is 44 bytes. QueuePresent's request length varies with the semaphore count, but its reply is always 36 bytes.
+
+For each request, mixed-failure tests verify framing before scalar syntax, scalar syntax before XID resolution, XID/type/ownership checks before lifecycle and mutable-state checks, and atomic rejection. CreateSurface and CreateSwapchain tests verify target-XID validation order and that failed creation leaves the target XID unallocated. QueuePresent tests verify that rejection neither consumes waits nor reserves the token nor transitions the image, while an accepted request commits token, wait reservations, references, and image transition together. Accepted asynchronous failure must produce one terminal presentation outcome and no delayed X11 request error.
