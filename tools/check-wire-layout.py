@@ -2019,7 +2019,7 @@ def check_presentation_profile(c: Check) -> None:
     if command_copy_id_assigned:
         c.require(actual_command_rows == assigned_command_rows,
                   "presentation audit: assigned command-entry registry must append copy entry as ID 5")
-        c.require("command ID is 5" in command_recording,
+        c.require("Assigned command ID: 5" in command_recording,
                   "presentation copy command: assigned ID 5 must be stated in the normative chapter")
     else:
         c.require(actual_command_rows in (compute_command_rows, assigned_command_rows),
