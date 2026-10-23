@@ -67,6 +67,8 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateDescriptorPool`, `AllocateDescriptorSets` und `FreeDescriptorSets` weisen Count null mit `BadValue` ab; `AllocateDescriptorSets` unterscheidet unbekannte Eingabe-XIDs (`BadValue`), falsche live Typen/fremde Ownership (`BadMatch`), Device-Zustände (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`) und Pool-/Backend-Allokationsfehler (`ALLOCATION_FAILED`), und lässt bei Ablehnung keine Teilmenge live
 - Alle Create-Ziel-XIDs werden getrennt von Eingabe-XIDs geprüft: ungültige/belegte Ziel-XIDs ergeben `BadIDChoice`; Batch-Erzeugung hinterlässt bei Kollision keine Teilmenge
 - `ShaderModuleData` ohne passendes Upload-Assembly und `CommandBufferData` ohne passenden `RECORDING`-Buffer werden mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen; CREATE-XID-Kollisionen ergeben `BadIDChoice`
+- `ShaderModuleData`: jeder fehlerhafte Chunk verwirft das gesamte Assembly; nach Disconnect oder Device Loss bleibt kein altes Assembly adressierbar, und spätere Chunks/ABORTs dürfen es nicht wiederbeleben
+- `ShaderModuleData`- und `CommandBufferData`-Chunk-Fehler werden nur synchron als X11-Fehler gemeldet; sie erzeugen kein `ASYNC_ERROR`, da keine Submission angenommen wurde
 - `CreateDevice` weist null Queue-Family-Records, null Queue-Anzahl und doppelte Queue-Family-Records mit `BadValue` ab; eine nicht unterstützte Queue-Anzahl ergibt `BadMatch`
 - Binary-Semaphore: ein angenommener Wait konsumiert das Signal nicht vor tatsächlicher Erfüllung; das Signal wird genau einmal konsumiert und erst dann kann ein neuer Signalzyklus beginnen; doppelte pending Wait-/Signaloperationen werden atomar abgewiesen
 - Timeline-Semaphore: angenommene, noch nicht terminale Signaloperationen reservieren ihre Werte, erhöhen den beobachtbaren Counter aber erst nach erfolgreicher Ausführung; neue Signalwerte müssen über allen pending reservierten Werten liegen
@@ -115,7 +117,8 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `TRANSIENT` ändert keine beobachtbare Semantik; `RESET_COMMAND_BUFFER` und `TRANSIENT` sind unabhängig kombinierbar
 - `ResetCommandBuffer` ohne `RESET_COMMAND_BUFFER` wird abgewiesen; mit Flag setzt es `INITIAL`, `RECORDING`, `EXECUTABLE` oder `INVALID` auf `INITIAL` und verwirft Entries samt aufgezeichneten Referenzen
 - `ResetCommandBuffer` bei `PENDING` wird atomar abgewiesen; Zustand und Referenzen bleiben unverändert
-- `CommandBufferData`-`ABORT` kann ein nicht-pending `RECORDING` unabhängig vom Pool-Reset-Flag auf `INITIAL` zurücksetzen, ist aber für andere Zustände unzulässig
+- `CommandBufferData`-`ABORT` kann ein nicht-pending `RECORDING` unabhängig vom Pool-Reset-Flag auf `INITIAL` zurücksetzen, ist aber für andere Zustände unzulässig; es bleibt nach Device Loss als logische Bereinigung zulässig, sofern Buffer und Pool noch live sind und korrekt zusammengehören
+- Nach Device Loss werden CREATE-/Append-/FINAL-Chunks von `CommandBufferData` mit `DEVICE_LOST` abgewiesen und verändern keine vorher akzeptierten Entries oder Referenzen; ABORT startet keine Vulkan-Arbeit
 - `CommandBufferData` validiert alle Entries eines Chunks vor dem Anhängen; bei einem ungültigen Chunk wird nichts aus diesem Chunk angehängt
 - Nach fehlgeschlagenem CommandBufferData-Chunk bleiben zuvor akzeptierte Chunks erhalten; ein korrigierter Chunk kann folgen oder ABORT setzt den Buffer auf INITIAL zurück
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
