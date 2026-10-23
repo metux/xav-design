@@ -430,10 +430,14 @@ def check_error_registry(c: Check) -> None:
         "Feldwerte und reservierte Felder",
         "Auflösung jeder erforderlichen XID",
         "Ressourcentyp und Ownership",
-        "request-spezifischen Zustands- und Backend-Prüfungen",
     ):
         c.require(phrase in error_doc,
                   f"error coverage: missing normative validation-order/atomicity rule {phrase!r}")
+    c.require(
+        "request-spezifischen Zustands- und Backend-Prüfungen" in error_doc or
+        "request-spezifische Zustands- und Backend-Prüfungen" in error_doc,
+        "error coverage: missing normative request-specific state/backend validation phase",
+    )
 
 
 
