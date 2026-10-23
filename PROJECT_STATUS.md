@@ -280,3 +280,11 @@ During source-level review of the new assertion, corrected the regex escaping an
 Extended `check_presentation_profile` to compare the fixed request-field offsets for all seven provisional presentation requests and all fourteen fixed `GetSurfaceCapabilities` reply fields. This supplements the existing size/formula assertions and copy-command entry layout checks. The checker uses the actual `### RequestName — ...` headings in `spec/presentation.md`; source-level extraction against the current spec confirms the expected offset sequences are present.
 
 During implementation, corrected the regex escaping and used a presentation-specific section extractor because the existing `chapter_section` helper targets a different heading convention. These were source-review corrections, not a successful execution of the checker. CI remains unverified; no subopcodes or command-entry IDs have been allocated.
+
+## Golden wire-vector CI follow-up — 2026-10-23
+
+Inspected Actions run [39940007063](https://github.com/metux/xav-design/actions/runs/39940007063): syntax checking and the request/reply/XGE layout checker passed, while the golden-vector suite reported 13 failures. Nine were overly strict event-field label assertions that did not recognize names written after their wire type in a shared inline-code span. The remaining failures were stale SelectEvents test expectations: two tests omitted the presentation-profile queue mask bits and one assertion used an outdated phrase for the queue-mask linearization rule.
+
+Updated the event field checks to match field names as tokens, aligned the SelectEvents contract test with the normative presentation event-mask table, and corrected the linearization wording expectation. The first rerun exposed one additional stale expected mask list in the exhaustive vector/spec test; that list was corrected as well.
+
+Actions run [39940369790](https://github.com/metux/xav-design/actions/runs/39940369790) then completed successfully: syntax check, request/reply matrix and XGE event layout validation, and all golden wire-vector tests passed. No request subopcodes or command-entry IDs were allocated by this test-only correction.
