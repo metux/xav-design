@@ -21,6 +21,10 @@ Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören
 
 `DestroyCommandPool` hat eine feste Gesamtlänge von 16 Bytes: `device_xid` bei Offset 8 und `command_pool_xid` bei Offset 12.
 
+Der Pool muss zum angegebenen logischen Device gehören. Unbekannte/nicht-live Device- oder Pool-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-Ownership oder Cross-Device-Verwendung ergibt `BadMatch`. Die Zerstörung wird atomar mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange mindestens ein Kind-Command-Buffer noch `PENDING` ist. Bei Ablehnung bleiben Pool, Kind-XIDs und Zustände unverändert. Bei Erfolg werden Pool und alle Kind-Command-Buffer öffentlich invalidiert; interne Objekte bleiben bis zum Ende möglicher Backend-Zugriffe erhalten.
+
+Device Loss allein verhindert `DestroyCommandPool` nicht. Da alle betroffenen angenommenen Submissions terminalisiert werden und ihre Command Buffer nach Ende der Pending-Phase `INVALID` sind, blockiert eine abgeschlossene Device-Loss-Abwicklung die Zerstörung nicht mehr allein wegen früherer GPU-Arbeit. Es darf keine neue GPU-Arbeit gestartet werden; interne Backend-Referenzen bleiben bis zur sicheren Quieszenz erhalten oder werden quarantänisiert.
+
 `ResetCommandBuffer` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes:
 
 | Offset | Typ | Feld |
