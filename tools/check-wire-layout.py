@@ -271,9 +271,9 @@ def check_events(c: Check) -> None:
               "hat Vorrang vor veränderlichen Submit-Zuständen" in submissions and
               "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
-    c.require(re.search(r"\\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\\n\\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
+    c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
               "typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig" in errors and
-              "Device Loss ergibt `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer" in conformance,
+              "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt `DEVICE_LOST`" in conformance,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
@@ -637,11 +637,11 @@ def check_request_document_coverage(c: Check) -> None:
               "Feldfehler schlagen XID-Fehler" in command_recording and
               "Device Loss" in command_recording and
               "ABORT" in command_recording and
-              "Device Loss hat Vorrang vor einem nicht passenden Buffer-Zustand" in errors,
+              "hat damit Vorrang vor einem nicht passenden Buffer-Zustand" in errors,
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
     c.require("CommandBufferData`-Fehlerpräzedenz: fehlerhafte Request-/Entry-Struktur" in conformance and
               "ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt `BadValue`" in conformance and
-              "ABORT bleibt die Ausnahme" in command_recording,
+              "ist die definierte Ausnahme von Phase 5" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
         "dessen deklarierte Länge über das Request-Ende hinausreicht" in errors
