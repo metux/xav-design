@@ -2158,6 +2158,8 @@ def check_presentation_profile(c: Check) -> None:
     # previous baseline status guard intentionally replaced below
     c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation,
               "AcquireNextImage: all non-success operation statuses must be distinguished from X11 errors")
+    c.require("image index is meaningful only for SUCCESS and must be zero on every non-success result" in presentation,
+              "AcquireNextImage: failure reply must use image_index = 0")
     c.require("A failed or timed-out acquire signals neither object and changes no image state." in presentation,
               "AcquireNextImage: failure/timeout must not signal semaphore or fence")
     c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
