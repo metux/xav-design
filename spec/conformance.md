@@ -255,3 +255,18 @@ The following cases apply only when the server implements the presentation-capab
 - IMAGE_RELEASED and PRESENTATION_COMPLETE are distinct terminal milestones, may arrive in either order, and each is emitted at most once per accepted presentation operation. An image is reacquirable only after IMAGE_RELEASED. A presentation failure must release the image or invalidate it and its Swapchain deterministically.
 - Resize marks the old Swapchain OUT_OF_DATE, prevents new acquire/present acceptance, and allows replacement creation while old work drains. Window destruction marks the Surface SURFACE_LOST; no XID reuse can revive it.
 - Presentation event layouts are checked as XGE events 7 and 8 with total lengths 56 and 64 bytes respectively, and queue event-mask bits 2 and 3 are rejected by compute-only implementations.
+
+
+## Presentation-profile conformance cases (provisional)
+
+The following cases apply only when the presentation-capable profile is advertised; they do not expand the compute-only baseline:
+
+- `CreateSurface` rejects a bad target XID with `BadIDChoice`, and an invalid/non-Window core X11 Window XID with `BadWindow`; failure allocates no Surface and retains no window reference.
+- `DestroySurface` is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while any live Swapchain references it.
+- `GetSurfaceCapabilities` uses exactly the defined 64-byte fixed reply prefix plus 8 bytes per format/color-space pair and 4 bytes per present mode; `reply.length = 8 + 2 * format_pair_count + present_mode_count`. Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified.
+- `CreateSwapchain` succeeds only when it can provide the exact requested image count. Every non-success status leaves the target Swapchain XID unallocated.
+- `AcquireNextImage` timeout, not-ready, out-of-date, surface-lost, and device-lost results neither signal the supplied semaphore/fence nor change image state; a pending acquire prevents destruction of its referenced objects.
+- `QueuePresent` has total request size `40 + 4 * wait_semaphore_count` and a 36-byte reply. Duplicate waits, token zero/reuse, wrong resource types, invalid image state, and non-existent queues follow the specific error mapping; rejection does not consume waits or transition the image.
+- A successful `QueuePresent` reply means accepted, not displayed. Image release and presentation completion are separate terminal events and may be observed in either order; each accepted presentation gets at most one of each event.
+- A buffer-to-swapchain-image command requires an acquired image at submission acceptance, retains the exact Swapchain/image identity while pending, and prevents backing storage from being freed until the submission and backend accesses are terminal.
+- Resize/out-of-date, Window destruction/surface-lost, and device loss prevent new acquire/present operations while preserving safe terminal cleanup of previously accepted work.
