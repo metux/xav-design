@@ -2045,6 +2045,8 @@ def check_presentation_profile(c: Check) -> None:
               "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
     c.require("8 + 2 * format_pair_count + present_mode_count + 2 * queue_family_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
+    c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST" in presentation,
+              "QueuePresent: reply status values must be explicit and local to the reply field")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
     c.require("actual_image_count = 0" in presentation and
