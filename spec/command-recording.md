@@ -111,6 +111,8 @@ Die Fehlerauswertung erfolgt in verbindlichen Phasen; der erste Fehler in der fr
 4. Ressourcentyp, Client-Ownership, Device-Zugehörigkeit und exakte Eltern-Pool-Zuordnung; falscher live Typ, fremde Ownership oder falsche Zuordnung ergeben `BadMatch`.
 5. Für CREATE, Append und FINAL wird der Zustand des zugehörigen Devices geprüft; `DEVICE_UNAVAILABLE`/`DEVICE_LOST` hat Vorrang vor einem Buffer-Zustandsfehler. Bei funktionsfähigem Device muss ein nicht-CREATE-Buffer `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`.
 
+Damit gilt ausdrücklich: Wire-Strukturfehler schlagen Feldfehler; Feldfehler schlagen Ziel-/Pool-XID-Fehler; XID-/Typ-/Ownership-Fehler schlagen Device- und Buffer-Zustandsfehler. Innerhalb der XID-Phase wird die Ziel-XID vor der Pool-XID ausgewertet.
+
 `ABORT` ist die definierte Ausnahme von Phase 5: nach den Phasen 1–4 wird geprüft, ob der Buffer `RECORDING` und nicht pending ist. Diese logische Bereinigung bleibt auch bei Device Loss zulässig, startet keine Vulkan-Arbeit und ist bei falschem Buffer-Zustand mit `INVALID_SYNCHRONIZATION_STATE` abzuweisen. Jede Ablehnung lässt alle vorher akzeptierten Entries und Referenzen unverändert; der aktuelle Chunk wird nie teilweise übernommen.
 
 
