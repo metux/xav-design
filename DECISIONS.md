@@ -10,7 +10,7 @@ This file tracks the status and rationale of design decisions. The historical dr
 - Queue identity is `(device_xid, queue_family_index, queue_index)`; there are no Queue XIDs.
 - Physical-device XIDs are server-owned, survive client disconnects, and must never be silently rebound to a different physical device.
 - Both default device selection and explicit physical-device selection followed by `CreateDevice` are intended.
-- Images are outside the initial v0.1 compute path.
+- Images are outside the initial v0.1 compute path. A later presentation-capable profile will present into ordinary server-side X11 windows: the client creates the X window through core X11 and passes its XID to XAverius; the server owns the presentation backend. This does not require client-native Vulkan WSI handles, and it does not yet assign request opcodes or freeze image/swapchain layouts.
 - `WriteBuffer` uses independent requests rather than an upload transaction.
 - A successful `WriteBuffer` reply is an ordering boundary only within its logical device: all previously accepted submissions on that device reach a terminal outcome before the transfer modifies the destination, and all subsequently accepted submissions on any queue of that device observe the written bytes. It does not synchronize other logical devices on the same physical GPU. No client semaphore/barrier is required solely to make that upload visible. While waiting for prior work, the server must permit a later `SignalSemaphore` on the same connection to unblock that work, but must defer later `QueueSubmit` acceptance until the upload completes. The server may implement this conservatively with full device synchronization; if the device is lost or the transfer fails, no successful reply is sent.
 - Acceptance of `QueueSubmit` is distinct from GPU completion.
@@ -37,6 +37,8 @@ This file tracks the status and rationale of design decisions. The historical dr
 - For XAverius v0.1, the X11 request-header `data` byte is always zero; the subopcode is at offset 4 and is copied zero-extended to the standard X11 error packet's `minorCode`.
 
 ## Provisional rules requiring review
+
+- The server-side X11 window presentation architecture is documented in [presentation](spec/presentation.md). Surface/swapchain wire layouts, format/capability registries, acquire/present synchronization, completion semantics, and resize/loss handling remain to be designed before request subopcodes are assigned.
 
 - Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
 - Complete request-specific error mappings and exact applicability/layout of generic `DestroyResource`.
