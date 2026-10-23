@@ -293,7 +293,7 @@ The GetSurfaceCapabilities fixed reply is 64 bytes before any variable records, 
 
 The protocol kind is determined by the response behavior, not by the request's own byte length. A reply-bearing request must send exactly one normal reply on success or a documented status outcome; an X11 error replaces that reply and MUST NOT be followed by a normal reply for the same request. Void requests send no normal reply.
 
-The seven requests above remain unassigned in the central registry. The checker and conformance cases cover their current provisional layouts but do not allocate numeric values. After the final cross-chapter ABI review, assign each request an unused value through the central registry's append-only allocation policy; do not assume a particular numeric range in advance, because other requests may be assigned first.
+The seven requests above remain unassigned in the central registry. The checker and conformance cases cover their current provisional layouts but do not allocate numeric values. The planned append-only assignments after final cross-chapter ABI review are 41–47 in the order listed above, matching the checker’s staged-allocation contract. These are prospective values only: they are not allocated or reserved until the corresponding rows are committed to the central registry. Do not advertise or use them as request subopcodes before that registry update.
 
 ## 11. Work required before assigning request opcodes
 
