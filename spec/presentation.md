@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **architecture defined; request layouts and numeric assignments intentionally not yet allocated**.
+Status: **architecture defined; initial ownership/lifecycle rules settled; request layouts and numeric assignments remain provisional**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -23,6 +23,28 @@ The presentation API is expected to introduce at least these logical objects:
 - **Presentation operation** — an ordered request to make a rendered swapchain image available for display in the target window.
 
 These are conceptual object categories, not final wire names or assigned request subopcodes. The current request registry remains unchanged until each request layout, error behavior, and lifetime rule has been reviewed.
+
+
+## 2.1 Ownership and destruction contract
+
+The following ownership rules are normative for the presentation-capable profile:
+
+- A Surface is a client-created XAverius resource owned by the X11 connection that created it. It is bound to one exact X11 Window identity and is **not** owned by a logical Vulkan Device. This allows a client to query whether different logical devices can present to the same window without recreating the Surface.
+- A Swapchain is a client-created XAverius resource owned by exactly one logical Device and refers to exactly one Surface. Its images and image-acquisition state are children of the Swapchain, not separately client-destroyable resources.
+- A Surface may outlive any logical Device. Destroying a Device invalidates its Swapchains, but does not destroy a Surface owned by the same connection.
+- A Surface must not be destroyed while a live Swapchain references it. The destroy request is rejected atomically; the Surface remains live.
+- A Swapchain must not be destroyed while any image is acquired by the client or any presentation operation may still access its images. The destroy request is rejected atomically; the Swapchain and all image state remain unchanged. Once every image is released and every queued presentation has reached its defined terminal point, destruction may invalidate the Swapchain XID immediately and defer internal storage release until backend access is impossible.
+- Successful destruction immediately invalidates the public XID. Backend images, window references, and internal synchronization objects may be released later under the common resource-lifetime rules.
+- Destruction of the underlying X11 Window does not implicitly destroy or rebind the Surface XID. It transitions the Surface to SURFACE_LOST; operations that require a usable Surface report that state, and explicit Surface destruction remains available.
+- Client disconnect invalidates the client's Surface and Swapchain XIDs. Internal window/image references remain until queued operations and backend accesses are quiescent; XID reuse must never redirect such references.
+
+For wire-layout planning, the natural initial request shapes are a 16-byte CreateSurface (target Surface XID plus X11 Window XID), a 12-byte DestroySurface, and a 12-byte DestroySwapchain (target resource XID, with Device inferred from the resource). These are provisional layouts, not allocated or frozen requests; the common 8-byte header is included in each total. A later request-layout pass must cross-check these shapes against common error mapping and the central registry before assigning subopcodes.
+
+### Exact X11 Window identity
+
+A numeric XID alone is not a durable reference. On successful Surface creation, the server must resolve the Window XID to the server's internal resource identity and retain a reference to that identity. It must also subscribe to or otherwise reliably observe the window's destruction and geometry changes. If the XID is subsequently reused, the retained reference continues to identify the original window object, now destroyed; it must never resolve again by numeric lookup.
+
+A Surface creation failure must leave the target Surface XID unallocated and must not retain a partial window reference. A Surface creation request naming an unknown/destroyed XID or a non-Window resource fails synchronously; the exact X11 error code is to be settled with the request error map. A later Window destruction is asynchronous and cannot retroactively turn the original successful create request into an X11 error.
 
 ## 3. Window relationship and lifecycle
 
@@ -60,7 +82,7 @@ The intended workflow is:
 7. Queue a presentation operation that identifies the swapchain image and the synchronization dependency that makes its rendered contents ready.
 8. Reuse or destroy swapchain resources only after the relevant acquisition and presentation lifecycle permits it.
 
-The final protocol must specify whether acquisition signals a semaphore, a fence, or both; whether present waits on one or more semaphores; and how binary-semaphore consumption is represented. It must not imply that the server can infer GPU readiness merely from request order. Existing XAverius semantics explicitly distinguish protocol request order, queue acceptance, GPU completion, and host replies.
+The final protocol must specify whether acquisition signals a semaphore, a fence, or both; whether present waits on one or more semaphores; and how binary-semaphore consumption is represented. The current command-entry registry only supports compute dispatch and buffer descriptors; it has no image resource or graphics commands. Therefore this chapter does not claim that swapchain images can already be rendered to with the current v0.1 command set. A usable on-screen rendering profile must separately add and register the necessary image resource/usage support and rendering commands, or define a clearly scoped image-upload/copy path. It must not imply that the server can infer GPU readiness merely from request order. Existing XAverius semantics explicitly distinguish protocol request order, queue acceptance, GPU completion, and host replies.
 
 Presentation must be integrated with queue ordering without adding implicit cross-queue ordering beyond the dependencies explicitly established by the client and the presentation contract.
 
