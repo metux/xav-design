@@ -1,5 +1,11 @@
 # Request catalogue and wire-contract audit — 2026-10-21
 
+## Presentation registry value-coverage audit — 2026-10-23
+
+Added a golden-registry test for the future presentation profile. It now verifies that presentation event IDs 7 (`IMAGE_RELEASED`) and 8 (`PRESENTATION_COMPLETE`) extend, without colliding with, the compute baseline IDs 0–6; that the combined event namespace remains contiguous through 8; and that presentation-local terminal status values remain exactly 0–4 (`SUCCESS`, `OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`, `PRESENTATION_FAILED`). It also asserts that the registry remains explicitly outside compute-only v0.1 and that presentation-only queue mask bits are rejected there.
+
+CI: [39965463283](https://github.com/metux/xav-design/actions/runs/39965463283) passed. Commit: `f8ce010` (registry stability test). This is a guard against silent value drift; it does not promote presentation events into compute-only v0.1. `master` remains unchanged.
+
 ## Registry drift and presentation-profile mask audit — 2026-10-23
 
 The event/error registry cross-check confirms that the golden XGE tests already fail when the seven compute-baseline event IDs, event-local enum values, shared reason codes, or v0.1 error offsets drift from their registries. The standalone wire checker now also explicitly ties the `ASYNC_ERROR.error_code` range to offsets 0–8 in `registries/errors.md`, preserving the distinction between an extension-relative offset and an absolute X11 error code.
