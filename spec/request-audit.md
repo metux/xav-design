@@ -1,5 +1,13 @@
 # Request catalogue and wire-contract audit — 2026-10-21
 
+## Registry drift and presentation-profile mask audit — 2026-10-23
+
+The event/error registry cross-check confirms that the golden XGE tests already fail when the seven compute-baseline event IDs, event-local enum values, shared reason codes, or v0.1 error offsets drift from their registries. The standalone wire checker now also explicitly ties the `ASYNC_ERROR.error_code` range to offsets 0–8 in `registries/errors.md`, preserving the distinction between an extension-relative offset and an absolute X11 error code.
+
+The SelectEvents audit found a profile-boundary gap in the test coverage: queue mask bits 2 and 3 correspond to presentation-only event IDs 7 and 8, but must be rejected by the compute-only v0.1 profile. The test encoder and raw-wire validator now check both modes explicitly: compute-only rejects those bits; a presentation-capable profile accepts them. The test cross-checks the separate presentation event registry and exercises both byte orders. This is test coverage for the existing normative profile distinction, not an assignment of presentation events to compute-only v0.1.
+
+Commits: `7654b7a` (central error-registry range guard), `a41a44c` / `b4a92b9` (profile-gated SelectEvents mask tests and assertion correction). CI run [39964812429](https://github.com/metux/xav-design/actions/runs/39964812429) passed after the test correction. `master` was not modified.
+
 ## CommandBufferData and ResetCommandBuffer follow-up — 2026-10-22
 
 The command-recording pass made the five permitted CREATE/FINAL/ABORT combinations explicit in conformance coverage and tightened deterministic error handling: malformed/incomplete entry headers versus invalid entry lengths, CREATE target-XID collisions versus missing input buffers, and the exact parent-pool check even for ABORT. It also records the required recovery guarantees: failed chunks are atomic, failed FINAL leaves the buffer RECORDING, failed CREATE leaves no public buffer or pool-child entry, and rejected ResetCommandBuffer preserves state and references. Static checks now guard these cross-chapter statements. These are documentation and static consistency checks only; runtime server behavior remains untested.
