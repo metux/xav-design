@@ -335,3 +335,8 @@ A precedence pass found that the central error table listed bind/pending-state f
 ## Create and batch allocation error precedence — 2026-10-23
 
 The next precedence pass covered `AllocateDescriptorSets`, `CreatePipelineLayout`, and `CreateComputePipeline`. Their error lists named all major error classes but did not consistently prescribe the winner when a request combines invalid target XIDs, invalid input XIDs, and Device Loss. The request chapters now define field-syntax → target-XID → input-XID wire order → type/ownership → Device state → device-dependent compatibility/capacity/backend order. Batch descriptor-set allocation checks every requested target XID before resolving input resources and remains all-or-nothing. The central error map, conformance cases, and static checker were aligned. This is a specification/static-check audit, not runtime backend fault injection.
+
+
+## ResetFence Device-loss precedence — 2026-10-23
+
+The synchronization chapter already stated that ResetFence is rejected after Device Loss, but the central error table listed the invalid-fence-state result first. The mapping now explicitly places Device Loss after XID/type/ownership validation and before the mutable fence-state check. Conformance coverage and the static checker assert that a lost Device wins over an otherwise non-resettable Fence state while preserving the stored state. This is a spec/static-check correction, not runtime validation.
