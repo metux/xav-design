@@ -632,11 +632,12 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "`FreeDescriptorSets`:" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors
+        and "Nach Device Loss bleibt die logische Freigabe zulässig" in errors
         and "Keine Teilfreigabe bei Ablehnung" in errors
-        and "Die Freigabe ist atomar" in read("spec/shaders-pipelines.md"),
-        "error mapping: FreeDescriptorSets must define device-state and atomic batch behavior",
+        and "Die Freigabe ist atomar" in read("spec/shaders-pipelines.md")
+        and "FreeDescriptorSets` ist eine logische Freigabe und bleibt nach Device Loss zulässig" in read("spec/shaders-pipelines.md"),
+        "error mapping: FreeDescriptorSets must allow logical cleanup after device loss and preserve atomic batch behavior",
     )
 
 
