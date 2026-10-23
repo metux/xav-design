@@ -221,3 +221,10 @@ Added the presentation format/mode registry and capability-query semantics. The 
 Defined the minimal image path for the future presentation profile: compute can write a Buffer, and the new presentation-only CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE entry copies the buffer into an acquired swapchain image. Initial swapchain image usage is TRANSFER_DST only; no graphics pipeline/rasterization support is implied. Added separate IMAGE_RELEASED and PRESENTATION_COMPLETE event definitions and queue mask bits, plus conformance cases for their distinct semantics and for the presentation lifecycle.
 
 The chapter now includes provisional layouts for CreateSurface, DestroySurface, GetSurfaceCapabilities, CreateSwapchain, DestroySwapchain, AcquireNextImage, and QueuePresent. These are not yet assigned request subopcodes. The wire-layout checker still needs corresponding updates for the additional event IDs and presentation-only command entry before the request registry is extended. CI has not reported a status for these commits; no successful test run is claimed.
+
+
+## Presentation ABI review checkpoint — 2026-10-23
+
+The compute-only registries remain unchanged: the central event registry still assigns IDs 0–6, and the command-entry registry still assigns IDs 1–4. Presentation-only event IDs 7 and 8 are documented in a separate profile registry. The buffer-to-swapchain copy entry is specified but has no allocated numeric ID yet. This keeps the compute-only checker assumptions and stable IDs intact while the presentation profile's checker support is completed.
+
+The seven presentation request/reply layouts are specified provisionally in spec/presentation.md, but their request subopcodes are intentionally unassigned. The next implementation step is a reviewed static-checker extension for profile-specific events, command entries, request layouts, and reply formulas; only then should those request IDs be appended. No CI result was reported for the latest branch head.
