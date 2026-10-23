@@ -295,3 +295,8 @@ Actions run [39940369790](https://github.com/metux/xav-design/actions/runs/39940
 Continued the cross-chapter presentation audit after the golden-vector CI recovery. The presentation chapter still described its checker coverage as unvalidated, and the open-issues list still described cross-chapter error-map/checker coverage as unfinished, despite the successful CI run. Updated those status statements.
 
 Extended `tools/check-wire-layout.py` so the presentation-profile pass also checks key request-specific error-map invariants across all seven provisional requests: target-XID creation errors, unknown-XID errors, atomic failure semantics, the acquired-but-idle Swapchain destruction rule, and QueuePresent rejection preserving image/wait state. This remains profile-gated; request subopcodes 41–47 and command-entry ID 5 remain unassigned.
+
+
+## Presentation terminal-event semantics — 2026-10-23
+
+The cross-chapter lifecycle pass found that the presentation chapter still called asynchronous failure reporting and destruction with acquired images unresolved even though the event registry and conformance cases already defined most of the behavior. Reconciled those stale statements and made failure cardinality explicit: every accepted presentation gets a terminal `PRESENTATION_COMPLETE` outcome when delivery is permitted; `IMAGE_RELEASED` is emitted only if the image is reusable. If it cannot be reused, the image and Swapchain are invalidated instead. `DestroyDevice` and disconnect suppress event delivery at their established lifecycle boundary without skipping internal terminal cleanup.
