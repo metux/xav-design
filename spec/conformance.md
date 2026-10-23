@@ -293,7 +293,7 @@ The following cases apply only when the server implements the presentation-capab
 
 The following cases apply only when the presentation-capable profile is advertised; they do not expand the compute-only baseline:
 
-- `CreateSurface` rejects a bad target XID with `BadIDChoice`, and an invalid/non-Window core X11 Window XID with `BadWindow`; failure allocates no Surface and retains no window reference.
+- `CreateSurface` rejects a bad target XID with `BadIDChoice`, an invalid/non-Window core X11 Window XID with `BadWindow`, and a live Window owned by another X11 client with `BadMatch`; failure allocates no Surface and retains no window reference.
 - Mixed-failure `CreateSwapchain` requests validate scalar fields first, then `device_xid`, target `swapchain_xid`, and `surface_xid` in wire-field order; capability/status checks occur only after XID, type, ownership, and Device-state validation.
 - `DestroySurface` is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while any live Swapchain references it.
 - `DestroySwapchain` is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while a recording command buffer, pending acquire, accepted queue work, accepted presentation, or possible backend access still references its images; acquired-but-idle images alone do not block destruction. The resource-lifetime matrix must state the same rule.
