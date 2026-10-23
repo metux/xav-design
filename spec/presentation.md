@@ -183,7 +183,7 @@ The Device is not part of this request because Surface is connection-owned rathe
 - Offset 8: XID `device_xid`
 - Offset 12: XID `surface_xid`
 
-Reply payload begins at offset 32:
+The standard X11 reply header occupies offsets 0–31. The fixed capability fields below use its ordinary data area at offsets 8–28 and continue in the XAverius payload at offsets 32–60. All offsets in the table are absolute offsets from the beginning of the reply packet.
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -204,7 +204,7 @@ Reply payload begins at offset 32:
 
 Variable payload follows at offset 64: `format_pair_count` records of 8 bytes (`CARD32 format_id`, `CARD32 color_space_id`), followed by `present_mode_count` CARD32 values. Total reply size is `64 + 8 * format_pair_count + 4 * present_mode_count`; therefore `reply.length = 8 + 2 * format_pair_count + present_mode_count`. Counts and total size must be checked with wide arithmetic before allocation or serialization.
 
-Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST. SUCCESS with `present_supported = 0` means the Device/Surface pair is valid but cannot present. TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set present_supported to 0 and all extent/count/format/mode/usage fields to zero. SURFACE_LOST and DEVICE_LOST likewise return zero capability fields. Unknown or foreign resource XIDs are synchronous X11 errors, not status values.
+Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST. CreateSwapchain status values are 0 SUCCESS; 1 OUT_OF_DATE; 2 SURFACE_LOST; 3 DEVICE_LOST; 4 UNSUPPORTED_CONFIGURATION; 5 ALLOCATION_FAILED. SUCCESS with `present_supported = 0` means the Device/Surface pair is valid but cannot present. TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set present_supported to 0 and all extent/count/format/mode/usage fields to zero. SURFACE_LOST and DEVICE_LOST likewise return zero capability fields. Unknown or foreign resource XIDs are synchronous X11 errors, not status values.
 
 ### CreateSwapchain — Reply, 48 bytes
 
