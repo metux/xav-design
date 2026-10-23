@@ -2042,6 +2042,10 @@ def check_presentation_profile(c: Check) -> None:
               "GetSurfaceCapabilities: reply.length formula missing")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
+    c.require("actual_image_count = 0" in presentation and
+              "format/color-space pair and present mode must be reported" in presentation and
+              "present_supported = 1 iff at least one queue-family record" in presentation,
+              "CreateSwapchain/GetSurfaceCapabilities: capability validation and failure reply fields must be explicit")
     for contract in (
         "total reply size is 40 bytes and `reply.length = 2`",
         "total reply size is 44 bytes and `reply.length = 3`",
