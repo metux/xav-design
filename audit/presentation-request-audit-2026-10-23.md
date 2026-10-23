@@ -53,7 +53,7 @@ The wire-layout section stated that, after review, the seven requests would be a
 
 ## CI/checker status
 
-The latest audited commits returned no combined status entries and no workflow runs through the available GitHub status queries. This is **not** evidence that the checker passed. Execution of the repository's static checker and a CI run against the current branch remain unverified.
+The repository records a successful earlier wire-layout run, [39950681596](https://github.com/metux/xav-design/actions/runs/39950681596), whose `wire-layout` job passed syntax checks, request/reply/XGE validation, and 119 golden-wire tests. That run predates the latest presentation audit edits and does not validate these commits. The current commits returned no combined status entries, and the available workflow-run lookup did not expose a run for them. Therefore current-commit CI remains **unverified**; an empty status response is not evidence that the checker passed.
 
 ## Remaining work
 
