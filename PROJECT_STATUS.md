@@ -239,3 +239,12 @@ Still open before numeric allocation:
 - Reconcile the proposed presentation event layouts against XGE framing and validate their event IDs against the separate profile registry without changing the compute-only event registry.
 - Assign request subopcodes 41–47 and command-entry ID 5 only after checker coverage and the full wire/error audit are complete.
 - Run CI after these changes. No successful CI result has been confirmed for the current presentation commits.
+
+
+## Presentation-profile checker hardening — 2026-10-23
+
+Corrected the raw-regex escaping in `check_presentation_profile`. During the follow-up review, found and removed a second checker defect: the provisional request-layout headings are plain names followed by the request kind/size, not backtick-wrapped names, so the old heading matcher would have rejected all seven valid sections. The checker now validates the actual headings, fixed reply sizes and `reply.length` values, the exact presentation-event payload offset/type sequence and complete byte coverage, the separate event IDs, and that request IDs 1–40 plus command-entry IDs 1–4 remain unchanged until the profile audit is complete.
+
+The acquisition contract now explicitly permits either optional binary semaphore and optional fence to be omitted or supplied together, and states that each supplied object is signaled exactly once on success. The `IMAGE_RELEASED` wording now limits event cardinality per accepted presentation operation, avoiding an interpretation that an image may receive the event only once for its entire Swapchain lifetime.
+
+The changes are committed on `docs/restructure-2026-10-21`; `master` remains untouched. **Validation is still pending:** no local checkout/execution was available in this pass, and the GitHub status/workflow queries returned no checks for the observed commit. Do not treat the checker as passing and do not allocate presentation request subopcodes 41–47 or command-entry ID 5 until an actual checker/CI run succeeds.
