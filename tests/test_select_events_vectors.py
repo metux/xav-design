@@ -407,6 +407,28 @@ class GoldenSelectEventsTests(unittest.TestCase):
             lifetime,
         )
 
+    def test_async_error_scrubs_destroyed_or_reused_resource_xids(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        conformance = (ROOT / "spec" / "conformance.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "Ist die betroffene Ressource zum Linearisierungspunkt der Event-Einreihung nicht mehr als öffentliche XID live, MUSS `resource_xid = 0` gesetzt werden.",
+            events,
+        )
+        self.assertIn(
+            "Bei `ASYNC_ERROR` darf eine inzwischen zerstörte oder wiederverwendete Ressourcen-XID nicht als `resource_xid` ausgegeben werden",
+            lifetime,
+        )
+        self.assertIn(
+            "ist die öffentliche Ressourcen-XID beim Linearisierungspunkt nicht mehr live, wird `resource_xid = 0` serialisiert",
+            lifetime,
+        )
+        self.assertIn(
+            "muss `resource_xid = 0` sein; ein späterer Callback darf die numerische XID nicht auf das neue Objekt umbiegen",
+            conformance,
+        )
+
     def test_submission_event_delivery_failure_does_not_change_terminal_state(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
