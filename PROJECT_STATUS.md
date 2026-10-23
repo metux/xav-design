@@ -315,3 +315,8 @@ Clarified the terminal-state race for accepted `QueuePresent` operations across 
 ## QueuePresent binary-wait state integration — 2026-10-23
 
 Cross-checked presentation waits against the common binary-semaphore state machine. Accepted QueuePresent operations now reserve each semaphore wait slot atomically with image/token acceptance; the signal is consumed only after a confirmed backend wait. If an accepted presentation fails before a wait is resolved, the semaphore preserves a provably unconsumed state, records confirmed consumption, or becomes `UNTRUSTED` if the payload outcome is uncertain. Incompatible pending waits reject atomically with `INVALID_SYNCHRONIZATION_STATE`; `UNTRUSTED` waits reject with `DEPENDENCY_FAILED`. Added conformance and static-checker coverage. Presentation request subopcodes 41–47 and command-entry ID 5 remain unassigned.
+
+
+## Presentation synchronization and event selection — 2026-10-23
+
+Completed another cross-chapter check of QueuePresent. Binary presentation waits now participate in the same pending-wait exclusivity and payload-state accounting as QueueSubmit waits: reservation is atomic with acceptance, signal consumption requires a confirmed backend wait, and uncertain payload outcomes mark the semaphore `UNTRUSTED` rather than guessing. Error mapping and conformance now distinguish incompatible pending waits (`INVALID_SYNCHRONIZATION_STATE`) from an already `UNTRUSTED` semaphore (`DEPENDENCY_FAILED`). Presentation event masks are sampled independently at each event's own terminal milestone, so later `SelectEvents` changes cannot retroactively alter an event's delivery decision. Static checks cover both contracts. Presentation subopcodes 41–47 and command-entry ID 5 remain unassigned.
