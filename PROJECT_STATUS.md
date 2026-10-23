@@ -255,3 +255,10 @@ The changes are committed on `docs/restructure-2026-10-21`; `master` remains unt
 The cross-chapter audit found a substantive contradiction: `spec/presentation.md` and the presentation error rules allowed destroying a Swapchain with an acquired-but-idle image, but the resource-lifetime matrix still rejected destruction whenever any image was acquired. The matrix now agrees with the normative presentation contract: destruction is blocked by recording command buffers, pending acquires, accepted queue/presentation work, or possible backend accesses; an acquired-but-idle image alone does not block it. A conformance case and a static checker assertion now guard this agreement.
 
 The checker has also been extended to verify the seven actual presentation request headings and fixed reply-size/`reply.length` pairs, in addition to the corrected event registry regex and exact 64-byte presentation event layouts. This remains an unexecuted checker change: the GitHub status and workflow queries for the latest observed commit returned no checks. Numeric request IDs 41–47 and command-entry ID 5 remain intentionally unassigned pending an actual successful run.
+
+
+## Presentation event-mask audit — 2026-10-23
+
+Reviewed the presentation event selection against the shared XGE event namespace. Queue mask bits 2 and 3 map to `IMAGE_RELEASED` and `PRESENTATION_COMPLETE`; compute-only servers reject those bits with `BadValue`. The checker now verifies the presentation event status registry (0–4), those queue-mask mappings, and the compute-only rejection rule. The presentation profile remains separate from the compute baseline and no numeric request or command-entry assignments were added.
+
+The latest checker edits have not been executed locally or confirmed by CI; the current GitHub status/workflow query still needs to be checked after the latest commit. The next safe step remains obtaining a real successful checker/CI run, then fixing any surfaced failures before allocating IDs.
