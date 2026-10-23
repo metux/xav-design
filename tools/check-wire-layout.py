@@ -1578,8 +1578,14 @@ def check_presentation_profile(c: Check) -> None:
         "AcquireNextImage": [8, 12, 16, 24, 28],
         "QueuePresent": [8, 12, 16, 20, 24, 28, 32, 40],
     }
+    def presentation_request_section(request_name: str) -> str:
+        marker = f"### {request_name} —"
+        if marker not in presentation:
+            return ""
+        return presentation.split(marker, 1)[1].split("\\n### ", 1)[0]
+
     for request_name, expected_offsets in request_offsets.items():
-        body = chapter_section(presentation, request_name)
+        body = presentation_request_section(request_name)
         actual_offsets = [int(value) for value in re.findall(
             r"^- Offset (\d+):", body, re.M
         )]
@@ -1589,7 +1595,7 @@ def check_presentation_profile(c: Check) -> None:
             )]
         c.require(actual_offsets == expected_offsets,
                   f"{request_name}: request-field offsets missing, duplicated, or out of order")
-    caps = chapter_section(presentation, "GetSurfaceCapabilities")
+    caps = presentation_request_section("GetSurfaceCapabilities")
     capability_offsets = [int(value) for value in re.findall(
         r"^\|\s*(\d+)\s*\|\s*CARD32\s*\|", caps, re.M
     )]
