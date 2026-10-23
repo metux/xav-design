@@ -49,7 +49,9 @@ Interne Referenzen werden getrennt gezählt beziehungsweise nachverfolgt für au
 
 Explizite Eltern-Kind-Beziehungen:
 
-- Device → alle device-eigenen öffentlichen Ressourcen
+- X11-Verbindung → Surface (verbindungsgebundene Surface; kein Device-Child)
+- Device → alle device-eigenen öffentlichen Ressourcen, einschließlich Swapchains
+- Surface → abhängige Swapchains (Referenzbeziehung; Surface-Zerstörung wird bei live Swapchains abgewiesen)
 - CommandPool → zugehörige Command Buffer
 - DescriptorPool → zugehörige Descriptor Sets
 
@@ -81,6 +83,8 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | Fence | XID wird ungültig | Abweisen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
 | Semaphore | XID wird ungültig | Abweisen, solange ein angenommener Queue-Wait/-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Server-Host-Operation die Semaphore verwendet; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
 | Physical Device | Nicht durch Client zerstörbar | Server-Ownership; XID wird nie neu zugewiesen |
+| Surface (presentation profile) | XID wird ungültig; Window-Referenz wird später freigegeben | Zerstörung wird abgewiesen, solange eine live Swapchain darauf verweist; Window-Zerstörung setzt Surface auf `SURFACE_LOST`, bindet sie nie an eine wiederverwendete XID um |
+| Swapchain (presentation profile) | XID wird ungültig; Image-/Backend-Speicher ggf. verzögert freigegeben | Zerstörung wird abgewiesen, solange Images acquired sind oder Präsentations-/Backend-Zugriffe laufen; Device-Zerstörung invalidiert die XID und verzögert interne Freigabe bis Quieszenz |
 
 Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
 
