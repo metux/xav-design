@@ -4,7 +4,7 @@ This file distinguishes unresolved v0.1 validation work from rules that are alre
 
 ## Remaining v0.1 validation work
 
-1. **Open — implementation-level XGE interoperability.** Exercise `SelectEvents` and XGE framing against an actual X11/XGE implementation. The normative 32-byte GenericEvent header, dynamic extension opcode, static event type IDs, event lengths, and scope-specific selection masks are specified in [events](events.md), [wire protocol](wire-protocol.md), and the conformance checklist. This requires implementation-level testing; documentation-only checks cannot prove interoperability.
+1. **Open — implementation-level XGE interoperability.** Exercise `SelectEvents` and XGE framing against an actual X11/XGE implementation. The normative 32-byte GenericEvent header, dynamic extension opcode, static event type IDs, event lengths, and scope-specific selection masks are specified in [events](events.md), [wire protocol](wire-protocol.md), and the conformance checklist. The step-by-step execution matrix, positive/negative cases, and evidence requirements are in the [XGE interoperability test plan](xge-interoperability-test-plan.md). This requires implementation-level testing; documentation-only checks cannot prove interoperability.
 
 ## Normative maintenance rules
 
