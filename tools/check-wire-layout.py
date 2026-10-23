@@ -1617,6 +1617,14 @@ def check_presentation_profile(c: Check) -> None:
               "GetSurfaceCapabilities: fixed reply fields must occupy offsets 8 through 60")
     c.require("40 + 4 * wait_semaphore_count" in presentation,
               "QueuePresent: variable request length formula missing")
+    c.require("same per-Semaphore pending-wait accounting as `QueueSubmit` waits" in presentation and
+              "marks that binary semaphore `UNTRUSTED`" in presentation,
+              "QueuePresent: accepted wait reservations and uncertain-consumption handling must be explicit")
+    c.require("`QueuePresent` verwendet dieselbe globale Zustandsmaschine" in read("spec/synchronization.md") and
+              "bei unklarem Payload-Ergebnis wird die Semaphore `UNTRUSTED`" in read("spec/synchronization.md"),
+              "synchronization: presentation waits must follow binary semaphore state rules")
+    c.require("already marked `UNTRUSTED` is rejected with `DEPENDENCY_FAILED`" in errors,
+              "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
     c.require("8 + 2 * format_pair_count + present_mode_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
