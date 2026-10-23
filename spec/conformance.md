@@ -146,7 +146,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
 - ABORT ist bei INITIAL, EXECUTABLE, INVALID oder PENDING unzulässig und ändert keinen Zustand
 - Die zentrale Request-Registry enthält genau 40 eindeutige, explizit vergebene Subopcodes (1–40); Subopcode 0 ist reserviert, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
-- Die Command-Entry-Registry weist `CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH` und `CMD_PUSH_CONSTANTS` eindeutig die IDs 1–4 zu; ID 0 und alle nicht zugewiesenen IDs werden mit `BadValue` abgewiesen
+- Die Command-Entry-Registry weist `CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH` und `CMD_PUSH_CONSTANTS` eindeutig die IDs 1–4 zu. ID 5 bezeichnet ausschließlich im presentation-capable Profil `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`; ein Compute-only Server weist diesen Entry als unbekannte Command-ID mit `BadValue` zurück. ID 0 und alle sonstigen nicht zugewiesenen IDs ergeben `BadValue`
 - Die Descriptor-Type-Registry definiert in v0.1 ausschließlich `STORAGE_BUFFER = 1`; `0` und alle nicht zugewiesenen Werte werden abgewiesen und niemals stillschweigend umgedeutet
 - Die Shader-Stage-Registry definiert ausschließlich das `COMPUTE`-Bit `0x00000001`; andere Bits sind reserviert und müssen abgewiesen werden
 - Queue-Flags werden gemäß der zentralen Registry übersetzt und zurückgegeben; Bits 5–31 sind null/reserviert
