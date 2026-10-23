@@ -1541,16 +1541,31 @@ def check_presentation_profile(c: Check) -> None:
                   f"{name}: event payload must cover bytes 32 through 63 exactly")
 
     # Request layouts are specified but not assigned subopcodes yet.
-    for heading in ("CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
-                    "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent"):
-        c.require(re.search(r"### `" + re.escape(heading) + r"`", presentation) is not None,
-                  f"presentation requests: missing wire-layout section {heading}")
+    expected_headings = (
+        "### CreateSurface — Void, 16 bytes",
+        "### DestroySurface — Void, 12 bytes",
+        "### GetSurfaceCapabilities — Reply, 16 bytes",
+        "### CreateSwapchain — Reply, 48 bytes",
+        "### DestroySwapchain — Void, 12 bytes",
+        "### AcquireNextImage — Reply, 32 bytes",
+        "### QueuePresent — Reply, variable length",
+    )
+    for heading in expected_headings:
+        c.require(heading in presentation,
+                  f"presentation requests: missing or changed wire-layout heading {heading}")
     c.require("40 + 4 * wait_semaphore_count" in presentation,
               "QueuePresent: variable request length formula missing")
     c.require("8 + 2 * format_pair_count + present_mode_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
+    for contract in (
+        "total reply size is 40 bytes and `reply.length = 2`",
+        "total reply size is 44 bytes and `reply.length = 3`",
+        "total reply size is 36 bytes and `reply.length = 1`",
+    ):
+        c.require(contract in presentation,
+                  f"presentation reply ABI: missing fixed reply size/length contract: {contract}")
     c.require("The command-entry numeric ID is not allocated yet" in presentation,
               "presentation command entry must remain explicitly unassigned until checked")
     presentation_requests = {
