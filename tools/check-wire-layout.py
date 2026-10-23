@@ -399,8 +399,42 @@ def check_error_registry(c: Check) -> None:
     c.require("first_error + offset" in error_doc,
               "error chapter must define absolute code as first_error + offset")
     for _offset, symbol in rows:
-        c.require(f"`{symbol}`" in error_doc,
+        c.require(chr(96) + symbol + chr(96) in error_doc,
                   f"error registry symbol {symbol} is missing from error guidance")
+
+    # Tie error semantics to the full request registry and conformance corpus.
+    matrix_parts = read("spec/request-audit.md").split("## Per-request contract matrix", 1)
+    conformance = read("spec/conformance.md")
+    request_registry = read("registries/request-subopcodes.md")
+    c.require(len(matrix_parts) == 2, "error coverage: request audit matrix is missing")
+    if len(matrix_parts) == 2:
+        matrix_body = matrix_parts[1].split("\n## ", 1)[0]
+        tick = chr(96)
+        requests = re.findall(r"^\|\s*\d+\s*\|\s*" + tick + r"([^" + tick + r"]+)" + tick + r"\s*\|", matrix_body, re.M)
+        registered = set(re.findall(
+            r"^\|\s*" + tick + r"([^" + tick + r"]+)" + tick + r"\s*\|\s*\d+\s*\|", request_registry, re.M
+        ))
+        c.require(len(requests) == 40,
+                  f"error coverage: expected 40 request matrix entries, found {len(requests)}")
+        c.require(set(requests) == registered,
+                  "error coverage: request matrix and central request registry disagree")
+        for name in requests:
+            c.require(tick + name + tick in error_doc,
+                      f"error coverage: {name} is absent from spec/errors.md")
+            c.require(tick + name + tick in conformance,
+                      f"error coverage: {name} is absent from spec/conformance.md")
+    for phrase in (
+        "Die erste fehlerhafte XID bestimmt den gemeldeten Ressourcenfehler",
+        "Der Request bleibt atomar",
+        "Wire-Länge und strukturelle Integrität",
+        "Feldwerte und reservierte Felder",
+        "Auflösung jeder erforderlichen XID",
+        "Ressourcentyp und Ownership",
+        "request-spezifischen Zustands- und Backend-Prüfungen",
+    ):
+        c.require(phrase in error_doc,
+                  f"error coverage: missing normative validation-order/atomicity rule {phrase!r}")
+
 
 
 def check_other_numeric_registries(c: Check) -> None:
