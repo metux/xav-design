@@ -711,6 +711,20 @@ def check_request_document_coverage(c: Check) -> None:
         and "Ablehnung ist atomar" in errors,
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
+
+    # The summary matrix must not contradict the normative recorded-reference
+    # rules for descriptor sets and pipeline objects.
+    c.require(
+        "| DescriptorSet | XID wird ungültig | Abweisen, solange pending oder von einem `RECORDING`-Command-Buffer referenziert; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime
+        and "| Pipeline | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer sie referenziert oder angenommene Arbeit sie verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime
+        and "| PipelineLayout | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer es referenziert oder angenommene Arbeit es verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime,
+        "resource lifetime: DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
+    )
+    c.require(
+        "`FreeDescriptorSets` weist die Freigabe atomar mit `INVALID_SYNCHRONIZATION_STATE` ab, wenn ein ausgewähltes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird" in conformance
+        and "`DestroyResource` auf Pipeline oder Pipeline Layout weist Recording-Referenzen und angenommene Pending-Use atomar ab" in conformance,
+        "conformance: descriptor-set and pipeline recorded-reference lifetime rules must be explicit",
+    )
     c.require(
         "`DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`" in errors
         and "`DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`" in errors
