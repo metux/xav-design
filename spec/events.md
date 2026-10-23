@@ -127,6 +127,39 @@ Failure-Class-Werte:
 - 0: `EXECUTION_FAILED`
 - 1: `DEVICE_LOST`
 
+
+## `IMAGE_RELEASED`
+
+Gesamtlänge: 56 Bytes; XGE `length = 6`.
+
+| Offset | Typ | Feld |
+|---:|---|---|
+| 32 | XID | Device-XID |
+| 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
+| 40 | CARD32 | `queue_index` der akzeptierten Präsentationsoperation |
+| 44 | XID | Swapchain-XID |
+| 48 | CARD32 | `image_index` |
+| 52 | CARD32 | `reserved = 0` |
+| 56 | CARD64 | `presentation_token` aus dem Client-Request |
+
+Dieses Event bedeutet ausschließlich, dass die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Ein Event darf nur für eine zuvor akzeptierte Präsentationsoperation und höchstens einmal für deren Image ausgegeben werden.
+
+## `PRESENTATION_COMPLETE`
+
+Gesamtlänge: 64 Bytes; XGE `length = 8`.
+
+| Offset | Typ | Feld |
+|---:|---|---|
+| 32 | XID | Device-XID |
+| 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
+| 40 | CARD32 | `queue_index` der akzeptierten Präsentationsoperation |
+| 44 | XID | Swapchain-XID |
+| 48 | CARD32 | `image_index` |
+| 52 | CARD32 | `status` aus der Präsentations-Event-Status-Registry |
+| 56 | CARD64 | `presentation_token` aus dem Client-Request |
+
+Dieses Event bedeutet, dass die Operation den definierten Completion-Punkt der Präsentationsbackend erreicht hat. `SUCCESS` bedeutet, dass die Backend-Präsentation erfolgreich abgeschlossen wurde; andere Statuswerte beschreiben den terminalen Fehlerzustand. Das Event darf unabhängig von `IMAGE_RELEASED` eintreffen. Beide Events werden, falls relevant, separat und höchstens einmal pro akzeptierter Präsentationsoperation zugestellt. `PRESENTATION_COMPLETE` allein macht das Image nicht erneut erwerbbar; nur `IMAGE_RELEASED` tut das. Falls ein Fehler die Wiederverwendung verhindert, wird das Image stattdessen invalidiert und die Swapchain als nicht mehr verwendbar markiert.
+
 ## Voraussetzung fuer lange XGE-Events
 
 Alle in diesem Kapitel definierten Events sind laenger als der normale 32-Byte-X11-Event. Vor dem Versand solcher Events muss der Server wissen, dass der jeweilige Client XGE unterstuetzt; andernfalls kann der X11-Bytestrom fuer einen Client ohne XGE-Unterstuetzung falsch ausgerichtet werden.
@@ -165,8 +198,10 @@ Die Masken sind scopeabhängig:
 | `DEVICE` | 1 | `DEVICE_IDLE` |
 | `QUEUE` | 0 | `SUBMISSION_COMPLETE` |
 | `QUEUE` | 1 | `SUBMISSION_FAILED` |
+| `QUEUE` | 2 | `IMAGE_RELEASED` |
+| `QUEUE` | 3 | `PRESENTATION_COMPLETE` |
 
-Alle anderen Bits sind reserviert und müssen abgewiesen werden. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
+Alle anderen Bits sind reserviert und müssen abgewiesen werden. Die Präsentationsbits sind nur im presentation-capable Profil gültig; ein Compute-only Server muss sie als unbekannte Maskenbits mit `BadValue` zurückweisen. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
 
 `ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt, solange die Verbindung Events empfangen kann. Diese Regel unterliegt den Lebensdauergrenzen aus [Resource lifetime and ownership](resource-lifetime.md): Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt. `DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt. Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist. Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände. Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.
 
