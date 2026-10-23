@@ -982,6 +982,58 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
                       "CommandBufferData: normative variable length must define 16-byte minimum and exact 16-byte ABORT")
 
 
+def check_request_limit_contract(c: Check) -> None:
+    """Guard ordinary X11 request limits and the incompatible BIG-REQUESTS header."""
+    wire = read("spec/wire-protocol.md")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "BIG-REQUESTS wird in v0.1 nicht unterstützt" in wire
+        and "length = 0" in wire
+        and "als BadLength zurückweisen" in wire
+        and "bevor er Bytes ab Offset 4 als XAverius-Subopcode" in wire,
+        "request framing: BIG-REQUESTS length must be rejected before common-header parsing",
+    )
+    c.require(
+        "eine erwartete Länge über 262140 Bytes" in wire
+        and "vor Payload-Allokation, XID-Auflösung und Zustandsänderungen" in wire
+        and "Die maximale Länge gilt pro Request" in wire,
+        "request framing: checked arithmetic, maximum ordinary request size, and validation order must be normative",
+    )
+    matrix = read("spec/request-audit.md").split("## Per-request contract matrix", 1)
+    c.require(len(matrix) == 2, "request limit: missing request audit matrix")
+    if len(matrix) != 2:
+        return
+    matrix_body = matrix[1].split("\n## ", 1)[0]
+    rows = re.findall(
+        r"^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
+        matrix_body, re.M,
+    )
+    variable = {
+        name.strip(chr(96) + " ") for _opcode, name, _kind, length in rows
+        if not re.fullmatch(r"\d+", length.strip(chr(96) + " "))
+    }
+    expected_variable = {
+        "CreateDevice", "CreateDefaultDevice", "WriteBuffer", "ShaderModuleData",
+        "CreateDescriptorSetLayout", "CreateDescriptorPool", "AllocateDescriptorSets",
+        "UpdateDescriptorSets", "FreeDescriptorSets", "CreatePipelineLayout",
+        "CreateComputePipeline", "CommandBufferData", "QueueSubmit", "WaitSemaphores",
+    }
+    c.require(len(rows) == 40, f"request limit: expected 40 matrix rows, found {len(rows)}")
+    c.require(variable == expected_variable,
+              f"request limit: variable-length request set changed unexpectedly: {sorted(variable)}")
+    required_cases = (
+        "whose original X11 16-bit",
+        "exactly 262140 bytes is the maximum permitted size",
+        "evaluated with checked arithmetic",
+        "before payload allocation, XID lookup, or state mutation",
+        "enforce the limit per wire request",
+        "no partial resource creation",
+    )
+    for phrase in required_cases:
+        c.require(phrase in conformance,
+                  f"request limit: missing conformance case {phrase!r}")
+
+
 def check_reply_matrix(c: Check) -> None:
     registry_text = read("registries/request-subopcodes.md")
     registry_rows = [
@@ -2046,6 +2098,7 @@ def main() -> int:
     check_other_numeric_registries(c)
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
+    check_request_limit_contract(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
     check_reply_formula_vectors(c)
