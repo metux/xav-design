@@ -1538,6 +1538,9 @@ def check_presentation_profile(c: Check) -> None:
     c.require("terminalen Ausgang jeder akzeptierten Präsentationsoperation" in event_docs.get("PRESENTATION_COMPLETE", "") and
               "Nach `DestroyDevice` dürfen keine neuen Events" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "PRESENTATION_COMPLETE: terminal outcome and DestroyDevice suppression must be explicit")
+    c.require("Queue-Maske wird zu dem Zeitpunkt ausgewertet" in event_docs.get("IMAGE_RELEASED", "") and
+              "Queue-Maske wird beim Serialisieren des terminalen Präsentationsergebnisses ausgewertet" in event_docs.get("PRESENTATION_COMPLETE", ""),
+              "presentation events: queue mask must be sampled independently at each event milestone")
     c.require("Accepted presentation failures are reported through `PRESENTATION_COMPLETE`" in presentation_spec and
               "invalidates that image and the Swapchain instead" in presentation_spec,
               "presentation: accepted failure must terminate and either release or invalidate the image")
