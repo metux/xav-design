@@ -1744,6 +1744,14 @@ def check_presentation_profile(c: Check) -> None:
                   f"presentation copy command: missing bounds/alignment/ID contract: {contract}")
     c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in copy_command,
               "presentation copy path must specify destination and source usage")
+    copy_errors = read("spec/errors.md")
+    c.require("Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`" in copy_errors and
+              "image_index` außerhalb der Swapchain" in copy_errors and
+              "konkurriert der Submit mit einer Present-Transition" in copy_errors,
+              "presentation copy command: error mapping must cover resource, bounds, and image-state validation")
+    c.require("incompatible transfer usage with `BadMatch`" in read("spec/conformance.md") and
+              "non-`ACQUIRED` image at submission acceptance with `INVALID_SYNCHRONIZATION_STATE`" in read("spec/conformance.md"),
+              "presentation copy command: conformance must cover usage and acquired-image validation")
     c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
 
