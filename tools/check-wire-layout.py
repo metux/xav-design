@@ -1581,17 +1581,17 @@ def check_presentation_profile(c: Check) -> None:
     for request_name, expected_offsets in request_offsets.items():
         body = chapter_section(presentation, request_name)
         actual_offsets = [int(value) for value in re.findall(
-            r"^- Offset (\\d+):", body, re.M
+            r"^- Offset (\d+):", body, re.M
         )]
         if request_name == "QueuePresent":
             actual_offsets = [int(value) for value in re.findall(
-                r"^- Offset (\\d+):", body.split("Total request size", 1)[0], re.M
+                r"^- Offset (\d+):", body.split("Total request size", 1)[0], re.M
             )]
         c.require(actual_offsets == expected_offsets,
                   f"{request_name}: request-field offsets missing, duplicated, or out of order")
     caps = chapter_section(presentation, "GetSurfaceCapabilities")
     capability_offsets = [int(value) for value in re.findall(
-        r"^\\|\\s*(\\d+)\\s*\\|\\s*CARD32\\s*\\|", caps, re.M
+        r"^\|\s*(\d+)\s*\|\s*CARD32\s*\|", caps, re.M
     )]
     c.require(capability_offsets == list(range(8, 64, 4)),
               "GetSurfaceCapabilities: fixed reply fields must occupy offsets 8 through 60")
