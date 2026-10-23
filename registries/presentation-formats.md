@@ -29,6 +29,14 @@ A format/color-space pair is usable only if the queried Surface capabilities exp
 
 FIFO is the baseline mode for a conforming presentation-capable profile. A server may report no presentation support for a given Device/Surface pair, but if it reports presentation support it must report FIFO as supported. Other modes may be appended later; clients must reject unknown values rather than infer semantics.
 
+## Swapchain image usage flags
+
+| Bit | Symbol | Meaning |
+|---:|---|---|
+| 0 | TRANSFER_DST | Image can be the destination of the registered buffer-to-swapchain-image copy command |
+
+Bits 1–31 are unassigned. A server may report TRANSFER_DST only if it supports the copy command and the selected format/backend combination. The initial profile does not advertise color-attachment or storage-image usage because no corresponding command path is defined.
+
 ## Scope and compatibility
 
-These registries define only pixel format, color space, and presentation mode identifiers. They do not yet define image usage bits, alpha-compositing policy, display timing, transforms, HDR metadata, or graphics command entries. Those must be specified separately before a complete image-rendering ABI is declared.
+These registries define only pixel format, color space, and presentation mode identifiers. They do not define alpha-compositing policy, display timing, transforms, HDR metadata, or graphics command entries. The initial TRANSFER_DST path is specified separately in the presentation and command-recording chapters; it is not a general graphics-rendering ABI.
