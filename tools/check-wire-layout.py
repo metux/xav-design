@@ -268,7 +268,7 @@ def check_events(c: Check) -> None:
               "QueueSubmit: error map must state non-mutating synchronous rejection")
     c.require("Fehlerpräzedenz (erste zutreffende Phase gewinnt)" in submissions and
               "erforderliche XIDs werden in Wire-Reihenfolge aufgelöst: Device, optionale Fence, Command-Buffer-XIDs in Array-Reihenfolge" in submissions and
-              "hat Vorrang vor veränderlichen Submit-Zuständen" in submissions and
+              "Vorrang vor veränderlichen Submit-Zuständen" in submissions and
               "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
@@ -634,7 +634,7 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
     c.require("### Fehlerpräzedenz für `CommandBufferData`" in command_recording and
-              "Feldfehler schlagen XID-Fehler" in command_recording and
+              "Feldfehler schlagen Ziel-/Pool-XID-Fehler" in command_recording and
               "Device Loss" in command_recording and
               "ABORT" in command_recording and
               "hat damit Vorrang vor einem nicht passenden Buffer-Zustand" in errors,
@@ -667,7 +667,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "CREATE-, Append- und FINAL-Requests bei nicht verfügbarem/verlorenem Device" in command_recording
         and "`ABORT` bleibt als rein logische Recovery-/Cleanup-Operation auch nach Device Loss zulässig" in command_recording
-        and "ABORT` bleibt als logische Bereinigung nach Device Loss zulässig" in errors
+        and "`ABORT` ist die ausdrücklich logische Ausnahme" in errors
         and "Nach Device Loss werden CREATE-/Append-/FINAL-Chunks von `CommandBufferData` mit `DEVICE_LOST` abgewiesen" in conformance,
         "CommandBufferData: device-loss failures must preserve accepted chunks while ABORT remains logical cleanup",
     )
