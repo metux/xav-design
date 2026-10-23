@@ -330,3 +330,8 @@ The first run exposed a wording mismatch in the checker assertion (the normative
 ## Multi-XID error precedence: binding and descriptor updates — 2026-10-23
 
 A precedence pass found that the central error table listed bind/pending-state failures before Device Loss for `BindBufferMemory` and `UpdateDescriptorSets`, while both operations require a functioning logical Device and the shared policy gives Device-state failures precedence over request-specific state/backend checks. The request chapters now define explicit validation phases: framing/field syntax, XID resolution in wire order, type/ownership, Device state, then request-specific compatibility and mutable-state checks. The central mapping, conformance cases, and static checker now guard the intended mixed-failure outcomes. This is a specification/static-check result only; no live server or Vulkan backend error injection is available.
+
+
+## Create and batch allocation error precedence — 2026-10-23
+
+The next precedence pass covered `AllocateDescriptorSets`, `CreatePipelineLayout`, and `CreateComputePipeline`. Their error lists named all major error classes but did not consistently prescribe the winner when a request combines invalid target XIDs, invalid input XIDs, and Device Loss. The request chapters now define field-syntax → target-XID → input-XID wire order → type/ownership → Device state → device-dependent compatibility/capacity/backend order. Batch descriptor-set allocation checks every requested target XID before resolving input resources and remains all-or-nothing. The central error map, conformance cases, and static checker were aligned. This is a specification/static-check audit, not runtime backend fault injection.
