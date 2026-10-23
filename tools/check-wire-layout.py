@@ -1606,10 +1606,40 @@ def check_presentation_profile(c: Check) -> None:
     c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
               "acquired-but-idle images alone do not block destruction" in conformance,
               "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
+    copy_command = command_recording.split(
+        "### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`", 1
+    )[-1].split("\\n## ", 1)[0]
     c.require("CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE" in command_recording and
-              "36 bytes" in command_recording,
-              "presentation copy command: fixed 36-byte layout missing")
-    c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in command_recording,
+              "36 bytes" in copy_command and "entry_length = 9" in copy_command,
+              "presentation copy command: fixed 36-byte/9-word layout missing")
+    copy_fields = (
+        (0, "`CARD16 command_id`"),
+        (2, "`CARD16 entry_length = 9`"),
+        (4, "Buffer-XID"),
+        (8, "Swapchain-XID"),
+        (12, "`CARD32 image_index`"),
+        (16, "`CARD64 buffer_offset`"),
+        (24, "`CARD32 row_length`"),
+        (28, "`CARD32 image_height`"),
+        (32, "`CARD32 reserved = 0`"),
+    )
+    copy_offsets = re.findall(
+        r"^- Relative offset (\\d+): (.+)$", copy_command, re.M
+    )
+    c.require([(int(offset), field) for offset, field in copy_offsets] ==
+              list(copy_fields),
+              "presentation copy command: field offsets, types, order, or reserved value changed")
+    for contract in (
+        "The effective row length and image height must be at least the image width and height",
+        "overflow-safe wide arithmetic",
+        "4 * (effective_row_length * (height - 1) + width)",
+        "buffer_offset` must be four-byte aligned",
+        "The complete span must lie within the source Buffer",
+        "The command-entry numeric ID is not allocated yet",
+    ):
+        c.require(contract in copy_command,
+                  f"presentation copy command: missing bounds/alignment/ID contract: {contract}")
+    c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in copy_command,
               "presentation copy path must specify destination and source usage")
     c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
