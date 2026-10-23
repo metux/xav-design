@@ -1499,6 +1499,8 @@ def check_presentation_profile(c: Check) -> None:
     event_registry = read("registries/presentation-events.md")
     command_recording = read("spec/command-recording.md")
     formats = read("registries/presentation-formats.md")
+    request_registry = read("registries/request-subopcodes.md")
+    command_registry = read("registries/command-entries.md")
 
     # Presentation event IDs live in a separate, profile-gated registry.
     event_rows = [
@@ -1521,6 +1523,12 @@ def check_presentation_profile(c: Check) -> None:
             c.require((total, length) == (64, 8), f"{name}: expected 64-byte event and XGE length 8")
             c.require(total == 32 + 4 * length, f"{name}: total length must equal 32 + 4 * XGE length")
         records = event_field_records(body)
+        expected_layout = [
+            (32, "XID"), (36, "CARD32"), (40, "CARD32"),
+            (44, "XID"), (48, "CARD32"), (52, "CARD32"), (56, "CARD64"),
+        ]
+        c.require([(offset, typ) for offset, _size, typ, _field in records] == expected_layout,
+                  f"{name}: event payload offsets/types differ from the presentation ABI")
         occupied: set[int] = set()
         for offset, size, typ, field in records:
             c.require(offset >= 32 and offset % min(size, 4) == 0,
@@ -1545,6 +1553,23 @@ def check_presentation_profile(c: Check) -> None:
               "CreateSwapchain: exact image-count reply contract missing")
     c.require("The command-entry numeric ID is not allocated yet" in presentation,
               "presentation command entry must remain explicitly unassigned until checked")
+    presentation_requests = {
+        "CreateSurface", "DestroySurface", "GetSurfaceCapabilities", "CreateSwapchain",
+        "DestroySwapchain", "AcquireNextImage", "QueuePresent",
+    }
+    request_rows = parse_request_registry(request_registry)
+    c.require(set(request_rows) == set(range(1, 41)),
+              "presentation audit: central request registry must remain unchanged at IDs 1–40")
+    c.require(not (presentation_requests & {name for name, _kind in request_rows.values()}),
+              "presentation audit: provisional requests must not be assigned subopcodes yet")
+    command_rows = re.findall(r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|", command_registry, re.M)
+    c.require([(int(value), name) for value, name in command_rows] == [
+        (1, "CMD_BIND_PIPELINE"), (2, "CMD_BIND_DESCRIPTOR_SETS"),
+        (3, "CMD_DISPATCH"), (4, "CMD_PUSH_CONSTANTS"),
+    ], "presentation audit: command-entry registry must remain compute-only until the copy ABI is checked")
+    c.require("both may be supplied together" in presentation and
+              "each supplied synchronization object is signaled exactly once" in presentation,
+              "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
     c.require("CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE" in command_recording and
               "36 bytes" in command_recording,
               "presentation copy command: fixed 36-byte layout missing")
