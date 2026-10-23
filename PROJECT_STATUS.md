@@ -228,3 +228,14 @@ The chapter now includes provisional layouts for CreateSurface, DestroySurface, 
 The compute-only registries remain unchanged: the central event registry still assigns IDs 0–6, and the command-entry registry still assigns IDs 1–4. Presentation-only event IDs 7 and 8 are documented in a separate profile registry. The buffer-to-swapchain copy entry is specified but has no allocated numeric ID yet. This keeps the compute-only checker assumptions and stable IDs intact while the presentation profile's checker support is completed.
 
 The seven presentation request/reply layouts are specified provisionally in spec/presentation.md, but their request subopcodes are intentionally unassigned. The next implementation step is a reviewed static-checker extension for profile-specific events, command entries, request layouts, and reply formulas; only then should those request IDs be appended. No CI result was reported for the latest branch head.
+
+
+## Presentation-profile audit checkpoint — 2026-10-23
+
+The presentation chapter now has a provisional fixed wire layout for all seven requests, with request subopcodes still deliberately unassigned. The latest cross-chapter pass reconciled the acquisition/destroy rules and added presentation-specific error mapping plus profile-gated conformance cases. Key distinctions are explicit: core X11 `BadWindow` for the source Window XID, `BadIDChoice` for create-target collisions, synchronous X11 errors for malformed/invalid resources, normal reply statuses for expected runtime outcomes, and presentation events for accepted asynchronous outcomes.
+
+Still open before numeric allocation:
+- Extend and validate `tools/check-wire-layout.py` for the seven presentation request/reply layouts, the presentation-only command entry, and the separate presentation event registry. Previous update attempts to the executable checker were blocked; no checker modification is claimed.
+- Reconcile the proposed presentation event layouts against XGE framing and validate their event IDs against the separate profile registry without changing the compute-only event registry.
+- Assign request subopcodes 41–47 and command-entry ID 5 only after checker coverage and the full wire/error audit are complete.
+- Run CI after these changes. No successful CI result has been confirmed for the current presentation commits.
