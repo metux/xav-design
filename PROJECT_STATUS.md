@@ -209,3 +209,8 @@ Settled the initial presentation-profile ownership model in [presentation](spec/
 - DestroyDevice/client disconnect invalidate public presentation XIDs immediately while internal resources remain until safe backend quiescence.
 
 Provisional request shapes are noted for later wire/error review: CreateSurface 16 bytes, DestroySurface 12 bytes, DestroySwapchain 12 bytes. No subopcodes were allocated. The current command-entry registry is compute-only and has no image or graphics commands; this is explicitly called out as a separate prerequisite for actual rendering to swapchain images.
+
+
+## Presentation design pass 2 — capabilities and synchronization — 2026-10-23
+
+Added the presentation format/mode registry and capability-query semantics. The profile defines wire IDs for RGBA8_UNORM, BGRA8_UNORM, SRGB_NONLINEAR, and FIFO. The chapter now specifies the capability snapshot, swapchain image-index/state model, acquire and present synchronization, resize/loss transitions, and provisional request/reply layouts. Presentation XGE events IMAGE_RELEASED and PRESENTATION_COMPLETE distinguish image reuse from presentation completion. The existing static checker still needs to be extended for the additional presentation event definitions before new presentation subopcodes are assigned; no CI pass is claimed for these latest changes.
