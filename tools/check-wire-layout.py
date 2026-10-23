@@ -2196,7 +2196,7 @@ def check_presentation_profile(c: Check) -> None:
         "Device loss takes precedence over Surface loss and all later mutable-state checks.",
         "A zero token is always `BadValue`.",
         "Do not test whether a nonzero presentation token was previously accepted at this stage",
-        "after higher-priority XID, Device, queue/index, and lifecycle checks, reject reuse of a token",
+        "after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, reject reuse of a token",
         "Device loss/destruction, then surface loss, then out-of-date",
     )
     for contract in precedence_contracts:
@@ -2209,7 +2209,7 @@ def check_presentation_profile(c: Check) -> None:
         "`OUT_OF_DATE` takes precedence over `UNSUPPORTED_CONFIGURATION`",
         "Every non-success reply has `actual_image_count = 0` and leaves `swapchain_xid` unallocated.",
         "A token mentioned only in a rejected request is not reserved and may be retried.",
-        "after higher-priority XID, Device, queue/index, and lifecycle checks, it returns `BadValue`",
+        "after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, it returns `BadValue`",
         "reserve the token and every wait slot, retain all required resources, and transition the image from `ACQUIRED` to `PRESENT_PENDING`",
     )
     for contract in presentation_precedence_contracts:
@@ -2222,6 +2222,7 @@ def check_presentation_profile(c: Check) -> None:
         "lifecycle outcomes precede timeout polling",
         "Zero token, duplicate wait XIDs, and accepted-token reuse are `BadValue`",
         "Device loss beats Surface loss and accepted-token reuse",
+        "unsupported queue presentation capability is `BadMatch` before token reuse",
         "accepted-token reuse returns `BadValue` before image-state and semaphore-eligibility checks",
         "Acceptance atomically reserves the token and all wait slots",
     )
