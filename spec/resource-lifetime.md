@@ -73,11 +73,11 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | CommandPool | Invalidiert Pool und Kind-Command-Buffer atomar | Abweisen, solange mindestens ein Kind pending ist |
 | CommandBuffer | XID wird ungültig | Abweisen, solange pending |
 | DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, wenn ein Kind-Set pending ist oder ein Kind-Set von einem `RECORDING`-Command-Buffer referenziert wird |
-| DescriptorSet | XID wird ungültig | Abweisen, solange pending |
+| DescriptorSet | XID wird ungültig | Abweisen, solange pending oder von einem `RECORDING`-Command-Buffer referenziert; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
 | Buffer | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer ihn referenziert oder angenommene Arbeit ihn direkt/indirekt verwendet; bei erfolgreichem Destroy werden nicht-pending `EXECUTABLE`-Command-Buffer mit dieser Referenz `INVALID`. Interne Freigabe verzögern, solange Serveroperationen oder Descriptor-Slots das Objekt noch referenzieren |
 | Memory | Nur bei erfolgreicher Prüfung invalidiert | `FreeMemory` wird abgewiesen, solange irgendein Buffer daran gebunden ist oder angenommene Arbeit die Allokation verwendet |
-| Pipeline | XID wird ungültig | Abweisen, solange ein angenommener Command die Pipeline verwendet |
-| PipelineLayout | XID wird ungültig | Abweisen, solange ein angenommener Command das Layout verwendet; nicht-pending executable Command Buffer werden nach der allgemeinen Referenzregel invalidiert |
+| Pipeline | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer sie referenziert oder angenommene Arbeit sie verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
+| PipelineLayout | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer es referenziert oder angenommene Arbeit es verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
 | ShaderModule | Nach erfolgreicher Pipeline-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
 | DescriptorSetLayout | Nach erfolgreicher Pipeline-Layout-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
 | Fence | XID wird ungültig | Abweisen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
