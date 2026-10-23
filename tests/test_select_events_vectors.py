@@ -153,6 +153,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
             ("DEVICE", 1, "DEVICE_IDLE"),
             ("QUEUE", 0, "SUBMISSION_COMPLETE"),
             ("QUEUE", 1, "SUBMISSION_FAILED"),
+            ("QUEUE", 2, "IMAGE_RELEASED"),
+            ("QUEUE", 3, "PRESENTATION_COMPLETE"),
         ])
         registry = (ROOT / "registries" / "request-subopcodes.md").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"^\| `SelectEvents` \| 40 \| Void \|", registry, re.M)), 1)
