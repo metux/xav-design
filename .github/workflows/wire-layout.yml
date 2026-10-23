@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Syntax-check checker and wire tests
-        run: python -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
+        run: python -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py
       - name: Validate request/reply matrix and XGE event layouts
         run: python tools/check-wire-layout.py
       - name: Run golden wire-vector tests
