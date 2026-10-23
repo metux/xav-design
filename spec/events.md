@@ -130,7 +130,7 @@ Failure-Class-Werte:
 
 ## `IMAGE_RELEASED`
 
-Gesamtlänge: 56 Bytes; XGE `length = 6`.
+Gesamtlänge: 64 Bytes; XGE `length = 8`.
 
 | Offset | Typ | Feld |
 |---:|---|---|
