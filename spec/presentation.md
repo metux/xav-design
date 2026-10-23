@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **ownership/lifecycle and initial format/mode IDs defined; capability wire layout, request layouts, and numeric assignments remain provisional**.
+Status: **ownership/lifecycle, initial format/mode IDs, and provisional request/reply layouts defined; request subopcodes and command-entry ID remain unassigned; checker coverage is pending**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -22,7 +22,7 @@ The presentation API is expected to introduce at least these logical objects:
 - **Acquired image** — a swapchain image temporarily owned by the client for rendering or other permitted use.
 - **Presentation operation** — an ordered request to make a rendered swapchain image available for display in the target window.
 
-These are conceptual object categories, not final wire names or assigned request subopcodes. The current request registry remains unchanged until each request layout, error behavior, and lifetime rule has been reviewed.
+These are conceptual object categories. The request names and provisional layouts in section 10 are defined, but the current request registry remains unchanged until the cross-chapter error rules and checker coverage have been reviewed.
 
 
 ## 2.1 Ownership and destruction contract
@@ -44,7 +44,7 @@ For wire-layout planning, the natural initial request shapes are a 16-byte Creat
 
 A numeric XID alone is not a durable reference. On successful Surface creation, the server must resolve the Window XID to the server's internal resource identity and retain a reference to that identity. It must also subscribe to or otherwise reliably observe the window's destruction and geometry changes. If the XID is subsequently reused, the retained reference continues to identify the original window object, now destroyed; it must never resolve again by numeric lookup.
 
-A Surface creation failure must leave the target Surface XID unallocated and must not retain a partial window reference. A Surface creation request naming an unknown/destroyed XID or a non-Window resource fails synchronously; the exact X11 error code is to be settled with the request error map. A later Window destruction is asynchronous and cannot retroactively turn the original successful create request into an X11 error.
+A Surface creation failure must leave the target Surface XID unallocated and must not retain a partial window reference. A Surface creation request naming an unknown/destroyed XID or a non-Window resource fails synchronously with the core X11 `BadWindow` error. The target Surface XID is validated as a create-XID and uses `BadIDChoice` on invalidity or collision. A later Window destruction is asynchronous and cannot retroactively turn the original successful create request into an X11 error.
 
 ## 3. Window relationship and lifecycle
 
@@ -69,7 +69,7 @@ The capability query must report server/backend-supported values, not assume tha
 
 The initial presentation profile uses the explicit [presentation format and mode registry](../registries/presentation-formats.md). Format values are XAverius wire identifiers, not native Vulkan enum values. A supported format is reported together with its color-space identifier; clients must use a pair returned by the query. FIFO is the baseline presentation mode and must be reported whenever presentation is supported.
 
-The capability contract must report: (a) whether the Device/Surface pair can present; (b) current window extent; (c) minimum and maximum permitted swapchain image count; (d) minimum and maximum supported extent; (e) supported format/color-space pairs; (f) supported presentation modes; and (g) the image usage operations the server can actually support for those images. The wire representation and exact request/reply layout remain to be specified, but every count must be paired with an explicit record size and a reply-length formula, and reserved fields must be zero.
+The capability contract must report: (a) whether the Device/Surface pair can present; (b) current window extent; (c) minimum and maximum permitted swapchain image count; (d) minimum and maximum supported extent; (e) supported format/color-space pairs; (f) supported presentation modes; and (g) the image usage operations the server can actually support for those images. The provisional wire layout is defined in section 10, including record sizes, the reply-length formula, and zero-valued reserved fields.
 
 Capability results are a snapshot, not a permanent promise. Window resize, surface loss, backend reconfiguration, or device loss may invalidate the snapshot. A zero-sized/minimized window must be reported explicitly as temporarily not presentable (rather than returning a fabricated nonzero extent or blocking indefinitely); the client can query again after a later geometry change. A false presentation-support result is a normal capability result, not a reason to migrate the Swapchain to another Device.
 
@@ -105,7 +105,7 @@ The intended workflow is:
 7. Queue a presentation operation that identifies the swapchain image and the synchronization dependency that makes its rendered contents ready.
 8. Reuse or destroy swapchain resources only after the relevant acquisition and presentation lifecycle permits it.
 
-The final protocol must specify whether acquisition signals a semaphore, a fence, or both; whether present waits on one or more semaphores; and how binary-semaphore consumption is represented. The current command-entry registry only supports compute dispatch and buffer descriptors; it has no image resource or graphics commands. Therefore this chapter does not claim that swapchain images can already be rendered to with the current v0.1 command set. A usable on-screen rendering profile must separately add and register the necessary image resource/usage support and rendering commands, or define a clearly scoped image-upload/copy path. It must not imply that the server can infer GPU readiness merely from request order. Existing XAverius semantics explicitly distinguish protocol request order, queue acceptance, GPU completion, and host replies.
+The provisional wire layouts in section 10 permit both an optional binary semaphore and optional fence on acquisition, and a list of binary semaphore waits on presentation. Binary-semaphore consumption follows the existing synchronization rules. The current command-entry registry still contains only the compute entries; the presentation-only buffer-to-swapchain-image copy is specified but its numeric entry ID is not allocated. Therefore this chapter does not claim that the current compute-only v0.1 profile already supports presentation. A usable presentation-capable profile must advertise the copy entry only after its ID and checker coverage are completed. The protocol must not imply that the server can infer GPU readiness merely from request order. Existing XAverius semantics explicitly distinguish protocol request order, queue acceptance, GPU completion, and host replies.
 
 Presentation must be integrated with queue ordering without adding implicit cross-queue ordering beyond the dependencies explicitly established by the client and the presentation contract.
 
@@ -118,7 +118,7 @@ An acquire operation may name an optional binary Semaphore XID and optional Fenc
 
 Acquire status values must distinguish at least SUCCESS, TIMEOUT, NOT_READY, OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST. TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST are not X11 framing errors; they are operation results. An image index is valid only on SUCCESS. OUT_OF_DATE and SURFACE_LOST must not return a fabricated image index.
 
-A pending acquire registration holds internal references to its Swapchain, Surface, and supplied synchronization objects. Destroying any of those resources while the acquire is pending must be rejected or must first terminally cancel the acquire according to a deterministic rule; no object may be freed while a pending registration can signal it. The final contract should prefer atomic rejection of the destroy request while the acquire remains pending.
+A pending acquire registration holds internal references to its Swapchain, Surface, and supplied synchronization objects. Destroying any of those resources while the acquire is pending must be rejected or must first terminally cancel the acquire according to a deterministic rule; no object may be freed while a pending registration can signal it. The destroy request MUST be rejected atomically with `INVALID_SYNCHRONIZATION_STATE` while the acquire remains pending. The pending registration and its synchronization-object references remain intact.
 
 ## 5.2 Presentation synchronization contract
 
@@ -252,19 +252,18 @@ Fixed request fields:
 
 Total request size is `40 + 4 * wait_semaphore_count`. The count must be positive only if the client uses explicit waits; zero is permitted when the image needs no additional queue dependency. Duplicate semaphore XIDs are invalid. A reply contains one CARD32 status at offset 32; total reply size is 36 bytes and `reply.length = 1`. SUCCESS means accepted, not displayed. OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST are status outcomes and do not consume waits or change the image from ACQUIRED. Synchronous validation errors are X11 errors and likewise leave all state unchanged.
 
-The seven requests above are not assigned subopcodes in this chapter. After the request audit and checker are updated to these layouts, they may be appended to the central registry without moving the existing values 1–40.
+The seven requests above remain unassigned. After the request audit and checker cover these layouts, they may be appended to the central registry without moving the existing values 1–40.
 
 ## 11. Work required before assigning request opcodes
 
 Before adding presentation requests to the central registry, the design pass must settle and cross-check:
 
-1. Surface and swapchain ownership, destroy behavior, and exact X11 Window identity tracking.
-2. Surface capability query wire layout and the format/mode registries; initial pixel-format, color-space, and FIFO mode IDs are now defined in [presentation-formats](../registries/presentation-formats.md).
-3. Swapchain image usage and image-index identity are now defined in section 4.1; the required image-aware command/descriptor path remains to be specified.
-4. Acquire timeout/status semantics and semaphore/fence signaling are outlined in section 5.1; exact request/reply wire layout remains to be specified.
-5. Present wait-semaphore semantics, queue association, reply behavior, and asynchronous terminal events are outlined in section 5.2; exact layouts and event IDs remain to be assigned.
-6. Resize, out-of-date, surface-lost, and device-lost transitions.
-7. How presentation completion and image release are observed separately from GPU submission completion.
-8. Resource lifetime and synchronization integration with the existing checker and conformance cases.
+1. Complete the cross-chapter audit of Surface/Swapchain ownership, destroy behavior, and exact X11 Window identity tracking; these rules are drafted above.
+2. Validate the provisional capability/query and request/reply layouts in section 10 against the common wire protocol and the request-specific error map.
+3. Complete the image-aware command path by allocating a command-entry ID and integrating it into the checker; its proposed layout is in [command recording](command-recording.md).
+4. Validate acquire timeout/status and semaphore/fence signaling against the existing synchronization state machine.
+5. Validate QueuePresent wait-semaphore behavior and the separate image-release/presentation-completion events.
+6. Finish resize, out-of-date, surface-lost, and device-lost transitions in conformance coverage.
+7. Integrate all presentation layouts and the separate presentation event registry into automated checker coverage before allocating request subopcodes.
 
 No request subopcode is reserved by this chapter. Numeric assignments must be made append-only in [the request subopcode registry](../registries/request-subopcodes.md) after the wire contracts are reviewed.
