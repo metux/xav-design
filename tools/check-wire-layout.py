@@ -2165,7 +2165,7 @@ def check_presentation_profile(c: Check) -> None:
         "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
         "`QueuePresent`: unknown/non-live Device, Swapchain, or wait-semaphore XID is `BadValue`",
         "An acquired-but-idle image alone does not block destruction.",
-        "Any rejected request leaves the image `ACQUIRED`, leaves wait-semaphore state unchanged, and does not reserve its presentation token.",
+        "Any rejected `QueuePresent` leaves the image state as it was immediately before that request, leaves wait-semaphore state unchanged, and does not reserve its presentation token.",
         "Token uniqueness is checked against previously accepted presentations and recorded atomically with acceptance.",
     )
     for contract in presentation_error_contracts:
@@ -2180,6 +2180,11 @@ def check_presentation_profile(c: Check) -> None:
               "CreateSwapchain: mixed XID and capability error precedence must be explicit")
     c.require("For all seven requests, validation is atomic" in errors,
               "presentation request error map: all seven requests must share atomic failure semantics")
+
+    c.require("For `QueuePresent`, check image state first; if it is `ACQUIRED`, validate wait semaphores in array order." in errors and
+              "For each wait, `UNTRUSTED` yields `DEPENDENCY_FAILED`" in errors,
+              "QueuePresent: image-state and wait-semaphore error precedence must be deterministic")
+
 
     # Cross-check deterministic mixed-failure precedence and atomic status paths
     # across the normative error map, presentation chapter, and conformance cases.
