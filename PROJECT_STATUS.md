@@ -362,3 +362,8 @@ Added profile-specific wire tests for presentation events and replies in both by
 CI passed in [run 39971839876](https://github.com/metux/xav-design/actions/runs/39971839876), including the static wire-layout checker and all discovered golden/wire-vector tests. This does not substitute for runtime X11/XGE interoperability or Vulkan presentation-backend testing.
 
 The seven presentation request subopcodes remain unassigned; the central request registry and assigned request matrix remain at IDs 1–40. The provisional layouts and error/conformance coverage are present, but numeric allocation is not claimed. `master` remains unchanged.
+
+
+## Presentation mixed-failure precedence — 2026-10-23
+
+`CreateSwapchain` now defines deterministic mixed-failure ordering: validate wire structure and scalar fields first, then resolve `device_xid`, validate the target create-XID, resolve `surface_xid`, and only then evaluate capability/status outcomes. The error map, conformance checklist, and static checker assert the same order. CI passed in [run 39972062916](https://github.com/metux/xav-design/actions/runs/39972062916). The central request registry remains at 1–40; presentation request layouts are still unassigned pending the final registry allocation and ABI review.
