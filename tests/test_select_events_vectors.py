@@ -189,7 +189,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
                 with self.subTest(order=order, bit=bit, profile="compute-only-raw"):
                     with self.assertRaisesRegex(ValueError, "scope/profile"):
                         validate_select_events_wire(wire, order)
-        self.assertIn("compute-only Server muss sie als unbekannte Maskenbits",
+        self.assertIn("Die Präsentationsbits sind nur im presentation-capable Profil gültig",
                       (ROOT / "spec" / "events.md").read_text(encoding="utf-8"))
     def test_zero_mask_is_valid_for_each_scope_and_byte_order(self):
         import copy
