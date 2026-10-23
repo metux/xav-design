@@ -311,3 +311,10 @@ A framing review revisited the relationship between the standard X11 16-bit requ
 The normative framing rule now requires XAverius servers to reject requests whose original X11 16-bit `length` is zero with `BadLength` before interpreting offset 4 as the XAverius common header. All variable-length request formulas must be computed with checked arithmetic; overflow, an expected total above 262140 bytes, or disagreement between declared length, counts and actual packet end yields `BadLength` before payload allocation, XID resolution or state mutation. The maximum applies per wire request, including chunked uploads/recordings. The conformance checklist covers normal maximum length, oversized requests, zero-length/BIG-REQUESTS framing, overflow, and non-mutating failure. The static checker verifies this contract and that the request matrix still has exactly the expected 14 variable-length requests.
 
 Commits: `c910c49` (normative framing), `91182a6` (conformance cases), `088b9f3` / `143cd26` (static checker and wording fix). CI passed in [run 39968407308](https://github.com/metux/xav-design/actions/runs/39968407308). This validates the specification and static checks; actual X server dispatch behavior still requires implementation-level testing. `master` remains unchanged.
+
+
+## Repository-local Markdown link audit — 2026-10-23
+
+Added a repository-wide local Markdown link check to the wire-layout validation workflow. It scans Markdown files, resolves relative destinations from each source document, rejects missing local targets and links that escape the repository, and reports the source path and line number. The check intentionally validates target paths rather than generated heading fragments; anchor-fragment validation remains a separate possible extension.
+
+The first CI run passed with the new check enabled: [run 39968554690](https://github.com/metux/xav-design/actions/runs/39968554690). Checker commit: `b8da4ba`. This run found no broken local target paths in the current Markdown corpus. `master` remains unchanged.
