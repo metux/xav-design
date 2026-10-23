@@ -934,7 +934,8 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         normative = normalize_length_formula(section)
         c.require(expected in normative,
                   f"{request}: normative section does not state the expected request-length formula")
-        c.require(normalize_length_formula(matrix_length) == expected,
+        matrix_formula = matrix_length.split(";", 1)[0].strip()
+        c.require(normalize_length_formula(matrix_formula) == expected,
                   f"{request}: audit matrix length {matrix_length!r} disagrees with the canonical formula")
 
 
