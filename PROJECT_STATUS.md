@@ -340,3 +340,14 @@ The provisional `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` path now has an explicit er
 The cross-chapter audit corrected the Buffer destruction matrix to match the general recorded-reference rule: a Buffer referenced by a RECORDING command buffer blocks destruction; successful destruction invalidates non-pending EXECUTABLE command buffers that still reference it. The provisional swapchain-copy path now explicitly ties image-state validation to serialized X11 request acceptance: a copy submission accepted before QueuePresent retains its exact image/Swapchain identity, while a later copy submission after the image transitions to PRESENT_PENDING is rejected atomically. Request order is explicitly not a GPU memory dependency, and presentation must wait on a binary semaphore dependency when prior accepted work may still access the image.
 
 Conformance and the static checker now assert these rules, including indirect Buffer references through Descriptor Sets during recording. GitHub Actions run [39948495316](https://github.com/metux/xav-design/actions/runs/39948495316) passed syntax checking, request/reply and XGE layout validation, and all golden wire-vector tests. Presentation request subopcodes 41–47 and command-entry ID 5 remain unassigned.
+
+
+## Presentation ABI follow-up — 2026-10-23
+
+The presentation-only buffer-to-swapchain-image command is now assigned command-entry ID 5 in the append-only command registry; it remains gated behind the presentation-capable profile and is not part of the compute-only baseline. The static checker now verifies this assignment alongside the 36-byte/9-word entry layout.
+
+The presentation audit also corrected the `IMAGE_RELEASED` XGE size to 64 bytes (`length = 8`) and added a dedicated presentation-event wire test covering both byte orders. `GetSurfaceCapabilities` now reports per-queue-family present support in 8-byte records, making `QueuePresent` queue validation implementable without relying on a hidden “last query” state. Capability reply-length arithmetic includes those records. Swapchain creation now distinguishes malformed fields from unsupported configurations, specifies exact image-count results, and zeroes `actual_image_count` on non-success. Acquire polling now defines `NOT_READY` for an immediate zero-timeout miss and `TIMEOUT` for expiry of a finite positive timeout.
+
+CI passed in [run 39970932942](https://github.com/metux/xav-design/actions/runs/39970932942), including the static wire-layout checker and golden wire tests. These are static/specification checks, not runtime X11 presentation or Vulkan backend conformance.
+
+The seven presentation request layouts remain documented but unassigned in the central request registry. They are deliberately excluded from the assigned 1–40 request matrix until the registry allocation and final request audit are completed. `master` remains unchanged.
