@@ -148,6 +148,8 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Erfolgreiches `DestroyResource` invalidiert die öffentliche XID sofort, erhält interne Objekte aber bis zum Ende notwendiger Referenzen und Backend-Zugriffe
 - Destroy einer von einem `RECORDING`-Command-Buffer referenzierten Ressource wird atomar abgewiesen.
 - Destroy einer von einem nicht-pending `EXECUTABLE`-Command-Buffer referenzierten Ressource invalidiert diesen Command Buffer.
+- `FreeDescriptorSets` weist die Freigabe atomar mit `INVALID_SYNCHRONIZATION_STATE` ab, wenn ein ausgewähltes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird; bei Erfolg werden nicht-pending `EXECUTABLE`-Command-Buffer mit dieser Set-Referenz `INVALID`.
+- `DestroyResource` auf Pipeline oder Pipeline Layout weist Recording-Referenzen und angenommene Pending-Use atomar ab; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID`.
 - `DestroyCommandPool`, `DestroyDescriptorPool` und `FreeDescriptorSets` werden bei verbotener Pending-/Recording-Referenz atomar abgewiesen; erfolgreiche Kaskaden invalidieren alle betroffenen XIDs. `FreeDescriptorSets` prüft zudem Device-Zustand und Ownership; bei Ablehnung darf keine Teilfreigabe stattfinden.
 - `DestroyDescriptorPool` hat exakt 16 Bytes; es invalidiert Pool und Kind-Sets atomar und setzt referenzierende nicht-pending `EXECUTABLE`-Command-Buffer auf `INVALID`.
 - `DestroyResource` auf einen Buffer wird während Pending-Use abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
