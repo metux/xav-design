@@ -173,12 +173,12 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `UpdateDescriptorSets`: Device ist nicht verfügbar/verloren | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
 | `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige typunabhängige Feldwerte, doppelte rohe Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
-| `QueueSubmit`: typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig, nachdem XID, Typ und Device-Zustand geprüft wurden | `BadValue` |
 | `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
 | `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
 | `QueueSubmit`: Device nicht verfügbar/verloren, nach erfolgreicher XID-/Typ-/Ownership-/Queue-Prüfung und vor veränderlichen Submit-Zustandsprüfungen | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `QueueSubmit`: typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig, nachdem XID, Typ und Device-Zustand geprüft wurden | `BadValue` |
 | `QueueSubmit`: Command Buffer nicht `EXECUTABLE`, Fence nicht submitbar, Semaphore-Zustand unzulässig oder syntaktisch gültige Wait-Stage-Maske enthält eine Stage, die von der adressierten Queue-Family nicht unterstützt wird | `INVALID_SYNCHRONIZATION_STATE` |
-| `QueueSubmit`: typabhängiger Semaphore-Wert ungültig oder Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `BadValue` für ungültige Werte; andernfalls `DEPENDENCY_FAILED` |
+| `QueueSubmit`: Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `DEPENDENCY_FAILED` |
 | `QueueSubmit`: synchroner Fehler vor Annahme | keinerlei Zustandsänderung; Token bleibt unbenutzt, Command Buffer bleiben `EXECUTABLE`, Fence-/Semaphore-Zustände und interne Referenzen bleiben unverändert; kein Submission-Event und kein `ASYNC_ERROR` |
 | `ResetFence`: falsche Länge | `BadLength` |
 | `ResetFence`: Device- oder Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
