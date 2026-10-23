@@ -27,6 +27,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 - [Feature-ID registry](../registries/feature-ids.md) and [device-extension registry](../registries/device-extensions.md) — the v0.1 optional sets are intentionally empty.
 - [Physical-device property registry](../registries/physical-device-properties.md) — canonical Atom names, property types, value formats, and availability rules.
 - [Command-buffer entry registry](../registries/command-entries.md) — numeric IDs and support status for v0.1 command entries.
+- [Presentation format and mode registry](../registries/presentation-formats.md) — initial wire IDs for pixel formats, color space, and FIFO presentation mode in the future presentation profile.
 
 ## Editorial conventions
 
