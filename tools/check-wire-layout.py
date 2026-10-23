@@ -851,7 +851,7 @@ def check_request_document_coverage(c: Check) -> None:
 
 def normalize_length_formula(value: str) -> str:
     """Normalize insignificant whitespace and the audit's pad4 shorthand."""
-    value = value.replace("\`", "")
+    value = value.replace("`", "")
     value = value.replace("~uint64(3)", "~3")
     value = re.sub(r"uint64\(([^()]*)\)", r"\1", value)
     value = re.sub(r"pad4\(([^()]*)\)", r"((\1+3)&~3)", value)
