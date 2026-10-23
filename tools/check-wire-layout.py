@@ -1619,8 +1619,8 @@ def check_presentation_profile(c: Check) -> None:
         (8, "Swapchain-XID"),
         (12, "`CARD32 image_index`"),
         (16, "`CARD64 buffer_offset`"),
-        (24, "`CARD32 row_length`"),
-        (28, "`CARD32 image_height`"),
+        (24, "`CARD32 row_length` in texels; zero means the Swapchain width"),
+        (28, "`CARD32 image_height` in texels; zero means the Swapchain height"),
         (32, "`CARD32 reserved = 0`"),
     )
     copy_offsets = re.findall(
