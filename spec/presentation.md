@@ -160,7 +160,101 @@ The presentation-capable profile should initially target presentation into ordin
 - a guarantee that every compute-capable physical device is also presentation-capable;
 - a guarantee of a particular display timing, refresh interval, tearing policy, or physical scanout completion point unless explicitly reported by a future capability/extension contract.
 
-## 9. Work required before assigning request opcodes
+
+## 10. Provisional wire layouts
+
+This section proposes concrete fixed layouts so they can be audited against the common XAverius header and X11 reply framing. The layouts remain provisional until the cross-chapter error and checker pass is complete. All offsets below include the standard 8-byte request header.
+
+### CreateSurface — Void, 16 bytes
+
+- Offset 8: XID `surface_xid` — client-allocated target XID
+- Offset 12: XID `window_xid` — existing core X11 Window
+
+On success, creates a connection-owned Surface and retains the exact internal Window identity. The target XID remains unallocated on failure.
+
+### DestroySurface — Void, 12 bytes
+
+- Offset 8: XID `surface_xid`
+
+The Device is not part of this request because Surface is connection-owned rather than Device-owned. A live Swapchain referencing the Surface causes atomic rejection.
+
+### GetSurfaceCapabilities — Reply, 16 bytes
+
+- Offset 8: XID `device_xid`
+- Offset 12: XID `surface_xid`
+
+Reply payload begins at offset 32:
+
+| Offset | Type | Field |
+|---:|---|---|
+| 8 | CARD32 | `status` |
+| 12 | CARD32 | `present_supported` (0 or 1) |
+| 16 | CARD32 | `current_width` |
+| 20 | CARD32 | `current_height` |
+| 24 | CARD32 | `min_image_count` |
+| 28 | CARD32 | `max_image_count` (0 means no fixed maximum) |
+| 32 | CARD32 | `min_width` |
+| 36 | CARD32 | `min_height` |
+| 40 | CARD32 | `max_width` |
+| 44 | CARD32 | `max_height` |
+| 48 | CARD32 | `format_pair_count` |
+| 52 | CARD32 | `present_mode_count` |
+| 56 | CARD32 | `image_usage_flags` |
+| 60 | CARD32 | `reserved = 0` |
+
+Variable payload follows at offset 64: `format_pair_count` records of 8 bytes (`CARD32 format_id`, `CARD32 color_space_id`), followed by `present_mode_count` CARD32 values. Total reply size is `64 + 8 * format_pair_count + 4 * present_mode_count`; therefore `reply.length = 8 + 2 * format_pair_count + present_mode_count`. Counts and total size must be checked with wide arithmetic before allocation or serialization.
+
+Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST. SUCCESS with `present_supported = 0` means the Device/Surface pair is valid but cannot present. TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set present_supported to 0 and all extent/count/format/mode/usage fields to zero. SURFACE_LOST and DEVICE_LOST likewise return zero capability fields. Unknown or foreign resource XIDs are synchronous X11 errors, not status values.
+
+### CreateSwapchain — Reply, 48 bytes
+
+- Offset 8: XID `device_xid`
+- Offset 12: XID `swapchain_xid` — client-allocated target XID
+- Offset 16: XID `surface_xid`
+- Offset 20: CARD32 `image_count` — exact requested count
+- Offset 24: CARD32 `format_id`
+- Offset 28: CARD32 `color_space_id`
+- Offset 32: CARD32 `width`
+- Offset 36: CARD32 `height`
+- Offset 40: CARD32 `present_mode_id`
+- Offset 44: CARD32 `image_usage_flags`
+
+Reply payload at offset 32 is two CARD32 values: `status`, `actual_image_count`; total reply size is 40 bytes and `reply.length = 2`. The initial contract requests an exact image count: success reports the same count; a backend unable to provide exactly that count rejects creation. This avoids an ambiguity about the client-visible image-index range. A successful create atomically allocates the Swapchain XID and image set. A non-success status leaves the target XID unallocated.
+
+### DestroySwapchain — Void, 12 bytes
+
+- Offset 8: XID `swapchain_xid`
+
+Device ownership is inferred from the resource. Destruction is rejected while pending acquisition, queue work, accepted presentation, or backend access can still use its images. Acquired-but-idle images are invalidated with the Swapchain and do not independently prevent destruction.
+
+### AcquireNextImage — Reply, 32 bytes
+
+- Offset 8: XID `device_xid`
+- Offset 12: XID `swapchain_xid`
+- Offset 16: CARD64 `timeout_ns`; all ones means infinite
+- Offset 24: XID `semaphore_xid`; zero means absent
+- Offset 28: XID `fence_xid`; zero means absent
+
+Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on failure or timeout. The semaphore, when present, must be binary.
+
+### QueuePresent — Reply, variable length
+
+Fixed request fields:
+
+- Offset 8: XID `device_xid`
+- Offset 12: CARD32 `queue_family_index`
+- Offset 16: CARD32 `queue_index`
+- Offset 20: XID `swapchain_xid`
+- Offset 24: CARD32 `image_index`
+- Offset 28: CARD32 `wait_semaphore_count`
+- Offset 32: CARD64 `presentation_token` (nonzero and unique for the connection lifetime)
+- Offset 40: `wait_semaphore_count` XID values for binary semaphores
+
+Total request size is `40 + 4 * wait_semaphore_count`. The count must be positive only if the client uses explicit waits; zero is permitted when the image needs no additional queue dependency. Duplicate semaphore XIDs are invalid. A reply contains one CARD32 status at offset 32; total reply size is 36 bytes and `reply.length = 1`. SUCCESS means accepted, not displayed. OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST are status outcomes and do not consume waits or change the image from ACQUIRED. Synchronous validation errors are X11 errors and likewise leave all state unchanged.
+
+The seven requests above are not assigned subopcodes in this chapter. After the request audit and checker are updated to these layouts, they may be appended to the central registry without moving the existing values 1–40.
+
+## 11. Work required before assigning request opcodes
 
 Before adding presentation requests to the central registry, the design pass must settle and cross-check:
 
