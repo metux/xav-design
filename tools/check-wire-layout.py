@@ -1658,6 +1658,19 @@ def check_presentation_profile(c: Check) -> None:
               "presentation request error map: all seven requests must share atomic failure semantics")
     c.require("On every non-success status the target XID remains unallocated" in errors,
               "CreateSwapchain: every non-success reply status must preserve the target XID")
+    capability_failure_contract = (
+        "TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set "
+        "present_supported to 0 and all extent/count/format/mode/usage fields to zero. "
+        "SURFACE_LOST and DEVICE_LOST likewise return zero capability fields."
+    )
+    c.require(capability_failure_contract in presentation,
+              "GetSurfaceCapabilities: non-success statuses must define zeroed capability fields")
+    c.require("Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified." in conformance,
+              "presentation conformance: capability failure statuses must cover zeroed fields")
+    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST are not X11 framing errors" in presentation,
+              "AcquireNextImage: all non-success operation statuses must be distinguished from X11 errors")
+    c.require("neither signaled on failure or timeout" in presentation,
+              "AcquireNextImage: failure/timeout must not signal semaphore or fence")
     c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
               "acquired-but-idle images alone do not block destruction" in conformance,
               "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
