@@ -171,7 +171,7 @@ Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
 
 This entry is a minimal pixel-production path for the first on-screen presentation profile; it does not add general Vulkan Image resources or graphics pipelines. It copies a tightly or explicitly row-pitched rectangle from a Buffer into one acquired Swapchain image. The entry is valid only when the source Buffer has `TRANSFER_SRC` usage, the selected Swapchain was created with `TRANSFER_DST` image usage, and the referenced image is currently `ACQUIRED` at the point the command is validated for submission.
 
-Fixed total length: 36 bytes; `entry_length = 9) words.
+Fixed total length: 36 bytes; `entry_length = 9` words.
 
 - Relative offset 0: `CARD16 command_id`
 - Relative offset 2: `CARD16 entry_length = 9`
