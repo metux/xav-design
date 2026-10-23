@@ -84,7 +84,7 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | Semaphore | XID wird ungültig | Abweisen, solange ein angenommener Queue-Wait/-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Server-Host-Operation die Semaphore verwendet; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
 | Physical Device | Nicht durch Client zerstörbar | Server-Ownership; XID wird nie neu zugewiesen |
 | Surface (presentation profile) | XID wird ungültig; Window-Referenz wird später freigegeben | Zerstörung wird abgewiesen, solange eine live Swapchain darauf verweist; Window-Zerstörung setzt Surface auf `SURFACE_LOST`, bindet sie nie an eine wiederverwendete XID um |
-| Swapchain (presentation profile) | XID wird ungültig; Image-/Backend-Speicher ggf. verzögert freigegeben | Zerstörung wird abgewiesen, solange Images acquired sind oder Präsentations-/Backend-Zugriffe laufen; Device-Zerstörung invalidiert die XID und verzögert interne Freigabe bis Quieszenz |
+| Swapchain (presentation profile) | XID wird ungültig; Image-/Backend-Speicher ggf. verzögert freigegeben | Zerstörung wird abgewiesen, solange Recording-Command-Buffer, pending Acquires, angenommene Queue-/Präsentationsarbeit oder mögliche Backend-Zugriffe die Images referenzieren; ein acquired-but-idle Image allein blockiert nicht. Device-Zerstörung invalidiert die XID und verzögert interne Freigabe bis Quieszenz |
 
 Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
 
