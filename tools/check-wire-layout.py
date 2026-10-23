@@ -2195,6 +2195,7 @@ def check_presentation_profile(c: Check) -> None:
         "`CreateSwapchain` checks `device_xid`, then target `swapchain_xid`, then `surface_xid`",
         "Device loss takes precedence over Surface loss and all later mutable-state checks.",
         "A zero token is always `BadValue`.",
+        "Do not test whether a nonzero presentation token was previously accepted at this stage",
         "Device loss/destruction, then surface loss, then out-of-date",
     )
     for contract in precedence_contracts:
