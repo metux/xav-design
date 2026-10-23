@@ -453,6 +453,42 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_conformance_covers_event_negative_cases_and_lifecycle_ordering(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        conformance = (ROOT / "spec" / "conformance.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+
+        required_cases = (
+            "unbekannte Maskenbits",
+            "falschen Nullwerten",
+            "nicht angeforderter Queue-Kombination",
+            "nicht maskierbare `DEVICE_LOST`- und `ASYNC_ERROR`-Events",
+            "gemeinsamen serialisierten Linearisierungspunkt",
+            "höchstens eines von `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED`",
+        )
+        for phrase in required_cases:
+            with self.subTest(case=phrase):
+                self.assertIn(phrase, conformance)
+
+        # Conformance examples must be backed by the normative delivery and
+        # lifetime rules, not just repeat the intended behavior as checklist text.
+        self.assertIn(
+            "Alle anderen Bits sind reserviert und müssen abgewiesen werden.",
+            events,
+        )
+        self.assertIn(
+            "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen.",
+            events,
+        )
+        self.assertIn(
+            "bei `ASYNC_ERROR` darf die zerstörte Device-XID nicht als `device_xid` oder `resource_xid` ausgegeben werden",
+            lifetime,
+        )
+        self.assertIn(
+            "Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions",
+            lifetime,
+        )
+
     def test_backend_completion_keeps_original_connection_and_resource_identity(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
