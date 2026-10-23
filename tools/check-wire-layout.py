@@ -2049,7 +2049,7 @@ def check_presentation_profile(c: Check) -> None:
               "ordered by ascending index with no duplicates" in presentation and
               "`CARD32 queue_family_index`, `CARD32 present_supported`" in presentation,
               "GetSurfaceCapabilities: queue-family support records must have a defined, complete, ordered layout")
-    c.require("Every physical queue family has exactly one ordered support record." in conformance,
+    c.require("Every physical queue family has exactly one ordered support record." in read("spec/conformance.md"),
               "presentation conformance: queue-family capability records must cover every family exactly once")
     c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST" in presentation,
               "QueuePresent: reply status values must be explicit and local to the reply field")
