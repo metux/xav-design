@@ -1752,6 +1752,14 @@ def check_presentation_profile(c: Check) -> None:
     c.require("incompatible transfer usage with `BadMatch`" in read("spec/conformance.md") and
               "non-`ACQUIRED` image at submission acceptance with `INVALID_SYNCHRONIZATION_STATE`" in read("spec/conformance.md"),
               "presentation copy command: conformance must cover usage and acquired-image validation")
+    c.require("later copy submission processed after the image has transitioned to `PRESENT_PENDING` is rejected atomically with `INVALID_SYNCHRONIZATION_STATE`" in copy_command and
+              "Request order alone creates no GPU memory dependency" in copy_command and
+              "Request order alone is not a GPU dependency" in read("spec/conformance.md"),
+              "presentation copy command: submit/present ordering must be explicit and request order must not imply GPU synchronization")
+    c.require("referenziert oder angenommene Arbeit ihn direkt/indirekt verwendet" in lifetime and
+              "RECORDING-Command-Buffer den Buffer direkt referenziert" in lifetime and
+              "Destroying a Buffer referenced by a `RECORDING` command buffer is atomically rejected" in read("spec/conformance.md"),
+              "Buffer lifetime: recording references must block destruction and executable references must be invalidated")
     c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
 
