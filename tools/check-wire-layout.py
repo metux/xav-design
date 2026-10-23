@@ -2123,7 +2123,7 @@ def check_presentation_profile(c: Check) -> None:
               "CreateSwapchain: every non-success reply status must preserve the target XID")
     capability_failure_contract = (
         "TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set "
-        "present_supported to 0 and all extent/count/format/mode/usage fields to zero. "
+        "present_supported to 0 and all extent/count/format/mode/usage/queue-family fields to zero. "
         "SURFACE_LOST and DEVICE_LOST likewise return zero capability fields."
     )
     c.require(capability_failure_contract in presentation,
