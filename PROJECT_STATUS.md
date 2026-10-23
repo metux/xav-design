@@ -196,3 +196,16 @@ ResetCommandBuffer now specifies unavailable/lost logical Device outcomes consis
 Added [the presentation architecture chapter](spec/presentation.md) for a future presentation-capable profile. The intended model is server-side: clients create ordinary X11 windows, then identify them by XID; XAverius owns the presentation backend and does not require client-native Vulkan WSI handles. A native server WSI path is an implementation option, not a protocol requirement; server-managed images with an internal copy/blit/composition path remain possible.
 
 The existing 40-request compute-oriented registry was deliberately not changed. Before allocating presentation request subopcodes, the design still needs exact Surface/Swapchain lifetimes, capability and format registries, acquire/present synchronization, distinct GPU-completion/image-release/presentation-completion semantics, and resize/surface-loss handling. The chapter is indexed, the direction is recorded in the decision log, and the work is tracked as future-profile work rather than a v0.1 compute blocker. No live X11 or Vulkan implementation behavior has been tested by these documentation commits.
+
+
+## Presentation design pass 1 — ownership and window identity — 2026-10-23
+
+Settled the initial presentation-profile ownership model in [presentation](spec/presentation.md) and added Surface/Swapchain rows to [resource lifetime](spec/resource-lifetime.md):
+
+- Surface belongs to the creating X11 connection, is not Device-owned, and holds an internal reference to one exact X11 Window identity.
+- Swapchain belongs to exactly one logical Device and references one Surface; its images are not independently destroyable resources.
+- Surface destruction is rejected while a live Swapchain references it. Swapchain destruction is rejected while images are acquired or presentation/backend work may still access them.
+- Window destruction transitions the Surface to SURFACE_LOST; XID reuse must never retarget the existing Surface.
+- DestroyDevice/client disconnect invalidate public presentation XIDs immediately while internal resources remain until safe backend quiescence.
+
+Provisional request shapes are noted for later wire/error review: CreateSurface 16 bytes, DestroySurface 12 bytes, DestroySwapchain 12 bytes. No subopcodes were allocated. The current command-entry registry is compute-only and has no image or graphics commands; this is explicitly called out as a separate prerequisite for actual rendering to swapchain images.
