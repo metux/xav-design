@@ -318,3 +318,10 @@ Commits: `c910c49` (normative framing), `91182a6` (conformance cases), `088b9f3`
 Added a repository-wide local Markdown link check to the wire-layout validation workflow. It scans Markdown files, resolves relative destinations from each source document, rejects missing local targets and links that escape the repository, and reports the source path and line number. The check intentionally validates target paths rather than generated heading fragments; anchor-fragment validation remains a separate possible extension.
 
 The first CI run passed with the new check enabled: [run 39968554690](https://github.com/metux/xav-design/actions/runs/39968554690). Checker commit: `b8da4ba`. This run found no broken local target paths in the current Markdown corpus. `master` remains unchanged.
+
+
+## Request error/conformance coverage audit — 2026-10-23
+
+Extended `check_error_registry` so error validation now cross-checks the 40-entry request matrix against the central subopcode registry, requires every registered request to appear in both `spec/errors.md` and `spec/conformance.md`, and guards the normative validation order and atomic-failure rules. This is a coverage floor, not a claim that every request has a separate exhaustive error table: shared rules are intentionally centralized, while request-specific precedence and exceptional cases remain in the error chapter.
+
+The first run exposed a wording mismatch in the checker assertion (the normative text used the singular adjective form); the assertion was corrected without changing the protocol contract. The follow-up CI run passed: [run 39969925813](https://github.com/metux/xav-design/actions/runs/39969925813). Checker commit: `446f512`; wording assertion follow-up: `a9f83dc`. `master` remains unchanged.
