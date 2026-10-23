@@ -1512,6 +1512,22 @@ def check_presentation_profile(c: Check) -> None:
     ]
     c.require(event_rows == [(7, "IMAGE_RELEASED"), (8, "PRESENTATION_COMPLETE")],
               "presentation event registry must assign IDs 7 and 8 without changing the compute baseline")
+    status_rows = [
+        (int(value), symbol)
+        for value, symbol in re.findall(
+            r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|\s*$",
+            event_registry.split("## Presentation event status values", 1)[-1], re.M,
+        )
+    ]
+    c.require(status_rows == [
+        (0, "SUCCESS"), (1, "OUT_OF_DATE"), (2, "SURFACE_LOST"),
+        (3, "DEVICE_LOST"), (4, "PRESENTATION_FAILED"),
+    ], "presentation event status registry must remain contiguous and stable")
+    c.require(re.search(r"\|\s*`QUEUE`\s*\|\s*2\s*\|\s*`IMAGE_RELEASED`\s*\|", events) is not None and
+              re.search(r"\|\s*`QUEUE`\s*\|\s*3\s*\|\s*`PRESENTATION_COMPLETE`\s*\|", events) is not None,
+              "presentation events: queue mask bits 2 and 3 must map to the corresponding events")
+    c.require("Compute-only Server muss sie als unbekannte Maskenbits mit `BadValue` zurückweisen" in events,
+              "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
         c.require(name in event_docs, f"presentation events: missing {name} layout")
