@@ -246,3 +246,8 @@ Follow-up during the same audit: `FreeDescriptorSets` was the outlier among reso
 ## Pool destruction after Device Loss — 2026-10-23
 
 A follow-up lifecycle audit checked dedicated pool cleanup against the rule that Device Loss preserves public XIDs until explicit teardown. The normative request chapters now state that Device Loss alone does not prohibit logical `DestroyCommandPool` or `DestroyDescriptorPool`: terminalized submissions no longer count as pending uses, while descriptor sets referenced by a still-`RECORDING` command buffer continue to block descriptor-pool destruction until that command pool is destroyed. Error mapping and conformance cases match, and the wire-layout checker guards the cross-chapter contract. Internal backend references still require proven quiescence or quarantine; this does not claim runtime server behavior.
+
+
+## Complete resource-specific cleanup policy after Device Loss — 2026-10-23
+
+The follow-up audit generalized the pool finding across resource-specific cleanup. The lifecycle chapter and conformance checklist now explicitly state that Device Loss alone does not blanket-reject logical destroy/free requests: ordinary ownership, recording-reference, pending-use, and backend-safety guards remain authoritative. Terminalized submissions and host waits no longer block solely because they were formerly pending. `FreeMemory` remains blocked while an internally live Buffer is bound or backend access to the allocation is still possible. The wire-layout checker guards this policy; backend quiescence and runtime behavior remain implementation-level requirements.
