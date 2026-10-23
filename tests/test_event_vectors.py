@@ -168,6 +168,42 @@ class GoldenXGEEventTests(unittest.TestCase):
             raise ValueError("unsupported event vector schema version")
         cls.vectors = fixture["vectors"]
 
+    def test_presentation_registry_ids_and_status_values_are_stable(self):
+        compute = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        presentation = (ROOT / "registries" / "presentation-events.md").read_text(encoding="utf-8")
+        compute_section = re.search(
+            r"^## Event type IDs\s*$([\s\S]*?)(?=^## |\Z)", compute, re.M
+        )
+        presentation_section = re.search(
+            r"^## Event type IDs\s*$([\s\S]*?)(?=^## |\Z)", presentation, re.M
+        )
+        status_section = re.search(
+            r"^## Presentation event status values\s*$([\s\S]*?)(?=^## |\Z)", presentation, re.M
+        )
+        self.assertIsNotNone(compute_section)
+        self.assertIsNotNone(presentation_section)
+        self.assertIsNotNone(status_section)
+        row_pattern = r"^\|\s*(\d+)\s*\|\s*`?([A-Z_]+)`?\s*\|"
+        compute_ids = {
+            int(value): symbol for value, symbol in re.findall(row_pattern, compute_section.group(1), re.M)
+        }
+        presentation_ids = {
+            int(value): symbol for value, symbol in re.findall(row_pattern, presentation_section.group(1), re.M)
+        }
+        status_values = {
+            int(value): symbol for value, symbol in re.findall(row_pattern, status_section.group(1), re.M)
+        }
+        self.assertEqual(compute_ids, {value: name for name, value in EVENT_IDS.items()})
+        self.assertEqual(presentation_ids, {7: "IMAGE_RELEASED", 8: "PRESENTATION_COMPLETE"})
+        self.assertEqual(set(compute_ids).intersection(presentation_ids), set())
+        self.assertEqual(set(compute_ids) | set(presentation_ids), set(range(9)))
+        self.assertEqual(status_values, {
+            0: "SUCCESS", 1: "OUT_OF_DATE", 2: "SURFACE_LOST",
+            3: "DEVICE_LOST", 4: "PRESENTATION_FAILED",
+        })
+        self.assertIn("not part of compute-only v0.1", presentation)
+        self.assertIn("must reject the presentation-only queue event-mask bits", presentation)
+
     def test_golden_event_bytes(self):
         self.assertEqual(len(self.vectors), 14)
         names = set()
