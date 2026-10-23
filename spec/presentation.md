@@ -16,7 +16,7 @@ A server implementation MUST NOT require the client to pass native window-system
 
 The presentation API is expected to introduce at least these logical objects:
 
-- **Surface** — an XAverius resource referring to one existing X11 Window on the same X server connection. The surface does not own or create the X11 Window.
+- **Surface** — an XAverius resource referring to one existing core X11 Window owned by the requesting X11 client connection. The surface does not own or create the X11 Window; cross-client Window references are not supported.
 - **Swapchain** — a device-owned set of presentable images and their presentation state, associated with one surface.
 - **Swapchain image** — an image owned by the swapchain. It is not an independently client-destroyable resource in the initial design.
 - **Acquired image** — a swapchain image temporarily owned by the client for rendering or other permitted use.
@@ -178,7 +178,7 @@ This section proposes concrete fixed layouts so they can be audited against the 
 - Offset 8: XID `surface_xid` — client-allocated target XID
 - Offset 12: XID `window_xid` — existing core X11 Window
 
-On success, creates a connection-owned Surface and retains the exact internal Window identity. The target XID remains unallocated on failure.
+On success, creates a connection-owned Surface and retains the exact internal Window identity. The `window_xid` must name a live core Window owned by the requesting X11 client connection. The target XID remains unallocated on failure.
 
 ### DestroySurface — Void, 12 bytes
 
