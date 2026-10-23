@@ -288,3 +288,10 @@ Inspected Actions run [39940007063](https://github.com/metux/xav-design/actions/
 Updated the event field checks to match field names as tokens, aligned the SelectEvents contract test with the normative presentation event-mask table, and corrected the linearization wording expectation. The first rerun exposed one additional stale expected mask list in the exhaustive vector/spec test; that list was corrected as well.
 
 Actions run [39940369790](https://github.com/metux/xav-design/actions/runs/39940369790) then completed successfully: syntax check, request/reply matrix and XGE event layout validation, and all golden wire-vector tests passed. No request subopcodes or command-entry IDs were allocated by this test-only correction.
+
+
+## Presentation error-map checker follow-up — 2026-10-23
+
+Continued the cross-chapter presentation audit after the golden-vector CI recovery. The presentation chapter still described its checker coverage as unvalidated, and the open-issues list still described cross-chapter error-map/checker coverage as unfinished, despite the successful CI run. Updated those status statements.
+
+Extended `tools/check-wire-layout.py` so the presentation-profile pass also checks key request-specific error-map invariants across all seven provisional requests: target-XID creation errors, unknown-XID errors, atomic failure semantics, the acquired-but-idle Swapchain destruction rule, and QueuePresent rejection preserving image/wait state. This remains profile-gated; request subopcodes 41–47 and command-entry ID 5 remain unassigned.
