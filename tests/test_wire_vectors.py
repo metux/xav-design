@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "wire-vectors.json"
+REQUEST_REGISTRY = ROOT / "registries" / "request-subopcodes.md"
 
 
 def encode_request(vector: dict) -> bytes:
@@ -107,6 +108,15 @@ class GoldenWireVectorTests(unittest.TestCase):
         if fixture.get("schema_version") != 1:
             raise ValueError("unsupported wire vector schema version")
         cls.vectors = fixture["vectors"]
+        registry_text = REQUEST_REGISTRY.read_text(encoding="utf-8")
+        import re
+        cls.request_opcodes = {
+            name: int(opcode)
+            for name, opcode in re.findall(
+                r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|",
+                registry_text, re.M,
+            )
+        }
 
     def test_golden_bytes(self) -> None:
         self.assertGreaterEqual(len(self.vectors), 1)
@@ -124,6 +134,25 @@ class GoldenWireVectorTests(unittest.TestCase):
                 self.assertEqual(
                     int.from_bytes(actual[2:4], vector["byte_order"]),
                     len(actual) // 4,
+                )
+
+    def test_golden_vectors_match_central_request_registry(self) -> None:
+        # Golden bytes can otherwise remain internally consistent while the
+        # normative subopcode assignment changes underneath them.
+        self.assertTrue(self.request_opcodes)
+        values = list(self.request_opcodes.values())
+        self.assertEqual(len(values), len(set(values)), "registry subopcodes must be unique")
+        self.assertNotIn(0, values, "subopcode zero is reserved")
+        for vector in self.vectors:
+            with self.subTest(vector=vector["name"]):
+                self.assertIn(vector["request"], self.request_opcodes)
+                self.assertEqual(
+                    vector["subopcode"], self.request_opcodes[vector["request"]],
+                    "golden vector subopcode must match registries/request-subopcodes.md",
+                )
+                self.assertEqual(
+                    vector["subopcode"], bytes.fromhex(vector["wire_hex"])[4],
+                    "wire byte 4 must encode the registry subopcode",
                 )
 
     def test_both_byte_orders_are_present(self) -> None:
