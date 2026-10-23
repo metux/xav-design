@@ -441,7 +441,8 @@ class GoldenXGEEventTests(unittest.TestCase):
             "ein abgewiesener \x60QueueSubmit\x60 darf nie als Token-Ziel eines \x60ASYNC_ERROR\x60 erscheinen",
             conformance,
         )
-        self.assertRegex(queue, r"Jede synchrone Ablehnung.*?Token.*?(?:unverändert|nicht.*reserviert)")
+        self.assertIn("Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event.", queue)
+        self.assertIn("Ein synchroner Fehler darf kein `ASYNC_ERROR` für eine nicht angenommene Submission erzeugen.", queue)
 
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
