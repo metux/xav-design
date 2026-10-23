@@ -1504,7 +1504,7 @@ def check_presentation_profile(c: Check) -> None:
     event_rows = [
         (int(value), name)
         for value, name in re.findall(
-            r"^\\|\\s*(\\d+)\\s*\\|\\s*`([A-Z_]+)`\\s*\\|\\s*$",
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|\s*$",
             event_registry, re.M,
         )
     ]
@@ -1514,7 +1514,7 @@ def check_presentation_profile(c: Check) -> None:
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
         c.require(name in event_docs, f"presentation events: missing {name} layout")
         body = event_docs.get(name, "")
-        match = re.search(r"Gesamtlänge:\\s*(\\d+)\\s*Bytes;\\s*XGE `length\\s*=\\s*(\\d+)`", body)
+        match = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE `length\s*=\s*(\d+)`", body)
         c.require(match is not None, f"{name}: missing total/XGE length declaration")
         if match:
             total, length = map(int, match.groups())
