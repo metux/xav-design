@@ -229,28 +229,6 @@ def check_events(c: Check) -> None:
               "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
-
-    # Keep the provisional presentation error map cross-checked against the
-    # request ABI rather than validating only the request sizes and offsets.
-    presentation_error_contracts = (
-        "`CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`",
-        "`DestroySurface`: unknown/non-live Surface XID is `BadValue`",
-        "`GetSurfaceCapabilities`: unknown/non-live Device or Surface XID is `BadValue`",
-        "`CreateSwapchain`: invalid/already allocated target `swapchain_xid` is `BadIDChoice`",
-        "`DestroySwapchain`: unknown/non-live Swapchain XID is `BadValue`",
-        "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
-        "`QueuePresent`: unknown/non-live Device, Swapchain, or wait-semaphore XID is `BadValue`",
-        "An acquired-but-idle image alone does not block destruction.",
-        "Any rejected request leaves the image `ACQUIRED` and leaves wait-semaphore state unchanged.",
-    )
-    for contract in presentation_error_contracts:
-        c.require(contract in errors,
-                  f"presentation request error map: missing invariant: {contract}")
-    c.require("For all seven requests, validation is atomic" in errors,
-              "presentation request error map: all seven requests must share atomic failure semantics")
-    c.require("A non-success status leaves the target XID unallocated" in presentation or
-              "On every non-success status the target XID remains unallocated" in presentation,
-              "CreateSwapchain: every non-success reply status must preserve the target XID")
     c.require(
         "`DestroyFence` und `DestroySemaphore` prüfen die feste Request-Länge vor XID-Auflösung" in conformance
         and "nicht-terminalen Submission zugeordnet" in conformance
@@ -1658,6 +1636,28 @@ def check_presentation_profile(c: Check) -> None:
               "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
     lifetime = read("spec/resource-lifetime.md")
     conformance = read("spec/conformance.md")
+    errors = read("spec/errors.md")
+
+    # Keep the provisional presentation error map cross-checked against the
+    # request ABI rather than validating only the request sizes and offsets.
+    presentation_error_contracts = (
+        "`CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`",
+        "`DestroySurface`: unknown/non-live Surface XID is `BadValue`",
+        "`GetSurfaceCapabilities`: unknown/non-live Device or Surface XID is `BadValue`",
+        "`CreateSwapchain`: invalid/already allocated target `swapchain_xid` is `BadIDChoice`",
+        "`DestroySwapchain`: unknown/non-live Swapchain XID is `BadValue`",
+        "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
+        "`QueuePresent`: unknown/non-live Device, Swapchain, or wait-semaphore XID is `BadValue`",
+        "An acquired-but-idle image alone does not block destruction.",
+        "Any rejected request leaves the image `ACQUIRED` and leaves wait-semaphore state unchanged.",
+    )
+    for contract in presentation_error_contracts:
+        c.require(contract in errors,
+                  f"presentation request error map: missing invariant: {contract}")
+    c.require("For all seven requests, validation is atomic" in errors,
+              "presentation request error map: all seven requests must share atomic failure semantics")
+    c.require("On every non-success status the target XID remains unallocated" in errors,
+              "CreateSwapchain: every non-success reply status must preserve the target XID")
     c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
               "acquired-but-idle images alone do not block destruction" in conformance,
               "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
