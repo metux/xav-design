@@ -2,51 +2,62 @@
 
 **Branch:** `docs/restructure-2026-10-21`  
 **Audit date:** 2026-10-23  
-**Scope:** Presentation requests targeting server-side X11 Windows; request error precedence, status replies, and atomic state transitions.
+**Scope:** Presentation requests targeting server-side X11 Windows; wire layouts, error precedence, status replies, and atomic state transitions.
 
-## Result
+## Current result
 
-The initial audit used an incomplete view of the active branch and incorrectly concluded that the presentation chapter was absent. Follow-up inspection of `spec/presentation.md`, `spec/errors.md`, and `spec/conformance.md` found the seven intended request definitions and their cross-chapter precedence rules. That earlier conclusion is superseded by the correction below; the request family is present, but its ABI still needed a systematic wire-length audit.
+The active branch defines these seven presentation requests in `spec/presentation.md`:
 
-## Confirmed cross-cutting requirements
+1. `CreateSurface`
+2. `DestroySurface`
+3. `GetSurfaceCapabilities`
+4. `CreateSwapchain`
+5. `DestroySwapchain`
+6. `AcquireNextImage`
+7. `QueuePresent`
 
-Any presentation request added to the protocol must state and test all of the following:
+Their numeric request subopcodes remain unassigned. The presentation-capable profile is not part of the compute-only baseline.
 
-1. **Framing first:** malformed fixed length, variable counts, payload length, or padding is rejected as `BadLength` before resource lookup or state mutation.
-2. **Reserved fields and flags:** after framing is valid, unknown flag bits and nonzero reserved fields are rejected as `BadValue`.
-3. **Resource validation:** validate XID existence and type, client ownership, window ownership/validity, device association, and presentation-resource state in a documented, deterministic order. Use standard X11 errors where applicable; use `BadMatch` for valid but incompatible resource combinations.
-4. **No partial effects on rejection:** validation and all synchronous preconditions complete before committing any state transition, acquiring externally visible ownership, or enqueueing work. A rejected request leaves window and presentation state unchanged.
-5. **Reply semantics:** every reply-bearing request must define its exact 32-byte X11 reply header fields, payload length, status domain, and which failures are normal status replies rather than X11 errors. A status reply must not ambiguously coexist with an X11 error for the same request.
-6. **Accepted asynchronous work:** once a request has been accepted and work is queued, later execution/presentation failure must be reported through the documented asynchronous mechanism; it must not retroactively become an X11 request error.
-7. **X11 window semantics:** presentation must target an actual server-side X11 Window resource. Validate the window's lifecycle and any required visual/depth/size compatibility before committing. Window destruction or resize races must have explicitly defined behavior.
-8. **Atomic replacement/serials:** if a request replaces a pending presentation, changes a surface/window association, or advances a present serial, specify the exact commit point and rollback behavior. Serials must not advance on rejected requests.
-9. **Ordering:** define the order relative to earlier X11 requests, earlier XAverius requests, and GPU completion. X11 request processing order alone must not be described as GPU completion.
-10. **Tests:** include one test per precedence pair (bad framing plus invalid XID; reserved bits plus invalid state; wrong ownership plus unsupported state), plus rejection atomicity, accepted async failure, window destruction, and resize/reconfiguration races.
+## Verified wire-length matrix
 
-## Required next correction
+Request lengths include the 8-byte request header. Reply lengths include the standard 32-byte X11 reply header.
 
-Before editing the normative protocol, recover or restore the intended seven presentation request names and their agreed wire layouts. Then add a dedicated presentation chapter and registry rows, map each request's errors/status reply/atomic transition, and add automated consistency checks. Numeric subopcodes must remain `UNASSIGNED` until the registry allocation policy is finalized.
+| Request | Request length | Reply length |
+|---|---:|---:|
+| `CreateSurface` | 16 bytes | none |
+| `DestroySurface` | 12 bytes | none |
+| `GetSurfaceCapabilities` | 16 bytes | 64 bytes plus variable records |
+| `CreateSwapchain` | 48 bytes | 40 bytes |
+| `DestroySwapchain` | 12 bytes | none |
+| `AcquireNextImage` | 32 bytes | 44 bytes |
+| `QueuePresent` | 40 + 4 × `wait_semaphore_count` bytes | 36 bytes |
 
-## Branch safety
+The request/reply heading errors in `spec/presentation.md` were corrected, and matching framing tables and conformance requirements were added to `spec/conformance.md`.
 
-No changes to `master` are intended. This audit report does not claim that the missing seven request definitions have been implemented or that the presentation ABI is ready to freeze.
+## Cross-chapter semantic checks
 
+The inspected normative chapters establish these requirements:
 
-## Follow-up correction — 2026-10-23
+- Framing and checked arithmetic precede scalar validation, XID resolution, and state checks.
+- Scalar syntax and reserved fields are validated before XID resolution. Create-XID checks and input-XID checks follow each request's documented field order.
+- Resource type, ownership, and Device state are checked before lifecycle/status and mutable synchronization-state checks.
+- `QueuePresent` acceptance atomically reserves the unique token and each wait slot, retains required resources, and transitions the image from `ACQUIRED` to `PRESENT_PENDING`. Rejection does none of those things.
+- A successful `QueuePresent` reply means accepted, not displayed. Image release and presentation completion are separate terminal milestones/events.
+- Resize, Surface loss, and Device loss prevent new work as specified while previously accepted operations are terminalized exactly once; lifecycle transitions are not rolled back by rejected requests.
+- `DestroySwapchain` rejects while recording references, pending acquisition, accepted queue/presentation work, or backend access can still use its images. An acquired-but-idle image alone does not block destruction.
+- Presentation event types 7 and 8 are each 64 bytes (XGE length 8), with event-local status values defined separately from request reply statuses and X11 error offsets.
 
-The active branch already defines these seven presentation requests: CreateSurface, DestroySurface, GetSurfaceCapabilities, CreateSwapchain, DestroySwapchain, AcquireNextImage, and QueuePresent. The numeric subopcodes remain intentionally unassigned. The request names and base semantics were therefore retained; no alternative request family was invented.
+## Concrete correction made during this pass
 
-The first concrete ABI inconsistency found was in the presentation chapter's section 10 headings: GetSurfaceCapabilities and AcquireNextImage headings described the request size as a reply size, CreateSwapchain was labeled “Reply, 48 bytes” despite defining a 48-byte request and a 40-byte reply, and QueuePresent was labeled as a variable-length reply despite its variable-length request and fixed 36-byte reply. These headings have been corrected, and an explicit seven-request request/reply length matrix has been added to the presentation and conformance chapters.
+The wire-layout section stated that, after review, the seven requests would be appended specifically as subopcodes 41–47. That prematurely implied a numeric allocation while the same chapter said the requests remained unassigned. The text now requires assignment through the central append-only registry only after review and does not presume a numeric range; other requests may be assigned first.
 
-Verified framing matrix:
-- CreateSurface: 16-byte request, no reply.
-- DestroySurface: 12-byte request, no reply.
-- GetSurfaceCapabilities: 16-byte request, reply size 64 bytes plus variable records.
-- CreateSwapchain: 48-byte request, 40-byte reply.
-- DestroySwapchain: 12-byte request, no reply.
-- AcquireNextImage: 32-byte request, 44-byte reply.
-- QueuePresent: request size 40 + 4 × wait_semaphore_count bytes, fixed 36-byte reply.
+## CI/checker status
 
-The normative error-precedence rules already cover framing before scalar validation, scalar validation before XID resolution, XID/type/ownership validation before lifecycle and mutable-state checks, and atomic acceptance/rejection. The conformance chapter now explicitly requires byte-length, reply.length, reserved-field, status-field, mixed-failure precedence, and atomic-state tests for all seven requests.
+The latest audited commits returned no combined status entries and no workflow runs through the available GitHub status queries. This is **not** evidence that the checker passed. Execution of the repository's static checker and a CI run against the current branch remain unverified.
 
-This follow-up does not assign subopcodes or claim the presentation ABI is frozen. Remaining work is to execute/verify the repository's static checker and CI against the corrected source, resolve any semantic conflicts it exposes, and only then consider registry allocation.
+## Remaining work
+
+1. Locate and execute the existing static checker against the current presentation layouts and conformance rules.
+2. Run or trigger CI and inspect actual job results; do not infer success from an empty status response.
+3. Resolve any checker or cross-chapter contradictions before assigning request subopcodes.
+4. Keep `master` unchanged; all edits in this audit are on `docs/restructure-2026-10-21`.
