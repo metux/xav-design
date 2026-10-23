@@ -1530,6 +1530,19 @@ def check_presentation_profile(c: Check) -> None:
     c.require("Compute-only Server muss sie als unbekannte Maskenbits mit `BadValue` zurückweisen" in events,
               "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
+    presentation_spec = read("spec/presentation.md")
+    lifetime = read("spec/resource-lifetime.md")
+    c.require("It is emitted exactly once when the image becomes reusable" in event_docs.get("IMAGE_RELEASED", "") or
+              "Es wird genau einmal ausgegeben, wenn das Image nach dem terminalen Ausgang wiederverwendbar ist." in event_docs.get("IMAGE_RELEASED", ""),
+              "IMAGE_RELEASED: event cardinality must depend on image becoming reusable")
+    c.require("terminalen Ausgang jeder akzeptierten Präsentationsoperation" in event_docs.get("PRESENTATION_COMPLETE", "") and
+              "Nach `DestroyDevice` dürfen keine neuen Events" in event_docs.get("PRESENTATION_COMPLETE", ""),
+              "PRESENTATION_COMPLETE: terminal outcome and DestroyDevice suppression must be explicit")
+    c.require("Accepted presentation failures are reported through `PRESENTATION_COMPLETE`" in presentation_spec and
+              "invalidates that image and the Swapchain instead" in presentation_spec,
+              "presentation: accepted failure must terminate and either release or invalidate the image")
+    c.require("interne Terminalzustände und sichere Backend-Bereinigung" in lifetime,
+              "presentation: device teardown must preserve internal terminal cleanup when events are suppressed")
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
         c.require(name in event_docs, f"presentation events: missing {name} layout")
         body = event_docs.get(name, "")
