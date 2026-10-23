@@ -1635,7 +1635,8 @@ def check_presentation_profile(c: Check) -> None:
         "4 * (effective_row_length * (height - 1) + width)",
         "buffer_offset` must be four-byte aligned",
         "The complete span must lie within the source Buffer",
-        "The command-entry numeric ID is not allocated yet",
+        "numeric ID must be allocated append-only",
+        "It is not part of the current compute-only v0.1 entry set.",
     ):
         c.require(contract in copy_command,
                   f"presentation copy command: missing bounds/alignment/ID contract: {contract}")
