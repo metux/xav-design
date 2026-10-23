@@ -211,7 +211,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"`SignalSemaphore`.*Gesamtlänge muss exakt 24 Bytes.*`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", sync, re.S) is not None and
               re.search(r"`SignalSemaphore`: falsche Länge `BadLength`.*`DEVICE_UNAVAILABLE` / `DEVICE_LOST`", errors, re.S) is not None,
               "SignalSemaphore: request length, XID/ownership, and device-state errors must be explicit")
-    c.require(re.search(r"`WaitSemaphores`.*Request-Länge muss exakt `28 \+ 12 \* semaphore_count` Bytes.*doppelte XIDs und ungültige `wait_mode`-Werte ergeben `BadValue`", sync, re.S) is not None and
+    c.require(re.search(r"`WaitSemaphores`.*Request-Länge muss exakt `28 \+ 12 \* semaphore_count` Bytes.*gültiger `wait_mode` und keine doppelten Semaphore-XIDs.*`BadValue`", sync, re.S) is not None and
               re.search(r"`WaitSemaphores`: falsche Länge oder Überlauf.*`DEVICE_LOST`.*`DEVICE_DESTROYED`", errors, re.S) is not None,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
     c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
