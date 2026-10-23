@@ -19,7 +19,7 @@ SCOPES = {
 }
 
 
-def encode_select_events(vector: dict) -> bytes:
+def encode_select_events(vector: dict, *, presentation_capable: bool = False) -> bytes:
     order = vector["byte_order"]
     if order not in ("little", "big"):
         raise ValueError("unknown byte order")
@@ -38,8 +38,11 @@ def encode_select_events(vector: dict) -> bytes:
     scope = fields["scope"]
     if scope not in SCOPES:
         raise ValueError("unknown SelectEvents scope")
-    if fields["event_mask"] & ~SCOPES[scope]["mask"]:
-        raise ValueError("event mask contains bits not valid for scope")
+    allowed_mask = SCOPES[scope]["mask"]
+    if presentation_capable and scope == 2:
+        allowed_mask |= 0x0C  # IMAGE_RELEASED and PRESENTATION_COMPLETE
+    if fields["event_mask"] & ~allowed_mask:
+        raise ValueError("event mask contains bits not valid for scope/profile")
     if scope == 0 and any(fields[k] != 0 for k in ("device_xid", "queue_family_index", "queue_index")):
         raise ValueError("connection scope requires zero device and queue fields")
     if scope == 1 and (fields["device_xid"] == 0 or fields["queue_family_index"] != 0 or fields["queue_index"] != 0):
@@ -62,7 +65,7 @@ def encode_select_events(vector: dict) -> bytes:
     return bytes(data)
 
 
-def validate_select_events_wire(wire: bytes, byte_order: str) -> None:
+def validate_select_events_wire(wire: bytes, byte_order: str, *, presentation_capable: bool = False) -> None:
     if byte_order not in ("little", "big"):
         raise ValueError("unknown byte order")
     if len(wire) != 32:
@@ -85,8 +88,11 @@ def validate_select_events_wire(wire: bytes, byte_order: str) -> None:
     scope, device, family, queue, mask, _reserved = struct.unpack_from(endian + "IIIIII", wire, 8)
     if scope not in SCOPES:
         raise ValueError("unknown SelectEvents scope")
-    if mask & ~SCOPES[scope]["mask"]:
-        raise ValueError("event mask contains bits not valid for scope")
+    allowed_mask = SCOPES[scope]["mask"]
+    if presentation_capable and scope == 2:
+        allowed_mask |= 0x0C  # IMAGE_RELEASED and PRESENTATION_COMPLETE
+    if mask & ~allowed_mask:
+        raise ValueError("event mask contains bits not valid for scope/profile")
     if scope == 0 and (device or family or queue):
         raise ValueError("connection scope requires zero device and queue fields")
     if scope == 1 and (not device or family or queue):
@@ -159,6 +165,32 @@ class GoldenSelectEventsTests(unittest.TestCase):
         registry = (ROOT / "registries" / "request-subopcodes.md").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"^\| `SelectEvents` \| 40 \| Void \|", registry, re.M)), 1)
 
+    def test_presentation_queue_mask_bits_are_profile_gated_by_registry(self):
+        registry = (ROOT / "registries" / "presentation-events.md").read_text(encoding="utf-8")
+        ids = {
+            symbol: int(value)
+            for value, symbol in re.findall(
+                r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|", registry, re.M
+            )
+        }
+        self.assertEqual(ids, {"IMAGE_RELEASED": 7, "PRESENTATION_COMPLETE": 8})
+        self.assertIn("not part of compute-only v0.1", registry)
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors
+                          if v["fields"]["scope"] == 2 and v["byte_order"] == order)
+            for bit in (2, 3):
+                vector_copy = json.loads(json.dumps(vector))
+                vector_copy["fields"]["event_mask"] = 1 << bit
+                with self.subTest(order=order, bit=bit, profile="compute-only"):
+                    with self.assertRaisesRegex(ValueError, "scope/profile"):
+                        encode_select_events(vector_copy)
+                wire = encode_select_events(vector_copy, presentation_capable=True)
+                validate_select_events_wire(wire, order, presentation_capable=True)
+                with self.subTest(order=order, bit=bit, profile="compute-only-raw"):
+                    with self.assertRaisesRegex(ValueError, "scope/profile"):
+                        validate_select_events_wire(wire, order)
+        self.assertIn("compute-only Server muss sie als unbekannte Maskenbits",
+                      (ROOT / "spec" / "events.md").read_text(encoding="utf-8"))
     def test_zero_mask_is_valid_for_each_scope_and_byte_order(self):
         import copy
         for order in ("little", "big"):
