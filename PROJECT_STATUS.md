@@ -300,3 +300,8 @@ Extended `tools/check-wire-layout.py` so the presentation-profile pass also chec
 ## Presentation terminal-event semantics — 2026-10-23
 
 The cross-chapter lifecycle pass found that the presentation chapter still called asynchronous failure reporting and destruction with acquired images unresolved even though the event registry and conformance cases already defined most of the behavior. Reconciled those stale statements and made failure cardinality explicit: every accepted presentation gets a terminal `PRESENTATION_COMPLETE` outcome when delivery is permitted; `IMAGE_RELEASED` is emitted only if the image is reusable. If it cannot be reused, the image and Swapchain are invalidated instead. `DestroyDevice` and disconnect suppress event delivery at their established lifecycle boundary without skipping internal terminal cleanup.
+
+
+## Pending AcquireNextImage teardown semantics — 2026-10-23
+
+The lifecycle audit found one remaining gap: unlike the existing `WaitForFence`/`WaitSemaphores` contracts, the provisional `AcquireNextImage` contract did not define what happens when `DestroyDevice` is processed while an acquire is waiting for an image. Added the distinct normal reply status `DEVICE_DESTROYED=6`, with the first server-serialized terminal result winning. Device destruction terminates an open acquire without signaling its semaphore/fence; disconnect removes the registration without a reply. Destroying the referenced Surface or Swapchain while the acquire is still pending remains an atomic `INVALID_SYNCHRONIZATION_STATE` rejection. The request/error/lifetime/conformance chapters and static checker agree, and CI passed on `b0cf322470e63ffc4d112aaa0dc0634b022ae2d2` ([run 39943267748](https://github.com/metux/xav-design/actions/runs/39943267748)).
