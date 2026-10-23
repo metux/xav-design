@@ -1,5 +1,10 @@
 # Project status
 
+## CI follow-up — 2026-10-23
+
+Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 exposed a checker `NameError` in the CreateCommandPool error-map assertion; run 39940007063 reached the golden-wire tests but used stale SelectEvents expectations that omitted presentation-profile queue mask entries. The current branch version of `tools/check-wire-layout.py` checks the already-loaded `descriptor_errors` text, and `tests/test_select_events_vectors.py` now expects all seven documented scope/mask rows. These corrections are present in the current branch content, but a successful CI run against that exact tree still needs confirmation.
+
+
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
 **Specification baseline:** consolidated working draft dated 2026-10-20  
 **Initial implementation target:** Xvfb, compute-only  
