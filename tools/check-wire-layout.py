@@ -903,6 +903,34 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         r"^\|\s*(\d+)\s*\|\s*\`([^\`]+)\`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
         matrix_body, re.M,
     )
+    fixed_lengths = {
+        "EnumeratePhysicalDevices": 8,
+        "GetPhysicalDeviceProperty": 16,
+        "GetPhysicalDeviceQueueFamilyProperties": 12,
+        "DestroyDevice": 12,
+        "GetPhysicalDeviceMemoryProperties": 12,
+        "CreateBuffer": 32,
+        "GetBufferMemoryRequirements": 16,
+        "AllocateMemory": 32,
+        "FreeMemory": 16,
+        "BindBufferMemory": 28,
+        "ReadBuffer": 28,
+        "DestroyDescriptorPool": 16,
+        "CreateCommandPool": 24,
+        "DestroyCommandPool": 16,
+        "ResetCommandBuffer": 16,
+        "CreateSemaphore": 28,
+        "GetSemaphoreCounterValue": 16,
+        "SignalSemaphore": 24,
+        "DestroySemaphore": 16,
+        "CreateFence": 24,
+        "GetFenceStatus": 16,
+        "WaitForFence": 24,
+        "ResetFence": 16,
+        "DestroyFence": 16,
+        "DestroyResource": 12,
+        "SelectEvents": 32,
+    }
     formula_overrides = {
         "CreateDevice": "24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))",
         "CreateDefaultDevice": "16 + 4 * queue_count",
@@ -920,7 +948,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
     }
     c.require(len(rows) == 40, f"request matrix: expected 40 rows, found {len(rows)}")
     for _opcode, request, _kind, matrix_length in rows:
-        if request not in formula_overrides:
+        if request not in formula_overrides and request not in fixed_lengths and request != "CommandBufferData":
             continue
         responsibility = registry_rows.get(request, "")
         link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
@@ -930,13 +958,28 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         chapter = read("spec/" + link.group(1))
         section = request_normative_section(chapter, request)
         c.require(bool(section), f"{request}: cannot locate defining normative section")
-        expected = normalize_length_formula(formula_overrides[request])
-        normative = normalize_length_formula(section)
-        c.require(expected in normative,
-                  f"{request}: normative section does not state the expected request-length formula")
-        matrix_formula = matrix_length.split(";", 1)[0].strip()
-        c.require(normalize_length_formula(matrix_formula) == expected,
-                  f"{request}: audit matrix length {matrix_length!r} disagrees with the canonical formula")
+        if request in formula_overrides:
+            expected = normalize_length_formula(formula_overrides[request])
+            normative = normalize_length_formula(section)
+            c.require(expected in normative,
+                      f"{request}: normative section does not state the expected request-length formula")
+            matrix_formula = matrix_length.split(";", 1)[0].strip()
+            c.require(normalize_length_formula(matrix_formula) == expected,
+                      f"{request}: audit matrix length {matrix_length!r} disagrees with the canonical formula")
+        elif request in fixed_lengths:
+            expected_bytes = fixed_lengths[request]
+            length_evidence = re.search(
+                rf"(?:Gesamtlänge|Request(?:-Länge| length)?|Request-Größe|Request size)[^\n]{{0,100}}\b{expected_bytes}\s*Bytes?\b|"
+                rf"\b{expected_bytes}\s*Bytes?\b[^\n]{{0,80}}(?:Gesamtlänge|Request)",
+                section, re.I,
+            )
+            c.require(length_evidence is not None,
+                      f"{request}: normative section does not explicitly state the matrix's {expected_bytes}-byte request length")
+            c.require(normalize_length_formula(matrix_length).strip("\`") == str(expected_bytes),
+                      f"{request}: audit matrix fixed length {matrix_length!r} disagrees with normative {expected_bytes} bytes")
+        else:
+            c.require("mindestens 16 Bytes" in section and "exakt 16 Bytes" in section,
+                      "CommandBufferData: normative variable length must define 16-byte minimum and exact 16-byte ABORT")
 
 
 def check_reply_matrix(c: Check) -> None:
