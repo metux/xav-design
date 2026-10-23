@@ -1585,6 +1585,11 @@ def check_presentation_profile(c: Check) -> None:
     c.require("both may be supplied together" in presentation and
               "each supplied synchronization object is signaled exactly once" in presentation,
               "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
+    lifetime = read("spec/resource-lifetime.md")
+    conformance = read("spec/conformance.md")
+    c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
+              "acquired-but-idle images alone do not block destruction" in conformance,
+              "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
     c.require("CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE" in command_recording and
               "36 bytes" in command_recording,
               "presentation copy command: fixed 36-byte layout missing")
