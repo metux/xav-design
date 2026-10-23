@@ -2143,6 +2143,10 @@ def check_presentation_profile(c: Check) -> None:
     for contract in presentation_error_contracts:
         c.require(contract in errors,
                   f"presentation request error map: missing invariant: {contract}")
+    c.require("owned by the requesting X11 client connection" in presentation and
+              "a live Window owned by another X11 client is `BadMatch`" in errors and
+              "a live Window owned by another X11 client with `BadMatch`" in conformance,
+              "CreateSurface: Window identity must be client-owned and cross-client references rejected")
     c.require("resolve `device_xid`, validate the target `swapchain_xid` as a create-XID, then resolve `surface_xid`" in errors and
               "Mixed-failure `CreateSwapchain` requests validate scalar fields first" in conformance,
               "CreateSwapchain: mixed XID and capability error precedence must be explicit")
