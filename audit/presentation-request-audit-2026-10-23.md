@@ -6,9 +6,7 @@
 
 ## Result
 
-The checked branch currently contains only `wip/wip-2026-10-20.md` as the protocol specification. Its section 1.2 lists “Submission und Presentation” as a request family, but the specification has no presentation chapter, no seven-request definition, no presentation request registry entries, and no corresponding layouts or tests. The current central error mapping is generic and does not define presentation-specific precedence.
-
-Therefore a request-by-request audit of seven existing definitions cannot honestly be completed from this branch state. The seven request names/layouts are not present in the checked-in specification or discoverable repository search results. This report records the concrete gap rather than inventing request names, opcodes, layouts, or status values.
+The initial audit used an incomplete view of the active branch and incorrectly concluded that the presentation chapter was absent. Follow-up inspection of `spec/presentation.md`, `spec/errors.md`, and `spec/conformance.md` found the seven intended request definitions and their cross-chapter precedence rules. That earlier conclusion is superseded by the correction below; the request family is present, but its ABI still needed a systematic wire-length audit.
 
 ## Confirmed cross-cutting requirements
 
@@ -32,3 +30,23 @@ Before editing the normative protocol, recover or restore the intended seven pre
 ## Branch safety
 
 No changes to `master` are intended. This audit report does not claim that the missing seven request definitions have been implemented or that the presentation ABI is ready to freeze.
+
+
+## Follow-up correction — 2026-10-23
+
+The active branch already defines these seven presentation requests: CreateSurface, DestroySurface, GetSurfaceCapabilities, CreateSwapchain, DestroySwapchain, AcquireNextImage, and QueuePresent. The numeric subopcodes remain intentionally unassigned. The request names and base semantics were therefore retained; no alternative request family was invented.
+
+The first concrete ABI inconsistency found was in the presentation chapter's section 10 headings: GetSurfaceCapabilities and AcquireNextImage headings described the request size as a reply size, CreateSwapchain was labeled “Reply, 48 bytes” despite defining a 48-byte request and a 40-byte reply, and QueuePresent was labeled as a variable-length reply despite its variable-length request and fixed 36-byte reply. These headings have been corrected, and an explicit seven-request request/reply length matrix has been added to the presentation and conformance chapters.
+
+Verified framing matrix:
+- CreateSurface: 16-byte request, no reply.
+- DestroySurface: 12-byte request, no reply.
+- GetSurfaceCapabilities: 16-byte request, reply size 64 bytes plus variable records.
+- CreateSwapchain: 48-byte request, 40-byte reply.
+- DestroySwapchain: 12-byte request, no reply.
+- AcquireNextImage: 32-byte request, 44-byte reply.
+- QueuePresent: request size 40 + 4 × wait_semaphore_count bytes, fixed 36-byte reply.
+
+The normative error-precedence rules already cover framing before scalar validation, scalar validation before XID resolution, XID/type/ownership validation before lifecycle and mutable-state checks, and atomic acceptance/rejection. The conformance chapter now explicitly requires byte-length, reply.length, reserved-field, status-field, mixed-failure precedence, and atomic-state tests for all seven requests.
+
+This follow-up does not assign subopcodes or claim the presentation ABI is frozen. Remaining work is to execute/verify the repository's static checker and CI against the corrected source, resolve any semantic conflicts it exposes, and only then consider registry allocation.
