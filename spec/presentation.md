@@ -201,7 +201,7 @@ On success, creates a connection-owned Surface and retains the exact internal Wi
 
 The Device is not part of this request because Surface is connection-owned rather than Device-owned. A live Swapchain referencing the Surface causes atomic rejection.
 
-### GetSurfaceCapabilities — Reply, 16 bytes
+### GetSurfaceCapabilities — Request 16 bytes; variable-length Reply
 
 - Offset 8: XID `device_xid`
 - Offset 12: XID `surface_xid`
@@ -229,7 +229,7 @@ Variable payload follows at offset 64: `format_pair_count` records of 8 bytes (`
 
 Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST. CreateSwapchain status values are 0 SUCCESS; 1 OUT_OF_DATE; 2 SURFACE_LOST; 3 DEVICE_LOST; 4 UNSUPPORTED_CONFIGURATION; 5 ALLOCATION_FAILED. SUCCESS with `present_supported = 0` means the Device/Surface pair is valid but cannot present. TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set present_supported to 0 and all extent/count/format/mode/usage/queue-family fields to zero. SURFACE_LOST and DEVICE_LOST likewise return zero capability fields. Unknown or foreign resource XIDs are synchronous X11 errors, not status values.
 
-### CreateSwapchain — Reply, 48 bytes
+### CreateSwapchain — Request 48 bytes; Reply 40 bytes
 
 - Offset 8: XID `device_xid`
 - Offset 12: XID `swapchain_xid` — client-allocated target XID
@@ -250,7 +250,7 @@ Reply payload at offset 32 is two CARD32 values: `status`, `actual_image_count`;
 
 Device ownership is inferred from the resource. Destruction is rejected while pending acquisition, queue work, accepted presentation, or backend access can still use its images. Acquired-but-idle images are invalidated with the Swapchain and do not independently prevent destruction.
 
-### AcquireNextImage — Reply, 32 bytes
+### AcquireNextImage — Request 32 bytes; Reply 44 bytes
 
 - Offset 8: XID `device_xid`
 - Offset 12: XID `swapchain_xid`
@@ -260,7 +260,7 @@ Device ownership is inferred from the resource. Destruction is rejected while pe
 
 Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS and must be zero on every non-success result. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on any non-success result, including DEVICE_DESTROYED. The semaphore, when present, must be binary.
 
-### QueuePresent — Reply, variable length
+### QueuePresent — Request variable length; Reply 36 bytes
 
 Fixed request fields:
 
@@ -274,6 +274,24 @@ Fixed request fields:
 - Offset 40: `wait_semaphore_count` XID values for binary semaphores
 
 Total request size is `40 + 4 * wait_semaphore_count`. The count must be positive only if the client uses explicit waits; zero is permitted when the image needs no additional queue dependency. Duplicate semaphore XIDs are invalid, and `presentation_token` must be nonzero. A token already used by an accepted presentation on this connection is rejected with `BadValue`; tokens from rejected attempts are not reserved. A reply contains one CARD32 status at offset 32; total reply size is 36 bytes and `reply.length = 1`. QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST; these are local to this reply field and are not X11 error codes or presentation-event status values. SUCCESS means accepted, not displayed. OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST are status outcomes and do not consume waits or mutate image state as part of the rejected request. An independent lifecycle transition, especially Device loss, may already have invalidated the image. Synchronous validation errors are X11 errors and likewise leave all state unchanged. The nonzero `presentation_token` is reserved for uniqueness only when the request is accepted: the server checks it against tokens of previously accepted presentations and records it atomically with acceptance. A rejected request, including one returning a normal non-success status, does not reserve its token, so the client may use that token in a later attempt.
+
+### Cross-request wire-length audit
+
+The titles and framing are normative as follows; “request length” includes the eight-byte X11/XAverius request header, while reply length includes the standard 32-byte X11 reply header.
+
+| Request | Request length | Reply length | Kind |
+|---|---:|---:|---|
+| CreateSurface | 16 bytes | none | Void |
+| DestroySurface | 12 bytes | none | Void |
+| GetSurfaceCapabilities | 16 bytes | variable: 64 bytes plus records | Reply |
+| CreateSwapchain | 48 bytes | 40 bytes | Reply |
+| DestroySwapchain | 12 bytes | none | Void |
+| AcquireNextImage | 32 bytes | 44 bytes | Reply |
+| QueuePresent | 40 + 4 × wait_semaphore_count bytes | 36 bytes | Reply |
+
+The GetSurfaceCapabilities fixed reply is 64 bytes before any variable records, so its base reply length field is 8; the variable payload formula in the capability section adds the record contributions. All request-size calculations use checked wide arithmetic before reading variable arrays. The CreateSwapchain request's 48-byte size and 40-byte reply are distinct: the request carries ten CARD32/XID fields from offsets 8 through 44, while the reply carries status and actual_image_count after the 32-byte reply header. The QueuePresent reply is always 36 bytes regardless of wait count.
+
+The protocol kind is determined by the response behavior, not by the request's own byte length. A reply-bearing request must send exactly one normal reply on success or a documented status outcome; an X11 error replaces that reply and MUST NOT be followed by a normal reply for the same request. Void requests send no normal reply.
 
 The seven requests above remain unassigned in the central registry. The checker and conformance cases cover their current provisional layouts but do not allocate numeric values. After the final cross-chapter ABI review and central registry update, append them as 41–47 without moving the existing values 1–40.
 
