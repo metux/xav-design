@@ -49,7 +49,7 @@ The inspected normative chapters establish these requirements:
 
 ## Concrete correction made during this pass
 
-The wire-layout section stated that, after review, the seven requests would be appended specifically as subopcodes 41–47. That prematurely implied a numeric allocation while the same chapter said the requests remained unassigned. The text now requires assignment through the central append-only registry only after review and does not presume a numeric range; other requests may be assigned first.
+The wire-layout text and static checker define 41–47 as the planned append-only assignments after the final semantic review. Those values remain prospective, not allocated or reserved: the requests must not be advertised or used under those values until the corresponding rows are committed to the central registry. The normative text now distinguishes that planned mapping from an actual registry allocation.
 
 ## CI/checker status
 
