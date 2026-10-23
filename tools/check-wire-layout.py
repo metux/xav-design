@@ -426,8 +426,8 @@ def check_other_numeric_registries(c: Check) -> None:
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
     c.require(
-        "Queue-Family-Index außerhalb des Device-Profils oder Queue Family ohne Command-Buffer-Unterstützung: `BadValue`" in errors
-        and "Queue-Family-Index außerhalb des Device-Profils oder ohne Command-Buffer-Unterstützung `BadValue`" in errors
+        "Queue-Family-Index außerhalb des Device-Profils oder Queue Family ohne Command-Buffer-Unterstützung: `BadValue`" in descriptor_errors
+        and "Queue-Family-Index außerhalb des Device-Profils oder ohne Command-Buffer-Unterstützung `BadValue`" in descriptor_errors
         and "Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must consistently reject invalid or command-buffer-incompatible queue families with BadValue",
     )
