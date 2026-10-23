@@ -850,9 +850,12 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
 def normalize_length_formula(value: str) -> str:
-    """Normalize insignificant whitespace/backticks in documented ABI formulas."""
-    value = value.replace("`", "").replace(" ", "").replace("\\t", "")
-    return value.replace("uint64(", "").replace("~uint64(3)", "~3")
+    """Normalize insignificant whitespace and the audit's pad4 shorthand."""
+    value = value.replace("\`", "")
+    value = value.replace("~uint64(3)", "~3")
+    value = re.sub(r"uint64\(([^()]*)\)", r"\1", value)
+    value = re.sub(r"pad4\(([^()]*)\)", r"((\1+3)&~3)", value)
+    return re.sub(r"\s+", "", value)
 
 
 def request_normative_section(document: str, request: str) -> str:
@@ -860,7 +863,7 @@ def request_normative_section(document: str, request: str) -> str:
     lines = document.splitlines()
     heading_indexes = [
         i for i, line in enumerate(lines)
-        if re.match(r"^##\\s+", line) and request in line
+        if re.match(r"^##\s+", line) and request in line
     ]
     if heading_indexes:
         start = heading_indexes[0]
@@ -871,13 +874,13 @@ def request_normative_section(document: str, request: str) -> str:
         if not occurrences:
             return ""
         occurrence = occurrences[0]
-        prior = [i for i in range(occurrence + 1) if re.match(r"^##\\s+", lines[i])]
+        prior = [i for i in range(occurrence + 1) if re.match(r"^##\s+", lines[i])]
         if not prior:
             return ""
         start = prior[-1]
     end = next((i for i in range(start + 1, len(lines))
-                if re.match(r"^##\\s+", lines[i])), len(lines))
-    return "\\n".join(lines[start:end])
+                if re.match(r"^##\s+", lines[i])), len(lines))
+    return "\n".join(lines[start:end])
 
 
 def check_request_matrix_normative_lengths(c: Check) -> None:
@@ -887,7 +890,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
     registry_rows = {
         name: responsibility
         for name, _opcode, _kind, responsibility in re.findall(
-            r"^\\|\\s*`([^`]+)`\\s*\\|\\s*(\\d+)\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|",
+            r"^\|\s*\`([^\`]+)\`\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
             registry_text, re.M,
         )
     }
@@ -896,7 +899,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
     if len(matrix) != 2:
         return
     rows = re.findall(
-        r"^\\|\\s*(\\d+)\\s*\\|\\s*`([^`]+)`\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|",
+        r"^\|\s*(\d+)\s*\|\s*\`([^\`]+)\`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
         matrix[1], re.M,
     )
     formula_overrides = {
@@ -919,7 +922,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         if request not in formula_overrides:
             continue
         responsibility = registry_rows.get(request, "")
-        link = re.search(r"\\.\\./spec/([^)]*\\.md)", responsibility)
+        link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
         c.require(link is not None, f"{request}: registry lacks a defining normative chapter link")
         if not link:
             continue
@@ -929,9 +932,9 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         expected = normalize_length_formula(formula_overrides[request])
         normative = normalize_length_formula(section)
         c.require(expected in normative,
-                  f"{request}: matrix length formula is not stated in its normative section; expected {formula_overrides[request]!r}")
-        c.require(normalize_length_formula(matrix_length).replace("pad4(data_length)", expected if request == "WriteBuffer" else "pad4(data_length)") == normalize_length_formula(matrix_length),
-                  f"{request}: malformed matrix length expression")
+                  f"{request}: normative section does not state the expected request-length formula")
+        c.require(normalize_length_formula(matrix_length) == expected,
+                  f"{request}: audit matrix length {matrix_length!r} disagrees with the canonical formula")
 
 
 def check_reply_matrix(c: Check) -> None:
