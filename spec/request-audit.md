@@ -109,15 +109,8 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 38 | `DestroyFence` | Void | 16 |
 | 39 | `DestroyResource` | Void | 12 |
 | 40 | `SelectEvents` | Void | 32 |
-| 41 | `CreateSurface` | Void | 16 |
-| 42 | `DestroySurface` | Void | 12 |
-| 43 | `GetSurfaceCapabilities` | Reply | 16 |
-| 44 | `CreateSwapchain` | Reply | 48 |
-| 45 | `DestroySwapchain` | Void | 12 |
-| 46 | `AcquireNextImage` | Reply | 32 |
-| 47 | `QueuePresent` | Reply | `40 + 4 * wait_semaphore_count`
 
-Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
+Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.\nPresentation request layouts are documented in [the presentation chapter](presentation.md#10-provisional-wire-layouts), but remain provisional and are deliberately excluded from this assigned 1–40 request matrix until their central registry allocation is accepted.
 
 ## Cross-chapter consistency results
 
