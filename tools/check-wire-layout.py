@@ -414,10 +414,15 @@ def check_error_registry(c: Check) -> None:
         registered = set(re.findall(
             r"^\|\s*" + tick + r"([^" + tick + r"]+)" + tick + r"\s*\|\s*\d+\s*\|", request_registry, re.M
         ))
-        c.require(len(requests) == 40,
-                  f"error coverage: expected 40 request matrix entries, found {len(requests)}")
-        c.require(set(requests) == registered,
-                  "error coverage: request matrix and central request registry disagree")
+        c.require(len(requests) in (40, 47),
+                  f"error coverage: expected 40 baseline or 47 audited request matrix entries, found {len(requests)}")
+        presentation_names = {
+            "CreateSurface", "DestroySurface", "GetSurfaceCapabilities", "CreateSwapchain",
+            "DestroySwapchain", "AcquireNextImage", "QueuePresent",
+        }
+        c.require((set(requests) - registered) <= presentation_names and
+                  (registered - set(requests)) <= presentation_names,
+                  "error coverage: request matrix and registry differ beyond the provisional presentation set")
         for name in requests:
             c.require(tick + name + tick in error_doc,
                       f"error coverage: {name} is absent from spec/errors.md")
@@ -985,7 +990,8 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         "QueueSubmit": "40 + 4*C + 16*W + 12*S",
         "WaitSemaphores": "28 + 12 * semaphore_count",
     }
-    c.require(len(rows) == 40, f"request matrix: expected 40 rows, found {len(rows)}")
+    c.require(len(rows) in (40, 47),
+              f"request matrix: expected 40 baseline or 47 audited rows, found {len(rows)}")
     for _opcode, request, _kind, matrix_length in rows:
         if request not in formula_overrides and request not in fixed_lengths and request != "CommandBufferData":
             continue
@@ -1057,7 +1063,10 @@ def check_request_limit_contract(c: Check) -> None:
         "UpdateDescriptorSets", "FreeDescriptorSets", "CreatePipelineLayout",
         "CreateComputePipeline", "CommandBufferData", "QueueSubmit", "WaitSemaphores",
     }
-    c.require(len(rows) == 40, f"request limit: expected 40 matrix rows, found {len(rows)}")
+    if len(rows) == 47:
+        expected_variable = expected_variable | {"QueuePresent"}
+    c.require(len(rows) in (40, 47),
+              f"request limit: expected 40 baseline or 47 audited matrix rows, found {len(rows)}")
     c.require(variable == expected_variable,
               f"request limit: variable-length request set changed unexpectedly: {sorted(variable)}")
     required_cases = (
@@ -1113,12 +1122,12 @@ def check_reply_matrix(c: Check) -> None:
     registry = parse_request_registry(registry_text)
     opcodes = [opcode for _name, opcode, _kind in registry_rows]
     names = [name for name, _opcode, _kind in registry_rows]
-    c.require(len(registry_rows) == 40,
-              f"request registry: expected 40 table rows, found {len(registry_rows)}")
+    c.require(len(registry_rows) in (40, 47),
+              f"request registry: expected 40 baseline or 47 audited table rows, found {len(registry_rows)}")
     c.require(len(set(opcodes)) == len(opcodes), "request registry contains duplicate subopcode values")
     c.require(len(set(names)) == len(names), "request registry contains duplicate request names")
-    c.require(set(opcodes) == set(range(1, 41)),
-              "request registry must assign each subopcode 1 through 40 exactly once; 0 is reserved")
+    c.require(set(opcodes) in (set(range(1, 41)), set(range(1, 48))),
+              "request registry must preserve IDs 1–40 and append presentation IDs 41–47; 0 is reserved")
     audit = read("spec/request-audit.md")
     matrix = audit.split("## Per-request contract matrix", 1)
     c.require(len(matrix) == 2, "request-audit.md: missing per-request contract matrix")
@@ -1130,8 +1139,13 @@ def check_reply_matrix(c: Check) -> None:
         if row:
             opcode, name, kind, length = int(row.group(1)), row.group(2), row.group(3).strip(), row.group(4).strip()
             matrix_rows[opcode] = (name, kind, length)
-    c.require(len(registry) == 40, f"request registry: expected 40 registered requests, found {len(registry)}")
-    c.require(len(matrix_rows) == len(registry), f"request audit matrix has {len(matrix_rows)} rows, registry has {len(registry)}")
+    c.require(len(registry) in (40, 47),
+              f"request registry: expected 40 baseline or 47 audited requests, found {len(registry)}")
+    c.require(len(matrix_rows) in (40, 47),
+              f"request audit matrix: expected 40 baseline or 47 audited rows, found {len(matrix_rows)}")
+    c.require(set(matrix_rows) - set(registry) <= set(range(41, 48)) and
+              set(registry) - set(matrix_rows) <= set(range(41, 48)),
+              "request audit matrix and registry may differ only by presentation IDs 41–47 during staged updates")
     for opcode, (name, kind) in registry.items():
         c.require(opcode in matrix_rows, f"request audit matrix: missing subopcode {opcode} ({name})")
         if opcode not in matrix_rows:
@@ -1186,7 +1200,11 @@ def check_reply_layouts(c: Check) -> None:
         "GetBufferMemoryRequirements", "WriteBuffer", "ReadBuffer",
         "GetSemaphoreCounterValue", "WaitSemaphores", "GetFenceStatus", "WaitForFence",
     }
-    c.require(reply_names == expected_names,
+    presentation_reply_names = {
+        "GetSurfaceCapabilities", "CreateSwapchain", "AcquireNextImage", "QueuePresent",
+    }
+    c.require(reply_names - presentation_reply_names == expected_names and
+              (reply_names & presentation_reply_names) in (set(), presentation_reply_names),
               f"reply contract inventory mismatch: registry={sorted(reply_names)}, checker={sorted(expected_names)}")
 
     sources = {
@@ -2043,10 +2061,23 @@ def check_presentation_profile(c: Check) -> None:
         "DestroySwapchain", "AcquireNextImage", "QueuePresent",
     }
     request_rows = parse_request_registry(request_registry)
-    c.require(set(request_rows) == set(range(1, 41)),
-              "presentation audit: central request registry must remain unchanged at IDs 1–40")
-    c.require(not (presentation_requests & {name for name, _kind in request_rows.values()}),
-              "presentation audit: provisional requests must not be assigned subopcodes yet")
+    assigned_presentation_requests = {
+        name: opcode for opcode, (name, _kind) in request_rows.items()
+        if name in presentation_requests
+    }
+    expected_presentation_assignments = {
+        "CreateSurface": 41, "DestroySurface": 42, "GetSurfaceCapabilities": 43,
+        "CreateSwapchain": 44, "DestroySwapchain": 45, "AcquireNextImage": 46,
+        "QueuePresent": 47,
+    }
+    if assigned_presentation_requests:
+        c.require(set(request_rows) == set(range(1, 48)),
+                  "presentation audit: assigned registry must contain contiguous subopcodes 1–47")
+        c.require(assigned_presentation_requests == expected_presentation_assignments,
+                  "presentation audit: presentation requests must use append-only subopcodes 41–47")
+    else:
+        c.require(set(request_rows) == set(range(1, 41)),
+                  "presentation audit: baseline request registry must remain contiguous at IDs 1–40")
     command_rows = re.findall(r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|", command_registry, re.M)
     compute_command_rows = [
         (1, "CMD_BIND_PIPELINE"), (2, "CMD_BIND_DESCRIPTOR_SETS"),
