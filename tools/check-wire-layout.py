@@ -1568,6 +1568,11 @@ def check_xge_abi(c: Check) -> None:
               "`reserved = 0`" in doc_sections.get("ASYNC_ERROR", "") and
               re.search(r"reserved = 0", doc_sections.get("ASYNC_ERROR", "")) is not None,
               "XGE ASYNC_ERROR: invalid origin and reserved-field negative cases must be covered")
+    c.require("muss `resource_xid = 0` sein" in conformance and
+              "muss `resource_xid = 0` gesetzt werden" in read("spec/events.md") and
+              "resource_xid = 0` serialisiert" in read("spec/resource-lifetime.md") and
+              "wiederverwendete Ressourcen-XID nicht als `resource_xid` ausgegeben werden" in read("spec/resource-lifetime.md"),
+              "XGE ASYNC_ERROR: destroyed/reused resource XIDs must be scrubbed instead of retargeted")
     c.require("unbekannte Maskenbits" in conformance and
               "falschen Nullwerten" in conformance and
               "Jeder solche Fehler lässt die bisherige Maske unverändert" in conformance and
