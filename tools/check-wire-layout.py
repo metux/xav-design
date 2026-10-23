@@ -622,6 +622,28 @@ def check_request_document_coverage(c: Check) -> None:
         and "prüft Request-Länge, XIDs, Typ, Ownership und Cross-Device-Zuordnung vor Zustandsänderungen" in conformance,
         "command-buffer recovery: failed CREATE/FINAL and reset atomicity must be covered",
     )
+    shader_upload = read("spec/shaders-pipelines.md")
+    event_doc = read("spec/events.md")
+    c.require(
+        "späterer Chunk oder ABORT für ein verworfenes Assembly" in shader_upload
+        and "do not emit `ASYNC_ERROR`" in shader_upload
+        and "Fehler bei `ShaderModuleData` erzeugen kein `ASYNC_ERROR`" in errors
+        and "`ShaderModuleData`-Upload und bei `CommandBufferData`-Recording-Chunks sind immer synchron" in event_doc,
+        "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
+    )
+    c.require(
+        "CREATE-, Append- und FINAL-Requests bei nicht verfügbarem/verlorenem Device" in command_recording
+        and "`ABORT` bleibt als rein logische Recovery-/Cleanup-Operation auch nach Device Loss zulässig" in command_recording
+        and "ABORT` bleibt als logische Bereinigung nach Device Loss zulässig" in errors
+        and "Nach Device Loss werden CREATE-/Append-/FINAL-Chunks von `CommandBufferData` mit `DEVICE_LOST` abgewiesen" in conformance,
+        "CommandBufferData: device-loss failures must preserve accepted chunks while ABORT remains logical cleanup",
+    )
+    c.require(
+        "Chunk-Fehler sind synchron dem jeweiligen `CommandBufferData`-Request zugeordnet und erzeugen kein `ASYNC_ERROR`" in command_recording
+        and "Fehler beim `ShaderModuleData`-Upload und bei `CommandBufferData`-Recording-Chunks sind immer synchron" in event_doc
+        and "erzeugen kein `ASYNC_ERROR`" in conformance,
+        "chunked shader/command-buffer operations must not emit async errors before submission acceptance",
+    )
     c.require(
         "`AllocateDescriptorSets`:" in errors
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
