@@ -898,9 +898,10 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
     c.require(len(matrix) == 2, "request matrix: missing normative cross-check matrix")
     if len(matrix) != 2:
         return
+    matrix_body = matrix[1].split("\n## ", 1)[0]
     rows = re.findall(
         r"^\|\s*(\d+)\s*\|\s*\`([^\`]+)\`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
-        matrix[1], re.M,
+        matrix_body, re.M,
     )
     formula_overrides = {
         "CreateDevice": "24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))",
