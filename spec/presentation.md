@@ -116,9 +116,9 @@ Acquisition is a reply-bearing operation with an explicit timeout and status res
 
 An acquire operation may name an optional binary Semaphore XID and optional Fence XID owned by the same logical Device; either may be omitted, and both may be supplied together. The reply itself reports the acquisition result and, on SUCCESS, the acquired image index. Timeline semaphores are not valid acquire signals. On successful acquisition, each supplied synchronization object is signaled exactly once under the existing semaphore/fence state rules. A failed or timed-out acquire signals neither object and changes no image state.
 
-Acquire status values must distinguish at least SUCCESS, TIMEOUT, NOT_READY, OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST. TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST are not X11 framing errors; they are operation results. An image index is valid only on SUCCESS. OUT_OF_DATE and SURFACE_LOST must not return a fabricated image index.
+Acquire status values are SUCCESS=0, TIMEOUT=1, NOT_READY=2, OUT_OF_DATE=3, SURFACE_LOST=4, DEVICE_LOST=5, and DEVICE_DESTROYED=6. TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors; they are operation results. An image index is valid only on SUCCESS. OUT_OF_DATE and SURFACE_LOST must not return a fabricated image index.
 
-A pending acquire registration holds internal references to its Swapchain, Surface, and supplied synchronization objects. Destroying any of those resources while the acquire is pending must be rejected or must first terminally cancel the acquire according to a deterministic rule; no object may be freed while a pending registration can signal it. The destroy request MUST be rejected atomically with `INVALID_SYNCHRONIZATION_STATE` while the acquire remains pending. The pending registration and its synchronization-object references remain intact.
+A pending acquire registration holds internal references to its Swapchain, Surface, Device, and supplied synchronization objects. Destroying the Swapchain or Surface while the acquire is pending is rejected atomically with `INVALID_SYNCHRONIZATION_STATE`; the pending registration and its synchronization-object references remain intact. `DestroyDevice` is different: it invalidates the Device and its owned resources immediately, terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`, signals neither supplied synchronization object, and releases registration-only references after that terminal transition. The first terminal result serialized by the server wins; a later `DestroyDevice` must not overwrite an already-terminal acquire. Disconnect suppresses the reply but still removes the registration and safely releases its references.
 
 ## 5.2 Presentation synchronization contract
 
@@ -235,7 +235,7 @@ Device ownership is inferred from the resource. Destruction is rejected while pe
 - Offset 24: XID `semaphore_xid`; zero means absent
 - Offset 28: XID `fence_xid`; zero means absent
 
-Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on failure or timeout. The semaphore, when present, must be binary.
+Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on any non-success result, including DEVICE_DESTROYED. The semaphore, when present, must be binary.
 
 ### QueuePresent — Reply, variable length
 
