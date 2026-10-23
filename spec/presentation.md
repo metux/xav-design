@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **architecture defined; initial ownership/lifecycle rules settled; request layouts and numeric assignments remain provisional**.
+Status: **ownership/lifecycle and initial format/mode IDs defined; capability wire layout, request layouts, and numeric assignments remain provisional**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -63,11 +63,15 @@ A window event or resize notification is not itself proof that GPU work or prese
 
 ## 4. Surface capabilities and swapchain negotiation
 
-Before creating a swapchain, the client needs a queryable contract for whether the selected logical device can present to the Surface, which image formats and presentation modes are supported, and which extent, image-count, usage, and transform constraints apply.
+Before creating a swapchain, the client needs a queryable contract for whether the selected logical device can present to the Surface, which image formats and presentation modes are supported, and which extent, image-count, and image-usage constraints apply. This query is scoped to the exact pair (Device XID, Surface XID); it must not silently substitute another physical or logical device.
 
 The capability query must report server/backend-supported values, not assume that every Vulkan physical device can present to every X11 window. Device selection for compute does not imply presentation support. If the chosen logical device cannot present to the Surface, swapchain creation must fail deterministically rather than silently migrating resources to another device.
 
-The initial presentation profile should prefer a small, explicit set of formats and modes. Format values must use a XAverius wire registry with fixed numeric assignments; native Vulkan enum values must not be copied to the wire without an explicit compatibility decision. Extent and image-count limits must be explicit, and zero-sized/minimized windows must have a defined non-blocking behavior rather than causing an indefinite wait.
+The initial presentation profile uses the explicit [presentation format and mode registry](../registries/presentation-formats.md). Format values are XAverius wire identifiers, not native Vulkan enum values. A supported format is reported together with its color-space identifier; clients must use a pair returned by the query. FIFO is the baseline presentation mode and must be reported whenever presentation is supported.
+
+The capability contract must report: (a) whether the Device/Surface pair can present; (b) current window extent; (c) minimum and maximum permitted swapchain image count; (d) minimum and maximum supported extent; (e) supported format/color-space pairs; (f) supported presentation modes; and (g) the image usage operations the server can actually support for those images. The wire representation and exact request/reply layout remain to be specified, but every count must be paired with an explicit record size and a reply-length formula, and reserved fields must be zero.
+
+Capability results are a snapshot, not a permanent promise. Window resize, surface loss, backend reconfiguration, or device loss may invalidate the snapshot. A zero-sized/minimized window must be reported explicitly as temporarily not presentable (rather than returning a fabricated nonzero extent or blocking indefinitely); the client can query again after a later geometry change. A false presentation-support result is a normal capability result, not a reason to migrate the Swapchain to another Device.
 
 ## 5. Acquire, render, and present ordering
 
@@ -121,7 +125,7 @@ The presentation-capable profile should initially target presentation into ordin
 Before adding presentation requests to the central registry, the design pass must settle and cross-check:
 
 1. Surface and swapchain ownership, destroy behavior, and exact X11 Window identity tracking.
-2. Surface capability and format registries, including byte order and color-space scope.
+2. Surface capability query wire layout and the format/mode registries; initial pixel-format, color-space, and FIFO mode IDs are now defined in [presentation-formats](../registries/presentation-formats.md).
 3. Swapchain image usage and how image handles are exposed without allowing independent destruction.
 4. Acquire timeout/status semantics and semaphore/fence signaling.
 5. Present wait-semaphore semantics, queue association, reply behavior, and asynchronous failure events.
