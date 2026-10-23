@@ -214,3 +214,10 @@ Provisional request shapes are noted for later wire/error review: CreateSurface 
 ## Presentation design pass 2 — capabilities and synchronization — 2026-10-23
 
 Added the presentation format/mode registry and capability-query semantics. The profile defines wire IDs for RGBA8_UNORM, BGRA8_UNORM, SRGB_NONLINEAR, and FIFO. The chapter now specifies the capability snapshot, swapchain image-index/state model, acquire and present synchronization, resize/loss transitions, and provisional request/reply layouts. Presentation XGE events IMAGE_RELEASED and PRESENTATION_COMPLETE distinguish image reuse from presentation completion. The existing static checker still needs to be extended for the additional presentation event definitions before new presentation subopcodes are assigned; no CI pass is claimed for these latest changes.
+
+
+## Presentation design pass 3 — image path, event milestones, and lifecycle — 2026-10-23
+
+Defined the minimal image path for the future presentation profile: compute can write a Buffer, and the new presentation-only CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE entry copies the buffer into an acquired swapchain image. Initial swapchain image usage is TRANSFER_DST only; no graphics pipeline/rasterization support is implied. Added separate IMAGE_RELEASED and PRESENTATION_COMPLETE event definitions and queue mask bits, plus conformance cases for their distinct semantics and for the presentation lifecycle.
+
+The chapter now includes provisional layouts for CreateSurface, DestroySurface, GetSurfaceCapabilities, CreateSwapchain, DestroySwapchain, AcquireNextImage, and QueuePresent. These are not yet assigned request subopcodes. The wire-layout checker still needs corresponding updates for the additional event IDs and presentation-only command entry before the request registry is extended. CI has not reported a status for these commits; no successful test run is claimed.
