@@ -1571,7 +1571,7 @@ def check_xge_abi(c: Check) -> None:
     c.require("muss `resource_xid = 0` sein" in conformance and
               "muss `resource_xid = 0` gesetzt werden" in read("spec/events.md").lower() and
               "resource_xid = 0` serialisiert" in read("spec/resource-lifetime.md").lower() and
-              "wiederverwendete Ressourcen-xid` nicht als `resource_xid` ausgegeben werden" in read("spec/resource-lifetime.md").lower(),
+              "wiederverwendete ressourcen-xid nicht als `resource_xid` ausgegeben werden" in read("spec/resource-lifetime.md").lower(),
               "XGE ASYNC_ERROR: destroyed/reused resource XIDs must be scrubbed instead of retargeted")
     c.require("unbekannte Maskenbits" in conformance and
               "falschen Nullwerten" in conformance and
