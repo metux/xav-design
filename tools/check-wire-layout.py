@@ -625,8 +625,8 @@ def check_request_document_coverage(c: Check) -> None:
     shader_upload = read("spec/shaders-pipelines.md")
     event_doc = read("spec/events.md")
     c.require(
-        "späterer Chunk oder ABORT für ein verworfenes Assembly" in shader_upload
-        and "do not emit `ASYNC_ERROR`" in shader_upload
+        "A later chunk or ABORT for a discarded assembly" in shader_upload
+        and "They do not emit `ASYNC_ERROR`" in shader_upload
         and "Fehler bei `ShaderModuleData` erzeugen kein `ASYNC_ERROR`" in errors
         and "`ShaderModuleData`-Upload und bei `CommandBufferData`-Recording-Chunks sind immer synchron" in event_doc,
         "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
