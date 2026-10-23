@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **ownership/lifecycle, initial format/mode IDs, and provisional request/reply layouts defined; checker coverage is drafted but not yet validated; request subopcodes and command-entry ID remain unassigned**.
+Status: **ownership/lifecycle, initial format/mode IDs, provisional request/reply layouts, and static checker coverage validated by CI; request subopcodes and command-entry ID remain unassigned**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -22,7 +22,7 @@ The presentation API is expected to introduce at least these logical objects:
 - **Acquired image** — a swapchain image temporarily owned by the client for rendering or other permitted use.
 - **Presentation operation** — an ordered request to make a rendered swapchain image available for display in the target window.
 
-These are conceptual object categories. The request names and provisional layouts in section 10 are defined, but the current request registry remains unchanged until the cross-chapter error rules and checker coverage have been reviewed.
+These are conceptual object categories. The request names and provisional layouts in section 10 are defined. The static checker covers their wire layouts and core error-map invariants, but the current request registry remains unchanged until the remaining semantic/conformance review is complete.
 
 
 ## 2.1 Ownership and destruction contract
@@ -264,6 +264,6 @@ Before adding presentation requests to the central registry, the design pass mus
 4. Validate acquire timeout/status and semaphore/fence signaling against the existing synchronization state machine.
 5. Validate QueuePresent wait-semaphore behavior and the separate image-release/presentation-completion events.
 6. Finish resize, out-of-date, surface-lost, and device-lost transitions in conformance coverage.
-7. Run the expanded checker and resolve every failure; only after a successful run should presentation request subopcodes be allocated.
+7. Keep the expanded checker green in CI; allocate presentation request subopcodes only after the remaining semantic and conformance review is complete.
 
 No request subopcode is reserved by this chapter. Numeric assignments must be made append-only in [the request subopcode registry](../registries/request-subopcodes.md) after the wire contracts are reviewed.
