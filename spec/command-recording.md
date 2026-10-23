@@ -190,7 +190,7 @@ Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
 
 This entry is a minimal pixel-production path for the first on-screen presentation profile; it does not add general Vulkan Image resources or graphics pipelines. It copies a tightly or explicitly row-pitched rectangle from a Buffer into one acquired Swapchain image. The entry is valid only when the source Buffer has `TRANSFER_SRC` usage, the selected Swapchain was created with `TRANSFER_DST` image usage, and the referenced image is currently `ACQUIRED` at the point the command is validated for submission.
 
-Fixed total length: 36 bytes; `entry_length = 9` words.
+Assigned command ID: 5 (presentation-capable profile only; not part of the compute-only v0.1 entry set).\n\nFixed total length: 36 bytes; `entry_length = 9` words.
 
 - Relative offset 0: `CARD16 command_id`
 - Relative offset 2: `CARD16 entry_length = 9`
@@ -208,7 +208,7 @@ The server manages the image's backend layout transitions required for the copy.
 
 A command buffer referencing a Swapchain image retains an internal reference to the Swapchain. Destroying the Swapchain is rejected while a recording command buffer refers to it; non-pending executable command buffers that refer to it are invalidated atomically when the Swapchain is successfully destroyed. At submission acceptance, the referenced image must be ACQUIRED and the command must not race a presentation transition. A pending submission retains the image until its terminal outcome and all backend accesses end. The server serializes request validation and acceptance in X11 request order for a connection. A `QueueSubmit` accepted before `QueuePresent` retains its exact image/Swapchain identity; if it can access the image, presentation must wait on a binary semaphore dependency covering that work. A later copy submission processed after the image has transitioned to `PRESENT_PENDING` is rejected atomically with `INVALID_SYNCHRONIZATION_STATE`. Request order alone creates no GPU memory dependency. If `QueuePresent` is rejected, the image remains `ACQUIRED`, so a later submission may still be accepted if all other checks pass.
 
-This entry's numeric ID must be allocated append-only in the [command-entry registry](../registries/command-entries.md) before an implementation advertises support. It is not part of the current compute-only v0.1 entry set.
+The presentation-only command-entry ID is 5. Every new numeric ID must be allocated append-only in the [command-entry registry](../registries/command-entries.md) before an implementation advertises support. This entry is not part of the compute-only v0.1 entry set.
 
 ## 7.6 Command-Validierung
 
