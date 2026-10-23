@@ -310,3 +310,8 @@ The lifecycle audit found one remaining gap: unlike the existing `WaitForFence`/
 ## Accepted presentation lifecycle races — 2026-10-23
 
 Clarified the terminal-state race for accepted `QueuePresent` operations across window resize/zero extent, Window destruction, and Device loss. Each accepted operation records one serialized terminal status; later lifecycle notifications cannot overwrite it. A pending operation that cannot complete because of `OUT_OF_DATE`, `SURFACE_LOST`, or `DEVICE_LOST` invalidates the affected image/Swapchain and does not emit `IMAGE_RELEASED`. `PRESENTATION_FAILED` permits image release only after backend quiescence and confirmation that the Swapchain remains usable. Conformance and resource-lifetime text now cover the same rule. Presentation request subopcodes 41–47 and command-entry ID 5 remain unassigned pending the broader ABI review.
+
+
+## QueuePresent binary-wait state integration — 2026-10-23
+
+Cross-checked presentation waits against the common binary-semaphore state machine. Accepted QueuePresent operations now reserve each semaphore wait slot atomically with image/token acceptance; the signal is consumed only after a confirmed backend wait. If an accepted presentation fails before a wait is resolved, the semaphore preserves a provably unconsumed state, records confirmed consumption, or becomes `UNTRUSTED` if the payload outcome is uncertain. Incompatible pending waits reject atomically with `INVALID_SYNCHRONIZATION_STATE`; `UNTRUSTED` waits reject with `DEPENDENCY_FAILED`. Added conformance and static-checker coverage. Presentation request subopcodes 41–47 and command-entry ID 5 remain unassigned.
