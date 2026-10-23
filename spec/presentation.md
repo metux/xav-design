@@ -33,7 +33,7 @@ The following ownership rules are normative for the presentation-capable profile
 - A Swapchain is a client-created XAverius resource owned by exactly one logical Device and refers to exactly one Surface. Its images and image-acquisition state are children of the Swapchain, not separately client-destroyable resources.
 - A Surface may outlive any logical Device. Destroying a Device invalidates its Swapchains, but does not destroy a Surface owned by the same connection.
 - A Surface must not be destroyed while a live Swapchain references it. The destroy request is rejected atomically; the Surface remains live.
-- A Swapchain must not be destroyed while any image is acquired by the client or any presentation operation may still access its images. The destroy request is rejected atomically; the Swapchain and all image state remain unchanged. Once every image is released and every queued presentation has reached its defined terminal point, destruction may invalidate the Swapchain XID immediately and defer internal storage release until backend access is impossible.
+- A Swapchain must not be destroyed while any queue submission, accepted presentation operation, pending acquire registration, or backend access may still reference its images. The destroy request is rejected atomically in that case. An image being ACQUIRED by itself does not prevent destruction once the client has ensured that no GPU command or backend operation can still use it: successful destruction invalidates the Swapchain and all image indices, so they can no longer be presented or acquired.
 - Successful destruction immediately invalidates the public XID. Backend images, window references, and internal synchronization objects may be released later under the common resource-lifetime rules.
 - Destruction of the underlying X11 Window does not implicitly destroy or rebind the Surface XID. It transitions the Surface to SURFACE_LOST; operations that require a usable Surface report that state, and explicit Surface destruction remains available.
 - Client disconnect invalidates the client's Surface and Swapchain XIDs. Internal window/image references remain until queued operations and backend accesses are quiescent; XID reuse must never redirect such references.
@@ -54,7 +54,7 @@ The Surface holds a server-side reference to the X11 window identity, not merely
 
 Window resize, unmap, and destruction are asynchronous X11 lifecycle changes, not XAverius resource creation requests. The presentation implementation must observe these changes and keep its surface/swapchain state coherent:
 
-- A resize may change the surface extent and invalidate the current swapchain for future acquisition or presentation.
+- A change to the X11 Window's pixel extent marks each associated active Swapchain OUT_OF_DATE. No new acquire or present operation is accepted against an OUT_OF_DATE Swapchain; requests return the explicit OUT_OF_DATE status. Already accepted GPU and presentation operations are allowed to reach terminal outcomes, and the client may create a replacement Swapchain using freshly queried capabilities. The old Swapchain remains destroyable after pending uses have drained, even if its images were acquired but are no longer referenced by work.
 - Window destruction makes the associated Surface unusable for future acquisition and presentation. It must not redirect presentation to a later window that reuses the XID.
 - Unmapping or obscuring a window does not itself destroy the Surface. Whether the backend can avoid work while it is not visible is an optimization and must not change resource identity or synchronization guarantees.
 - A client may explicitly destroy its Surface and swapchain before destroying the X11 window. The eventual API must define deterministic behavior for destruction with acquired images or queued presentation operations.
@@ -86,7 +86,7 @@ The image state machine is:
 - AVAILABLE again: only after the presentation backend has released the image for reuse.
 - INVALID: the Swapchain has become unusable or has been destroyed; no further operation may use the image.
 
-A failed acquire does not change any image state. A present request rejected before acceptance leaves the image ACQUIRED. Once a present request is accepted, the image transitions to PRESENT_PENDING; an eventual presentation failure must still produce a terminal outcome that releases or invalidates the image deterministically. The protocol must never make an image reacquirable merely because the rendering QueueSubmit completed.
+A failed acquire does not change any image state. A present request rejected before acceptance leaves the image ACQUIRED. Once a present request is accepted, the image transitions to PRESENT_PENDING; an eventual presentation failure must still produce a terminal outcome that releases or invalidates the image deterministically. If a Swapchain becomes OUT_OF_DATE or SURFACE_LOST while an image is ACQUIRED, the client may destroy that Swapchain after all GPU references have completed; it does not need to present the image solely to make destruction possible. The protocol must never make an image reacquirable merely because the rendering QueueSubmit completed.
 
 The Swapchain creation contract must include an image usage mask. Capability queries return only usages that the server can actually support for the selected Device/Surface pair. Swapchain creation with any unreported usage bit is rejected atomically. The usage mask does not itself make an operation available: the presentation profile must separately define image-aware command entries and descriptors for each advertised use.
 
@@ -148,7 +148,7 @@ A resize can make the old swapchain extent unsuitable while GPU work or presenta
 
 The server must not free image backing storage while a queue submission, presentation operation, or backend access can still reference it. Public XIDs, if used for swapchains or surfaces, follow the existing immediate-public-invalidation and delayed-internal-release model.
 
-A zero-sized or temporarily unpresentable window must not force the client to destroy and recreate the X11 window. The API should report the condition explicitly and allow the client to retry after a later resize.
+A zero-sized or temporarily unpresentable window marks associated Swapchains OUT_OF_DATE and makes capabilities report temporarily not presentable. It must not force the client to destroy and recreate the X11 window. The client can retry after a later resize. Window destruction marks the Surface SURFACE_LOST and all associated Swapchains unusable; no new acquire or present is accepted, but already accepted operations still require a terminal outcome and safe backend release.
 
 ## 8. Initial scope and explicit non-goals
 
