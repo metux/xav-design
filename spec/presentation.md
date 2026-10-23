@@ -140,7 +140,7 @@ A window resize or zero extent marks the Swapchain `OUT_OF_DATE` immediately for
 
 ## 5.3 Request validation, status precedence, and atomic acceptance
 
-All seven presentation requests use the normative validation stages in [the error mapping](errors.md#normative-validation-precedence-for-the-seven-presentation-requests): wire length and checked arithmetic; scalar/reserved-field validation; XID resolution in the defined order; type and ownership validation; Device availability; immutable request constraints; lifecycle/capability status; then mutable state and synchronization eligibility. No later stage may mask an earlier error. A rejected request or non-success status leaves no partial object, reference, image, semaphore, or token mutation.
+All seven presentation requests use the normative validation stages in [the error mapping](errors.md#normative-validation-precedence-for-the-seven-presentation-requests): wire length and checked arithmetic; scalar/reserved-field validation; XID resolution in the defined order; type and ownership validation; Device availability; immutable request constraints; lifecycle/capability status; then mutable state and synchronization eligibility. No later stage may mask an earlier error. A rejected request or non-success status leaves no partial object, reference, image, semaphore, or token mutation attributable to that request; independent asynchronous lifecycle transitions are not rolled back.
 
 The status precedence for requests with status replies is deterministic:
 
