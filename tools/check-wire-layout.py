@@ -643,7 +643,8 @@ def check_request_document_coverage(c: Check) -> None:
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
         and "Kein Pipeline Layout bleibt bei Ablehnung live" in errors
-        and "Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt" in read("spec/shaders-pipelines.md"),
+        and "Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt" in read("spec/shaders-pipelines.md")
+        and "Ziel-XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
         "error mapping: CreatePipelineLayout must define device-state and atomic creation behavior",
     )
     c.require(
@@ -651,7 +652,8 @@ def check_request_document_coverage(c: Check) -> None:
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
         and "Kein Pipeline-Objekt bleibt bei Ablehnung live" in errors
-        and "bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt" in read("spec/shaders-pipelines.md"),
+        and "bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt" in read("spec/shaders-pipelines.md")
+        and "Ziel-Pipeline-XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
         "error mapping: CreateComputePipeline must define device-state and atomic creation behavior",
     )
     c.require(
@@ -733,7 +735,8 @@ def check_request_document_coverage(c: Check) -> None:
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
         and "keine Teilmenge der angeforderten Sets live" in errors
-        and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md"),
+        and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md")
+        and "Ziel-Set-XID in Array-Reihenfolge" in read("spec/shaders-pipelines.md"),
         "error mapping: AllocateDescriptorSets must define device-state and atomic batch behavior",
     )
     c.require(
@@ -2223,7 +2226,7 @@ def check_presentation_profile(c: Check) -> None:
               "ein `RECORDING`-Command-Buffer den Buffer direkt oder indirekt (einschließlich über ein referenziertes Descriptor Set) referenziert" in lifetime and
               "Destroying a Buffer referenced by a `RECORDING` command buffer is atomically rejected" in read("spec/conformance.md"),
               "Buffer lifetime: recording references must block destruction and executable references must be invalidated")
-    c.require("Values 7–65535 are unassigned in the compute-only v0.1 baseline" in read("registries/event-types.md"),
+    c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
 
 def main() -> int:
