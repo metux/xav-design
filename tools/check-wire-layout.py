@@ -2143,6 +2143,9 @@ def check_presentation_profile(c: Check) -> None:
     for contract in presentation_error_contracts:
         c.require(contract in errors,
                   f"presentation request error map: missing invariant: {contract}")
+    c.require("resolve `device_xid`, validate the target `swapchain_xid` as a create-XID, then resolve `surface_xid`" in errors and
+              "Mixed-failure `CreateSwapchain` requests validate scalar fields first" in conformance,
+              "CreateSwapchain: mixed XID and capability error precedence must be explicit")
     c.require("For all seven requests, validation is atomic" in errors,
               "presentation request error map: all seven requests must share atomic failure semantics")
     c.require("On every non-success status the target XID remains unallocated" in errors,
