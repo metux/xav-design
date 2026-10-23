@@ -1662,7 +1662,8 @@ def check_presentation_profile(c: Check) -> None:
         "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
         "`QueuePresent`: unknown/non-live Device, Swapchain, or wait-semaphore XID is `BadValue`",
         "An acquired-but-idle image alone does not block destruction.",
-        "Any rejected request leaves the image `ACQUIRED` and leaves wait-semaphore state unchanged.",
+        "Any rejected request leaves the image `ACQUIRED`, leaves wait-semaphore state unchanged, and does not reserve its presentation token.",
+        "Token uniqueness is checked against previously accepted presentations and recorded atomically with acceptance.",
     )
     for contract in presentation_error_contracts:
         c.require(contract in errors,
