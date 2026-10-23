@@ -1582,7 +1582,7 @@ def check_xge_abi(c: Check) -> None:
               "resource_xid" in conformance and
               "Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events" in read("spec/resource-lifetime.md"),
               "XGE event delivery: DestroyDevice suppression must cover all event XID fields")
-    c.require("gemeinsamen serialisierten Linearisierungspunkt" in conformance and
+    c.require("gemeinsamer serialisierter Linearisierungspunkt" in conformance and
               "gemeinsamen serialisierten Serverzustand" in events and
               "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern" in events,
               "XGE event delivery: SelectEvents/DestroyDevice/completion race must be serialized")
