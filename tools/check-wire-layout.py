@@ -734,7 +734,7 @@ def check_request_document_coverage(c: Check) -> None:
         "`AllocateDescriptorSets`:" in errors
         and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
-        and "keine Teilmenge der angeforderten Sets live" in errors
+        and "keine Teilmenge bleibt live" in errors
         and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md")
         and "Ziel-Set-XID in Array-Reihenfolge" in read("spec/shaders-pipelines.md"),
         "error mapping: AllocateDescriptorSets must define device-state and atomic batch behavior",
