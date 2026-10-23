@@ -142,7 +142,7 @@ Gesamtlänge: 64 Bytes; XGE `length = 8`.
 | 52 | CARD32 | `reserved = 0` |
 | 56 | CARD64 | `presentation_token` aus dem Client-Request |
 
-Dieses Event bedeutet ausschließlich, dass die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Ein Event darf nur für eine zuvor akzeptierte Präsentationsoperation und höchstens einmal pro akzeptierter Präsentationsoperation ausgegeben werden.
+Dieses Event bedeutet ausschließlich, dass die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Es wird genau einmal ausgegeben, wenn das Image nach dem terminalen Ausgang wiederverwendbar ist. Wird das Image stattdessen invalidiert, wird kein `IMAGE_RELEASED`-Event für dieses Image ausgegeben; `PRESENTATION_COMPLETE` meldet den Fehler. Ein Event darf nur für eine zuvor akzeptierte Präsentationsoperation ausgegeben werden.
 
 ## `PRESENTATION_COMPLETE`
 
@@ -158,7 +158,7 @@ Gesamtlänge: 64 Bytes; XGE `length = 8`.
 | 52 | CARD32 | `status` aus der Präsentations-Event-Status-Registry |
 | 56 | CARD64 | `presentation_token` aus dem Client-Request |
 
-Dieses Event bedeutet, dass die Operation den definierten Completion-Punkt der Präsentationsbackend erreicht hat. `SUCCESS` bedeutet, dass die Backend-Präsentation erfolgreich abgeschlossen wurde; andere Statuswerte beschreiben den terminalen Fehlerzustand. Das Event darf unabhängig von `IMAGE_RELEASED` eintreffen. Beide Events werden, falls relevant, separat und höchstens einmal pro akzeptierter Präsentationsoperation zugestellt. `PRESENTATION_COMPLETE` allein macht das Image nicht erneut erwerbbar; nur `IMAGE_RELEASED` tut das. Falls ein Fehler die Wiederverwendung verhindert, wird das Image stattdessen invalidiert und die Swapchain als nicht mehr verwendbar markiert.
+Dieses Event meldet den terminalen Ausgang jeder akzeptierten Präsentationsoperation und wird genau einmal ausgegeben, sofern die ursprüngliche Verbindung noch zustellbar ist und die Device-Lifecycle-Regeln Events erlauben. `SUCCESS` bedeutet, dass der definierte Completion-Punkt der Präsentationsbackend erfolgreich erreicht wurde; andere Statuswerte beschreiben den terminalen Fehlerzustand. Das Event darf unabhängig von `IMAGE_RELEASED` eintreffen. `PRESENTATION_COMPLETE` allein macht das Image nicht erneut erwerbbar. Wenn ein Fehler die Wiederverwendung verhindert, wird das Image invalidiert und die Swapchain als nicht mehr verwendbar markiert. Nach `DestroyDevice` dürfen keine neuen Events mit dessen Device-XID erzeugt oder zugestellt werden; nach Disconnect wird nichts mehr an die geschlossene Verbindung zugestellt, die interne Operation wird dennoch terminalisiert.
 
 ## Voraussetzung fuer lange XGE-Events
 
