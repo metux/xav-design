@@ -284,3 +284,12 @@ A systematic precedence review found that the general rule (wire structure, fiel
 ## XGE event negative-fixture and stale resource-XID audit — 2026-10-23
 
 The event review found that `ASYNC_ERROR.resource_xid` had no explicit rule for a resource destroyed after accepted work retained its internal identity but before a delayed diagnostic was enqueued. Without a wire rule, a reused numeric XID could misidentify a new resource. The event and lifetime chapters now require `resource_xid = 0` when the affected resource is no longer publicly live at the event's serialization point; callbacks must carry internal identity and must not re-resolve a numeric XID. Device-destruction suppression remains stricter: no new event is emitted for the destroyed Device identity. Conformance cases, the static checker, and executable Little-/Big-Endian golden-frame tests cover the distinction. CI passed in [run 39963955754](https://github.com/metux/xav-design/actions/runs/39963955754), including the wire-layout checks and golden wire-vector suite. These are protocol/specification tests, not runtime X11-server or Vulkan-backend tests.
+
+
+## Request-subopcode registry and golden-vector cross-check — 2026-10-23
+
+The central request registry and static wire checker already enforce the current 40 assignments (1–40), unique request names and numeric values, reserved subopcode 0, and a one-to-one match with the per-request audit matrix. The golden request-vector tests previously checked encoded bytes and framing but did not compare each fixture's request name and subopcode against the central registry. That meant a stale fixture could remain self-consistent after an assignment drift.
+
+Added a cross-check in `tests/test_wire_vectors.py`: every golden vector must name a registered request, use that request's assigned subopcode, and carry the same value in wire-header byte 4. The test also checks uniqueness and reservation of zero in the parsed registry. This complements rather than duplicates the checker’s full contiguous 1–40 assignment check. Current golden byte coverage remains intentionally limited to `CreateBuffer`, `WriteBuffer`, and `ReadBuffer`; this change does not claim byte-vector coverage for all 40 request layouts.
+
+Commit: `1d58cfe`. CI validation pending. `master` remains unchanged.
