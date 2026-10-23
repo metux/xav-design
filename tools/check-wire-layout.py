@@ -2045,6 +2045,12 @@ def check_presentation_profile(c: Check) -> None:
               "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
     c.require("8 + 2 * format_pair_count + present_mode_count + 2 * queue_family_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
+    c.require("exactly one record for every family returned by `GetPhysicalDeviceQueueFamilyProperties`" in presentation and
+              "ordered by ascending index with no duplicates" in presentation and
+              "`CARD32 queue_family_index`, `CARD32 present_supported`" in presentation,
+              "GetSurfaceCapabilities: queue-family support records must have a defined, complete, ordered layout")
+    c.require("Every physical queue family has exactly one ordered support record." in conformance,
+              "presentation conformance: queue-family capability records must cover every family exactly once")
     c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST" in presentation,
               "QueuePresent: reply status values must be explicit and local to the reply field")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
