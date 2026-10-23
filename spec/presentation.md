@@ -73,6 +73,25 @@ The capability contract must report: (a) whether the Device/Surface pair can pre
 
 Capability results are a snapshot, not a permanent promise. Window resize, surface loss, backend reconfiguration, or device loss may invalidate the snapshot. A zero-sized/minimized window must be reported explicitly as temporarily not presentable (rather than returning a fabricated nonzero extent or blocking indefinitely); the client can query again after a later geometry change. A false presentation-support result is a normal capability result, not a reason to migrate the Swapchain to another Device.
 
+
+## 4.1 Swapchain image identity and usage
+
+Swapchain images are identified by the pair (Swapchain XID, image_index), where image_index is a zero-based index returned by Swapchain creation and bounded by that Swapchain's image_count. They do not receive public XIDs, cannot be independently destroyed, and cannot be rebound to another Swapchain. This avoids creating a second public-resource lifetime for an image whose storage and presentation state are owned by the Swapchain.
+
+The image state machine is:
+
+- AVAILABLE: eligible to be returned by a successful acquire.
+- ACQUIRED: owned by the client; may be referenced by supported image commands and may be submitted for presentation.
+- PRESENT_PENDING: accepted for presentation; the presentation backend may still access the image, and it cannot be acquired again.
+- AVAILABLE again: only after the presentation backend has released the image for reuse.
+- INVALID: the Swapchain has become unusable or has been destroyed; no further operation may use the image.
+
+A failed acquire does not change any image state. A present request rejected before acceptance leaves the image ACQUIRED. Once a present request is accepted, the image transitions to PRESENT_PENDING; an eventual presentation failure must still produce a terminal outcome that releases or invalidates the image deterministically. The protocol must never make an image reacquirable merely because the rendering QueueSubmit completed.
+
+The Swapchain creation contract must include an image usage mask. Capability queries return only usages that the server can actually support for the selected Device/Surface pair. Swapchain creation with any unreported usage bit is rejected atomically. The usage mask does not itself make an operation available: the presentation profile must separately define image-aware command entries and descriptors for each advertised use.
+
+The current v0.1 command-entry registry supports only buffer-backed compute dispatch. It cannot directly address a Swapchain image. Therefore the first presentation-capable profile is not complete until it defines at least one concrete way to produce pixels in an acquired image (for example, image-backed storage descriptors for compute or graphics rendering commands) and validates those entries against the image's ACQUIRED state and owning Swapchain/Device. Advertising an image usage without a command path that can exercise it is non-conforming.
+
 ## 5. Acquire, render, and present ordering
 
 The intended workflow is:
@@ -126,7 +145,7 @@ Before adding presentation requests to the central registry, the design pass mus
 
 1. Surface and swapchain ownership, destroy behavior, and exact X11 Window identity tracking.
 2. Surface capability query wire layout and the format/mode registries; initial pixel-format, color-space, and FIFO mode IDs are now defined in [presentation-formats](../registries/presentation-formats.md).
-3. Swapchain image usage and how image handles are exposed without allowing independent destruction.
+3. Swapchain image usage and image-index identity are now defined in section 4.1; the required image-aware command/descriptor path remains to be specified.
 4. Acquire timeout/status semantics and semaphore/fence signaling.
 5. Present wait-semaphore semantics, queue association, reply behavior, and asynchronous failure events.
 6. Resize, out-of-date, surface-lost, and device-lost transitions.
