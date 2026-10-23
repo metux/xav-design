@@ -278,6 +278,11 @@ def check_events(c: Check) -> None:
               "typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig" in errors and
               "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt `DEVICE_LOST`" in conformance,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
+    c.require(
+        "Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen" in read("spec/memory-buffers.md")
+        and "Device-Zustandsprüfung hat Vorrang vor diesen request-spezifischen Kompatibilitäts- und Pending-Zustandsprüfungen" in read("spec/shaders-pipelines.md")
+        and "Pending-Set-Konflikt" in conformance,
+        "BindBufferMemory/UpdateDescriptorSets: device-loss precedence must follow valid XID/type/ownership checks and precede mutable/backend checks")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
