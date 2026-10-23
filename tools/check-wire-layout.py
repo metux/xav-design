@@ -2206,6 +2206,7 @@ def check_presentation_profile(c: Check) -> None:
         "## 5.3 Request validation, status precedence, and atomic acceptance",
         "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
         "`SURFACE_LOST` takes precedence over `OUT_OF_DATE`",
+        "A valid queue tuple with no presentation support is a synchronous `BadMatch` before token-reuse and image-state checks.",
         "`OUT_OF_DATE` takes precedence over `UNSUPPORTED_CONFIGURATION`",
         "Every non-success reply has `actual_image_count = 0` and leaves `swapchain_xid` unallocated.",
         "A token mentioned only in a rejected request is not reserved and may be retried.",
