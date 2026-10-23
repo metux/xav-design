@@ -57,7 +57,7 @@ Window resize, unmap, and destruction are asynchronous X11 lifecycle changes, no
 - A change to the X11 Window's pixel extent marks each associated active Swapchain OUT_OF_DATE. No new acquire or present operation is accepted against an OUT_OF_DATE Swapchain; requests return the explicit OUT_OF_DATE status. Already accepted GPU and presentation operations are allowed to reach terminal outcomes, and the client may create a replacement Swapchain using freshly queried capabilities. The old Swapchain remains destroyable after pending uses have drained, even if its images were acquired but are no longer referenced by work.
 - Window destruction makes the associated Surface unusable for future acquisition and presentation. It must not redirect presentation to a later window that reuses the XID.
 - Unmapping or obscuring a window does not itself destroy the Surface. Whether the backend can avoid work while it is not visible is an optimization and must not change resource identity or synchronization guarantees.
-- A client may explicitly destroy its Surface and swapchain before destroying the X11 window. The eventual API must define deterministic behavior for destruction with acquired images or queued presentation operations.
+- A client may explicitly destroy its Surface and swapchain before destroying the X11 window. Destruction with an acquired-but-idle image invalidates that image with the Swapchain; destruction is rejected while accepted presentation operations or other pending work can still reference the Swapchain.
 
 A window event or resize notification is not itself proof that GPU work or presentation has completed.
 
@@ -140,7 +140,7 @@ The presentation contract MUST distinguish at least these milestones:
 
 These milestones may occur at different times. A normal QueueSubmit terminal event is not, by itself, proof that a submitted image has been displayed or released for reacquisition. Likewise, a successful present request reply should mean only what its normative reply contract says (for example, request accepted or operation queued), not necessarily that pixels have reached the screen.
 
-The eventual API must specify how asynchronous present failures, out-of-date swapchains, surface loss, and device loss are reported. It must avoid an unbounded server wait in the X11 request dispatcher.
+Accepted presentation failures are reported through `PRESENTATION_COMPLETE` with the corresponding status (`OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`, or `PRESENTATION_FAILED`). If the image can be safely reused, the server also emits `IMAGE_RELEASED`; if not, it invalidates that image and the Swapchain instead. These terminal outcomes never block the X11 request dispatcher. Event delivery remains subject to connection lifetime and the `DestroyDevice` suppression rule.
 
 ## 7. Resize and swapchain replacement
 
