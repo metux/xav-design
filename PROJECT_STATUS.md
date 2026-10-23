@@ -351,3 +351,14 @@ The presentation audit also corrected the `IMAGE_RELEASED` XGE size to 64 bytes 
 CI passed in [run 39970932942](https://github.com/metux/xav-design/actions/runs/39970932942), including the static wire-layout checker and golden wire tests. These are static/specification checks, not runtime X11 presentation or Vulkan backend conformance.
 
 The seven presentation request layouts remain documented but unassigned in the central request registry. They are deliberately excluded from the assigned 1–40 request matrix until the registry allocation and final request audit are completed. `master` remains unchanged.
+
+
+## Presentation reply ABI and conformance follow-up — 2026-10-23
+
+The presentation-capable profile now defines per-queue-family present support in `GetSurfaceCapabilities` (8-byte records, complete ordered family coverage, and a corresponding reply-length term). `QueuePresent` validates the server's current queue-family capability rather than depending on whether the client happened to query capabilities most recently. `QueuePresent` reply status values are explicitly assigned locally; `AcquireNextImage` uses `NOT_READY` for a zero-timeout poll miss, `TIMEOUT` for finite positive timeout expiry, and `image_index = 0` on every non-success result. Swapchain creation now validates its requested count, extent, format/color-space pair, mode, and usage against current capabilities, and returns `actual_image_count = 0` on failure.
+
+Added profile-specific wire tests for presentation events and replies in both byte orders. The checker now validates the presentation status values, queue-family record contract, capability reply formula, and command-entry ID 5. The central event registry now explicitly scopes IDs 7–65535 as unassigned only in the compute-only baseline, with presentation IDs 7 and 8 defined in the separate profile registry.
+
+CI passed in [run 39971839876](https://github.com/metux/xav-design/actions/runs/39971839876), including the static wire-layout checker and all discovered golden/wire-vector tests. This does not substitute for runtime X11/XGE interoperability or Vulkan presentation-backend testing.
+
+The seven presentation request subopcodes remain unassigned; the central request registry and assigned request matrix remain at IDs 1–40. The provisional layouts and error/conformance coverage are present, but numeric allocation is not claimed. `master` remains unchanged.
