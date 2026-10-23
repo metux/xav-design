@@ -463,7 +463,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             "falschen Nullwerten",
             "nicht angeforderter Queue-Kombination",
             "nicht maskierbare `DEVICE_LOST`- und `ASYNC_ERROR`-Events",
-            "gemeinsamen serialisierten Linearisierungspunkt",
+            "gemeinsamer serialisierter Linearisierungspunkt",
             "höchstens eines von `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED`",
         )
         for phrase in required_cases:
