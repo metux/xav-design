@@ -367,3 +367,10 @@ The seven presentation request subopcodes remain unassigned; the central request
 ## Presentation mixed-failure precedence — 2026-10-23
 
 `CreateSwapchain` now defines deterministic mixed-failure ordering: validate wire structure and scalar fields first, then resolve `device_xid`, validate the target create-XID, resolve `surface_xid`, and only then evaluate capability/status outcomes. The error map, conformance checklist, and static checker assert the same order. CI passed in [run 39972062916](https://github.com/metux/xav-design/actions/runs/39972062916). The central request registry remains at 1–40; presentation request layouts are still unassigned pending the final registry allocation and ABI review.
+
+
+## Surface ownership and final presentation error checks — 2026-10-23
+
+A Surface may now reference only a live core X11 Window owned by the requesting X11 client connection. Unknown/destroyed/non-Window XIDs use core `BadWindow`; a live Window owned by another client is rejected with `BadMatch`. The error map, conformance cases, and checker enforce this ownership boundary. `CreateSwapchain` mixed-failure precedence is also explicit and checked: scalar fields, Device XID, target create-XID, Surface XID, then capability/status evaluation.
+
+CI passed in [run 39972296604](https://github.com/metux/xav-design/actions/runs/39972296604). Presentation command-entry ID 5 is assigned and validated. Presentation request subopcodes remain unassigned in the central registry; the current assigned request matrix remains 1–40. `master` remains unchanged.
