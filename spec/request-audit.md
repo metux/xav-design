@@ -293,3 +293,12 @@ The central request registry and static wire checker already enforce the current
 Added a cross-check in `tests/test_wire_vectors.py`: every golden vector must name a registered request, use that request's assigned subopcode, and carry the same value in wire-header byte 4. The test also checks uniqueness and reservation of zero in the parsed registry. This complements rather than duplicates the checker’s full contiguous 1–40 assignment check. Current golden byte coverage remains intentionally limited to `CreateBuffer`, `WriteBuffer`, and `ReadBuffer`; this change does not claim byte-vector coverage for all 40 request layouts.
 
 Commit: `1d58cfe`. CI validation pending. `master` remains unchanged.
+
+
+## Full request-matrix length cross-check — 2026-10-23
+
+Rechecked all 40 request-matrix rows against the defining normative chapters linked from the central request registry. No request-kind, fixed-length, or variable-length formula discrepancy was found in the current matrix. One important coverage gap was in the checker rather than the protocol text: the previous checker compared registry assignments with the matrix but did not systematically require the matrix's length rule to be present in the normative request section.
+
+The wire-layout checker now validates all 26 fixed request lengths against their defining sections, all 13 arithmetic variable-length formulas against the normative formula and the matrix expression (including the `pad4` shorthand), and the variable `CommandBufferData` minimum/ABORT lengths. This also caught a wording variation in `CreateSemaphore` (the chapter says “hat 28 Bytes” rather than “Gesamtlänge: 28 Bytes”); the checker accepts both explicit forms, without changing the protocol contract. The matrix remains 40 rows and request kinds continue to be checked against the central registry.
+
+CI: [39967702408](https://github.com/metux/xav-design/actions/runs/39967702408) passed. Checker commit: `21b3643`. This is static specification consistency coverage, not live implementation interoperability. `master` remains unchanged.
