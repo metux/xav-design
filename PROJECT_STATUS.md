@@ -262,3 +262,10 @@ The checker has also been extended to verify the seven actual presentation reque
 Reviewed the presentation event selection against the shared XGE event namespace. Queue mask bits 2 and 3 map to `IMAGE_RELEASED` and `PRESENTATION_COMPLETE`; compute-only servers reject those bits with `BadValue`. The checker now verifies the presentation event status registry (0–4), those queue-mask mappings, and the compute-only rejection rule. The presentation profile remains separate from the compute baseline and no numeric request or command-entry assignments were added.
 
 The latest checker edits have not been executed locally or confirmed by CI; the current GitHub status/workflow query still needs to be checked after the latest commit. The next safe step remains obtaining a real successful checker/CI run, then fixing any surfaced failures before allocating IDs.
+
+
+## CI failure from run 39935266354 — 2026-10-23
+
+Inspected job 120353145994. Python syntax compilation passed; the matrix/layout validation failed before the golden wire-vector tests ran. The traceback identified a real checker bug in `check_other_numeric_registries()`: the CreateCommandPool error-map assertions referenced an undefined local variable `errors`, raising `NameError`. Changed those references to the already loaded `descriptor_errors` content. Confirmed both expected error strings exist in `spec/errors.md`.
+
+Fix committed as `fed81540744047f913531bfe9181db7b52e11dbe`. A new successful run has not yet been observed; the connector's status query currently reports no status entries and its commit-run query only returns pull-request-triggered runs. Treat validation as pending until a new Actions run reaches the layout-validation and golden-vector steps.
