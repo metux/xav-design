@@ -101,6 +101,19 @@ Alle anderen Kombinationen sind ungültig. Ein ABORT-Request muss außer dem fes
 
 `FINAL` entspricht dem Ende der Aufzeichnung. Ein separater `EndCommandBuffer`-Request ist nicht vorgesehen.
 
+### Fehlerpräzedenz für `CommandBufferData`
+
+Die Fehlerauswertung erfolgt in verbindlichen Phasen; der erste Fehler in der frühesten zutreffenden Phase wird gemeldet:
+
+1. Request-Länge, ABORT-Länge, vollständige Entry-Header und deklarierte Entry-Grenzen; strukturelle Fehler ergeben `BadLength`.
+2. Common-Header-Flags, reservierte Bits/Felder, zulässige CREATE/FINAL/ABORT-Kombination, Padding sowie semantische Entry-Feldwerte und Command-IDs; ungültige Werte ergeben `BadValue`.
+3. Ziel-XID, danach Pool-XID. Bei CREATE ergibt eine ungültige/belegte Ziel-XID `BadIDChoice`; ohne CREATE ergibt eine unbekannte Ziel-XID `BadValue`. Anschließend werden Pool-XID und live Ressourcentypen aufgelöst.
+4. Ressourcentyp, Client-Ownership, Device-Zugehörigkeit und exakte Eltern-Pool-Zuordnung; falscher live Typ, fremde Ownership oder falsche Zuordnung ergeben `BadMatch`.
+5. Für CREATE, Append und FINAL wird der Zustand des zugehörigen Devices geprüft; `DEVICE_UNAVAILABLE`/`DEVICE_LOST` hat Vorrang vor einem Buffer-Zustandsfehler. Bei funktionsfähigem Device muss ein nicht-CREATE-Buffer `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`.
+
+`ABORT` ist die definierte Ausnahme von Phase 5: nach den Phasen 1–4 wird geprüft, ob der Buffer `RECORDING` und nicht pending ist. Diese logische Bereinigung bleibt auch bei Device Loss zulässig, startet keine Vulkan-Arbeit und ist bei falschem Buffer-Zustand mit `INVALID_SYNCHRONIZATION_STATE` abzuweisen. Jede Ablehnung lässt alle vorher akzeptierten Entries und Referenzen unverändert; der aktuelle Chunk wird nie teilweise übernommen.
+
+
 Chunks dürfen nur zwischen vollständigen Command-Entries geteilt werden. Kein einzelner Entry darf über mehrere Requests verteilt sein.
 
 ## 7.4 Entry-Header
