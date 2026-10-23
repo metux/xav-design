@@ -320,3 +320,8 @@ Cross-checked presentation waits against the common binary-semaphore state machi
 ## Presentation synchronization and event selection — 2026-10-23
 
 Completed another cross-chapter check of QueuePresent. Binary presentation waits now participate in the same pending-wait exclusivity and payload-state accounting as QueueSubmit waits: reservation is atomic with acceptance, signal consumption requires a confirmed backend wait, and uncertain payload outcomes mark the semaphore `UNTRUSTED` rather than guessing. Error mapping and conformance now distinguish incompatible pending waits (`INVALID_SYNCHRONIZATION_STATE`) from an already `UNTRUSTED` semaphore (`DEPENDENCY_FAILED`). Presentation event masks are sampled independently at each event's own terminal milestone, so later `SelectEvents` changes cannot retroactively alter an event's delivery decision. Static checks cover both contracts. Presentation subopcodes 41–47 and command-entry ID 5 remain unassigned.
+
+
+## Copy-command validation and error mapping — 2026-10-23
+
+The provisional `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` path now has an explicit error map and conformance coverage. Resource lookup/type/ownership, transfer-usage compatibility, image-index bounds, row geometry, alignment and source-span checks are distinguished; the image must still be `ACQUIRED` atomically at submission acceptance. The checker validates that this remains documented. The command-entry ID is still unassigned and presentation request subopcodes 41–47 remain unassigned pending the complete ABI review.
