@@ -2038,7 +2038,7 @@ def check_presentation_profile(c: Check) -> None:
               "synchronization: presentation waits must follow binary semaphore state rules")
     c.require("already marked `UNTRUSTED` is rejected with `DEPENDENCY_FAILED`" in read("spec/errors.md"),
               "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
-    c.require("8 + 2 * format_pair_count + present_mode_count" in presentation,
+    c.require("8 + 2 * format_pair_count + present_mode_count + 2 * queue_family_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
