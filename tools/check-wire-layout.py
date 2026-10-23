@@ -712,6 +712,13 @@ def check_request_document_coverage(c: Check) -> None:
         and "Ablehnung ist atomar" in errors,
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
+    c.require(
+        "Device Loss allein verhindert `DestroyCommandPool` nicht" in read("spec/command-recording.md")
+        and "Device Loss allein verhindert `DestroyDescriptorPool` nicht" in read("spec/shaders-pipelines.md")
+        and "Device Loss allein ist kein Ablehnungsgrund" in errors
+        and "Device Loss allein blockiert `DestroyCommandPool` und `DestroyDescriptorPool` nicht" in conformance,
+        "device loss: logical command/descriptor pool destruction must remain available subject to lifetime guards",
+    )
 
     # The summary matrix must not contradict the normative recorded-reference
     # rules for descriptor sets and pipeline objects.
