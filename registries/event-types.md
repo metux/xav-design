@@ -13,8 +13,23 @@ XAverius events use XGE. The XGE `extension` field carries the dynamically assig
 | 4 | `DEVICE_IDLE` |
 | 5 | `SUBMISSION_COMPLETE` |
 | 6 | `SUBMISSION_FAILED` |
+| 7 | `IMAGE_RELEASED` |
+| 8 | `PRESENTATION_COMPLETE` |
 
-Event type IDs are stable and MUST NOT be renumbered. Values 7–65535 are unassigned.
+Event type IDs are stable and MUST NOT be renumbered. Values 9–65535 are unassigned.
+
+
+## Presentation event status values
+
+| Value | Symbol |
+|---:|---|
+| 0 | SUCCESS |
+| 1 | OUT_OF_DATE |
+| 2 | SURFACE_LOST |
+| 3 | DEVICE_LOST |
+| 4 | PRESENTATION_FAILED |
+
+These status values apply to presentation events only. They are not X11 error codes or XAverius error offsets.
 
 ## `ASYNC_ERROR.error_code`
 
