@@ -340,3 +340,8 @@ The next precedence pass covered `AllocateDescriptorSets`, `CreatePipelineLayout
 ## ResetFence Device-loss precedence — 2026-10-23
 
 The synchronization chapter already stated that ResetFence is rejected after Device Loss, but the central error table listed the invalid-fence-state result first. The mapping now explicitly places Device Loss after XID/type/ownership validation and before the mutable fence-state check. Conformance coverage and the static checker assert that a lost Device wins over an otherwise non-resettable Fence state while preserving the stored state. This is a spec/static-check correction, not runtime validation.
+
+
+## WaitSemaphores validation and terminal-result precedence — 2026-10-23
+
+The synchronization pass made the distinction between initial request validation and an already registered wait explicit. `WaitSemaphores` now defines a single precedence order: framing/count/mode/duplicate syntax, Device then Semaphore XIDs in wire order, type/ownership/cross-device checks, Device state, and finally the Timeline-only requirement. This settles mixed-failure outcomes (a lost Device wins over a live Binary Semaphore type mismatch after ownership checks) without allowing malformed requests to register waits. Device Loss and `DestroyDevice` remain terminal outcomes only for waits already registered; an earlier terminal result cannot be overwritten. The central error mapping, conformance checklist and static checker now assert the same contract. This is a specification/static-check change, not live backend validation.
