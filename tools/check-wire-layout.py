@@ -412,8 +412,8 @@ def check_other_numeric_registries(c: Check) -> None:
             read("registries/command-entries.md"), re.M,
         )
     ]
-    c.require([value for value, _symbol in command_rows] == [1, 2, 3, 4],
-              "command-entry registry must assign IDs 1 through 4 exactly once")
+    c.require([value for value, _symbol in command_rows] in ([1, 2, 3, 4], [1, 2, 3, 4, 5]),
+              "command-entry registry must preserve IDs 1–4 and append only optional presentation ID 5")
     c.require(len({symbol for _value, symbol in command_rows}) == len(command_rows),
               "command-entry registry contains duplicate symbols")
 
