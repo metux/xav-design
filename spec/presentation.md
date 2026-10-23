@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **ownership/lifecycle, initial format/mode IDs, and provisional request/reply layouts defined; request subopcodes and command-entry ID remain unassigned; checker coverage is pending**.
+Status: **ownership/lifecycle, initial format/mode IDs, and provisional request/reply layouts defined; checker coverage is drafted but not yet validated; request subopcodes and command-entry ID remain unassigned**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -264,6 +264,6 @@ Before adding presentation requests to the central registry, the design pass mus
 4. Validate acquire timeout/status and semaphore/fence signaling against the existing synchronization state machine.
 5. Validate QueuePresent wait-semaphore behavior and the separate image-release/presentation-completion events.
 6. Finish resize, out-of-date, surface-lost, and device-lost transitions in conformance coverage.
-7. Integrate all presentation layouts and the separate presentation event registry into automated checker coverage before allocating request subopcodes.
+7. Run the expanded checker and resolve every failure; only after a successful run should presentation request subopcodes be allocated.
 
 No request subopcode is reserved by this chapter. Numeric assignments must be made append-only in [the request subopcode registry](../registries/request-subopcodes.md) after the wire contracts are reviewed.
