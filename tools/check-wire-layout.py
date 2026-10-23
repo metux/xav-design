@@ -746,6 +746,12 @@ def check_request_document_coverage(c: Check) -> None:
 
     lifetime = read("spec/resource-lifetime.md")
     c.require(
+        "Device Loss allein invalidiert keine öffentlichen XIDs" in lifetime
+        and "`GetFenceStatus` und `DestroyDevice` nach Device Loss nutzbar" in lifetime
+        and "Device Loss allein invalidiert keine öffentlichen Device-/Ressourcen-XIDs" in read("spec/conformance.md"),
+        "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
+    )
+    c.require(
         "offene `WaitForFence`-Registrierung" in lifetime
         and "offene `WaitSemaphores`-Registrierung" in lifetime
         and "terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply" in lifetime,
@@ -767,7 +773,8 @@ def check_request_document_coverage(c: Check) -> None:
         "`DestroySemaphore`: falsche Länge `BadLength`" in errors
         and "offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität" in errors
         and "andere laufende Host-Operation" in errors
-        and "Device Loss darf die Device-weite Kaskadeninvalidierung" in errors,
+        and "Device Loss allein invalidiert keine öffentlichen XIDs" in errors
+        and "wenn anschließend `DestroyDevice` verarbeitet wird" in errors,
         "error mapping: DestroySemaphore must cover length, host waits, identity, and device-loss teardown",
     )
 
