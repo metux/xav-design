@@ -29,11 +29,12 @@ Der X-Server weist die Extension-Major-Opcode dynamisch aus dem X11-Erweiterungs
 - Padding muss null sein.
 - Ein inkonsistentes Request-Layout oder ein nicht passender Payload-Umfang ergibt `BadLength`.
 - Ungültige Werte oder reservierte Bits ergeben normalerweise `BadValue`.
-- BIG-REQUESTS wird in v0.1 nicht unterstützt. Sein Extended-Length-Feld liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header.
+- BIG-REQUESTS wird in v0.1 nicht unterstützt. Sein Extended-Length-Feld liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header. Clients MUST NOT senden XAverius-Requests im BIG-REQUESTS-Format. Der Server MUST eine XAverius-Anfrage mit dem X11-Headerfeld `length = 0` als `BadLength` zurückweisen, bevor er Bytes ab Offset 4 als XAverius-Subopcode, Flags oder reserviertes Feld interpretiert.
 - Ohne BIG-REQUESTS beträgt die maximale gewöhnliche Request-Länge 262140 Bytes einschließlich des gesamten Requests, also einschließlich X11- und XAverius-Header. Größere Nutzdaten müssen in mehreren Requests übertragen werden, soweit der jeweilige Request dies erlaubt.
+- Für jeden Request mit variabler Länge MUSS der Server die erwartete Gesamtlänge mit geprüfter Arithmetik berechnen. Ein arithmetischer Überlauf, eine erwartete Länge über 262140 Bytes, ein X11-Längenfeld von null oder eine Abweichung zwischen deklarierter Länge, Counts und tatsächlichem Paketende MUSS zu `BadLength` führen. Die vollständige Längen-/Count-Prüfung MUSS vor Payload-Allokation, XID-Auflösung und Zustandsänderungen abgeschlossen sein.
 - Größenberechnungen müssen vor der Verarbeitung auf Überläufe geprüft werden.
 
-Ein Server darf variable Payloads nicht auf Grundlage ungeprüfter Counts allokieren.
+Ein Server darf variable Payloads nicht auf Grundlage ungeprüfter Counts allokieren. Diese Grenze gilt auch dann, wenn das request-spezifische Kapitel die Maximalgröße nicht wiederholt. Chunk-basierte Requests müssen stattdessen die jeweilige Chunk-Länge begrenzen; die maximale Länge gilt pro Request, nicht für die gesamte logische Shader- oder Command-Buffer-Aufzeichnung.
 
 ## Replies
 
