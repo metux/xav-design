@@ -1978,18 +1978,20 @@ def check_presentation_profile(c: Check) -> None:
     event_docs = dict(sections(events))
     presentation_spec = read("spec/presentation.md")
     lifetime = read("spec/resource-lifetime.md")
-    c.require("It is emitted exactly once when the image becomes reusable" in event_docs.get("IMAGE_RELEASED", "") or
-              "Es wird genau einmal ausgegeben, wenn das Image nach dem terminalen Ausgang wiederverwendbar ist." in event_docs.get("IMAGE_RELEASED", ""),
-              "IMAGE_RELEASED: event cardinality must depend on image becoming reusable")
-    c.require("terminalen Ausgang jeder akzeptierten Präsentationsoperation" in event_docs.get("PRESENTATION_COMPLETE", "") and
-              "Nach `DestroyDevice` dürfen keine neuen Events" in event_docs.get("PRESENTATION_COMPLETE", ""),
-              "PRESENTATION_COMPLETE: terminal outcome and DestroyDevice suppression must be explicit")
-    c.require("Queue-Maske wird zu dem Zeitpunkt ausgewertet" in event_docs.get("IMAGE_RELEASED", "") and
-              "Queue-Maske wird beim Serialisieren des terminalen Präsentationsergebnisses ausgewertet" in event_docs.get("PRESENTATION_COMPLETE", ""),
+    c.require("Dieser Freigabeübergang darf pro akzeptierter Präsentationsoperation höchstens einmal stattfinden" in event_docs.get("IMAGE_RELEASED", "") and
+              "Ein `IMAGE_RELEASED`-Event wird genau dann eingereiht" in event_docs.get("IMAGE_RELEASED", "") and
+              "Queue-Maske (Bit 2)" in event_docs.get("IMAGE_RELEASED", ""),
+              "IMAGE_RELEASED: internal release cardinality and conditional event delivery must be explicit")
+    c.require("einmaligen internen terminalen Ausgang jeder akzeptierten Präsentationsoperation" in event_docs.get("PRESENTATION_COMPLETE", "") and
+              "Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events" in event_docs.get("PRESENTATION_COMPLETE", "") and
+              "Queue-Maske (Bit 3)" in event_docs.get("PRESENTATION_COMPLETE", ""),
+              "PRESENTATION_COMPLETE: terminal outcome, queue mask, and DestroyDevice suppression must be explicit")
+    c.require("Queue-Maske (Bit 2)" in event_docs.get("IMAGE_RELEASED", "") and
+              "Queue-Maske (Bit 3)" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "presentation events: queue mask must be sampled independently at each event milestone")
-    c.require("Accepted presentation failures are reported through `PRESENTATION_COMPLETE`" in presentation_spec and
-              "invalidates that image and the Swapchain instead" in presentation_spec,
-              "presentation: accepted failure must terminate and either release or invalidate the image")
+    c.require("Accepted presentation failures set the internal terminal status" in presentation_spec and
+              "Queue mask bit 3" in presentation_spec and "Queue mask bit 2" in presentation_spec,
+              "presentation: internal terminal cleanup and independently masked event delivery must be explicit")
     c.require("interne Terminalzustände und sichere Backend-Bereinigung" in lifetime,
               "presentation: device teardown must preserve internal terminal cleanup when events are suppressed")
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
