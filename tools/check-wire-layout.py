@@ -2186,8 +2186,8 @@ def check_presentation_profile(c: Check) -> None:
     precedence_contracts = (
         "### Normative validation precedence for the seven presentation requests",
         "Validate exact/fixed or formula-derived wire length using checked wide arithmetic.",
-        "CreateSurface checks `surface_xid` before resolving `window_xid`",
-        "CreateSwapchain checks `device_xid`, then target `swapchain_xid`, then `surface_xid`",
+        "`CreateSurface` checks `surface_xid` before resolving `window_xid`",
+        "`CreateSwapchain` checks `device_xid`, then target `swapchain_xid`, then `surface_xid`",
         "Device loss takes precedence over Surface loss and all later mutable-state checks.",
         "A zero token is always `BadValue`.",
         "Device loss/destruction, then surface loss, then out-of-date",
