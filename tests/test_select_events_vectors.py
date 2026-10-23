@@ -347,6 +347,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
             ("DEVICE", 1, "DEVICE_IDLE"),
             ("QUEUE", 0, "SUBMISSION_COMPLETE"),
             ("QUEUE", 1, "SUBMISSION_FAILED"),
+            ("QUEUE", 2, "IMAGE_RELEASED"),
+            ("QUEUE", 3, "PRESENTATION_COMPLETE"),
         ]
         actual = [
             (scope, int(bit), event)
