@@ -166,6 +166,31 @@ Der Bereich muss innerhalb von `maxPushConstantsSize` liegen und von einem kompa
 
 Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
 
+
+### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` — presentation-capable profile only
+
+This entry is a minimal pixel-production path for the first on-screen presentation profile; it does not add general Vulkan Image resources or graphics pipelines. It copies a tightly or explicitly row-pitched rectangle from a Buffer into one acquired Swapchain image. The entry is valid only when the source Buffer has `TRANSFER_SRC` usage, the selected Swapchain was created with `TRANSFER_DST` image usage, and the referenced image is currently `ACQUIRED` at the point the command is validated for submission.
+
+Fixed total length: 36 bytes; `entry_length = 9) words.
+
+- Relative offset 0: `CARD16 command_id`
+- Relative offset 2: `CARD16 entry_length = 9`
+- Relative offset 4: Buffer-XID
+- Relative offset 8: Swapchain-XID
+- Relative offset 12: `CARD32 image_index`
+- Relative offset 16: `CARD64 buffer_offset`
+- Relative offset 24: `CARD32 row_length` in texels; zero means the Swapchain width
+- Relative offset 28: `CARD32 image_height` in texels; zero means the Swapchain height
+- Relative offset 32: `CARD32 reserved = 0`
+
+The copy covers the entire Swapchain extent. The effective row length and image height must be at least the image width and height. Pixel size is four bytes for the initial RGBA8_UNORM and BGRA8_UNORM formats. The server must calculate the last byte read using overflow-safe wide arithmetic; the required source span is `4 * (effective_row_length * (height - 1) + width)` bytes from `buffer_offset`. The complete span must lie within the source Buffer, and `buffer_offset` must be four-byte aligned. The Swapchain image's format determines channel order; this command does not convert formats or color spaces.
+
+The server manages the image's backend layout transitions required for the copy. Queue ordering and cross-queue visibility still follow the ordinary XAverius submission/semaphore rules; the entry does not imply that a later presentation waits for this copy unless the client establishes a dependency (for example, by signaling a binary semaphore in the submission and supplying it to QueuePresent).
+
+A command buffer referencing a Swapchain image retains an internal reference to the Swapchain. Destroying the Swapchain is rejected while a recording command buffer refers to it; non-pending executable command buffers that refer to it are invalidated atomically when the Swapchain is successfully destroyed. At submission acceptance, the referenced image must be ACQUIRED and the command must not race a presentation transition. A pending submission retains the image until its terminal outcome and all backend accesses end.
+
+This entry's numeric ID must be allocated append-only in the [command-entry registry](../registries/command-entries.md) before an implementation advertises support. It is not part of the current compute-only v0.1 entry set.
+
 ## 7.6 Command-Validierung
 
 Der Server validiert Command-Buffer-Zustand, Entry-Längen, Ressourcen-Typen, Device-Ownership, reservierte Felder, Pipeline- und Layout-Kompatibilität, Descriptor-Bindings, Push-Constant-Ranges und Dispatch-Limits.
