@@ -109,6 +109,27 @@ The final protocol must specify whether acquisition signals a semaphore, a fence
 
 Presentation must be integrated with queue ordering without adding implicit cross-queue ordering beyond the dependencies explicitly established by the client and the presentation contract.
 
+
+## 5.1 Acquisition synchronization contract
+
+Acquisition is a reply-bearing operation with an explicit timeout and status result; it must not block the X11 request dispatcher while waiting for an image. The server may retain a pending acquire registration and continue processing requests from the connection, including host semaphore signals and destruction checks. A timeout of zero performs a non-blocking poll; an infinite timeout is represented by the all-ones CARD64 value. Other timeout values are nanoseconds.
+
+An acquire operation may name an optional binary Semaphore XID and optional Fence XID owned by the same logical Device. At least one synchronization object or a successful reply carrying the image index must make the acquisition result observable; the final wire layout must state whether both synchronization objects may be supplied together. Timeline semaphores are not valid acquire signals. On successful acquisition, each supplied synchronization object is signaled exactly once under the existing semaphore/fence state rules. A failed or timed-out acquire signals neither object and changes no image state.
+
+Acquire status values must distinguish at least SUCCESS, TIMEOUT, NOT_READY, OUT_OF_DATE, SURFACE_LOST, and DEVICE_LOST. TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST are not X11 framing errors; they are operation results. An image index is valid only on SUCCESS. OUT_OF_DATE and SURFACE_LOST must not return a fabricated image index.
+
+A pending acquire registration holds internal references to its Swapchain, Surface, and supplied synchronization objects. Destroying any of those resources while the acquire is pending must be rejected or must first terminally cancel the acquire according to a deterministic rule; no object may be freed while a pending registration can signal it. The final contract should prefer atomic rejection of the destroy request while the acquire remains pending.
+
+## 5.2 Presentation synchronization contract
+
+A present operation names the Device, an existing queue tuple (queue family and queue index), the Swapchain and acquired image index, plus a list of binary semaphores to wait on. The queue must belong to that Device and must be reported as capable of presenting to the Surface. Timeline semaphores are not accepted as present waits in the initial profile.
+
+The present request is reply-bearing. A SUCCESS reply means the operation was accepted and the image entered PRESENT_PENDING; it does not mean the image has been displayed, released, or reached physical scanout. Before acceptance, the server validates every resource, image state, queue capability, and wait semaphore atomically. A rejected request leaves the image ACQUIRED and does not consume or reserve any wait semaphore.
+
+After acceptance, the named binary semaphore waits are consumed according to the existing binary-semaphore rules, and the presentation backend waits until those dependencies are satisfied before reading the image. Request order alone is not a substitute for this GPU dependency. The server must avoid blocking the X11 dispatcher while waiting for presentation dependencies.
+
+The operation has an asynchronous terminal outcome. The protocol must expose both (a) the point at which the image is no longer in use by the presentation backend and can be acquired again, and (b) presentation completion as defined by the selected backend. These are distinct signals even if a particular backend reports them at the same time. An asynchronous failure must not leave an image permanently PRESENT_PENDING: it must either release the image for reuse or transition the affected Swapchain to a state in which the image is INVALID, with the terminal outcome observable by the client.
+
 ## 6. Completion is three different things
 
 The presentation contract MUST distinguish at least these milestones:
@@ -146,8 +167,8 @@ Before adding presentation requests to the central registry, the design pass mus
 1. Surface and swapchain ownership, destroy behavior, and exact X11 Window identity tracking.
 2. Surface capability query wire layout and the format/mode registries; initial pixel-format, color-space, and FIFO mode IDs are now defined in [presentation-formats](../registries/presentation-formats.md).
 3. Swapchain image usage and image-index identity are now defined in section 4.1; the required image-aware command/descriptor path remains to be specified.
-4. Acquire timeout/status semantics and semaphore/fence signaling.
-5. Present wait-semaphore semantics, queue association, reply behavior, and asynchronous failure events.
+4. Acquire timeout/status semantics and semaphore/fence signaling are outlined in section 5.1; exact request/reply wire layout remains to be specified.
+5. Present wait-semaphore semantics, queue association, reply behavior, and asynchronous terminal events are outlined in section 5.2; exact layouts and event IDs remain to be assigned.
 6. Resize, out-of-date, surface-lost, and device-lost transitions.
 7. How presentation completion and image release are observed separately from GPU submission completion.
 8. Resource lifetime and synchronization integration with the existing checker and conformance cases.
