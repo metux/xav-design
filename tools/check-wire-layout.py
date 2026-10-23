@@ -1927,7 +1927,27 @@ def check_presentation_profile(c: Check) -> None:
     command_recording = read("spec/command-recording.md")
     formats = read("registries/presentation-formats.md")
     request_registry = read("registries/request-subopcodes.md")
+    request_audit = read("spec/request-audit.md")
     command_registry = read("registries/command-entries.md")
+
+    # Keep the normative presentation chapter represented in the audit matrix
+    # even while its request IDs remain intentionally unassigned.
+    presentation_audit_rows = (
+        "| `CreateSurface` | Void | 16 | — |",
+        "| `DestroySurface` | Void | 12 | — |",
+        "| `GetSurfaceCapabilities` | Reply | 16 | `64 + 8*format_pair_count + 4*present_mode_count + 8*queue_family_count` |",
+        "| `CreateSwapchain` | Reply | 48 | 40 |",
+        "| `DestroySwapchain` | Void | 12 | — |",
+        "| `AcquireNextImage` | Reply | 32 | 44 |",
+        "| `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` | 36 |",
+    )
+    c.require("### Presentation-capable profile: provisional request/reply matrix" in request_audit,
+              "request audit: presentation-capable normative chapter must have a separate provisional matrix")
+    for row in presentation_audit_rows:
+        c.require(row in request_audit,
+                  f"request audit: presentation request kind/length row missing or inconsistent: {row}")
+    c.require("This profile matrix is intentionally separate from the assigned 1–40 request matrix." in request_audit,
+              "request audit: provisional presentation rows must not imply subopcode allocation")
 
     # Presentation event IDs live in a separate, profile-gated registry.
     event_rows = [
