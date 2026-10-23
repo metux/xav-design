@@ -102,6 +102,8 @@ Der Pool muss zum angegebenen logischen Device gehören. Der Request wird atomar
 
 Bei Erfolg werden der Pool und alle enthaltenen Descriptor Sets öffentlich invalidiert. Nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`. Interne Objekte bleiben erhalten, bis alle Referenzen und Backend-Zugriffe beendet sind.
 
+Device Loss allein verhindert `DestroyDescriptorPool` nicht und erzeugt für sich genommen keinen `DEVICE_LOST`-Fehler für diese logische Bereinigung. Die normale atomare Prüfung bleibt jedoch bestehen: Ein Kind-Set, das noch von einem `RECORDING`-Command-Buffer referenziert wird, blockiert die Zerstörung weiterhin. Der Client kann zuerst den betreffenden Command Pool zerstören; nach Device Loss darf der Server dafür keine neue GPU-Arbeit starten und muss interne Referenzen bis zur sicheren Quieszenz halten oder quarantänisieren.
+
 ## 6.4 `AllocateDescriptorSets`
 
 `AllocateDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
