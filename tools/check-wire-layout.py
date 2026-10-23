@@ -1582,7 +1582,7 @@ def check_presentation_profile(c: Check) -> None:
         marker = f"### {request_name} —"
         if marker not in presentation:
             return ""
-        return presentation.split(marker, 1)[1].split("\\n### ", 1)[0]
+        return presentation.split(marker, 1)[1].split("\n### ", 1)[0]
 
     for request_name, expected_offsets in request_offsets.items():
         body = presentation_request_section(request_name)
