@@ -235,7 +235,8 @@ class GoldenXGEEventTests(unittest.TestCase):
             for field in fields:
                 label = field_labels[field]
                 with self.subTest(event=event, field=field):
-                    self.assertIn(label, body, f"{event}.{field} missing from normative event chapter")
+                    self.assertRegex(body, r"(?<![A-Za-z0-9_])" + re.escape(label.strip("`")) + r"(?![A-Za-z0-9_])",
+                                 f"{event}.{field} missing from normative event chapter")
             length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
             if not length:
                 length = re.search(r"Gesamtlänge:\s*(\d+) Bytes; XGE `length = (\d+)`", body)
