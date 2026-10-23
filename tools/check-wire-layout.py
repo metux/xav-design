@@ -1608,7 +1608,7 @@ def check_presentation_profile(c: Check) -> None:
               "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
     copy_command = command_recording.split(
         "### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`", 1
-    )[-1].split("\\n## ", 1)[0]
+    )[-1].split("\n## ", 1)[0]
     c.require("CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE" in command_recording and
               "36 bytes" in copy_command and "entry_length = 9" in copy_command,
               "presentation copy command: fixed 36-byte/9-word layout missing")
@@ -1624,7 +1624,7 @@ def check_presentation_profile(c: Check) -> None:
         (32, "`CARD32 reserved = 0`"),
     )
     copy_offsets = re.findall(
-        r"^- Relative offset (\\d+): (.+)$", copy_command, re.M
+        r"^- Relative offset (\d+): (.+)$", copy_command, re.M
     )
     c.require([(int(offset), field) for offset, field in copy_offsets] ==
               list(copy_fields),
