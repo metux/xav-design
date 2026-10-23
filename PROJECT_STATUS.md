@@ -248,3 +248,10 @@ Corrected the raw-regex escaping in `check_presentation_profile`. During the fol
 The acquisition contract now explicitly permits either optional binary semaphore and optional fence to be omitted or supplied together, and states that each supplied object is signaled exactly once on success. The `IMAGE_RELEASED` wording now limits event cardinality per accepted presentation operation, avoiding an interpretation that an image may receive the event only once for its entire Swapchain lifetime.
 
 The changes are committed on `docs/restructure-2026-10-21`; `master` remains untouched. **Validation is still pending:** no local checkout/execution was available in this pass, and the GitHub status/workflow queries returned no checks for the observed commit. Do not treat the checker as passing and do not allocate presentation request subopcodes 41–47 or command-entry ID 5 until an actual checker/CI run succeeds.
+
+
+## Swapchain lifetime cross-chapter correction — 2026-10-23
+
+The cross-chapter audit found a substantive contradiction: `spec/presentation.md` and the presentation error rules allowed destroying a Swapchain with an acquired-but-idle image, but the resource-lifetime matrix still rejected destruction whenever any image was acquired. The matrix now agrees with the normative presentation contract: destruction is blocked by recording command buffers, pending acquires, accepted queue/presentation work, or possible backend accesses; an acquired-but-idle image alone does not block it. A conformance case and a static checker assertion now guard this agreement.
+
+The checker has also been extended to verify the seven actual presentation request headings and fixed reply-size/`reply.length` pairs, in addition to the corrected event registry regex and exact 64-byte presentation event layouts. This remains an unexecuted checker change: the GitHub status and workflow queries for the latest observed commit returned no checks. Numeric request IDs 41–47 and command-entry ID 5 remain intentionally unassigned pending an actual successful run.
