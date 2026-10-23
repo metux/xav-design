@@ -1680,7 +1680,16 @@ def check_presentation_profile(c: Check) -> None:
               "GetSurfaceCapabilities: non-success statuses must define zeroed capability fields")
     c.require("Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified." in conformance,
               "presentation conformance: capability failure statuses must cover zeroed fields")
-    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST are not X11 framing errors" in presentation,
+    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation and
+              "DEVICE_DESTROYED=6" in presentation,
+              "AcquireNextImage: device destruction must have a distinct terminal reply status")
+    c.require("DestroyDevice terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`" in presentation and
+              "first terminal result serialized by the server wins" in presentation,
+              "AcquireNextImage: pending registration must terminate on DestroyDevice without overriding prior terminal outcomes")
+    c.require("DEVICE_DESTROYED" in errors.split("`AcquireNextImage`:", 1)[-1].split("\n", 1)[0],
+              "AcquireNextImage: error map must include device-destroyed reply outcome")
+    # previous baseline status guard intentionally replaced below
+    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation,
               "AcquireNextImage: all non-success operation statuses must be distinguished from X11 errors")
     c.require("A failed or timed-out acquire signals neither object and changes no image state." in presentation,
               "AcquireNextImage: failure/timeout must not signal semaphore or fence")
