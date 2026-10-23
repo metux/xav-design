@@ -110,7 +110,27 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 39 | `DestroyResource` | Void | 12 |
 | 40 | `SelectEvents` | Void | 32 |
 
-Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.\nPresentation request layouts are documented in [the presentation chapter](presentation.md#10-provisional-wire-layouts), but remain provisional and are deliberately excluded from this assigned 1–40 request matrix until their central registry allocation is accepted.
+Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
+
+### Presentation-capable profile: provisional request/reply matrix
+
+The presentation chapter is normative for the presentation-capable profile, even though its seven request subopcodes remain unassigned. These entries are audited separately from the stable compute-baseline registry so the audit does not imply numeric allocation. Request lengths below include the standard 8-byte XAverius header; reply totals include the standard 32-byte X11 reply header.
+
+| Request | Kind | Total request length | Total reply length |
+|---|---|---:|---:|
+| `CreateSurface` | Void | 16 | — |
+| `DestroySurface` | Void | 12 | — |
+| `GetSurfaceCapabilities` | Reply | 16 | `64 + 8*format_pair_count + 4*present_mode_count + 8*queue_family_count` |
+| `CreateSwapchain` | Reply | 48 | 40 |
+| `DestroySwapchain` | Void | 12 | — |
+| `AcquireNextImage` | Reply | 32 | 44 |
+| `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` | 36 |
+
+For `GetSurfaceCapabilities`, the reply length field is `8 + 2*format_pair_count + present_mode_count + 2*queue_family_count` four-byte units. The variable counts and all aggregate-size calculations require checked wide arithmetic. `CreateSwapchain` has a 48-byte request but a 40-byte reply; the 40-byte reply consists of the standard 32-byte header plus `status` and `actual_image_count`. `AcquireNextImage` replies with `status`, `image_index`, and a zero reserved word. `QueuePresent` has a variable request and a fixed 36-byte reply.
+
+This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-provisional-wire-layouts) for cross-chapter auditing only; it does not allocate subopcodes or promote these requests into compute-only v0.1.
+
+
 
 ## Cross-chapter consistency results
 
