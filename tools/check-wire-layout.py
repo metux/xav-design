@@ -1669,7 +1669,7 @@ def check_presentation_profile(c: Check) -> None:
               "presentation conformance: capability failure statuses must cover zeroed fields")
     c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST are not X11 framing errors" in presentation,
               "AcquireNextImage: all non-success operation statuses must be distinguished from X11 errors")
-    c.require("neither signaled on failure or timeout" in presentation,
+    c.require("A failed or timed-out acquire signals neither object and changes no image state." in presentation,
               "AcquireNextImage: failure/timeout must not signal semaphore or fence")
     c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
               "acquired-but-idle images alone do not block destruction" in conformance,
