@@ -269,7 +269,9 @@ def check_events(c: Check) -> None:
     c.require("Fehlerpräzedenz (erste zutreffende Phase gewinnt)" in submissions and
               "erforderliche XIDs werden in Wire-Reihenfolge aufgelöst: Device, optionale Fence, Command-Buffer-XIDs in Array-Reihenfolge" in submissions and
               "Vorrang vor veränderlichen Submit-Zuständen" in submissions and
-              "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions,
+              "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions and
+              "zuerst der Zustand der optionalen Fence, dann die Command Buffer in Array-Reihenfolge, danach die Wait-Entries in Array-Reihenfolge" in submissions and
+              "prüft `QueueSubmit` nach Device-Zustand zuerst die optionale Fence" in conformance,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
               "typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig" in errors and
