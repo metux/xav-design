@@ -254,7 +254,7 @@ The following cases apply only when the server implements the presentation-capab
 - QueuePresent rejection leaves the image ACQUIRED and does not consume wait semaphores. An accepted present moves the image to PRESENT_PENDING; request success does not imply GPU completion, image release, or presentation completion.
 - IMAGE_RELEASED and PRESENTATION_COMPLETE are distinct terminal milestones, may arrive in either order, and each is emitted at most once per accepted presentation operation. An image is reacquirable only after IMAGE_RELEASED. A presentation failure must release the image or invalidate it and its Swapchain deterministically.
 - Resize marks the old Swapchain OUT_OF_DATE, prevents new acquire/present acceptance, and allows replacement creation while old work drains. Window destruction marks the Surface SURFACE_LOST; no XID reuse can revive it.
-- Presentation event layouts are checked as XGE events 7 and 8 with total lengths 64 and 64 bytes respectively, and queue event-mask bits 2 and 3 are rejected by compute-only implementations.
+- Conformance validation must check presentation event IDs 7 and 8 with total lengths 64 and 64 bytes respectively, and queue event-mask bits 2 and 3 are rejected by compute-only implementations.
 
 
 ## Presentation-profile conformance cases (provisional)
