@@ -252,6 +252,20 @@ def check_events(c: Check) -> None:
               "doppelte Timeline-Signal-Entries derselben Semaphore" in conformance and
               "reserviert weder `submission_token` noch Semaphore-Wait-/Signal-Slots" in conformance,
               "QueueSubmit: semaphore value checks and rejected-submit atomicity must be covered")
+    c.require("Die `EXECUTABLE`-zu-`PENDING`-Übergänge und die Synchronisationsreservierungen sind somit ein gemeinsamer Commit" in submissions and
+              "der Token bleibt unbenutzt" in submissions and
+              "Semaphore-Counter, Signalverfügbarkeit, Pending-Slots und Timeline-Reservierungen bleiben unverändert" in submissions,
+              "QueueSubmit: all state changes and token reservation must share the acceptance commit")
+    c.require("Ein FINAL-Chunk führt den Übergang `RECORDING` → `EXECUTABLE` erst nach erfolgreicher Validierung" in read("spec/command-recording.md") and
+              "der Buffer bleibt `RECORDING`, alle vorher akzeptierten Entries und ihre Referenzen bleiben unverändert" in read("spec/command-recording.md"),
+              "CommandBufferData: failed FINAL must preserve recording state and prior references")
+    c.require("Ein fehlerhafter FINAL-Chunk von `CommandBufferData` lässt den Buffer `RECORDING`" in conformance and
+              "Bei abgewiesenem `QueueSubmit` bleibt jeder Command Buffer `EXECUTABLE`" in conformance and
+              "kann derselbe Token in einem korrigierten Request verwendet werden" in conformance and
+              "weder `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` noch `ASYNC_ERROR`" in conformance,
+              "conformance: finalization and rejected-submit state transitions must be atomic")
+    c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
+              "QueueSubmit: error map must state non-mutating synchronous rejection")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
