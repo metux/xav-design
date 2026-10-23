@@ -78,6 +78,16 @@ Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig und ergeben `BadValu
 
 `QueueSubmit` ist ein Void-Request. Die Annahme oder Ablehnung wird synchron über die normalen X11-Fehlerregeln signalisiert; der Token dient ausschließlich der Korrelation späterer asynchroner Ergebnisse.
 
+
+### Validation und atomare Annahme
+
+Die Validierung ist zweiphasig. Zuerst prüft der Server Request-Framing und Längen/Counts, reservierte Felder und Token-Syntax, danach löst er Ressourcen in der definierten Feldreihenfolge auf und prüft Typ, Client-/Device-Ownership sowie Queue-Zuordnung. Anschließend prüft er den Device-Zustand und sämtliche veränderlichen Submit-Voraussetzungen: jeder Command Buffer muss `EXECUTABLE`, nicht `PENDING` oder `INVALID`, sein; Fence und Semaphore müssen submitbar sein; Wait-Stages, Semaphore-Typen/-Werte, Timeline-Signalreservierungen und alle sonstigen Abhängigkeiten müssen gültig sein. Die allgemeine XID-Fehlerpräzedenz und die request-spezifische Reihenfolge gelten auch bei mehreren fehlerhaften Feldern; eine Implementierung darf nicht vorzeitig Zustand reservieren, nur weil sie einen früheren Eintrag bereits validiert hat.
+
+Erst wenn alle Prüfungen erfolgreich sind, nimmt der Server die Submission als eine einzige serialisierte Transaktion an. In diesem Commit-Punkt werden der `submission_token` als verwendet registriert, die Submission angelegt, die Command Buffer auf `PENDING` gesetzt, Fence und Semaphore-Zuordnungen/Wait-/Signal-Slots reserviert und sämtliche internen Ressourcenreferenzen festgehalten. Kein sichtbarer Teil dieses Commit-Punkts darf für andere Requests oder asynchrone Backend-Callbacks als angenommen gelten, bevor der ganze Commit abgeschlossen ist.
+
+Jede Ablehnung vor diesem Commit-Punkt ist vollständig nicht-mutierend: der Token bleibt unbenutzt und darf in einem korrigierten Request wiederverwendet werden; kein Command Buffer verlässt `EXECUTABLE`; keine Fence wechselt ihren Zustand oder wird einer Submission zugeordnet; Semaphore-Counter, Signalverfügbarkeit, Pending-Slots und Timeline-Reservierungen bleiben unverändert; es entstehen keine Submission-Objekte, internen Submission-Referenzen oder Submission-Events. Das gilt auch dann, wenn mehrere Command Buffer oder Synchronisationsobjekte bereits einzeln validiert wurden, bevor ein späterer Eintrag fehlschlägt. Ein synchroner Fehler darf kein `ASYNC_ERROR` für eine nicht angenommene Submission erzeugen.
+
+Die `EXECUTABLE`-zu-`PENDING`-Übergänge und die Synchronisationsreservierungen sind somit ein gemeinsamer Commit, nicht voneinander getrennte schrittweise Änderungen. Nach diesem Commit ist die Submission angenommen; spätere Backend-Fehler werden ausschließlich über den terminalen Submission-Ausgang und die definierten Synchronisationszustände verarbeitet.
 ## Terminaler Submission-Zustand und Device Loss
 
 Jede angenommene Submission hat genau einen terminalen Ausgang:
