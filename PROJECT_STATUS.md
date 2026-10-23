@@ -189,3 +189,10 @@ Duplicate wait/signal semaphore entries and using the same semaphore in both arr
 ## ResetCommandBuffer device-state audit — 2026-10-22
 
 ResetCommandBuffer now specifies unavailable/lost logical Device outcomes consistently across the normative chapter, central error map and conformance checklist, with XID/type/ownership validation taking precedence over device-state and reset-state checks. The static checker guards the cross-chapter contract. CI passed in [run 39830304211](https://github.com/metux/xav-design/actions/runs/39830304211), including 2,234 static checks and 90 golden wire-vector tests. This remains a specification/static-check pass, not a live server test.
+
+
+## Server-side X11 presentation direction — 2026-10-23
+
+Added [the presentation architecture chapter](spec/presentation.md) for a future presentation-capable profile. The intended model is server-side: clients create ordinary X11 windows, then identify them by XID; XAverius owns the presentation backend and does not require client-native Vulkan WSI handles. A native server WSI path is an implementation option, not a protocol requirement; server-managed images with an internal copy/blit/composition path remain possible.
+
+The existing 40-request compute-oriented registry was deliberately not changed. Before allocating presentation request subopcodes, the design still needs exact Surface/Swapchain lifetimes, capability and format registries, acquire/present synchronization, distinct GPU-completion/image-release/presentation-completion semantics, and resize/surface-loss handling. The chapter is indexed, the direction is recorded in the decision log, and the work is tracked as future-profile work rather than a v0.1 compute blocker. No live X11 or Vulkan implementation behavior has been tested by these documentation commits.
