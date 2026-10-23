@@ -216,8 +216,8 @@ def check_events(c: Check) -> None:
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
     c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
               "zuletzt muss jeder Semaphore-Typ `TIMELINE` sein (`BadMatch`)" in errors and
-              "gemischten Fehlern gewinnt die frühere Phase" in conformance and
-              "Alle synchronen Ablehnungen erfolgen ohne Wait-Registrierung" in conformance,
+              "gemischten Fehlern gewinnt die frühere Phase" in read("spec/conformance.md") and
+              "Alle synchronen Ablehnungen erfolgen ohne Wait-Registrierung" in read("spec/conformance.md"),
               "WaitSemaphores: precedence must distinguish pre-registration validation from terminal wait outcomes")
     c.require(re.search(r"`WaitForFence`.*Request: 24 Bytes exakt.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*Cross-Device-Verwendung ergeben `BadMatch`", sync, re.S) is not None and
               re.search(r"`WaitForFence`: falsche Länge `BadLength`.*Device Loss und `DestroyDevice`.*Reply-Statuswerte", errors, re.S) is not None,
