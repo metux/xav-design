@@ -1683,7 +1683,7 @@ def check_presentation_profile(c: Check) -> None:
     c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation and
               "DEVICE_DESTROYED=6" in presentation,
               "AcquireNextImage: device destruction must have a distinct terminal reply status")
-    c.require("DestroyDevice terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`" in presentation and
+    c.require("terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`" in presentation and
               "first terminal result serialized by the server wins" in presentation,
               "AcquireNextImage: pending registration must terminate on DestroyDevice without overriding prior terminal outcomes")
     c.require("DEVICE_DESTROYED" in errors.split("`AcquireNextImage`:", 1)[-1].split("\n", 1)[0],
