@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -1032,6 +1033,34 @@ def check_request_limit_contract(c: Check) -> None:
     for phrase in required_cases:
         c.require(phrase in conformance,
                   f"request limit: missing conformance case {phrase!r}")
+
+
+def check_local_markdown_links(c: Check) -> None:
+    """Reject broken relative links in repository Markdown documents."""
+    link_pattern = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+    documents = sorted(
+        path for path in ROOT.rglob("*.md")
+        if ".git" not in path.parts and "node_modules" not in path.parts
+    )
+    for source in documents:
+        text = source.read_text(encoding="utf-8")
+        for match in link_pattern.finditer(text):
+            target = match.group(1)
+            parsed = urlsplit(target)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            decoded_path = unquote(parsed.path)
+            candidate = (source.parent / decoded_path).resolve()
+            try:
+                candidate.relative_to(ROOT.resolve())
+            except ValueError:
+                c.require(False, f"markdown link escapes repository: {source.relative_to(ROOT)} -> {target}")
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            c.require(
+                candidate.exists(),
+                f"broken local Markdown link: {source.relative_to(ROOT)}:{line} -> {target}",
+            )
 
 
 def check_reply_matrix(c: Check) -> None:
@@ -2099,6 +2128,7 @@ def main() -> int:
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
     check_request_limit_contract(c)
+    check_local_markdown_links(c)
     check_reply_matrix(c)
     check_reply_layouts(c)
     check_reply_formula_vectors(c)
