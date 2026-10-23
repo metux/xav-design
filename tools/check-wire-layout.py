@@ -266,6 +266,15 @@ def check_events(c: Check) -> None:
               "conformance: finalization and rejected-submit state transitions must be atomic")
     c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
               "QueueSubmit: error map must state non-mutating synchronous rejection")
+    c.require("Fehlerpräzedenz (erste zutreffende Phase gewinnt)" in submissions and
+              "erforderliche XIDs werden in Wire-Reihenfolge aufgelöst: Device, optionale Fence, Command-Buffer-XIDs in Array-Reihenfolge" in submissions and
+              "hat Vorrang vor veränderlichen Submit-Zuständen" in submissions and
+              "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions,
+              "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
+    c.require(re.search(r"\\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\\n\\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
+              "typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig" in errors and
+              "Device Loss ergibt `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer" in conformance,
+              "QueueSubmit: error table and conformance must follow device-before-state precedence")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
         c.require(name in doc_sections, f"events.md: missing layout section {name}")
@@ -624,6 +633,16 @@ def check_request_document_coverage(c: Check) -> None:
         and "unbekannte/nicht-live Buffer-XIDs" in errors,
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
+    c.require("### Fehlerpräzedenz für `CommandBufferData`" in command_recording and
+              "Feldfehler schlagen XID-Fehler" in command_recording and
+              "Device Loss" in command_recording and
+              "ABORT" in command_recording and
+              "Device Loss hat Vorrang vor einem nicht passenden Buffer-Zustand" in errors,
+              "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
+    c.require("CommandBufferData`-Fehlerpräzedenz: fehlerhafte Request-/Entry-Struktur" in conformance and
+              "ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt `BadValue`" in conformance and
+              "ABORT bleibt die Ausnahme" in command_recording,
+              "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
         "dessen deklarierte Länge über das Request-Ende hinausreicht" in errors
         and "insbesondere null oder kleiner als der Entry-Header" in errors
