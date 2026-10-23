@@ -112,7 +112,7 @@ Presentation must be integrated with queue ordering without adding implicit cros
 
 ## 5.1 Acquisition synchronization contract
 
-Acquisition is a reply-bearing operation with an explicit timeout and status result; it must not block the X11 request dispatcher while waiting for an image. The server may retain a pending acquire registration and continue processing requests from the connection, including host semaphore signals and destruction checks. A timeout of zero performs a non-blocking poll; an infinite timeout is represented by the all-ones CARD64 value. Other timeout values are nanoseconds.
+Acquisition is a reply-bearing operation with an explicit timeout and status result; it must not block the X11 request dispatcher while waiting for an image. The server may retain a pending acquire registration and continue processing requests from the connection, including host semaphore signals and destruction checks. A timeout of zero performs a non-blocking poll and returns `NOT_READY` if no image is immediately available; a finite positive timeout that expires returns `TIMEOUT`. An infinite timeout is represented by the all-ones CARD64 value. Other timeout values are nanoseconds.
 
 An acquire operation may name an optional binary Semaphore XID and optional Fence XID owned by the same logical Device; either may be omitted, and both may be supplied together. The reply itself reports the acquisition result and, on SUCCESS, the acquired image index. Timeline semaphores are not valid acquire signals. On successful acquisition, each supplied synchronization object is signaled exactly once under the existing semaphore/fence state rules. A failed or timed-out acquire signals neither object and changes no image state.
 
