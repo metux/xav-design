@@ -1491,9 +1491,72 @@ def check_xge_abi(c: Check) -> None:
             c.require(not valid_xge(bytes(bad_response)), f"XGE negative ({name}/{order_name}): wrong response type accepted")
 
 
+
+def check_presentation_profile(c: Check) -> None:
+    """Check future presentation-profile wire layouts without expanding v0.1 registries."""
+    presentation = read("spec/presentation.md")
+    events = read("spec/events.md")
+    event_registry = read("registries/presentation-events.md")
+    command_recording = read("spec/command-recording.md")
+    formats = read("registries/presentation-formats.md")
+
+    # Presentation event IDs live in a separate, profile-gated registry.
+    event_rows = [
+        (int(value), name)
+        for value, name in re.findall(
+            r"^\\|\\s*(\\d+)\\s*\\|\\s*`([A-Z_]+)`\\s*\\|\\s*$",
+            event_registry, re.M,
+        )
+    ]
+    c.require(event_rows == [(7, "IMAGE_RELEASED"), (8, "PRESENTATION_COMPLETE")],
+              "presentation event registry must assign IDs 7 and 8 without changing the compute baseline")
+    event_docs = dict(sections(events))
+    for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
+        c.require(name in event_docs, f"presentation events: missing {name} layout")
+        body = event_docs.get(name, "")
+        match = re.search(r"Gesamtlänge:\\s*(\\d+)\\s*Bytes;\\s*XGE `length\\s*=\\s*(\\d+)`", body)
+        c.require(match is not None, f"{name}: missing total/XGE length declaration")
+        if match:
+            total, length = map(int, match.groups())
+            c.require((total, length) == (64, 8), f"{name}: expected 64-byte event and XGE length 8")
+            c.require(total == 32 + 4 * length, f"{name}: total length must equal 32 + 4 * XGE length")
+        records = event_field_records(body)
+        occupied: set[int] = set()
+        for offset, size, typ, field in records:
+            c.require(offset >= 32 and offset % min(size, 4) == 0,
+                      f"{name}.{field}: invalid payload offset/alignment")
+            for byte in range(offset, offset + size):
+                c.require(byte not in occupied, f"{name}.{field}: overlapping event fields")
+                occupied.add(byte)
+            c.require(offset + size <= 64, f"{name}.{field}: field exceeds 64-byte event")
+        c.require(occupied == set(range(32, 64)),
+                  f"{name}: event payload must cover bytes 32 through 63 exactly")
+
+    # Request layouts are specified but not assigned subopcodes yet.
+    for heading in ("CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
+                    "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent"):
+        c.require(re.search(r"### `" + re.escape(heading) + r"`", presentation) is not None,
+                  f"presentation requests: missing wire-layout section {heading}")
+    c.require("40 + 4 * wait_semaphore_count" in presentation,
+              "QueuePresent: variable request length formula missing")
+    c.require("8 + 2 * format_pair_count + present_mode_count" in presentation,
+              "GetSurfaceCapabilities: reply.length formula missing")
+    c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
+              "CreateSwapchain: exact image-count reply contract missing")
+    c.require("The command-entry numeric ID is not allocated yet" in presentation,
+              "presentation command entry must remain explicitly unassigned until checked")
+    c.require("CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE" in command_recording and
+              "36 bytes" in command_recording,
+              "presentation copy command: fixed 36-byte layout missing")
+    c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in command_recording,
+              "presentation copy path must specify destination and source usage")
+    c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
+              "compute-only event registry must remain unchanged by presentation event assignments")
+
 def main() -> int:
     c = Check()
     check_events(c)
+    check_presentation_profile(c)
     check_xge_abi(c)
     check_reason_code_registry(c)
     check_error_registry(c)
