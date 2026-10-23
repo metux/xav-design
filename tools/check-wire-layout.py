@@ -2180,6 +2180,45 @@ def check_presentation_profile(c: Check) -> None:
               "CreateSwapchain: mixed XID and capability error precedence must be explicit")
     c.require("For all seven requests, validation is atomic" in errors,
               "presentation request error map: all seven requests must share atomic failure semantics")
+
+    # Cross-check deterministic mixed-failure precedence and atomic status paths
+    # across the normative error map, presentation chapter, and conformance cases.
+    precedence_contracts = (
+        "### Normative validation precedence for the seven presentation requests",
+        "Validate exact/fixed or formula-derived wire length using checked wide arithmetic.",
+        "CreateSurface checks `surface_xid` before resolving `window_xid`",
+        "CreateSwapchain checks `device_xid`, then target `swapchain_xid`, then `surface_xid`",
+        "Device loss takes precedence over Surface loss and all later mutable-state checks.",
+        "A zero token is always `BadValue`.",
+        "Device loss/destruction, then surface loss, then out-of-date",
+    )
+    for contract in precedence_contracts:
+        c.require(contract in errors,
+                  f"presentation error precedence: missing normative contract: {contract}")
+    presentation_precedence_contracts = (
+        "## 5.3 Request validation, status precedence, and atomic acceptance",
+        "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
+        "`SURFACE_LOST` takes precedence over `OUT_OF_DATE`",
+        "`OUT_OF_DATE` takes precedence over `UNSUPPORTED_CONFIGURATION`",
+        "Every non-success reply has `actual_image_count = 0` and leaves `swapchain_xid` unallocated.",
+        "A token mentioned only in a rejected request is not reserved and may be retried.",
+        "reserve the token and every wait slot, retain all required resources, and transition the image from `ACQUIRED` to `PRESENT_PENDING`",
+    )
+    for contract in presentation_precedence_contracts:
+        c.require(contract in presentation,
+                  f"presentation status/atomicity: missing normative contract: {contract}")
+    conformance_precedence_contracts = (
+        "Presentation error precedence is tested with mixed-failure requests",
+        "returns `DEVICE_LOST` rather than `SURFACE_LOST`",
+        "returns `DEVICE_LOST` before `SURFACE_LOST`, `SURFACE_LOST` before `OUT_OF_DATE`",
+        "lifecycle outcomes precede timeout polling",
+        "Zero token, duplicate wait XIDs, and accepted-token reuse are `BadValue`",
+        "Acceptance atomically reserves the token and all wait slots",
+    )
+    for contract in conformance_precedence_contracts:
+        c.require(contract in conformance,
+                  f"presentation conformance: missing mixed-failure case: {contract}")
+
     c.require("On every non-success status the target XID remains unallocated" in errors,
               "CreateSwapchain: every non-success reply status must preserve the target XID")
     capability_failure_contract = (
