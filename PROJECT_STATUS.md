@@ -1,8 +1,12 @@
 # Project status
 
+## Live XGE validation plan — 2026-10-23
+
+Added [spec/xge-interoperability-test-plan.md](spec/xge-interoperability-test-plan.md), with concrete positive and negative cases for dynamic `QueryExtension` opcode use, `GEQueryVersion`, `SelectEvents`, XGE frame sizes/reserved bytes, event-mask scoping, terminal-event exclusivity, and connection isolation. Linked it from [open issues](spec/open-issues.md). This is a test procedure, not evidence of live interoperability; that remains open until exercised against an actual implementation.
+
 ## CI follow-up — 2026-10-23
 
-Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 exposed a checker `NameError` in the CreateCommandPool error-map assertion; run 39940007063 reached the golden-wire tests but used stale SelectEvents expectations that omitted presentation-profile queue mask entries. The current branch version of `tools/check-wire-layout.py` checks the already-loaded `descriptor_errors` text, and `tests/test_select_events_vectors.py` now expects all seven documented scope/mask rows. These corrections are present in the current branch content, but a successful CI run against that exact tree still needs confirmation.
+Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 exposed a checker `NameError` in the CreateCommandPool error-map assertion; run 39940007063 reached the golden-wire tests but used stale SelectEvents expectations that omitted presentation-profile queue mask entries. The current branch version of `tools/check-wire-layout.py` checks the already-loaded `descriptor_errors` text, and `tests/test_select_events_vectors.py` expects all seven documented scope/mask rows. Both fixes are now confirmed by successful run [39950681596](https://github.com/metux/xav-design/actions/runs/39950681596): syntax check, request/reply/XGE validation, and all 119 golden-wire tests passed.
 
 
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
