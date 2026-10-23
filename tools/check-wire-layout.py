@@ -1509,6 +1509,17 @@ def check_xge_abi(c: Check) -> None:
               "DEVICE_STATUS_CHANGED.reason_code" in registry,
               "event registry: device reason_code fields must use shared reason-code registry")
 
+    # Keep the event-side error-code range tied to the central v0.1 registry.
+    error_registry = read("registries/errors.md")
+    c.require("in the range 0–8 for v0.1" in registry,
+              "ASYNC_ERROR.error_code: event registry range must remain 0 through 8")
+    c.require("first_error + offset" in error_registry and
+              "not the absolute X11 error code" in registry,
+              "ASYNC_ERROR.error_code: registry offsets must not be confused with absolute X11 codes")
+    c.require(all(f"| {offset} |" in error_registry for offset in range(9)) and
+              "| 9 |" not in error_registry,
+              "ASYNC_ERROR.error_code: v0.1 range must match the central error registry offsets 0 through 8")
+
     request_registry = parse_request_registry(requests)
     c.require(request_registry.get(40) == ("SelectEvents", "Void"),
               "request registry: SelectEvents must remain Void subopcode 40")
