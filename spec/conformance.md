@@ -154,7 +154,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `DestroyDescriptorPool` hat exakt 16 Bytes; es invalidiert Pool und Kind-Sets atomar und setzt referenzierende nicht-pending `EXECUTABLE`-Command-Buffer auf `INVALID`.
 - `DestroyResource` auf einen Buffer wird während Pending-Use abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
 - `FreeMemory` ist ein eigener Void-Request mit exakt 16 Bytes; bei gebundenem Buffer ergibt er `BadMatch`; bei pending GPU-Zugriff `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung bleibt die Memory-XID live und die Allokation unverändert.
-- Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion.
+- Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion. Device Loss allein invalidiert keine öffentlichen Device-/Ressourcen-XIDs; Statusabfragen wie `GetFenceStatus` bleiben gemäß Request-Vertrag möglich, bis `DestroyDevice` oder Client-Disconnect die öffentliche Kaskadeninvalidierung auslöst.
 - Wenn Backend-Quieszenz nach Device Loss nicht nachweisbar ist, werden interne Ressourcen quarantänisiert und weder freigegeben noch wiederverwendet, bis Quieszenz nachgewiesen oder der Serverprozess beendet ist.
 - XID-Wiederverwendung bei ausstehender Arbeit
 - Device Removal und Device Loss
