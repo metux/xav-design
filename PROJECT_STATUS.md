@@ -325,3 +325,9 @@ Completed another cross-chapter check of QueuePresent. Binary presentation waits
 ## Copy-command validation and error mapping — 2026-10-23
 
 The provisional `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` path now has an explicit error map and conformance coverage. Resource lookup/type/ownership, transfer-usage compatibility, image-index bounds, row geometry, alignment and source-span checks are distinguished; the image must still be `ACQUIRED` atomically at submission acceptance. The checker validates that this remains documented. The command-entry ID is still unassigned and presentation request subopcodes 41–47 remain unassigned pending the complete ABI review.
+
+## Command-buffer / presentation lifetime cross-check — 2026-10-23
+
+The cross-chapter audit corrected the Buffer destruction matrix to match the general recorded-reference rule: a Buffer referenced by a RECORDING command buffer blocks destruction; successful destruction invalidates non-pending EXECUTABLE command buffers that still reference it. The provisional swapchain-copy path now explicitly ties image-state validation to serialized X11 request acceptance: a copy submission accepted before QueuePresent retains its exact image/Swapchain identity, while a later copy submission after the image transitions to PRESENT_PENDING is rejected atomically. Request order is explicitly not a GPU memory dependency, and presentation must wait on a binary semaphore dependency when prior accepted work may still access the image.
+
+Conformance and the static checker now assert these rules. The change is committed on the working branch; the checker/CI run for this newest update is pending. Presentation request subopcodes 41–47 and command-entry ID 5 remain unassigned.
