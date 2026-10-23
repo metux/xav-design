@@ -243,7 +243,7 @@ Device ownership is inferred from the resource. Destruction is rejected while pe
 - Offset 24: XID `semaphore_xid`; zero means absent
 - Offset 28: XID `fence_xid`; zero means absent
 
-Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on any non-success result, including DEVICE_DESTROYED. The semaphore, when present, must be binary.
+Reply payload at offset 32 is three CARD32 values: `status`, `image_index`, `reserved = 0`; total reply size is 44 bytes and `reply.length = 3`. The image index is meaningful only for SUCCESS and must be zero on every non-success result. If both semaphore and fence are nonzero, both must be valid and eligible for acquisition signaling; neither is signaled on any non-success result, including DEVICE_DESTROYED. The semaphore, when present, must be binary.
 
 ### QueuePresent — Reply, variable length
 
