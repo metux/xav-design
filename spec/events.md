@@ -1,6 +1,6 @@
 # XAverius-Events
 
-Alle folgenden Events verwenden XGE. Der gemeinsame 32-Byte-Header entspricht dem X Generic Event-Format:
+Alle folgenden Events verwenden XGE. Die sieben Compute-Baseline-Events verwenden IDs aus der [zentralen Event-Registry](../registries/event-types.md). Die presentation-only Events IMAGE_RELEASED (7) und PRESENTATION_COMPLETE (8) sowie deren Statuswerte stehen in der separaten [Presentation-Event-Registry](../registries/presentation-events.md) und dürfen nur vom presentation-capable Profil verwendet werden. Der gemeinsame 32-Byte-Header entspricht dem X Generic Event-Format:
 
 | Offset | Typ | Feld |
 |---:|---|---|
@@ -168,7 +168,7 @@ Ein XAverius-Client muss deshalb vor dem Erzeugen eines logischen Devices oder v
 
 ## Event-Auswahl: `SelectEvents`
 
-Die Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt. Sie sind von Request-Subopcodes, Error-Offsets und dem serverseitig vergebenen XGE-Event-Base zu unterscheiden.
+Die Compute-Baseline-Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt; presentation-only IDs sind in der [Presentation-Event-Registry](../registries/presentation-events.md) festgelegt. Beide Namespaces verwenden dieselben append-only Event-Type-IDs und dürfen nicht miteinander kollidieren. Sie sind von Request-Subopcodes und Error-Offsets zu unterscheiden.
 
 `SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Das Common-Header-Feld `flags` bei Offset 5 muss 0 sein; das reservierte Common-Header-Feld bei Offset 6 muss ebenfalls 0 sein. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
 
@@ -209,4 +209,4 @@ Alle anderen Bits sind reserviert und müssen abgewiesen werden. Die Präsentati
 
 Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert. Das ändert nicht den internen terminalen Ausgang der Submission. Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.
 
-Die Event-Type-IDs und event-lokalen Werte sind in der [Event-Registry](../registries/event-types.md) registriert. XGE verwendet den Core-Eventcode GenericEvent (35). Ein XAverius-Event wird durch den XAverius-Major-Opcode im XGE-Feld extension und die registrierte Event-Type-ID im Feld evtype identifiziert. Der Major-Opcode wird ueber die normale X11-Extension-Abfrage ermittelt; es gibt kein separates XAverius-XGE-Event-Base.
+Die Compute-Baseline-Event-Type-IDs und event-lokalen Werte sind in der [Event-Registry](../registries/event-types.md) registriert; presentation-only Event-IDs und Statuswerte stehen in der [Presentation-Event-Registry](../registries/presentation-events.md). XGE verwendet den Core-Eventcode GenericEvent (35). Ein XAverius-Event wird durch den XAverius-Major-Opcode im XGE-Feld extension und die registrierte Event-Type-ID im Feld evtype identifiziert. Der Major-Opcode wird ueber die normale X11-Extension-Abfrage ermittelt; es gibt kein separates XAverius-XGE-Event-Base.
