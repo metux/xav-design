@@ -421,6 +421,47 @@ class GoldenXGEEventTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "ORIGIN_QUEUE_SUBMIT"):
                     validate_event_wire(bytes(wire), order)
 
+    def test_async_error_token_rules_match_acceptance_contract(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        conformance = (ROOT / "spec" / "conformance.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
+
+        # The wire validator can check the structural origin/token relation;
+        # whether a token refers to an actually accepted submission is a
+        # server-state invariant and must remain explicit in the normative spec.
+        self.assertIn(
+            "Bei \x60origin = ORIGIN_QUEUE_SUBMIT\x60 MUSS \x60submission_token\x60 daher ungleich null sein",
+            events,
+        )
+        self.assertIn(
+            "ein nicht-null Token darf niemals eine abgewiesene \x60QueueSubmit\x60-Anforderung bezeichnen",
+            events,
+        )
+        self.assertIn(
+            "ein abgewiesener \x60QueueSubmit\x60 darf nie als Token-Ziel eines \x60ASYNC_ERROR\x60 erscheinen",
+            conformance,
+        )
+        self.assertRegex(queue, r"Jede synchrone Ablehnung.*?Token.*?(?:unverändert|nicht.*reserviert)")
+
+        for order in ("little", "big"):
+            vector = next(v for v in self.vectors
+                          if v["event"] == "ASYNC_ERROR" and v["byte_order"] == order)
+            for origin in (0, 2, 3, 4, 5, 6):
+                wire = bytearray(encode_event(vector))
+                wire[40:44] = origin.to_bytes(4, order)
+                wire[44:52] = bytes(8)
+                with self.subTest(order=order, origin=origin, token=0):
+                    validate_event_wire(bytes(wire), order)
+
+            wire = bytearray(encode_event(vector))
+            wire[40:44] = (1).to_bytes(4, order)
+            wire[44:52] = (0x1122334455667788).to_bytes(8, order)
+            validate_event_wire(bytes(wire), order)
+            wire[44:52] = bytes(8)
+            with self.subTest(order=order, origin=1, token=0):
+                with self.assertRaisesRegex(ValueError, "ORIGIN_QUEUE_SUBMIT"):
+                    validate_event_wire(bytes(wire), order)
+
     def test_rejects_invalid_event_local_values(self):
         cases = (
             ("ASYNC_ERROR", 40, 7),
