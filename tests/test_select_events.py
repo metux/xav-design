@@ -356,7 +356,8 @@ class SelectEventsContractTests(unittest.TestCase):
         self.assertIn("ändert nicht den internen terminalen Ausgang der Submission", EVENTS)
         self.assertIn("Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event", SUBMISSIONS)
         self.assertIn("Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen", SUBMISSIONS)
-        self.assertIn("Device-Kaskadeninvalidierung bei `DestroyDevice`", LIFETIME)
+        self.assertIn("Device-Kaskadeninvalidierung bei erfolgreichem `DestroyDevice` oder Client-Disconnect", LIFETIME)
+        self.assertIn("Device Loss allein invalidiert keine öffentlichen XIDs", LIFETIME)
 
 
 if __name__ == "__main__":
