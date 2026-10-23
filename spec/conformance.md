@@ -306,3 +306,12 @@ The following cases apply only when the presentation-capable profile is advertis
 - Destroying a Buffer referenced by a `RECORDING` command buffer is atomically rejected with `INVALID_SYNCHRONIZATION_STATE`; successful Buffer destruction invalidates all non-pending executable command buffers that still reference it.
 - The provisional copy entry rejects unknown Buffer/Swapchain XIDs with `BadValue`, wrong live types/ownership/device or incompatible transfer usage with `BadMatch`, malformed dimensions/alignment/out-of-range source spans and invalid image indices with `BadValue`, and a non-`ACQUIRED` image at submission acceptance with `INVALID_SYNCHRONIZATION_STATE`; every rejection is atomic.
 - Resize/out-of-date, Window destruction/surface-lost, and device loss prevent new acquire/present operations while preserving safe terminal cleanup of previously accepted work. Accepted present operations reach a terminal status; a non-reusable image is invalidated rather than left PRESENT_PENDING.
+
+
+## Request framing, maximum length, and BIG-REQUESTS
+
+- XAverius v0.1 rejects BIG-REQUESTS framing: an XAverius request whose original X11 16-bit `length` field is zero is rejected as `BadLength` before offset 4 is interpreted as the XAverius common header.
+- A normal request of exactly 262140 bytes is the maximum permitted size; a request that would exceed 262140 bytes is rejected with `BadLength`, even if its variable-length formula and counts are otherwise internally consistent.
+- Variable-length request formulas are evaluated with checked arithmetic. Counts that overflow the formula, a computed size above 262140 bytes, a declared-length mismatch, or trailing/truncated payload bytes all produce `BadLength` before payload allocation, XID lookup, or state mutation.
+- Chunked `WriteBuffer`, `ShaderModuleData`, and `CommandBufferData` requests enforce the limit per wire request. The aggregate logical upload/recording may exceed the limit only by using multiple valid chunks; a single oversized chunk is rejected.
+- For each rejection above, no partial resource creation, upload commit, command-buffer append/finalization, queue-submission acceptance, or event-mask change occurs.
