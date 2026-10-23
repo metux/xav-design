@@ -142,7 +142,7 @@ Gesamtlänge: 64 Bytes; XGE `length = 8`.
 | 52 | CARD32 | `reserved = 0` |
 | 56 | CARD64 | `presentation_token` aus dem Client-Request |
 
-Dieses Event bedeutet ausschließlich, dass die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Ein Event darf nur für eine zuvor akzeptierte Präsentationsoperation und höchstens einmal für deren Image ausgegeben werden.
+Dieses Event bedeutet ausschließlich, dass die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Ein Event darf nur für eine zuvor akzeptierte Präsentationsoperation und höchstens einmal pro akzeptierter Präsentationsoperation ausgegeben werden.
 
 ## `PRESENTATION_COMPLETE`
 
