@@ -2223,7 +2223,7 @@ def check_presentation_profile(c: Check) -> None:
               "ein `RECORDING`-Command-Buffer den Buffer direkt oder indirekt (einschließlich über ein referenziertes Descriptor Set) referenziert" in lifetime and
               "Destroying a Buffer referenced by a `RECORDING` command buffer is atomically rejected" in read("spec/conformance.md"),
               "Buffer lifetime: recording references must block destruction and executable references must be invalidated")
-    c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
+    c.require("Values 7–65535 are unassigned in the compute-only v0.1 baseline" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
 
 def main() -> int:
