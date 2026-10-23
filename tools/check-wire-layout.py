@@ -969,7 +969,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         elif request in fixed_lengths:
             expected_bytes = fixed_lengths[request]
             length_evidence = re.search(
-                rf"(?:Gesamtlänge|Request(?:-Länge| length)?|Request-Größe|Request size)[^\n]{{0,100}}\b{expected_bytes}\s*Bytes?\b|"
+                rf"(?:Gesamtlänge|Request(?:-Länge| length)?|Request-Größe|Request size|hat|ist|beträgt)[^\n]{{0,100}}\b{expected_bytes}\s*Bytes?\b|"
                 rf"\b{expected_bytes}\s*Bytes?\b[^\n]{{0,80}}(?:Gesamtlänge|Request)",
                 section, re.I,
             )
