@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **ownership/lifecycle, initial format/mode IDs, provisional request/reply layouts, and static checker coverage validated by CI; request subopcodes and command-entry ID remain unassigned**.
+Status: **ownership/lifecycle, initial format/mode IDs, provisional request/reply layouts, static checker coverage, and presentation command-entry ID 5 defined; request subopcodes remain unassigned**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -90,7 +90,7 @@ A failed acquire does not change any image state. A present request rejected bef
 
 The Swapchain creation contract must include an image usage mask. In the initial profile, TRANSFER_DST is the only defined usage bit; capability queries return it only when the server can support the buffer-to-image copy for the selected Device/Surface pair and format. Swapchain creation with any unreported or unassigned usage bit is rejected atomically. The usage mask does not itself make an operation available: the presentation profile must separately define image-aware command entries and descriptors for each advertised use.
 
-The current compute-only command set does not directly address a Swapchain image. The initial presentation-capable profile now defines a minimal pixel path via CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE: compute work may fill a transfer-source Buffer, and a command entry copies the pixel data into an acquired Swapchain image with TRANSFER_DST usage. The command-entry numeric ID is not allocated yet. This enables basic on-screen pixel output but does not provide general graphics pipelines, rasterization, or color-attachment rendering. Advertising an image usage without a command path that can exercise it is non-conforming.
+The current compute-only command set does not directly address a Swapchain image. The initial presentation-capable profile now defines a minimal pixel path via CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE: compute work may fill a transfer-source Buffer, and a command entry copies the pixel data into an acquired Swapchain image with TRANSFER_DST usage. The presentation-only command-entry ID is 5. This enables basic on-screen pixel output but does not provide general graphics pipelines, rasterization, or color-attachment rendering. Advertising an image usage without a command path that can exercise it is non-conforming.
 
 ## 5. Acquire, render, and present ordering
 
@@ -268,7 +268,7 @@ Before adding presentation requests to the central registry, the design pass mus
 
 1. Complete the cross-chapter audit of Surface/Swapchain ownership, destroy behavior, and exact X11 Window identity tracking; these rules are drafted above.
 2. Validate the provisional capability/query and request/reply layouts in section 10 against the common wire protocol and the request-specific error map.
-3. Complete the image-aware command path by allocating a command-entry ID and integrating it into the checker; its proposed layout is in [command recording](command-recording.md).
+3. The image-aware command path is assigned command-entry ID 5 and covered by the static checker. Complete the remaining cross-chapter semantic/conformance review before assigning request subopcodes; the layout is in [command recording](command-recording.md).
 4. Validate acquire timeout/status and semaphore/fence signaling against the existing synchronization state machine.
 5. Validate QueuePresent wait-semaphore behavior and the separate image-release/presentation-completion events.
 6. Finish resize, out-of-date, surface-lost, and device-lost transitions in conformance coverage.
