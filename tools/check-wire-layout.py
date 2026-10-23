@@ -1623,7 +1623,7 @@ def check_presentation_profile(c: Check) -> None:
     c.require("`QueuePresent` verwendet dieselbe globale Zustandsmaschine" in read("spec/synchronization.md") and
               "bei unklarem Payload-Ergebnis wird die Semaphore `UNTRUSTED`" in read("spec/synchronization.md"),
               "synchronization: presentation waits must follow binary semaphore state rules")
-    c.require("already marked `UNTRUSTED` is rejected with `DEPENDENCY_FAILED`" in errors,
+    c.require("already marked `UNTRUSTED` is rejected with `DEPENDENCY_FAILED`" in read("spec/errors.md"),
               "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
     c.require("8 + 2 * format_pair_count + present_mode_count" in presentation,
               "GetSurfaceCapabilities: reply.length formula missing")
