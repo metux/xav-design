@@ -31,3 +31,30 @@ This plan is the implementation-level follow-up for the static XGE ABI checks. I
 ## Evidence and pass criteria
 
 For each case, save the raw request/reply/event bytes and the decoded field table. A case passes only when both the wire bytes and the observed behavior match the normative specification. Static golden-vector tests alone do not satisfy this plan. Until this plan is run against an actual implementation, live XGE interoperability remains open.
+
+
+## Presentation-capable profile extensions
+
+Run this section only against a server that explicitly implements the presentation-capable profile. The seven assigned request subopcodes 41–47 and the presentation event IDs 7–8 do not imply that a compute-only server supports presentation.
+
+### Profile discovery and request dispatch
+
+1. On a compute-only server, send a well-formed presentation request using its assigned subopcode and confirm it returns core X11 `BadRequest` before request-specific payload parsing or XID resolution. Repeat with a deliberately malformed payload to verify the profile gate takes precedence.
+2. On a presentation-capable server, issue `GetSurfaceCapabilities` using valid Device/Surface XIDs and confirm a normal reply with the documented status and capability fields. Record the exact reply bytes and formula-derived length.
+3. For all seven requests, verify the assigned subopcode (41–47), exact request kind, fixed or formula-derived length, zero reserved fields, and normal X11 sequence/error framing in both byte orders.
+4. Verify `CreateSurface` accepts only a live Window owned by that X11 client; a missing/non-Window Window XID returns `BadWindow`, a foreign live Window returns `BadMatch`, and failed creation leaves no Surface XID or retained Window identity.
+5. Verify `CreateSwapchain` with a lost Surface returns the documented `SURFACE_LOST` status rather than creating a partial Swapchain; mixed-failure probes must follow the normative validation precedence.
+
+### Presentation event framing
+
+1. Trigger `IMAGE_RELEASED` and `PRESENTATION_COMPLETE` independently and capture raw packets. Both are exactly 64 bytes with XGE `length = 8`; the 64-bit presentation token occupies bytes 56–63. Decode all multibyte fields using the connection byte order.
+2. Confirm the event's extension byte is the dynamically negotiated XAverius major opcode, the event type at offset 8 is 7 or 8, the reserved field at offset 52 is zero for `IMAGE_RELEASED`, and the declared XGE length exactly matches the captured packet.
+3. Run both events in little- and big-endian client connections where supported. Do not infer byte-order correctness from Xlib's decoded structure alone; compare the raw frame and the expected field table.
+4. Confirm a compute-only server rejects queue-mask bits 2 and 3 with `BadValue` and never emits presentation event types 7 or 8. A presentation-capable server accepts those mask bits only for queue scope.
+5. Confirm event ordering is not assumed: image release may precede or follow presentation completion. Each accepted presentation emits at most one of each applicable event, with the same token and the original queue/Swapchain/image identity.
+6. Exercise independent masks: change the queue mask after one terminal milestone but before the other. The decision to deliver each event must use the mask at that event's own serialized terminal milestone, not reuse the first event's mask snapshot.
+7. Race `DestroyDevice`, Surface loss, resize/out-of-date, and connection close against pending presentation. No event may be enqueued after successful Device destruction or onto a different/closed connection; internal terminal cleanup must still complete.
+
+### Evidence and pass criteria
+
+Store each request, reply, X11 error, and XGE event as raw bytes alongside the decoded field table, connection byte order, negotiated major opcode, request sequence, profile mode, and server/X server versions. Keep compute-only and presentation-capable results separate. A passing presentation-profile static checker or golden-vector test is not a substitute for these live interoperability cases.
