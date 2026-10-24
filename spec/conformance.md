@@ -359,7 +359,7 @@ The following cases apply only when the presentation-capable profile is advertis
 - `ResetFence`-Fehlerpräzedenz: falsche Länge schlägt alle weiteren Prüfungen; unbekannte Device-/Fence-XIDs ergeben `BadValue`, falscher live Typ/Ownership/Cross-Device `BadMatch`; nach gültigen XIDs und Ownership gewinnt `DEVICE_LOST` vor `INVALID_SYNCHRONIZATION_STATE` für einen nicht zurücksetzbaren Fence-Zustand. Jede Ablehnung erhält den gespeicherten Fence-Zustand.
 
 
-## Presentation request wire-layout audit (provisional profile)
+## Presentation request wire-layout audit (assigned, profile-gated ABI)
 
 The request/reply framing matrix is cross-checked against [the presentation chapter](presentation.md#cross-request-wire-length-audit). Request sizes include the 8-byte X11/XAverius header; reply sizes include the 32-byte X11 reply header.
 
