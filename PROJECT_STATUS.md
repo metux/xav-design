@@ -403,3 +403,12 @@ Manual source-level cross-check after the registry update confirms:
 - A compute-only server's behavior for assigned but profile-gated requests is now explicit: core X11 `BadRequest` before request-specific payload parsing or XID resolution.
 
 These are source-level consistency checks performed against the current branch contents, not execution of `tools/check-wire-layout.py` or the Python test suite. The current-head CI result remains unconfirmed: the GitHub status and workflow queries returned no checks/runs for the latest commit. Next: obtain a green CI run, then move to runtime X11/XGE interoperability and presentation-backend tests. `master` remains unchanged.
+
+
+## Current branch-head verification — 2026-10-24
+
+The current observed branch head is `ba11888eeaa8d9870c62b1f5881638ee0917a4ea` (`test: cover swapchain creation on stale lost surface`). The presentation profile now has request subopcodes 41–47, command-entry ID 5, and event IDs 7–8 in the separate profile registry. The latest commit adds a conformance case for swapchain creation when the Surface is already lost.
+
+The current GitHub combined-status query returned no status checks, and the workflow-run query returned no runs (that query only reports pull-request-triggered runs). Therefore current-head CI is **unconfirmed**, not green or failed. The last documented green run predates the current head. Do not claim the checker or golden vectors passed on `ba11888` without a run tied to that commit.
+
+Remaining scope is implementation-level X11/XGE interoperability and a real presentation-backend implementation/test; static ABI documentation does not establish runtime presentation support. `master` remains unchanged.
