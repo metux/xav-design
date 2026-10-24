@@ -4,10 +4,15 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 
 - `wire-vectors.json` covers selected request layouts, including CreateBuffer,
   ReadBuffer and WriteBuffer payload boundaries in both X11 byte orders.
-- `event-vectors.json` covers all seven registered XGE event types in both
+- `event-vectors.json` covers the seven compute-baseline XGE event types in both
   byte orders. Fixture values for the extension opcode and event sequence are
   deliberately fixed test values; real connections supply their negotiated
   extension opcode and current sequence number.
+- `presentation-event-vectors.json` and `test_presentation_event_vectors.py`
+  cover profile-gated `IMAGE_RELEASED` and `PRESENTATION_COMPLETE` frames in
+  both byte orders, including all payload fields, the 64-bit token, reserved
+  fields, the 64-byte total size, and XGE `length = 8`. These tests do not
+  imply that the presentation-capable profile is implemented by a live server.
 - `select-events-vectors.json` covers `SelectEvents` for connection, device and
   queue scopes in both byte orders. Its tests compare field offsets, scope IDs,
   scope-specific masks and the subopcode against the normative chapters/registry.
@@ -41,7 +46,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 Run all fixture tests from the repository root:
 
 ```sh
-python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
+python3 -m py_compile tools/check-wire-layout.py tests/test_wire_vectors.py tests/test_event_vectors.py tests/test_presentation_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py
 python3 tools/check-wire-layout.py
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
