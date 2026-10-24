@@ -412,3 +412,10 @@ The current observed branch head is `ba11888eeaa8d9870c62b1f5881638ee0917a4ea` (
 The current GitHub combined-status query returned no status checks, and the workflow-run query returned no runs (that query only reports pull-request-triggered runs). Therefore current-head CI is **unconfirmed**, not green or failed. The last documented green run predates the current head. Do not claim the checker or golden vectors passed on `ba11888` without a run tied to that commit.
 
 Remaining scope is implementation-level X11/XGE interoperability and a real presentation-backend implementation/test; static ABI documentation does not establish runtime presentation support. `master` remains unchanged.
+
+
+## Presentation XGE golden-vector coverage — 2026-10-24
+
+Added committed 64-byte raw XGE frames for `IMAGE_RELEASED` and `PRESENTATION_COMPLETE` in both byte orders. The presentation event test now checks those fixture bytes field-by-field, including the 64-bit presentation token, event IDs 7/8, XGE length 8, reserved fields, and the separate profile-gated event registry. The token is stored as hexadecimal text in JSON to avoid loss of precision in JSON consumers that represent numbers as IEEE-754 doubles. The live interoperability plan now includes presentation-profile request dispatch, Window ownership, stale/lost Surface behavior, event-mask timing, event ordering, and device/connection teardown races.
+
+These are committed test additions, not executed results. Current-head CI must still be confirmed; no local checkout or live XAverius server was available for running the suite in this workflow. `master` remains unchanged.
