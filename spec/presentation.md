@@ -61,6 +61,17 @@ Window resize, unmap, and destruction are asynchronous X11 lifecycle changes, no
 
 A window event or resize notification is not itself proof that GPU work or presentation has completed.
 
+### Serialization of Window and Surface lifecycle
+
+The server MUST serialize each Window lifecycle notification and each XAverius request that creates, queries, or destroys the associated Surface against one authoritative per-connection resource-state order. A lifecycle notification is applied at its serialized transition point; the server MUST NOT resolve the Window XID again to identify the object for an existing Surface.
+
+- If `CreateSurface` is serialized before the original Window's destruction transition, creation may succeed and the Surface then becomes `SURFACE_LOST` when destruction is processed. If destruction is serialized first, `CreateSurface` using that old XID fails with `BadWindow`, even if the numeric XID has since been reused for a different Window.
+- If `DestroySurface` succeeds before Window destruction is processed, its public Surface XID becomes invalid immediately. The later notification MUST NOT mutate or notify a different resource; the retained internal Window identity and any backend references are released only after all operations that may refer to them are quiescent. If Window destruction is processed first, the Surface becomes `SURFACE_LOST` but remains explicitly destroyable under the normal reference checks.
+- `DestroySurface` performs all type, ownership, and live-Swapchain-reference checks at its serialization point. If any live Swapchain references the Surface, it fails atomically with `INVALID_SYNCHRONIZATION_STATE`: the Surface remains public and its state/references are unchanged by that request. If the checks pass, public invalidation and detachment from future Surface operations are atomic; internal reference release may be deferred.
+- Connection teardown invalidates the connection's public Surface and Swapchain XIDs and suppresses future event/reply delivery for that connection. It does not cancel accepted backend work or permit early release of internal Window identities that backend work may still access. A delayed Window notification or completion must never look up a replacement resource by numeric XID.
+
+For all races, the first serialized terminal transition for a given public resource wins. Later notifications may complete internal cleanup but MUST NOT revive the resource, overwrite an already serialized terminal status, or change the identity referenced by an accepted operation.
+
 ## 4. Surface capabilities and swapchain negotiation
 
 Before creating a swapchain, the client needs a queryable contract for whether the selected logical device can present to the Surface, which image formats and presentation modes are supported, and which extent, image-count, and image-usage constraints apply. This query is scoped to the exact pair (Device XID, Surface XID); it must not silently substitute another physical or logical device.
