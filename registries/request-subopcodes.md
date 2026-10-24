@@ -1,6 +1,6 @@
 # XAverius v0.1 request subopcode registry
 
-Status: **40 defined requests assigned; registry remains open for future requests and is not a v0.1 freeze**.
+Status: **47 defined request contracts assigned; subopcodes 41–47 are presentation-profile-only and do not expand the compute-only v0.1 profile**.
 
 This file is the central inventory and numeric assignment for XAverius extension requests. It records only requests already named and described in the current specification chapters. The assignments do not imply that the wire protocol is frozen.
 
@@ -8,7 +8,7 @@ This file is the central inventory and numeric assignment for XAverius extension
 
 - Every listed name denotes one XAverius request opcode unless explicitly noted otherwise.
 - Subopcode values are explicit protocol identifiers; clients and servers MUST use the values in this table and MUST NOT infer values from row order, chapter order, or Vulkan enum values.
-- Value `0` is reserved and MUST NOT identify a request. Values `1` through `40` are assigned below. Existing assignments are stable and MUST NOT be renumbered; future requests use unused values.
+- Value `0` is reserved and MUST NOT identify a request. Values `1` through `40` are the compute-baseline assignments. Values `41` through `47` are assigned only for the future presentation-capable profile. All assignments are stable and MUST NOT be renumbered; future requests use unused values.
 - `Void` means a successful request has no normal reply; request validation errors still use the standard X11 error mechanism.
 - `Reply` means the request returns a normal X11 reply. A reply may carry a status rather than reporting that condition as an X11 error.
 - `Void + async events` means no normal reply; later outcomes are reported through the specified events and synchronization state.
@@ -60,9 +60,16 @@ This file is the central inventory and numeric assignment for XAverius extension
 | `DestroyFence` | 38 | Void | Destroy a non-pending fence. [Synchronization](../spec/synchronization.md), [lifetime](../spec/resource-lifetime.md) |
 | `DestroyResource` | 39 | Void | Generic destroy for Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, and Pipeline; synchronization objects use dedicated destroy requests. [Resource lifetime](../spec/resource-lifetime.md) |
 | `SelectEvents` | 40 | Void | Replace one connection, device, or queue event mask. [Events](../spec/events.md) |
+| `CreateSurface` | 41 | Void | Bind an XAverius Surface to a live core X11 Window owned by this connection. [Presentation](../spec/presentation.md) |
+| `DestroySurface` | 42 | Void | Destroy a Surface when no Swapchain references it. [Presentation](../spec/presentation.md) |
+| `GetSurfaceCapabilities` | 43 | Reply | Query per-device/per-queue-family presentation support and supported Swapchain configuration. [Presentation](../spec/presentation.md) |
+| `CreateSwapchain` | 44 | Reply | Create a Swapchain with an exact image count and supported configuration. [Presentation](../spec/presentation.md) |
+| `DestroySwapchain` | 45 | Void | Retire a Swapchain after blocking references and backend access have drained. [Presentation](../spec/presentation.md) |
+| `AcquireNextImage` | 46 | Reply | Acquire an available Swapchain image with timeout and synchronization signaling. [Presentation](../spec/presentation.md) |
+| `QueuePresent` | 47 | Reply | Accept an acquired image for presentation with explicit binary-semaphore dependencies. [Presentation](../spec/presentation.md) |
 
-## Allocation work still required
+## Allocation policy
 
-The currently defined inventory has explicit assignments 1–40. New request definitions MUST be assigned an unused value; existing values MUST NOT be moved to make room for later requests. The registry is not a frozen v0.1 ABI; additions must still follow the stable, append-only allocation rule.
+The compute-baseline inventory retains explicit assignments 1–40. The presentation-capable profile appends `CreateSurface` through `QueuePresent` at 41–47 without changing any existing value. New request definitions MUST use an unused value; existing values MUST NOT be moved to make room for later requests. The registry is not a frozen v0.1 ABI; additions must follow the stable, append-only allocation rule. A server that advertises only the compute baseline does not thereby advertise support for requests 41–47.
 
 Separate numeric namespaces MUST NOT be conflated with request subopcodes. Registries already defined are [descriptor types](descriptor-types.md), [shader stages](shader-stages.md), [device types](device-types.md), [queue flags](queue-flags.md), and [XAverius error codes](errors.md). Registries already defined include [command-buffer entry IDs](command-entries.md) and [event types plus event-local values](event-types.md). The v0.1 feature-ID and device-extension registries are intentionally empty, and the physical-device property registry is defined. Future assignments remain append-only. Final verification of XGE event framing and extension-opcode lookup remains part of the ABI review. Event types are XGE event types, not request subopcodes.
