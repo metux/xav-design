@@ -14,7 +14,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 10. [Resource lifetime and ownership](resource-lifetime.md)
 11. [Errors and error mapping](errors.md)
 12. [Reference workflow and conformance](conformance.md)
-13. [On-screen presentation in X11 windows](presentation.md) — server-side presentation architecture and provisional request/reply layouts; subopcodes remain unassigned.
+13. [On-screen presentation in X11 windows](presentation.md) — server-side presentation architecture and assigned profile-gated request/reply layouts (subopcodes 41–47).
 14. [Open issues](open-issues.md)
 
 ## Audit records
