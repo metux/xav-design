@@ -380,3 +380,10 @@ CI passed in [run 39972296604](https://github.com/metux/xav-design/actions/runs/
 
 The latest audit found one stale conformance bullet that still used the pre-queue-family `GetSurfaceCapabilities` reply formula. It now includes the 8-byte queue-family records and their exact count/ordering invariant, matching the normative chapter, request-audit matrix, and static checker. The spec index now distinguishes defined provisional wire layouts from unassigned request subopcodes. Request IDs 41–47 remain intentionally unallocated pending final cross-chapter review; command-entry ID 5 is already assigned to the presentation-only copy command and the checker contains presentation-profile assertions.
 
+
+
+## Presentation request subopcode allocation — 2026-10-24
+
+Completed the final static cross-chapter review and allocated the seven presentation requests append-only as subopcodes 41–47, preserving all existing values 1–40. The central request registry and the main per-request audit matrix now include these rows; the separate presentation profile matrix remains as a profile-gating cross-check. The request layouts, request kinds, fixed/formula lengths, error precedence, resource ownership, and reply/event distinctions are cross-checked by the existing static checker. Presentation command-entry ID 5 remains assigned only to the presentation-capable profile; event IDs 7 and 8 remain in the separate presentation event registry and are not part of compute-only v0.1.
+
+This allocation does not claim runtime presentation support or X11/XGE interoperability. The latest CI result for the allocation commit must be checked separately; previous CI passes covered the staged checker and pre-allocation registry state. `master` remains unchanged.
