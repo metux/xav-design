@@ -390,3 +390,16 @@ This allocation does not claim runtime presentation support or X11/XGE interoper
 
 
 Profile dispatch semantics were also made explicit: a server without the presentation-capable profile rejects assigned requests 41–47 with core `BadRequest` before payload parsing or XID resolution. This provides a defined probe path through `GetSurfaceCapabilities` without adding an eighth request. Conformance documentation now describes the 47-request registry and 15 Reply requests (including the four presentation Replies). These edits are committed, but current-head CI still needs confirmation.
+
+
+## Post-allocation consistency audit — 2026-10-24
+
+Manual source-level cross-check after the registry update confirms:
+- The central request registry contains exactly 47 unique assignments, contiguous from 1 through 47; the original compute-baseline values 1–40 are unchanged.
+- The main request audit matrix contains 47 unique rows with matching request names and kinds; every registered request is named in both error guidance and conformance coverage.
+- The four presentation Reply requests are included in the 15-Reply conformance inventory.
+- Presentation event IDs 7 and 8 both specify 64-byte XGE frames with `length = 8`, including the 64-bit token at offset 56.
+- Command-entry ID 5 remains assigned to `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` only for the presentation-capable profile.
+- A compute-only server's behavior for assigned but profile-gated requests is now explicit: core X11 `BadRequest` before request-specific payload parsing or XID resolution.
+
+These are source-level consistency checks performed against the current branch contents, not execution of `tools/check-wire-layout.py` or the Python test suite. The current-head CI result remains unconfirmed: the GitHub status and workflow queries returned no checks/runs for the latest commit. Next: obtain a green CI run, then move to runtime X11/XGE interoperability and presentation-backend tests. `master` remains unchanged.
