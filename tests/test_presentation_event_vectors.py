@@ -104,6 +104,35 @@ class PresentationEventWireTests(unittest.TestCase):
             self.assertEqual(wire[52:56], bytes(4))
             validate_event(wire, order, "IMAGE_RELEASED")
 
+    def test_presentation_payload_fields_match_event_contract(self) -> None:
+        """Check every event-specific field, not only framing and token."""
+        values = {
+            32: (0x01020304, 4),
+            36: (1, 4),
+            40: (2, 4),
+            44: (0x11223344, 4),
+            48: (3, 4),
+            56: (0x0102030405060708, 8),
+        }
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                released = encode_event("IMAGE_RELEASED", order)
+                complete = encode_event(
+                    "PRESENTATION_COMPLETE", order,
+                    status=STATUS["SURFACE_LOST"],
+                )
+                for offset, (value, width) in values.items():
+                    expected = value.to_bytes(width, order)
+                    self.assertEqual(released[offset:offset + width], expected)
+                    self.assertEqual(complete[offset:offset + width], expected)
+                self.assertEqual(released[52:56], bytes(4))
+                self.assertEqual(
+                    complete[52:56],
+                    STATUS["SURFACE_LOST"].to_bytes(4, order),
+                )
+                validate_event(released, order, "IMAGE_RELEASED")
+                validate_event(complete, order, "PRESENTATION_COMPLETE")
+
     def test_invalid_presentation_status_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "invalid presentation status"):
             encode_event("PRESENTATION_COMPLETE", "little", status=5)
