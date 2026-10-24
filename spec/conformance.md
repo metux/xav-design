@@ -366,3 +366,19 @@ Presentation lifecycle race tests MUST also cover the following serialized outco
 - Destroy the Swapchain after an acquired-but-idle image, after accepted presentation work, and while backend access is possible. The first case may succeed once GPU references are drained; the latter cases must reject atomically until all relevant references and accesses are terminal.
 
 These are state-machine conformance tests; golden-wire tests alone cannot establish them.
+
+## `CreateDevice` mixed-failure and atomicity tests
+
+The `CreateDevice` validation order in [the error mapping](errors.md) is normative. Conformance tests MUST exercise at least these mixed-failure pairs and assert that the earlier stage wins:
+
+- Malformed total length plus an invalid or occupied `device_xid` → `BadLength`.
+- A scalar/reserved-field or duplicate-record error plus an invalid or occupied `device_xid` → `BadValue`.
+- Invalid or occupied `device_xid` plus unknown `physical_device_xid` → `BadIDChoice`.
+- Unknown `physical_device_xid` plus missing XGE 1.0 negotiation → `BadValue`.
+- Valid XIDs but missing XGE 1.0 negotiation plus an unsupported queue request or unsupported feature → `BadMatch` from the missing handshake.
+- An unavailable Physical Device plus a well-formed but unsupported queue/feature/extension request → `DEVICE_UNAVAILABLE`.
+- An unknown feature ID plus a registered-but-unsupported feature on the same request → `BadValue` for the unknown ID, because feature IDs are checked in wire-array order after earlier validation stages.
+- A syntactically invalid extension name plus a syntactically valid but unsupported extension → `BadValue` for the invalid name, with extension records checked in wire-array order.
+
+For every rejection, verify that `device_xid` remains unallocated, no logical Device or Queue is published, and no requested feature or extension is partially enabled. A corrected retry using the same target XID must succeed when all conditions are subsequently valid. The v0.1 feature and device-extension registries are empty: every feature ID is therefore currently unknown (`BadValue`), while every syntactically valid extension name is currently unknown (`BadMatch`); tests for registered-but-unsupported entries are forward-compatibility tests against a test registry fixture, not ordinary v0.1 registry data.
+
