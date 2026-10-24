@@ -1,6 +1,6 @@
 # On-screen presentation in X11 windows
 
-Status: **ownership/lifecycle, initial format/mode IDs, provisional request/reply layouts, static checker coverage, and presentation command-entry ID 5 defined; request subopcodes remain unassigned**.
+Status: **ownership/lifecycle, initial format/mode IDs, request/reply layouts, static checker coverage, presentation command-entry ID 5, and request subopcodes 41–47 defined; presentation requests remain profile-gated**.
 
 This chapter extends the compute-oriented v0.1 design toward presentation into ordinary X11 windows. It does not change existing compute request contracts, queue semantics, or resource ownership rules. The initial implementation may remain compute-only; this chapter establishes the direction for a later presentation-capable profile.
 
@@ -38,7 +38,7 @@ The following ownership rules are normative for the presentation-capable profile
 - Destruction of the underlying X11 Window does not implicitly destroy or rebind the Surface XID. It transitions the Surface to SURFACE_LOST; operations that require a usable Surface report that state, and explicit Surface destruction remains available.
 - Client disconnect invalidates the client's Surface and Swapchain XIDs. Internal window/image references remain until queued operations and backend accesses are quiescent; XID reuse must never redirect such references.
 
-For wire-layout planning, the natural initial request shapes are a 16-byte CreateSurface (target Surface XID plus X11 Window XID), a 12-byte DestroySurface, and a 12-byte DestroySwapchain (target resource XID, with Device inferred from the resource). These are provisional layouts, not allocated or frozen requests; the common 8-byte header is included in each total. A later request-layout pass must cross-check these shapes against common error mapping and the central registry before assigning subopcodes.
+For wire-layout history, the initial request shapes are a 16-byte CreateSurface (target Surface XID plus X11 Window XID), a 12-byte DestroySurface, and a 12-byte DestroySwapchain (target resource XID, with Device inferred from the resource). The final layouts include the common 8-byte header and are cross-checked against the common error mapping and central registry.
 
 ### Exact X11 Window identity
 
@@ -308,18 +308,15 @@ The GetSurfaceCapabilities fixed reply is 64 bytes before any variable records, 
 
 The protocol kind is determined by the response behavior, not by the request's own byte length. A reply-bearing request must send exactly one normal reply on success or a documented status outcome; an X11 error replaces that reply and MUST NOT be followed by a normal reply for the same request. Void requests send no normal reply.
 
-The seven requests above remain unassigned in the central registry. The checker and conformance cases cover their current provisional layouts but do not allocate numeric values. The planned append-only assignments after final cross-chapter ABI review are 41–47 in the order listed above, matching the checker’s staged-allocation contract. These are prospective values only: they are not allocated or reserved until the corresponding rows are committed to the central registry. Do not advertise or use them as request subopcodes before that registry update.
+The seven requests above are assigned append-only subopcodes 41–47 in the order listed above. The checker, request-audit matrix, error map, and conformance cases cover their layouts and assignments. These requests remain unavailable to compute-only servers; only a server advertising the presentation-capable profile may accept them.
 
-## 11. Work required before assigning request opcodes
+## 11. Remaining validation work
 
-Before adding presentation requests to the central registry, the design pass must settle and cross-check:
+The request subopcodes and presentation command-entry ID are assigned. Remaining work is implementation-level validation and maintenance of the profile-gated ABI:
 
-1. Complete the cross-chapter audit of Surface/Swapchain ownership, destroy behavior, and exact X11 Window identity tracking; these rules are drafted above.
-2. Validate the provisional capability/query and request/reply layouts in section 10 against the common wire protocol and the request-specific error map.
-3. The image-aware command path is assigned command-entry ID 5 and covered by the static checker. Complete the remaining cross-chapter semantic/conformance review before assigning request subopcodes; the layout is in [command recording](command-recording.md).
-4. Validate acquire timeout/status and semaphore/fence signaling against the existing synchronization state machine.
-5. Validate QueuePresent wait-semaphore behavior and the separate image-release/presentation-completion events.
-6. Finish resize, out-of-date, surface-lost, and device-lost transitions in conformance coverage.
-7. Keep the expanded checker green in CI; allocate presentation request subopcodes only after the remaining semantic and conformance review is complete.
+1. Keep the seven request layouts and error precedence synchronized with the central registry, checker, and golden tests.
+2. Run and retain CI evidence for the full static checker and wire-vector suite after ABI changes.
+3. Test the profile against a real X11/XGE implementation and a Vulkan presentation backend; static checks do not prove runtime interoperability.
+4. Add runtime tests for window resize/loss, acquisition timeout, semaphore consumption, and the distinct image-release/presentation-completion milestones.
 
-No request subopcode is reserved by this chapter. Numeric assignments must be made append-only in [the request subopcode registry](../registries/request-subopcodes.md) after the wire contracts are reviewed.
+The numeric assignments are stable and append-only. A compute-only implementation must continue rejecting presentation-only requests and event-mask bits.
