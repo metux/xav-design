@@ -63,6 +63,16 @@ Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht
 - Doppelte Extension-Namen: `BadValue`.
 - Alle Anforderungen müssen vor der Device-Erzeugung geprüft werden. Bei jedem Fehler bleibt die angeforderte `device_xid` unangelegt; der Server darf Features oder Extensions nicht stillschweigend auslassen.
 
+Für `CreateDevice` gilt folgende Fehlerpräzedenz; sie konkretisiert die allgemeine XID-Regel für diesen Request:
+
+1. Request-Länge und die mit Wire-Daten allein prüfbaren Feldregeln: reservierte Felder, Queue- und Feature-Counts, Queue-Prioritäten, `enabled = 1`, doppelte Queue-Family-/Feature-/Extension-Einträge sowie Extension-Namenssyntax und Namenslänge. Fehler hier ergeben `BadLength` beziehungsweise `BadValue`.
+2. Create-XID `device_xid`: ungültig oder bereits belegt ergibt `BadIDChoice`.
+3. `physical_device_xid`: unbekannt/nicht live ergibt `BadValue`; falscher live Ressourcentyp ergibt `BadMatch`.
+4. Ressourcen-Ownership und die für die Verbindung erforderliche erfolgreiche XGE-`GEQueryVersion)-Aushandlung mindestens Version 1.0. Ein fehlender XGE-Handshake ergibt `BadMatch`; ein Fehler darf die Ziel-XID nicht belegen.
+5. Geräteabhängige Anforderungen: Verfügbarkeit des Physical Device, Queue-Family-/Queue-Anzahl und Unterstützung angeforderter Features/Extensions. Ein nicht verfügbares Gerät ergibt `DEVICE_UNAVAILABLE`; eine nicht unterstützte Queue-Anforderung, ein registriertes aber nicht unterstütztes Feature oder eine formal gültige, aber unbekannte/nicht unterstützte Extension ergibt `BadMatch`.
+
+Alle Feature- und Extension-Records müssen vor der Erstellung geprüft werden. Insbesondere darf ein früherer, geräteabhängiger Fehler nicht dazu führen, dass spätere Wire-Records ungeprüft oder teilweise aktiviert werden. Bei jedem Fehler bleibt `device_xid` unangelegt und es werden keine partiellen Device-/Queue-Objekte veröffentlicht.
+
 ## Request-spezifische Fehlerzuordnung
 
 ### `WriteBuffer`
