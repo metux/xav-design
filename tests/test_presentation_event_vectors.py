@@ -133,9 +133,20 @@ class PresentationEventWireTests(unittest.TestCase):
                 validate_event(released, order, "IMAGE_RELEASED")
                 validate_event(complete, order, "PRESENTATION_COMPLETE")
 
+    def test_all_terminal_statuses_are_encoded_in_both_byte_orders(self) -> None:
+        for order in ("little", "big"):
+            for name, status in STATUS.items():
+                with self.subTest(order=order, status=name):
+                    wire = encode_event("PRESENTATION_COMPLETE", order, status=status)
+                    self.assertEqual(wire[52:56], status.to_bytes(4, order))
+                    validate_event(wire, order, "PRESENTATION_COMPLETE")
+
     def test_invalid_presentation_status_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ValueError, "invalid presentation status"):
-            encode_event("PRESENTATION_COMPLETE", "little", status=5)
+        for order in ("little", "big"):
+            for status in (-1, 5, 0xFFFFFFFF):
+                with self.subTest(order=order, status=status):
+                    with self.assertRaisesRegex(ValueError, "invalid presentation status"):
+                        encode_event("PRESENTATION_COMPLETE", order, status=status)
 
 
 if __name__ == "__main__":
