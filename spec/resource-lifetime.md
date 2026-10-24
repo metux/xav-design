@@ -50,6 +50,7 @@ Interne Referenzen werden getrennt gezählt beziehungsweise nachverfolgt für au
 Explizite Eltern-Kind-Beziehungen:
 
 - X11-Verbindung → Surface (verbindungsgebundene Surface; kein Device-Child)
+- Surface → exakte interne Identität des referenzierten X11 Window (keine Ownership des Window; die Referenz darf nie durch erneute Auflösung der numerischen XID ersetzt werden)
 - Device → alle device-eigenen öffentlichen Ressourcen, einschließlich Swapchains
 - Surface → abhängige Swapchains (Referenzbeziehung; Surface-Zerstörung wird bei live Swapchains abgewiesen)
 - CommandPool → zugehörige Command Buffer
@@ -83,7 +84,7 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 | Fence | XID wird ungültig | Abweisen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
 | Semaphore | XID wird ungültig | Abweisen, solange ein angenommener Queue-Wait/-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Server-Host-Operation die Semaphore verwendet; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
 | Physical Device | Nicht durch Client zerstörbar | Server-Ownership; XID wird nie neu zugewiesen |
-| Surface (presentation profile) | XID wird ungültig; Window-Referenz wird später freigegeben | Zerstörung wird abgewiesen, solange eine live Swapchain darauf verweist; Window-Zerstörung setzt Surface auf `SURFACE_LOST`, bindet sie nie an eine wiederverwendete XID um |
+| Surface (presentation profile) | XID wird bei erfolgreichem `DestroySurface` oder Connection-Teardown ungültig; die interne Window-Identität/Referenz wird erst freigegeben, wenn Surface-, Swapchain- und Backend-Referenzen sicher beendet sind | Zerstörung wird atomar abgewiesen, solange eine live Swapchain darauf verweist; Window-Zerstörung markiert die weiterhin adressierbare Surface als `SURFACE_LOST` und erzeugt weder implizite Surface-Zerstörung noch Rebinding bei XID-Wiederverwendung |
 | Swapchain (presentation profile) | XID wird ungültig; Image-/Backend-Speicher ggf. verzögert freigegeben | Zerstörung wird abgewiesen, solange Recording-Command-Buffer, pending Acquires, angenommene Queue-/Präsentationsarbeit oder mögliche Backend-Zugriffe die Images referenzieren; ein acquired-but-idle Image allein blockiert nicht. Device-Zerstörung invalidiert die XID und verzögert interne Freigabe bis Quieszenz |
 
 Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
