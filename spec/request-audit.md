@@ -135,7 +135,7 @@ The presentation chapter is normative for the presentation-capable profile. Its 
 
 For `GetSurfaceCapabilities`, the reply length field is `8 + 2*format_pair_count + present_mode_count + 2*queue_family_count` four-byte units. The variable counts and all aggregate-size calculations require checked wide arithmetic. `CreateSwapchain` has a 48-byte request but a 40-byte reply; the 40-byte reply consists of the standard 32-byte header plus `status` and `actual_image_count`. `AcquireNextImage` replies with `status`, `image_index`, and a zero reserved word. `QueuePresent` has a variable request and a fixed 36-byte reply.
 
-This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-provisional-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
+This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-requestreply-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
 
 
 
