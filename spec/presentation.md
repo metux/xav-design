@@ -22,7 +22,7 @@ The presentation API is expected to introduce at least these logical objects:
 - **Acquired image** — a swapchain image temporarily owned by the client for rendering or other permitted use.
 - **Presentation operation** — an ordered request to make a rendered swapchain image available for display in the target window.
 
-These are conceptual object categories. The request names and provisional layouts in section 10 are defined. The static checker covers their wire layouts and core error-map invariants, but the current request registry remains unchanged until the remaining semantic/conformance review is complete.
+These are conceptual object categories. The request names and wire layouts in section 10 are defined and assigned subopcodes 41–47 in the central registry. The static checker covers their wire layouts and core error-map invariants; all seven requests remain gated on the presentation-capable profile.
 
 
 ## 2.1 Ownership and destruction contract
@@ -199,9 +199,9 @@ The presentation-capable profile should initially target presentation into ordin
 - a guarantee of a particular display timing, refresh interval, tearing policy, or physical scanout completion point unless explicitly reported by a future capability/extension contract.
 
 
-## 10. Provisional wire layouts
+## 10. Request/reply wire layouts
 
-This section proposes concrete fixed layouts so they can be audited against the common XAverius header and X11 reply framing. The layouts remain provisional until the cross-chapter error and checker pass is complete. All offsets below include the standard 8-byte request header.
+This section defines the fixed and variable layouts for the seven presentation-profile requests against the common XAverius header and X11 reply framing. Their subopcodes 41–47 are assigned append-only in the central registry. These requests remain profile-gated and are not part of the compute-only v0.1 request set. All offsets below include the standard 8-byte request header.
 
 ### CreateSurface — Void, 16 bytes
 
