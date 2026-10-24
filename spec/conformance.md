@@ -367,6 +367,11 @@ Presentation lifecycle race tests MUST also cover the following serialized outco
 
 These are state-machine conformance tests; golden-wire tests alone cannot establish them.
 
+
+- Keep QueuePresent reply status values separate from presentation-event terminal status values: the 36-byte QueuePresent reply uses only SUCCESS=0, OUT_OF_DATE=1, SURFACE_LOST=2, DEVICE_LOST=3; the 64-byte PRESENTATION_COMPLETE event additionally permits PRESENTATION_FAILED=4. A synchronously rejected QueuePresent must not emit either presentation event or reserve its token. Once accepted, later backend failure is reported only through the single terminal event/state transition, never as a delayed X11 error or by rewriting the original SUCCESS reply.
+- Change the Queue mask between image-release eligibility and presentation completion, testing both orders: IMAGE_RELEASED delivery uses the mask sampled at the release milestone, and PRESENTATION_COMPLETE delivery uses the mask sampled at its terminal milestone. Changing a mask after one milestone must not retroactively suppress or create that milestone's event; suppressing delivery must still apply the corresponding internal state transition.
+- At each terminal status (SUCCESS, OUT_OF_DATE, SURFACE_LOST, DEVICE_LOST, PRESENTATION_FAILED), verify the image's internal state and Swapchain usability agree with the status contract. In particular, an invalidated image never emits IMAGE_RELEASED; a safely reusable image is released at most once; late backend callbacks and later lifecycle notifications cannot emit a second terminal event or overwrite the first serialized terminal status.
+
 ## `CreateDevice` mixed-failure and atomicity tests
 
 The `CreateDevice` validation order in [the error mapping](errors.md) is normative. Conformance tests MUST exercise at least these mixed-failure pairs and assert that the earlier stage wins:
