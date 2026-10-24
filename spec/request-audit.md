@@ -135,13 +135,13 @@ The presentation chapter is normative for the presentation-capable profile. Its 
 
 For `GetSurfaceCapabilities`, the reply length field is `8 + 2*format_pair_count + present_mode_count + 2*queue_family_count` four-byte units. The variable counts and all aggregate-size calculations require checked wide arithmetic. `CreateSwapchain` has a 48-byte request but a 40-byte reply; the 40-byte reply consists of the standard 32-byte header plus `status` and `actual_image_count`. `AcquireNextImage` replies with `status`, `image_index`, and a zero reserved word. `QueuePresent` has a variable request and a fixed 36-byte reply.
 
-This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-provisional-wire-layouts) for cross-chapter auditing only; it does not allocate subopcodes or promote these requests into compute-only v0.1.
+This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-provisional-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
 
 
 
 ## Cross-chapter consistency results
 
-- **Request kind:** all 40 inventory kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
+- **Request kind:** all 47 assigned request kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
 - **Reply lengths:** discovery reply formulas and property status values are now explicit; fixed replies use `reply.length = 0` when all data fits in the standard 32-byte reply header. Variable data begins at byte 32 and `reply.length` counts four-byte units after that header.
 - **Descriptor/stage values:** v0.1 supports `STORAGE_BUFFER = 1` only and the XAverius stage bit `COMPUTE = 0x00000001`; examples must not substitute native Vulkan enum names.
 - **Error mapping:** the central error chapter governs XID liveness, live-type mismatch, ownership, Atom validation, Create-XID choice, validation order, and atomic rejection. Request-specific tables define the specialized state and backend failures. The specification-level ABI review is complete for the currently defined reply and XGE layouts. The remaining ABI task is live interoperability testing against an X11/XGE implementation; static checks do not establish runtime interoperability. The feature-ID, device-extension, and physical-device-property registries are defined for v0.1; XGE negotiation and event selection are specified. Timeout behavior and implementation-level backend conformance remain subject to their defining chapters and the open-issues register.
@@ -317,7 +317,7 @@ The event review found that `ASYNC_ERROR.resource_xid` had no explicit rule for 
 
 The central request registry and static wire checker enforce all 47 assignments (1–47), unique request names and numeric values, reserved subopcode 0, and a one-to-one match with the per-request audit matrix; the presentation request layouts remain profile-gated. The golden request-vector tests previously checked encoded bytes and framing but did not compare each fixture's request name and subopcode against the central registry. That meant a stale fixture could remain self-consistent after an assignment drift.
 
-Added a cross-check in `tests/test_wire_vectors.py`: every golden vector must name a registered request, use that request's assigned subopcode, and carry the same value in wire-header byte 4. The test also checks uniqueness and reservation of zero in the parsed registry. This complements rather than duplicates the checker’s full contiguous 1–47 assignment check. Current golden byte coverage remains intentionally limited to `CreateBuffer`, `WriteBuffer`, and `ReadBuffer`; this change does not claim byte-vector coverage for all 40 request layouts.
+Added a cross-check in `tests/test_wire_vectors.py`: every golden vector must name a registered request, use that request's assigned subopcode, and carry the same value in wire-header byte 4. The test also checks uniqueness and reservation of zero in the parsed registry. This complements rather than duplicates the checker’s full contiguous 1–47 assignment check. Current golden byte coverage remains intentionally limited to `CreateBuffer`, `WriteBuffer`, and `ReadBuffer`; this change does not claim byte-vector coverage for all 47 request layouts.
 
 Commit: `1d58cfe`. CI validation pending. `master` remains unchanged.
 
