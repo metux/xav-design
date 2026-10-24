@@ -10,7 +10,7 @@ This file distinguishes unresolved v0.1 validation work from rules that are alre
 
 These points are already specified and are not unresolved v0.1 design questions:
 
-- **Request subopcodes:** the current 40 requests have stable assignments in the [central request subopcode registry](../registries/request-subopcodes.md). New assignments are append-only; existing assignments MUST NOT be renumbered.
+- **Request subopcodes:** the 40 compute-baseline requests retain stable assignments 1–40, and the presentation-capable profile appends requests 41–47 in the [central request subopcode registry](../registries/request-subopcodes.md). New assignments are append-only; existing assignments MUST NOT be renumbered.
 - **Physical-device properties:** the four v0.1 properties and their wire representations are defined in the [property registry](../registries/physical-device-properties.md). Future properties must be registered append-only.
 - **Feature IDs and device extensions:** future assignments must be registered append-only. The v0.1 optional sets are intentionally empty; see [feature IDs](../registries/feature-ids.md) and [device extensions](../registries/device-extensions.md).
 - **Memory properties flags:** `memory_properties_flags` MUST be zero in v0.1 until a registry definition is explicitly assigned; see [memory properties](memory-buffers.md#52-getphysicaldevicememoryproperties).
@@ -22,7 +22,7 @@ These topics do not block the current v0.1 contract:
 
 - **Queue fairness and bounded progress:** v0.1 specifies same-queue submission order, no implicit cross-queue ordering, semaphore dependencies, and no fairness or latency guarantee in [queue submission and ordering](queue-submission.md). Any stronger guarantee is a future-version design question.
 - **X11 resource sharing:** ownership and semantics for future cross-client or cross-device resource-sharing mechanisms remain unspecified. v0.1 does not implicitly provide such sharing; current ownership rules are in [device discovery](devices.md) and [resource lifetime](resource-lifetime.md).
-- **Presentation-capable profile:** server-side presentation into ordinary X11 windows has an architectural chapter in [presentation](presentation.md), but it is not part of the initial compute-only v0.1 request inventory. Surface/swapchain ownership, capability semantics, image acquisition/presentation synchronization, event distinction, resize/loss behavior, provisional request layouts, and static wire/error-map checks are documented. The checker and golden-vector CI are green, but these are not runtime presentation conformance tests. Remaining work is implementation-level backend validation and completion of the semantic review before assigning presentation request subopcodes.
+- **Presentation-capable profile:** server-side presentation into ordinary X11 windows has an architectural chapter in [presentation](presentation.md), but it is not part of the initial compute-only v0.1 request inventory. Surface/swapchain ownership, capability semantics, image acquisition/presentation synchronization, event distinction, resize/loss behavior, provisional request layouts, and static wire/error-map checks are documented. The checker and golden-vector CI are green, but these are not runtime presentation conformance tests. Presentation request subopcodes 41–47 and command-entry ID 5 are assigned and statically checked. Remaining work is implementation-level backend validation and runtime X11/XGE interoperability testing.
 
 ## Closed items
 
