@@ -22,6 +22,12 @@ Die X11-Verbindungsbyteordnung gilt für sämtliche mehrbyteigen Wire-Felder.
 
 Der X-Server weist die Extension-Major-Opcode dynamisch aus dem X11-Erweiterungsbereich 128–255 zu. Clients MUST XAverius mit der standardmäßigen X11-`QueryExtension`-Anfrage entdecken und den zurückgegebenen Major-Opcode verwenden; ein fest codierter XAverius-Major-Opcode ist unzulässig. Derselbe Wert steht im X11-Request-Header `reqType` und im XGE-Feld `extension`. Er ist keine XAverius-Registry-Konstante. Für XAverius v0.1 ist das X11-Request-Header-Feld `data` immer null; die Request-Identität steht ausschließlich im `subopcode`-Feld bei Offset 4. Der `subopcode` ist zentral registriert; Wert `0` ist reserviert. Bereits vergebene Subopcodes sind stabil und dürfen bei späteren Erweiterungen nicht neu vergeben oder verschoben werden. Nicht definierte Requests besitzen keinen impliziten Wert. In einem standardmäßigen X11-Error-Packet wird dieser Wert zero-extended in `minorCode` eingetragen. `majorCode` enthält den Extension-Major-Opcode. Clients dürfen `data` nicht als Subopcode interpretieren.
 
+## Profilgebundene Requests
+
+Die Subopcodes 1–40 bilden das Compute-Baseline-Profil. Die Subopcodes 41–47 sind ausschließlich im presentation-capable Profil definiert. Ein Server, der dieses Profil nicht unterstützt oder für die Verbindung nicht aktiviert hat, MUSS einen Request mit Subopcode 41–47 vor dem request-spezifischen Payload-Parsing mit dem Core-X11-Fehler `BadRequest` zurückweisen. Er darf daraus weder XID-Auflösungen noch Zustandsänderungen oder normale Replies ableiten. Damit kann ein Client die Profilunterstützung durch einen gültig gerahmten `GetSurfaceCapabilities`-Request prüfen; `BadRequest` bedeutet, dass die Präsentations-Requests auf diesem Server nicht verfügbar sind. Ein Server, der das Profil unterstützt, verarbeitet die Requests gemäß ihrer Definition und ihren normalen Fehler-/Reply-Regeln.
+
+Diese Profilgrenze ändert die zentralen Subopcode-Zuweisungen nicht und aktiviert keine Präsentationsunterstützung implizit. Compute-only Server müssen weiterhin Command-Entry-ID 5 sowie Event-Type-IDs 7 und 8 und die zugehörigen Queue-Maskenbits als nicht unterstützt behandeln.
+
 ## Längen, Padding und BIG-REQUESTS
 
 - X11-Request-Längen werden in Einheiten von vier Bytes angegeben.
