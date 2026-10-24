@@ -2,6 +2,7 @@
 """Golden wire checks for the presentation-only XGE events."""
 from __future__ import annotations
 
+import json
 import re
 import struct
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "registries" / "presentation-events.md"
 SPEC = ROOT / "spec" / "events.md"
+FIXTURE = ROOT / "tests" / "presentation-event-vectors.json"
 
 EVENTS = {
     "IMAGE_RELEASED": 7,
@@ -140,6 +142,39 @@ class PresentationEventWireTests(unittest.TestCase):
                     wire = encode_event("PRESENTATION_COMPLETE", order, status=status)
                     self.assertEqual(wire[52:56], status.to_bytes(4, order))
                     validate_event(wire, order, "PRESENTATION_COMPLETE")
+
+    def test_committed_golden_vectors_match_every_payload_field(self) -> None:
+        fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(fixture.get("schema_version"), 1)
+        vectors = fixture["vectors"]
+        self.assertEqual(len(vectors), 4)
+        self.assertEqual({v["byte_order"] for v in vectors}, {"little", "big"})
+        self.assertEqual({v["event"] for v in vectors}, set(EVENTS))
+        seen = set()
+        for vector in vectors:
+            with self.subTest(vector=vector["name"]):
+                self.assertNotIn(vector["name"], seen)
+                seen.add(vector["name"])
+                wire = bytes.fromhex(vector["wire_hex"])
+                order = vector["byte_order"]
+                endian = "<" if order == "little" else ">"
+                fields = vector["fields"]
+                validate_event(wire, order, vector["event"])
+                self.assertEqual(len(wire), vector["total_bytes"])
+                self.assertEqual(wire[1], vector["extension_opcode"])
+                self.assertEqual(struct.unpack_from(endian + "H", wire, 2)[0], vector["sequence"])
+                self.assertEqual(struct.unpack_from(endian + "I", wire, 4)[0], vector["length"])
+                self.assertEqual(struct.unpack_from(endian + "H", wire, 8)[0], vector["event_id"])
+                self.assertEqual(vector["event_id"], EVENTS[vector["event"]])
+                for field, offset in (("device_xid",32),("queue_family_index",36),("queue_index",40),("swapchain_xid",44),("image_index",48)):
+                    self.assertEqual(struct.unpack_from(endian + "I", wire, offset)[0], fields[field])
+                payload_word = struct.unpack_from(endian + "I", wire, 52)[0]
+                if vector["event"] == "IMAGE_RELEASED":
+                    self.assertEqual(payload_word, fields["reserved"])
+                else:
+                    self.assertEqual(payload_word, fields["status"])
+                token = int(fields["presentation_token_hex"], 16)
+                self.assertEqual(struct.unpack_from(endian + "Q", wire, 56)[0], token)
 
     def test_invalid_presentation_status_is_rejected(self) -> None:
         for order in ("little", "big"):
