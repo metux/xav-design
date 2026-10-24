@@ -2025,11 +2025,11 @@ def check_presentation_profile(c: Check) -> None:
     expected_headings = (
         "### CreateSurface — Void, 16 bytes",
         "### DestroySurface — Void, 12 bytes",
-        "### GetSurfaceCapabilities — Reply, 16 bytes",
-        "### CreateSwapchain — Reply, 48 bytes",
+        "### GetSurfaceCapabilities — Request 16 bytes; variable-length Reply",
+        "### CreateSwapchain — Request 48 bytes; Reply 40 bytes",
         "### DestroySwapchain — Void, 12 bytes",
-        "### AcquireNextImage — Reply, 32 bytes",
-        "### QueuePresent — Reply, variable length",
+        "### AcquireNextImage — Request 32 bytes; Reply 44 bytes",
+        "### QueuePresent — Request variable length; Reply 36 bytes",
     )
     for heading in expected_headings:
         c.require(heading in presentation,
@@ -2183,7 +2183,7 @@ def check_presentation_profile(c: Check) -> None:
     c.require("For all seven requests, validation is atomic" in errors,
               "presentation request error map: all seven requests must share atomic failure semantics")
 
-    c.require("For `QueuePresent`, check image state first; if it is `ACQUIRED`, validate wait semaphores in array order." in errors and
+    c.require("For `QueuePresent`, after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, reject reuse of a token from an earlier accepted presentation with `BadValue`; then check image state, and if it is `ACQUIRED`, validate wait semaphores in array order." in errors and
               "For each wait, `UNTRUSTED` yields `DEPENDENCY_FAILED`" in errors,
               "QueuePresent: image-state and wait-semaphore error precedence must be deterministic")
 
@@ -2199,7 +2199,7 @@ def check_presentation_profile(c: Check) -> None:
         "A zero token is always `BadValue`.",
         "Do not test whether a nonzero presentation token was previously accepted at this stage",
         "after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, reject reuse of a token",
-        "Device loss/destruction, then surface loss, then out-of-date",
+        "For a new `AcquireNextImage` evaluation, after the preceding validation stages, `DEVICE_LOST` takes precedence over `SURFACE_LOST`, which takes precedence over `OUT_OF_DATE`;",
     )
     for contract in precedence_contracts:
         c.require(contract in errors,
