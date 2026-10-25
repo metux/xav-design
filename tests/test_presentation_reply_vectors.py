@@ -96,9 +96,19 @@ def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
             if u32(wire, 12, order) not in (0, 1):
                 raise ValueError("invalid present_supported value")
             start = 64 + 8 * formats + 4 * modes
+            family_indices = []
+            family_support = []
             for off in range(start, len(wire), 8):
-                if u32(wire, off + 4, order) not in (0, 1):
+                family_index = u32(wire, off, order)
+                supported = u32(wire, off + 4, order)
+                if supported not in (0, 1):
                     raise ValueError("invalid queue-family present_supported value")
+                family_indices.append(family_index)
+                family_support.append(supported)
+            if family_indices != sorted(set(family_indices)):
+                raise ValueError("queue-family indices are not strictly ascending and unique")
+            if u32(wire, 12, order) != int(any(family_support)):
+                raise ValueError("aggregate present_supported does not match queue-family records")
     else:
         size, words, statuses = {
             "create_swapchain": (40, 2, 6),
@@ -240,6 +250,9 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 48, "I", 99, "capabilities record counts do not match reply length"),
                 ("capabilities", 12, "I", 7, "invalid present_supported value"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
+                ("capabilities", 12, "I", 0, "aggregate present_supported does not match queue-family records"),
+                ("capabilities", 76, "I", 1, "queue-family indices are not strictly ascending and unique"),
+                ("capabilities", 84, "I", 0, "queue-family indices are not strictly ascending and unique"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
                 ("create_swapchain", 32, "I", 6, "invalid presentation status"),
                 ("create_swapchain", 36, "I", 1, "failed CreateSwapchain has nonzero image count"),
