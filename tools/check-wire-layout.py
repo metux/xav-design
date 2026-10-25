@@ -2317,6 +2317,59 @@ def check_presentation_profile(c: Check) -> None:
     c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
               "compute-only event registry must remain unchanged by presentation event assignments")
 
+    # The lifecycle race catalogue is normative conformance coverage, not a
+    # claim that a server/runtime test harness already exists. Keep its race
+    # classes and the test oracle synchronized with the presentation rules.
+    lifecycle_vectors = (
+        "**Acquire timeout versus lifecycle:**",
+        "**DestroyDevice versus pending acquire:**",
+        "**DestroySurface versus CreateSwapchain:**",
+        "**DestroyDevice versus CreateSwapchain:**",
+        "**Resize/window destruction versus CreateSwapchain preparation:**",
+        "**QueuePresent rejection versus accepted state:**",
+        "**Accepted presentation versus resize/Surface loss/Device loss:**",
+        "**DestroySwapchain versus pending references:**",
+        "**Semaphore uncertainty after accepted presentation failure:**",
+    )
+    for vector in lifecycle_vectors:
+        c.require(vector in conformance,
+                  f"presentation lifecycle conformance: missing race vector {vector}")
+    c.require(
+        "A test controls the serialization order explicitly; wall-clock timing alone is not a valid oracle." in conformance,
+        "presentation lifecycle conformance: race ordering must be controlled, not inferred from wall-clock timing",
+    )
+    c.require(
+        "Every vector must assert both externally observable result" in conformance and
+        "public XID visibility, image state, token reservation, semaphore state, pending-reference count" in conformance,
+        "presentation lifecycle conformance: every race needs external and internal state assertions",
+    )
+    c.require(
+        "Include at least one case per vector with presentation event masks disabled" in conformance and
+        "both byte orders for wire parsing" in conformance,
+        "presentation lifecycle conformance: masked-event and both-endian coverage must be explicit",
+    )
+    lifecycle_normative_contracts = (
+        "first terminal result serialized by the server wins",
+        "terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`",
+        "a live Swapchain reference causes DestroySurface to fail atomically",
+        "DestroySwapchain",
+        "UNTRUSTED",
+        "pending acquire registration",
+    )
+    for contract in lifecycle_normative_contracts:
+        c.require(contract in presentation or contract in lifetime,
+                  f"presentation lifecycle: normative lifecycle contract missing: {contract}")
+    c.require(
+        "IMAGE_RELEASED is permitted only when backend access has ended" in conformance and
+        "otherwise the image is invalidated and no release event is emitted" in conformance,
+        "presentation lifecycle conformance: image release must be gated on backend quiescence and reusability",
+    )
+    c.require(
+        "It must never silently reset a semaphore to `UNSIGNALED`" in presentation and
+        "marks that binary semaphore `UNTRUSTED`" in presentation,
+        "presentation lifecycle: uncertain semaphore consumption must not be guessed or silently reset",
+    )
+
 def main() -> int:
     c = Check()
     check_events(c)
