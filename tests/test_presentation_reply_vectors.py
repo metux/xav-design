@@ -68,6 +68,57 @@ def u32(wire: bytes, offset: int, order: str) -> int:
     return int.from_bytes(wire[offset:offset + 4], order)
 
 
+def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
+    if order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if kind not in ("capabilities", "create_swapchain", "acquire", "queue_present"):
+        raise ValueError("unknown presentation reply kind")
+    if len(wire) < 32 or len(wire) % 4 or wire[0] != 1 or wire[1] != 0:
+        raise ValueError("invalid X11 reply framing")
+    endian = "<" if order == "little" else ">"
+    declared = struct.unpack_from(endian + "I", wire, 4)[0]
+    if 32 + 4 * declared != len(wire):
+        raise ValueError("reply length does not match packet size")
+    if kind == "capabilities":
+        if len(wire) < 64:
+            raise ValueError("capabilities reply shorter than fixed fields")
+        status = u32(wire, 8, order)
+        if status not in range(4):
+            raise ValueError("invalid capabilities status")
+        if status:
+            if len(wire) != 64 or declared != 8 or any(wire[12:64]):
+                raise ValueError("invalid capabilities failure payload")
+        else:
+            formats, modes, families = (u32(wire, off, order) for off in (48, 52, 60))
+            expected = 64 + 8 * formats + 4 * modes + 8 * families
+            if len(wire) != expected or declared != 8 + 2 * formats + modes + 2 * families:
+                raise ValueError("capabilities record counts do not match reply length")
+            if u32(wire, 12, order) not in (0, 1):
+                raise ValueError("invalid present_supported value")
+            start = 64 + 8 * formats + 4 * modes
+            for off in range(start, len(wire), 8):
+                if u32(wire, off + 4, order) not in (0, 1):
+                    raise ValueError("invalid queue-family present_supported value")
+    else:
+        size, words, statuses = {
+            "create_swapchain": (40, 2, 6),
+            "acquire": (44, 3, 7),
+            "queue_present": (36, 1, 4),
+        }[kind]
+        if len(wire) != size or declared != words:
+            raise ValueError("invalid fixed presentation reply size")
+        status = u32(wire, 32, order)
+        if status not in range(statuses):
+            raise ValueError("invalid presentation status")
+        if kind == "create_swapchain" and status and u32(wire, 36, order):
+            raise ValueError("failed CreateSwapchain has nonzero image count")
+        if kind == "acquire":
+            if u32(wire, 40, order):
+                raise ValueError("AcquireNextImage reserved word is nonzero")
+            if status and u32(wire, 36, order):
+                raise ValueError("failed AcquireNextImage has nonzero image index")
+
+
 class PresentationReplyWireTests(unittest.TestCase):
     def test_capabilities_reply_formula_and_queue_family_records(self) -> None:
         for order in ("little", "big"):
