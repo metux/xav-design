@@ -237,6 +237,7 @@ class PresentationReplyWireTests(unittest.TestCase):
             cases = (
                 ("capabilities", 4, "I", 99, "reply length does not match packet size"),
                 ("capabilities", 8, "I", 9, "invalid capabilities status"),
+                ("capabilities", 48, "I", 99, "capabilities record counts do not match reply length"),
                 ("capabilities", 12, "I", 7, "invalid present_supported value"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
