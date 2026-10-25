@@ -2345,13 +2345,13 @@ def check_presentation_profile(c: Check) -> None:
     )
     c.require(
         "Include at least one case per vector with presentation event masks disabled" in conformance and
-        "both byte orders for wire parsing" in conformance,
+        "Run the vectors in both request byte orders wherever wire parsing is involved." in conformance,
         "presentation lifecycle conformance: masked-event and both-endian coverage must be explicit",
     )
     lifecycle_normative_contracts = (
         "first terminal result serialized by the server wins",
         "terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`",
-        "a live Swapchain reference causes DestroySurface to fail atomically",
+        "A Surface must not be destroyed while a live Swapchain references it. The destroy request is rejected atomically; the Surface remains live.",
         "DestroySwapchain",
         "UNTRUSTED",
         "pending acquire registration",
