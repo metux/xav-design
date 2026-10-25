@@ -2098,6 +2098,11 @@ def check_presentation_profile(c: Check) -> None:
               "format/color-space pair and present mode must be reported" in presentation and
               "`present_supported` is 1 if and only if at least one queue-family record" in presentation,
               "CreateSwapchain/GetSurfaceCapabilities: capability validation and failure reply fields must be explicit")
+    presentation_reply_tests = read("tests/test_presentation_reply_vectors.py")
+    c.require("family_indices != list(range(families))" in presentation_reply_tests and
+              "aggregate present_supported does not match queue-family records" in presentation_reply_tests,
+              "presentation reply tests must check complete family ordering and aggregate support")
+
     for contract in (
         "total reply size is 40 bytes and `reply.length = 2`",
         "total reply size is 44 bytes and `reply.length = 3`",
