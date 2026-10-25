@@ -79,7 +79,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("IMAGE_RELEASED is permitted only when backend access has ended", accepted)
         self.assertIn("image remains reusable in a usable Swapchain", accepted)
         self.assertIn("otherwise the image is invalidated and no release event is emitted", accepted)
-        self.assertIn("backend accesses are quiescent", self.lifetime)
+        self.assertIn("PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence", self.lifetime)
 
 
 if __name__ == "__main__":
