@@ -127,5 +127,45 @@ class PresentationReplyWireTests(unittest.TestCase):
                     self.assertEqual(u32(wire, 32, order), status)
 
 
+    def test_all_documented_presentation_reply_statuses_have_valid_wire_shapes(self) -> None:
+        # Status values are separate per-reply namespaces. Exercise every
+        # normative value, not only representative failure codes.
+        cases = (
+            ("capabilities", range(4), 64, 8),
+            ("create_swapchain", range(6), 40, 2),
+            ("acquire", range(7), 44, 3),
+            ("queue_present", range(4), 36, 1),
+        )
+        for order in ("little", "big"):
+            for kind, statuses, total, reply_words in cases:
+                for status in statuses:
+                    with self.subTest(order=order, kind=kind, status=status):
+                        if kind == "capabilities":
+                            wire = encode_capabilities(order, status=status)
+                            # Capabilities status 0 has variable records; the
+                            # failure statuses must carry only the zeroed base.
+                            if status == 0:
+                                self.assertEqual(len(wire), 92)
+                            else:
+                                self.assertEqual(len(wire), total)
+                                self.assertEqual(wire[12:64], bytes(52))
+                        elif kind == "create_swapchain":
+                            wire = encode_create_swapchain_reply(
+                                order, status, 2 if status == 0 else 0
+                            )
+                            self.assertEqual(len(wire), total)
+                            self.assertEqual(u32(wire, 36, order), 2 if status == 0 else 0)
+                        elif kind == "acquire":
+                            wire = encode_acquire_reply(order, status, 1 if status == 0 else 0)
+                            self.assertEqual(len(wire), total)
+                            self.assertEqual(u32(wire, 36, order), 1 if status == 0 else 0)
+                            self.assertEqual(u32(wire, 40, order), 0)
+                        else:
+                            wire = encode_queue_present_reply(order, status)
+                            self.assertEqual(len(wire), total)
+                        self.assertEqual(u32(wire, 4, order), reply_words)
+                        self.assertEqual(32 + 4 * u32(wire, 4, order), len(wire))
+
+
 if __name__ == "__main__":
     unittest.main()
