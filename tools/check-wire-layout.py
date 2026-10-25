@@ -2101,6 +2101,7 @@ def check_presentation_profile(c: Check) -> None:
     presentation_reply_tests = read("tests/test_presentation_reply_vectors.py")
     c.require("family_indices != list(range(families))" in presentation_reply_tests and
               "aggregate present_supported does not match queue-family records" in presentation_reply_tests,
+              "successful capabilities reply has zero current extent" in presentation_reply_tests,
               "presentation reply tests must check complete family ordering and aggregate support")
 
     for contract in (
