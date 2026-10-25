@@ -148,22 +148,26 @@ class PresentationReplyWireTests(unittest.TestCase):
                                 self.assertEqual(len(wire), 92)
                             else:
                                 self.assertEqual(len(wire), total)
+                                self.assertEqual(u32(wire, 8, order), status)
                                 self.assertEqual(wire[12:64], bytes(52))
                         elif kind == "create_swapchain":
                             wire = encode_create_swapchain_reply(
                                 order, status, 2 if status == 0 else 0
                             )
                             self.assertEqual(len(wire), total)
+                            self.assertEqual(u32(wire, 32, order), status)
                             self.assertEqual(u32(wire, 36, order), 2 if status == 0 else 0)
                         elif kind == "acquire":
                             wire = encode_acquire_reply(order, status, 1 if status == 0 else 0)
                             self.assertEqual(len(wire), total)
+                            self.assertEqual(u32(wire, 32, order), status)
                             self.assertEqual(u32(wire, 36, order), 1 if status == 0 else 0)
                             self.assertEqual(u32(wire, 40, order), 0)
                         else:
                             wire = encode_queue_present_reply(order, status)
                             self.assertEqual(len(wire), total)
-                        self.assertEqual(u32(wire, 4, order), reply_words)
+                        expected_words = 15 if kind == "capabilities" and status == 0 else reply_words
+                        self.assertEqual(u32(wire, 4, order), expected_words)
                         self.assertEqual(32 + 4 * u32(wire, 4, order), len(wire))
 
 
