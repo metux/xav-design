@@ -11,8 +11,12 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
 - `presentation-event-vectors.json` and `test_presentation_event_vectors.py`
   cover profile-gated `IMAGE_RELEASED` and `PRESENTATION_COMPLETE` frames in
   both byte orders, including all payload fields, the 64-bit token, reserved
-  fields, the 64-byte total size, and XGE `length = 8`. These tests do not
-  imply that the presentation-capable profile is implemented by a live server.
+  fields, the 64-byte total size, and XGE `length = 8`. Negative raw-wire
+  cases also reject malformed XGE lengths, mismatched event IDs, nonzero
+  reserved header/payload fields, invalid serialized completion statuses,
+  zero presentation tokens, and unsupported byte-order arguments. These tests
+  do not imply that the presentation-capable profile is implemented by a live
+  server.
 - `select-events-vectors.json` covers `SelectEvents` for connection, device and
   queue scopes in both byte orders. Its tests compare field offsets, scope IDs,
   scope-specific masks and the subopcode against the normative chapters/registry.
