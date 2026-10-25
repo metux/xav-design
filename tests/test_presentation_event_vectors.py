@@ -46,6 +46,10 @@ def encode_event(name: str, byte_order: str, *, status: int = 0) -> bytes:
 
 
 def validate_event(wire: bytes, byte_order: str, name: str) -> None:
+    if byte_order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if name not in EVENTS:
+        raise ValueError("unknown presentation event")
     if len(wire) != 64:
         raise ValueError("presentation event must be 64 bytes")
     if len(wire) % 4:
