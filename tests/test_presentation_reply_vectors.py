@@ -237,7 +237,7 @@ class PresentationReplyWireTests(unittest.TestCase):
             cases = (
                 ("capabilities", 4, "I", 99, "reply length does not match packet size"),
                 ("capabilities", 8, "I", 9, "invalid capabilities status"),
-                ("capabilities", 12, "I", 7, "invalid capabilities failure payload"),
+                ("capabilities", 12, "I", 7, "invalid present_supported value"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
                 ("create_swapchain", 32, "I", 6, "invalid presentation status"),
@@ -253,6 +253,14 @@ class PresentationReplyWireTests(unittest.TestCase):
                     struct.pack_into(endian + fmt, wire, offset, value)
                     with self.assertRaisesRegex(ValueError, message):
                         validate_presentation_reply(kind, bytes(wire), order)
+
+    def test_capability_failure_rejects_nonzero_payload(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                wire = bytearray(encode_capabilities(order, status=1))
+                struct.pack_into("<I" if order == "little" else ">I", wire, 12, 1)
+                with self.assertRaisesRegex(ValueError, "invalid capabilities failure payload"):
+                    validate_presentation_reply("capabilities", bytes(wire), order)
 
     def test_reply_validator_rejects_unknown_kind_and_byte_order(self) -> None:
         wire = encode_queue_present_reply("little", 0)
