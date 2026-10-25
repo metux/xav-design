@@ -222,5 +222,45 @@ class PresentationReplyWireTests(unittest.TestCase):
                         self.assertEqual(32 + 4 * u32(wire, 4, order), len(wire))
 
 
+    def test_malformed_reply_wire_bytes_are_rejected(self) -> None:
+        for order in ("little", "big"):
+            endian = "<" if order == "little" else ">"
+            valid = {
+                "capabilities": encode_capabilities(order),
+                "create_swapchain": encode_create_swapchain_reply(order, 0, 3),
+                "acquire": encode_acquire_reply(order, 0, 2),
+                "queue_present": encode_queue_present_reply(order, 0),
+            }
+            for kind, wire in valid.items():
+                with self.subTest(order=order, kind=kind):
+                    validate_presentation_reply(kind, wire, order)
+            cases = (
+                ("capabilities", 4, "I", 99, "reply length does not match packet size"),
+                ("capabilities", 8, "I", 9, "invalid capabilities status"),
+                ("capabilities", 12, "I", 7, "invalid capabilities failure payload"),
+                ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
+                ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
+                ("create_swapchain", 32, "I", 6, "invalid presentation status"),
+                ("create_swapchain", 36, "I", 1, "failed CreateSwapchain has nonzero image count"),
+                ("acquire", 32, "I", 7, "invalid presentation status"),
+                ("acquire", 36, "I", 1, "failed AcquireNextImage has nonzero image index"),
+                ("acquire", 40, "I", 1, "AcquireNextImage reserved word is nonzero"),
+                ("queue_present", 32, "I", 4, "invalid presentation status"),
+            )
+            for kind, offset, fmt, value, message in cases:
+                with self.subTest(order=order, kind=kind, offset=offset):
+                    wire = bytearray(valid[kind])
+                    struct.pack_into(endian + fmt, wire, offset, value)
+                    with self.assertRaisesRegex(ValueError, message):
+                        validate_presentation_reply(kind, bytes(wire), order)
+
+    def test_reply_validator_rejects_unknown_kind_and_byte_order(self) -> None:
+        wire = encode_queue_present_reply("little", 0)
+        with self.assertRaisesRegex(ValueError, "unknown byte order"):
+            validate_presentation_reply("queue_present", wire, "middle")
+        with self.assertRaisesRegex(ValueError, "unknown presentation reply kind"):
+            validate_presentation_reply("future_reply", wire, "little")
+
+
 if __name__ == "__main__":
     unittest.main()
