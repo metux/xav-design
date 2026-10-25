@@ -95,6 +95,8 @@ def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
                 raise ValueError("capabilities record counts do not match reply length")
             if u32(wire, 12, order) not in (0, 1):
                 raise ValueError("invalid present_supported value")
+            if u32(wire, 16, order) == 0 or u32(wire, 20, order) == 0:
+                raise ValueError("successful capabilities reply has zero current extent")
             start = 64 + 8 * formats + 4 * modes
             family_indices = []
             family_support = []
@@ -249,6 +251,7 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 8, "I", 9, "invalid capabilities status"),
                 ("capabilities", 48, "I", 99, "capabilities record counts do not match reply length"),
                 ("capabilities", 12, "I", 7, "invalid present_supported value"),
+                ("capabilities", 16, "I", 0, "successful capabilities reply has zero current extent"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("capabilities", 12, "I", 0, "aggregate present_supported does not match queue-family records"),
                 ("capabilities", 76, "I", 1, "queue-family indices must cover every family in ascending order"),
