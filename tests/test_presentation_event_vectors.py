@@ -184,5 +184,38 @@ class PresentationEventWireTests(unittest.TestCase):
                         encode_event("PRESENTATION_COMPLETE", order, status=status)
 
 
+    def test_malformed_serialized_events_are_rejected(self) -> None:
+        """Reject invalid wire bytes, not just invalid encoder arguments."""
+        for order in ("little", "big"):
+            endian = "<" if order == "little" else ">"
+            cases = (
+                ("xge_length", "PRESENTATION_COMPLETE", 4, "I", 7,
+                 "XGE length must be 8"),
+                ("wrong_event_type", "PRESENTATION_COMPLETE", 8, "H", 7,
+                 "event type ID mismatch"),
+                ("nonzero_header_reserved", "PRESENTATION_COMPLETE", 10, "H", 1,
+                 "XGE reserved header bytes must be zero"),
+                ("invalid_completion_status", "PRESENTATION_COMPLETE", 52, "I", 5,
+                 "invalid event status or reserved field"),
+                ("nonzero_release_reserved", "IMAGE_RELEASED", 52, "I", 1,
+                 "invalid event status or reserved field"),
+                ("zero_presentation_token", "PRESENTATION_COMPLETE", 56, "Q", 0,
+                 "presentation token must be nonzero"),
+            )
+            for label, name, offset, fmt, value, message in cases:
+                with self.subTest(order=order, case=label):
+                    wire = bytearray(encode_event(
+                        name, order, status=STATUS["SUCCESS"]
+                    ))
+                    struct.pack_into(endian + fmt, wire, offset, value)
+                    with self.assertRaisesRegex(ValueError, message):
+                        validate_event(bytes(wire), order, name)
+
+    def test_validator_rejects_unknown_byte_order(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unknown byte order"):
+            validate_event(encode_event("IMAGE_RELEASED", "little"),
+                           "middle", "IMAGE_RELEASED")
+
+
 if __name__ == "__main__":
     unittest.main()
