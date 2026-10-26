@@ -158,16 +158,16 @@ class SelectEventsErrorPrecedenceTests(unittest.TestCase):
         self.assertIsNotNone(section)
         body = section.group(1)
         required = (
-            "Falsche Request-Länge: `BadLength`.",
-            "Erfolgreicher `GEQueryVersion`-Austausch mindestens mit XGE 1.0 fehlt: `BadMatch`.",
-            "Unbekannter Scope, nicht-null Flags/reservierte Felder, ungültige Maskenbits oder nicht-null Felder außerhalb des ausgewählten Scopes: `BadValue`.",
-            "Unbekannte/nicht-live Device-XID oder ungültiger Queue-Family-/Queue-Index: `BadValue`; falscher live Ressourcentyp oder fremde Client-Ownership: `BadMatch`.",
-            "Ein Fehler muss die bisherige Event-Auswahl unverändert lassen; eine erfolgreiche Anfrage ersetzt atomar nur die Auswahl für den angegebenen Scope.",
+            "An incorrect request length results in `BadLength`.",
+            "If the client has not successfully negotiated at least XGE 1.0 with `GEQueryVersion`, the request results in `BadMatch`.",
+            "An unknown scope, nonzero flags/reserved fields, invalid mask bits, or nonzero fields outside the selected scope results in `BadValue`.",
+            "An unknown or non-live Device XID, or an invalid queue-family/queue index, results in `BadValue`; a live resource of the wrong type or foreign client ownership results in `BadMatch`.",
+            "An error leaves the previous event selection unchanged; a successful request atomically replaces only the selection for the specified scope.",
         )
         for phrase in required:
             self.assertIn(phrase, body)
-        self.assertIn("Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`.", events)
-        self.assertIn("Bei jedem Fehler bleibt die vorherige Auswahl unverändert.", events)
+        self.assertIn("A nonexistent queue within a valid device results in `BadValue`.", events)
+        self.assertIn("On any error, the previous selection remains unchanged.", events)
         self.assertIn("Eine live Ressource, die einem anderen Client gehört", errors)
         self.assertIn("Ownership", lifetime)
 
