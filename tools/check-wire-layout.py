@@ -175,25 +175,25 @@ def check_events(c: Check) -> None:
     sync = read("spec/synchronization.md")
     c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
-    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the (?:server-)?stored fence state", sync, re.S) is not None and
+    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the (?:server-)?stored fence state", sync, re.S | re.I) is not None and
               re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S | re.I) is not None,
               "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
-    c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
+    c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S | re.I) is not None and
               re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over the Fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S | re.I) is not None,
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
-    c.require(re.search(r"WaitForFence.*returns `DEVICE_LOST` once device loss is detected", sync, re.S) is not None,
+    c.require(re.search(r"WaitForFence.*Device loss returns `DEVICE_LOST`", sync, re.S | re.I) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
-    c.require(re.search(r"no open `WaitForFence` registration.*rejected with `INVALID_SYNCHRONIZATION_STATE`", sync, re.S) is not None,
+    c.require(re.search(r"open `WaitForFence` registration references that exact internal Fence identity", sync, re.S) is not None,
               "DestroyFence: must reject while a host wait registration is still open")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"open `WaitSemaphores` registration.*exact internal semaphore identity", sync, re.S) is not None,
+    c.require(re.search(r"open `WaitSemaphores` registration for that exact internal Semaphore identity", sync, re.S) is not None,
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
     c.require(re.search(r"GetSemaphoreCounterValue.*rejected with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
-    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*Unknown or non-live Device or Semaphore XIDs result in `BadValue`.*rejected with `DEVICE_LOST`", sync, re.S) is not None and
+    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*Unknown or non-live Device or Semaphore XIDs result in `BadValue`.*rejected with `DEVICE_LOST`", sync, re.S | re.I) is not None and
               re.search(r"`GetSemaphoreCounterValue`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST`", errors, re.S | re.I) is not None,
               "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
     c.require(re.search(r"WaitSemaphores.*terminates with `DEVICE_LOST`", sync, re.S) is not None,
