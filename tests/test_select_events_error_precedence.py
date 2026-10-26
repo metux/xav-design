@@ -168,7 +168,7 @@ class SelectEventsErrorPrecedenceTests(unittest.TestCase):
             self.assertIn(phrase, body)
         self.assertIn("A nonexistent queue within a valid device results in `BadValue`.", events)
         self.assertIn("On any error, the previous selection remains unchanged.", events)
-        self.assertIn("Eine live Ressource, die einem anderen Client gehört", errors)
+        self.assertIn("A live resource owned by another client", errors)
         self.assertIn("Ownership", lifetime)
 
 
