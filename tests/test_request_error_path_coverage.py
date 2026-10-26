@@ -57,7 +57,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
     def test_fence_destroy_boundary_is_serialized_wait_result(self):
         self.assertIn("terminal result has been serialized", self.conformance)
         self.assertIn("an unsent reply alone does not keep destruction blocked", self.conformance)
-        self.assertIn("open `WaitForFence` registration", self.errors)
+        self.assertIn("offene `WaitForFence`-Registrierung", self.errors)
 
 
 if __name__ == "__main__":
