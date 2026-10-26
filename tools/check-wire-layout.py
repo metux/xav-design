@@ -1778,7 +1778,7 @@ def check_xge_abi(c: Check) -> None:
         c.require(bool(body), f"{name}: missing event ABI section")
         if not body:
             continue
-        declaration = re.search(r"(?:Total length:\s*(\d+)\s*bytes|Gesamtlänge:\s*(\d+)\s*Bytes);\s*XGE.*length\s*=\s*(\d+)", body)
+        declaration = re.search(r"(?:Total length|Gesamtlänge):\s*(\d+)\s*(?:bytes|Bytes);\s*XGE.*length\s*=\s*(\d+)", body)
         c.require(bool(declaration), f"{name}: missing total/XGE length declaration")
         if declaration:
             actual_total, actual_length = map(int, declaration.groups())
