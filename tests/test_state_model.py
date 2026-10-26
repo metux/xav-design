@@ -320,6 +320,51 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         state = self.state(device_lost=True, types_and_ownership_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
 
+    def test_timeline_wait_may_target_value_not_yet_reached(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
+            signal_counters=[3, 0],
+        )
+        result = queue_submit(
+            state, SubmitRequest(token=10, wait_indices=(0,), wait_values=(9,))
+        )
+        self.assertEqual(result, "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [(10, 0, 9)])
+        self.assertEqual(state.wait_states[0], WaitState.READY)
+
+    def test_concurrent_timeline_waits_can_share_same_future_target(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE),
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE),
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
+            signal_counters=[2, 0],
+        )
+        first = queue_submit(
+            state, SubmitRequest(token=11, command_buffer_indices=(0,),
+                                 wait_indices=(0,), wait_values=(8,))
+        )
+        second = queue_submit(
+            state, SubmitRequest(token=12, command_buffer_indices=(1,),
+                                 wait_indices=(0,), wait_values=(8,))
+        )
+        self.assertEqual((first, second), ("SUCCESS", "SUCCESS"))
+        self.assertEqual(
+            state.pending_timeline_waits, [(11, 0, 8), (12, 0, 8)]
+        )
+
+    def test_later_timeline_signal_must_exceed_existing_reservation(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_slots=[None, 12],
+            signal_counters=[0, 0],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(1,), signal_values=(11,)),
+            "BadValue",
+        )
+
     def test_binary_semaphore_nonzero_wait_value_is_bad_value(self) -> None:
         state = self.state(semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY])
         self.assert_atomic_rejection(
