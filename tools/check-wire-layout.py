@@ -129,17 +129,17 @@ def check_events(c: Check) -> None:
     lifetime = read("spec/resource-lifetime.md")
     c.require(re.search(r"(?:After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events|Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events mehr erzeugen oder zustellen)", lifetime, re.S) is not None,
               "DestroyDevice: must suppress later events for the destroyed logical device")
-    c.require(re.search(r"(?:The suppression of delivery.*internal terminal outcome.*backend references|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:Suppressing delivery does not change the internal terminal outcome of accepted submissions or the requirement to retain backend references until possible accesses have ended|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
     c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
               "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
-    c.require(re.search(r"(?:A client disconnect stops event delivery.*that exact X11 connection|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:A client disconnect ends event delivery for that X11 connection only|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
               "Client disconnect: event delivery must stop for that exact X11 connection")
     c.require(re.search(r"(?:must not enqueue events to a closed connection or deliver them through another connection|dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden)", lifetime, re.S) is not None,
               "Client disconnect: late backend events must not target a closed or different connection")
-    c.require(re.search(r"(?:Already accepted work.*actual terminal outcome|Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:Accepted work still reaches its actual internal terminal outcome|Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt)", lifetime, re.S) is not None,
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
-    c.require(re.search(r"(?:internal Vulkan objects remain alive until all backend accesses have ended|interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:Resources that the backend may still access remain alive until those accesses are proven to have ended|interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten)", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
     c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independently of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
               "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
