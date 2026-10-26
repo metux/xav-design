@@ -10,7 +10,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 
 ## General Error Classes
 
-| Situation | Ergebnis |
+| Situation | Result |
 |---|---|
 | Inconsistent request length or count | `BadLength` |
 | Invalid field value, reserved bits, or flags | `BadValue` |
@@ -164,7 +164,7 @@ Diese Regeln gelten nur im presentation-capable Profil; `CMD_COPY_BUFFER_TO_SWAP
 
 Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integrität; Feldwerte und reservierte Felder; Auflösung jeder erforderlichen XID; Ressourcentyp und Ownership; request-spezifische Zustands- und Backend-Prüfungen. Ein Fehler beendet den Request ohne Teiländerungen. Ein als `0` definierter optionaler XID-Wert wird nicht aufgelöst.
 
-| Request / Bedingung | Fehler |
+| Request / Condition | Error |
 |---|---|
 | `DestroyResource`: falsche Länge | `BadLength` |
 | `DestroyResource`: XID löst keine live Ressource auf | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
