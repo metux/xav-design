@@ -239,7 +239,7 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     """Validate a whole chunk before changing recording state or entries."""
     if not request.framing_valid:
         return "BadLength"
-    if not request.scalar_valid or request.operation not in {"CREATE", "APPEND", "FINAL", "ABORT"}:
+    if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
     if request.operation == "CREATE" and not request.target_xid_available:
         return "BadIDChoice"
@@ -255,14 +255,14 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         return "SUCCESS"
     if state.device_lost:
         return "DEVICE_LOST"
-    if request.operation == "CREATE":
+    if request.operation in {"CREATE", "CREATE_FINAL"}:
         if state.lifecycle is not CommandBufferLifecycle.INITIAL:
             return "INVALID_SYNCHRONIZATION_STATE"
         if not request.entries_valid:
             return "BadValue"
         state.entries = list(request.entries)
         state.lifecycle = (
-            CommandBufferLifecycle.EXECUTABLE if request.operation == "FINAL"
+            CommandBufferLifecycle.EXECUTABLE if request.operation == "CREATE_FINAL"
             else CommandBufferLifecycle.RECORDING
         )
         return "SUCCESS"
@@ -313,7 +313,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
-            or len(request.signal_values) != len(state.signal_slots)):
+            or (request.signal_values and len(request.signal_values) != len(state.signal_slots))):
         return "BadValue"
     if not state.device_xid_valid or not state.xids_valid:
         return "BadValue"
@@ -344,7 +344,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         state.wait_states[i] = WaitState.RESERVED
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
-    state.signal_slots[:] = list(request.signal_values)
+    if request.signal_values:
+        state.signal_slots[:] = list(request.signal_values)
     state.fence_attached = request.attach_fence
     state.pending_submissions.append(request.token)
     return "SUCCESS"
