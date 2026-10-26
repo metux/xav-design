@@ -81,37 +81,32 @@ class Timeline:
             status = "SUCCESS"
         elif status == "SUCCESS":
             return "INVALID_SYNCHRONIZATION_STATE"
-        elif status not in {"TIMEOUT", "DEVICE_LOST", "DEVICE_DESTROYED"}:
+        elif status != "TIMEOUT":
+            # Device-loss and destruction transitions are serialized through
+            # mark_device_lost()/destroy_device(), never injected by a callback.
             return "BadValue"
         del self.pending_host_waits[token]
         self.terminal_waits[token] = status
         return "SUCCESS"
 
     def mark_device_lost(self) -> str:
-        if self.lifecycle == "DEVICE_LOST":
-            return "SUCCESS"
-        if self.lifecycle == "DEVICE_DESTROYED":
+        if self.lifecycle != "ACTIVE":
             return "SUCCESS"
         self.lifecycle = "DEVICE_LOST"
         self._terminate_open_waits("DEVICE_LOST")
         return "SUCCESS"
 
     def destroy_device(self) -> str:
-        if self.lifecycle == "DEVICE_LOST":
-            return "SUCCESS"
-        if self.lifecycle == "DEVICE_DESTROYED":
+        if self.lifecycle != "ACTIVE":
             return "SUCCESS"
         self.lifecycle = "DEVICE_DESTROYED"
         self._terminate_open_waits("DEVICE_DESTROYED")
         return "SUCCESS"
 
     def _terminate_open_waits(self, status: str) -> None:
-        for token, value in list(self.pending_host_waits.items()):
-            # Once the predicate was observed satisfied, preserve SUCCESS.
+        for token in list(self.pending_host_waits):
             del self.pending_host_waits[token]
-            self.terminal_waits[token] = (
-                "SUCCESS" if self.counter >= value else status
-            )
+            self.terminal_waits[token] = status
 
     def _resolve_waits(self) -> None:
         for token, value in list(self.pending_host_waits.items()):
