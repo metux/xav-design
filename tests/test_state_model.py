@@ -7,6 +7,7 @@ import unittest
 from xa_state_model import (
     ImageState,
     BinarySignalState,
+    SharedBinarySemaphore,
     PresentRequest,
     PresentState,
     WaitState,
@@ -593,6 +594,62 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             queue_present(state, PresentRequest(token=132, wait_indices=(0,))).result,
             "SUCCESS",
         )
+
+    def test_queue_submit_wait_conflicts_with_pending_queue_present_wait(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=170, wait_indices=(0,))).accepted)
+        self.assertEqual(shared.wait_reservation, ("present", 170))
+
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(submit)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=171, wait_indices=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(submit, before)
+        self.assertEqual(shared.wait_reservation, ("present", 170))
+
+    def test_queue_present_wait_conflicts_with_pending_queue_submit_wait(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=180, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.wait_reservation, ("submit", 180))
+
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(present)
+        result = queue_present(present, PresentRequest(token=181, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted),
+                         ("INVALID_SYNCHRONIZATION_STATE", False))
+        self.assertEqual(present, before)
+        self.assertEqual(shared.wait_reservation, ("submit", 180))
 
     def test_present_wait_unknown_payload_marks_semaphore_untrusted(self) -> None:
         state = self.present_state(
