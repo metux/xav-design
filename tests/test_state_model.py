@@ -152,7 +152,7 @@ class QueuePresentStateModelTests(unittest.TestCase):
         self.assertEqual((result.result, result.accepted), ("SUCCESS", True))
         self.assertEqual(state.image_state, ImageState.PRESENT_PENDING)
         self.assertIn(9, state.accepted_tokens)
-        self.assertEqual(state.wait_states, [WaitState.READY, WaitState.READY, WaitState.RESERVED, WaitState.RESERVED])
+        self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
         self.assertEqual(len(state.accepted_tokens - before.accepted_tokens), 1)
 
     def test_independent_lifecycle_change_is_not_rolled_back(self) -> None:
