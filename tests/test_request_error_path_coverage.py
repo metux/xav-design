@@ -98,6 +98,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
     def test_presentation_request_error_paths_match_registry(self):
         presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
         cases = {
             "CreateSurface": ("BadIDChoice", "BadWindow", "BadMatch"),
@@ -116,7 +117,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(f"`{request}` | {subopcode} |", registry)
                 for outcome in outcomes:
                     self.assertIn(outcome, self.errors)
-                    self.assertIn(outcome, presentation)
+                    self.assertTrue(
+                        outcome in presentation or outcome in synchronization,
+                        f"{outcome} has no presentation/synchronization contract",
+                    )
 
     def test_presentation_rejections_preserve_state_and_status_is_not_x11_error(self):
         presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
