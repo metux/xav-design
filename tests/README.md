@@ -39,8 +39,9 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   invalid scope, masks, flags and reserved fields.
 - `test_reply_vectors.py` checks standard reply framing, fixed reply fields,
   variable payload lengths, record boundaries, padding, and malformed headers.
-- `test_presentation_reply_vectors.py` checks all documented presentation
-  reply statuses in both byte orders and validates raw reply framing, exact
+- `test_presentation_reply_vectors.py` passes every documented presentation
+  reply status through the validator in both byte orders and validates raw
+  reply framing, exact
   fixed/variable sizes, capability record-count formulas, failure-payload
   zeroing, queue-family support flags, ordered nonempty family records and aggregate support consistency, nonzero current extents and internally consistent minimum/maximum extent and image-count bounds
   on successful capability replies, zero-image successful swapchain replies, request-matched successful image counts and failure counts, acquire failure indices and reserved
