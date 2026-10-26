@@ -353,6 +353,28 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
                     "BadValue",
                 )
 
+    def test_timeline_signal_value_validation_follows_device_validation(self) -> None:
+        state = self.state(
+            device_lost=True,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[0, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(0x10000000000000000,)),
+            "DEVICE_LOST",
+        )
+        state = self.state(
+            types_and_ownership_valid=False,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[0, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(0x10000000000000000,)),
+            "BadMatch",
+        )
+
     def test_timeline_signal_rejects_values_outside_unsigned_64_bit_range(self) -> None:
         for value in (-1, 0x10000000000000000):
             with self.subTest(value=value):
@@ -365,6 +387,28 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
                     SubmitRequest(signal_indices=(0,), signal_values=(value,)),
                     "BadValue",
                 )
+
+    def test_timeline_wait_value_validation_follows_device_validation(self) -> None:
+        state = self.state(
+            device_lost=True,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
+            signal_counters=[3, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(wait_indices=(0,), wait_values=(-1,)),
+            "DEVICE_LOST",
+        )
+        state = self.state(
+            types_and_ownership_valid=False,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
+            signal_counters=[3, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(wait_indices=(0,), wait_values=(-1,)),
+            "BadMatch",
+        )
 
     def test_timeline_wait_may_target_value_not_yet_reached(self) -> None:
         state = self.state(
