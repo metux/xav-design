@@ -84,6 +84,44 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("otherwise the image is invalidated and no release event is emitted", accepted)
         self.assertIn("PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence", self.lifetime)
 
+    def test_status_precedence_is_consistent_across_normative_chapters(self) -> None:
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        presentation_status = self.presentation.split(
+            "The status precedence for requests with status replies is deterministic:", 1
+        )[1].split("\nFor `CreateSurface`", 1)[0]
+        errors_precedence = errors.split(
+            "### Normative validation precedence for the seven presentation requests", 1
+        )[1].split("\n## Synchron versus asynchron", 1)[0]
+
+        # Device loss wins before queue/index checks; once the Device is usable,
+        # immutable index errors precede Surface/extent status replies.
+        queue = presentation_status.split("- `QueuePresent`:", 1)[1]
+        self.assertLess(queue.index("`DEVICE_LOST`"), queue.index("out-of-range image index is `BadValue`"))
+        self.assertLess(queue.index("out-of-range image index is `BadValue`"), queue.index("`SURFACE_LOST` takes precedence over `OUT_OF_DATE`"))
+        self.assertLess(errors_precedence.index("check Device availability"), errors_precedence.index("Validate request-specific indices"))
+        self.assertLess(errors_precedence.index("Validate request-specific indices"), errors_precedence.index("Resolve lifecycle/capability outcomes"))
+        self.assertIn("Device loss takes precedence over Surface loss and all later mutable-state checks.", errors_precedence)
+
+    def test_acquire_sync_eligibility_precedes_timeout_and_never_signals_on_failure(self) -> None:
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        acquire = errors.split("For a new `AcquireNextImage` evaluation", 1)[1].split("\nFor `QueuePresent`", 1)[0]
+        self.assertLess(acquire.index("DEVICE_LOST"), acquire.index("SURFACE_LOST"))
+        self.assertLess(acquire.index("SURFACE_LOST"), acquire.index("OUT_OF_DATE"))
+        self.assertLess(acquire.index("validate every supplied semaphore/fence"), acquire.index("before polling or registering the wait"))
+        self.assertIn("even if no image is available or the timeout is zero", acquire)
+        self.assertIn("neither optional synchronization object", self.presentation)
+
+    def test_present_rejection_and_async_terminalization_are_distinct(self) -> None:
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        queue = errors.split("For `QueuePresent`, status replies", 1)[1].split("\n## Synchron versus asynchron", 1)[0]
+        self.assertIn("pre-acceptance outcomes", queue)
+        self.assertIn("consumes no semaphore", queue)
+        self.assertIn("reserves no token", queue)
+        self.assertIn("token used only by a rejected attempt remains available", queue)
+        self.assertIn("After acceptance, the request cannot produce a synchronous X11 error", self.presentation)
+        self.assertIn("exactly one terminal status wins by serialization order", self.races)
+        self.assertIn("internal terminal transition, image-state update, and release of backend references occur exactly once", self.presentation)
+
 
 if __name__ == "__main__":
     unittest.main()
