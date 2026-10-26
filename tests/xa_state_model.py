@@ -445,11 +445,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)
             or bool(set(request.wait_indices) & set(request.signal_indices))
-            or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)
-            or any(value < 0 or value > 0xFFFFFFFFFFFFFFFF
-                   for value in request.wait_values)
-            or any(value < 0 or value > 0xFFFFFFFFFFFFFFFF
-                   for value in request.signal_values)):
+            or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
@@ -482,6 +478,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.BINARY
         value = request.wait_values[pos] if request.wait_values else 0
         if kind is SemaphoreKind.BINARY and value != 0:
+            return "BadValue"
+        if kind is SemaphoreKind.TIMELINE and not 0 <= value <= 0xFFFFFFFFFFFFFFFF:
             return "BadValue"
         mask = request.wait_stage_masks[pos] if request.wait_stage_masks else 0x1
         if mask & ~state.queue_supported_stage_mask:
@@ -537,6 +535,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                     )):
                 return "INVALID_SYNCHRONIZATION_STATE"
         else:
+            if not 0 <= value <= 0xFFFFFFFFFFFFFFFF:
+                return "BadValue"
             pending_values = [
                 pending_value
                 for _token, pending_index, pending_value in state.pending_timeline_signals
