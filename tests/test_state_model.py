@@ -1088,5 +1088,82 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state, before)
 
 
+    def test_cross_model_wait_completion_is_recorded_for_pending_signal_owner(self) -> None:
+        shared = SharedBinarySemaphore()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        consumer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(producer, SubmitRequest(token=301, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(consumer, SubmitRequest(token=302, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(consumer, 302, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(shared.signal_reservation, ("submit", 301))
+        self.assertTrue(shared.signal_consumed)
+
+        # The producer's later terminal callback must observe consumption
+        # recorded on the canonical semaphore, not resurrect its signal.
+        self.assertEqual(finish_submission(producer, 301, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+
+    def test_failed_wait_unchanged_report_does_not_restore_stale_pending_signal(self) -> None:
+        shared = SharedBinarySemaphore()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        consumer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(producer, SubmitRequest(token=303, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(consumer, SubmitRequest(token=304, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        # Signal completion races ahead of the still-pending wait callback.
+        self.assertEqual(finish_submission(producer, 303, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(finish_submission(
+            consumer, 304, success=False,
+            binary_payload_unchanged={("wait", 0)},
+        ), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(consumer.binary_signal_states[0], BinarySignalState.SIGNALED)
+        self.assertEqual(consumer.wait_states[0], WaitState.READY)
+        self.assertIsNone(shared.wait_reservation)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
