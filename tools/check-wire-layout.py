@@ -183,11 +183,11 @@ def check_events(c: Check) -> None:
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
     c.require(re.search(r"WaitForFence.*Device loss returns `DEVICE_LOST`", sync, re.S | re.I) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
-    c.require(re.search(r"open `WaitForFence` registration references that exact internal Fence identity", sync, re.S) is not None,
+    c.require(re.search(r"open `WaitForFence` registration is waiting on that exact internal fence identity", sync, re.S | re.I) is not None,
               "DestroyFence: must reject while a host wait registration is still open")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"open `WaitSemaphores` registration for that exact internal Semaphore identity", sync, re.S) is not None,
+    c.require(re.search(r"open `WaitSemaphores` registration.*references the exact internal semaphore identity", sync, re.S | re.I) is not None,
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
@@ -214,7 +214,7 @@ def check_events(c: Check) -> None:
               "counters and reservations unchanged" in errors,
               "SignalSemaphore: validation precedence and atomic rejection must be explicit")
     c.require("total length: `28 + 12 * semaphore_count` bytes" in sync and
-              "Duplicate wait or signal entries are invalid in v0.1 and result in `BadValue`" in sync and
+              "no duplicate semaphore XIDs (`BadValue`)" in sync and
               "normative precedence" in errors and "`DEVICE_DESTROYED`" in errors,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
     c.require("Synchronous validation MUST follow this order" in sync and
@@ -222,7 +222,7 @@ def check_events(c: Check) -> None:
               "in mixed-error cases the earlier phase wins" in read("spec/conformance.md") and
               "All synchronous rejections occur without registering a wait" in read("spec/conformance.md"),
               "WaitSemaphores: precedence must distinguish pre-registration validation from terminal wait outcomes")
-    c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*cross-device use results in `BadMatch`", sync, re.S) is not None and
+    c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*cross-device use results in `BadMatch`", sync, re.S | re.I) is not None and
               re.search(r"`WaitForFence`: incorrect length `BadLength`.*Device loss.*`DestroyDevice`.*normal reply statuses", errors, re.S | re.I) is not None,
               "WaitForFence: request length, XID/ownership errors, and reply terminal states must be explicit")
     c.require(re.search(r"WaitSemaphores` MUST NOT synchronously block the X11 request dispatcher", sync) is not None,
