@@ -712,15 +712,15 @@ def check_request_document_coverage(c: Check) -> None:
               "ist die definierte Ausnahme von Phase 5" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
-        "dessen deklarierte Länge über das Request-Ende hinausreicht" in errors
-        and "insbesondere null oder kleiner als der Entry-Header" in errors
-        and "unbekannte Command-ID" in errors,
+        "an entry whose declared length exceeds the request boundary" in errors
+        and "invalid entry lengths (especially zero or less than the entry header)" in errors
+        and "unknown command IDs" in errors,
         "CommandBufferData: malformed entry length and unknown command ID errors must be explicit",
     )
     c.require(
-        "Ein fehlgeschlagener FINAL-Chunk lässt den Buffer" in errors
-        and "Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer" in conformance
-        and "prüft Request-Länge, XIDs, Typ, Ownership und Cross-Device-Zuordnung vor Zustandsänderungen" in conformance,
+        "A failed FINAL chunk leaves the buffer in `RECORDING`" in read("spec/command-recording.md")
+        and "A failed CREATE request leaves neither a command buffer nor a pool-child entry" in read("spec/command-recording.md")
+        and "CommandBufferData errors are validated before state changes" in conformance,
         "command-buffer recovery: failed CREATE/FINAL and reset atomicity must be covered",
     )
     shader_upload = read("spec/shaders-pipelines.md")
@@ -733,16 +733,16 @@ def check_request_document_coverage(c: Check) -> None:
         "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
     )
     c.require(
-        "CREATE-, Append- und FINAL-Requests bei nicht verfügbarem/verlorenem Device" in command_recording
-        and "`ABORT` bleibt als rein logische Recovery-/Cleanup-Operation auch nach Device Loss zulässig" in command_recording
-        and "`ABORT` ist die ausdrücklich logische Ausnahme" in errors
-        and "Nach Device Loss werden CREATE-/Append-/FINAL-Chunks von `CommandBufferData` mit `DEVICE_LOST` abgewiesen" in conformance,
+        "For CREATE, append, and FINAL, the associated device state is checked" in command_recording
+        and "`ABORT` is the defined exception to phase 5" in command_recording
+        and "`ABORT` is the explicit logical exception" in errors
+        and "For CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence" in conformance,
         "CommandBufferData: device-loss failures must preserve accepted chunks while ABORT remains logical cleanup",
     )
     c.require(
-        "Chunk-Fehler sind synchron dem jeweiligen `CommandBufferData`-Request zugeordnet und erzeugen kein `ASYNC_ERROR`" in command_recording
-        and "Fehler beim `ShaderModuleData`-Upload und bei `CommandBufferData`-Recording-Chunks sind immer synchron" in event_doc
-        and "erzeugen kein `ASYNC_ERROR`" in conformance,
+        "Chunk errors are synchronous to the respective `CommandBufferData` request and do not generate `ASYNC_ERROR`" in command_recording
+        and "Errors during `ShaderModuleData` upload and `CommandBufferData` recording chunks are always synchronous" in event_doc
+        and "do not generate `ASYNC_ERROR`" in conformance,
         "chunked shader/command-buffer operations must not emit async errors before submission acceptance",
     )
     c.require(
@@ -1902,7 +1902,7 @@ def check_xge_abi(c: Check) -> None:
               "SelectEvents: queue lookup and ownership failures must be distinguished")
     c.require("unmaskable `DEVICE_LOST` and `ASYNC_ERROR` events" in conformance and
               "resource_xid" in conformance and
-              "after successful processing of `DestroyDevice`, no new events using the destroyed `device_xid` may be generated or delivered" in read("spec/resource-lifetime.md"),
+              "After successful processing of `DestroyDevice`, the server MUST NOT generate or deliver new XAverius events" in read("spec/resource-lifetime.md"),
               "XGE event delivery: DestroyDevice suppression must cover all event XID fields")
     c.require("shared serialized linearization point" in conformance and
               "one shared serialized server state" in events and
