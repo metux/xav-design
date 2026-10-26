@@ -162,7 +162,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("terminal failure that invalidates the image MUST NOT emit `IMAGE_RELEASED`", self.conformance)
 
     def test_reacquisition_requires_internal_release_not_event_delivery(self) -> None:
-        race_contract = self.races.split(
+        race_contract = self.conformance.split(
             "- Presentation event race vectors MUST exercise", 1
         )[1].split("\n- ", 1)[0]
         self.assertIn("Masking or suppressed delivery never skips internal cleanup", self.conformance)
