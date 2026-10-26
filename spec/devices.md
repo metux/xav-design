@@ -74,7 +74,7 @@ The canonical v0.1 names, types, exact value lengths, and availability rules are
 
 Normative XAverius property type IDs:
 
-| ID | Typ |
+| ID | Type |
 |---:|---|
 | 0 | `NONE` |
 | 1 | `CARD32` |
