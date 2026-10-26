@@ -1,8 +1,8 @@
-# 5. Memory und Buffers
+# 5. Memory and Buffers
 
 ## 5.1 `CreateBuffer`
 
-Gesamtlänge: 32 Bytes.
+Total length: 32 bytes.
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -12,7 +12,7 @@ Gesamtlänge: 32 Bytes.
 | 24 | CARD32 | `usage_flags` |
 | 28 | CARD32 | `reserved = 0` |
 
-Die Größe muss positiv sein und mindestens ein unterstütztes `usage_flags`-Bit muss gesetzt sein. Unbekannte Bits oder `usage_flags = 0` werden mit `BadValue` abgewiesen. Buffer-Erstellung alloziert und bindet noch keinen Speicher.
+The size MUST be positive and at least one supported `usage_flags` bit MUST be set. Unknown bits or `usage_flags = 0` are rejected with `BadValue`. Creating a buffer does not allocate or bind memory.
 
 Usage-Bits:
 
@@ -23,20 +23,20 @@ Usage-Bits:
 - Bit 4: `INDEX_BUFFER`
 - Bit 5: `VERTEX_BUFFER`
 - Bit 6: `INDIRECT_BUFFER`
-- Bits 7–31: reserviert
+- Bits 7–31: reserved
 
-Der Server darf keine Usage-Flags stillschweigend hinzufügen. Images sind in v0.1 nicht enthalten.
+The server MUST NOT silently add usage flags. Images are not included in v0.1.
 
-Für den initialen Compute-Test:
+For the initial compute test:
 
-- A und B: `STORAGE_BUFFER | TRANSFER_DST`
+- A and B: `STORAGE_BUFFER | TRANSFER_DST`
 - C: `STORAGE_BUFFER | TRANSFER_SRC`
 
 ## 5.2 `GetPhysicalDeviceMemoryProperties`
 
-Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes. Der Request verwendet ausdrücklich die XID eines Physical Devices, nicht die XID eines logischen Devices.
+Request: physical-device XID at offset 8; total length 12 bytes. This request explicitly uses a physical-device XID, not a logical-device XID.
 
-Der Reply enthält nach dem 32-Byte-Header:
+The reply contains the following after the 32-byte header:
 
 - `CARD32 memory_type_count`
 - `CARD32 memory_heap_count`
@@ -45,18 +45,18 @@ Der Reply enthält nach dem 32-Byte-Header:
 - `MEMORYTYPEINFO[]`
 - `MEMORYHEAPINFO[]`
 
-`MEMORYTYPEINFO` ist 8 Bytes groß:
+`MEMORYTYPEINFO` is 8 bytes:
 
 - `CARD32 property_flags`
 - `CARD32 heap_index`
 
-`MEMORYHEAPINFO` ist 16 Bytes groß:
+`MEMORYHEAPINFO` is 16 bytes:
 
 - `CARD64 size`
 - `CARD32 heap_flags`
 - `CARD32 reserved = 0`
 
-Die Reply-Payload-Länge beträgt `16 + 8 * memory_type_count + 16 * memory_heap_count` Bytes. Entsprechend ist `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count`.
+The reply payload length is `16 + 8 * memory_type_count + 16 * memory_heap_count` bytes. Accordingly, `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count`.
 
 Memory-Type-Flags:
 
@@ -67,11 +67,11 @@ Memory-Type-Flags:
 - Bit 4: `LAZILY_ALLOCATED`
 - Bit 5: `PROTECTED`
 
-Heap-Flag-Bit 0 bezeichnet `DEVICE_LOCAL`. Andere Bits sind reserviert.
+Heap flag bit 0 denotes `DEVICE_LOCAL`. Other bits are reserved.
 
-Es gelten maximal 32 Memory Types und 16 Memory Heaps. Indizes beginnen bei null und bleiben für die Lebensdauer der Physical-Device-XID beziehungsweise ihrer Gerätegeneration stabil; alle logischen Devices auf diesem Physical Device verwenden dieselbe Zuordnung. Jeder Heap-Index muss gültig sein. `memory_type_count` und `memory_heap_count` dürfen ihre jeweiligen Obergrenzen nicht überschreiten. Jeder `property_flags`-Wert darf nur definierte Bits enthalten; reservierte Bits müssen null sein. `heap_index` muss kleiner als `memory_heap_count` sein. Bei null Memory Types beziehungsweise null Memory Heaps darf kein entsprechender Record folgen.
+At most 32 memory types and 16 memory heaps are supported. Indices start at zero and remain stable for the lifetime of the physical-device XID or its device generation; all logical devices on that physical device use the same mapping. Every heap index MUST be valid. `memory_type_count` and `memory_heap_count` MUST NOT exceed their respective limits. Each `property_flags` value may contain only defined bits; reserved bits MUST be zero. `heap_index` MUST be less than `memory_heap_count`. If the number of memory types or memory heaps is zero, no corresponding records may follow.
 
-`memory_properties_flags` besitzt noch keine festgelegte Semantik; bis zur Zuweisung einer Registry-Definition muss das Feld null sein.
+`memory_properties_flags` has no defined semantics yet; the field MUST be zero until a registry definition is assigned.
 
 ## 5.3 `GetBufferMemoryRequirements`
 
@@ -79,7 +79,7 @@ Request:
 
 - Offset 8: Device-XID
 - Offset 12: Buffer-XID
-- Gesamtlänge: 16 Bytes
+- Total length: 16 bytes
 
 Reply:
 
@@ -90,7 +90,7 @@ Reply:
 | 24 | CARD32 | `memory_type_bits` |
 | 28 | CARD32 | `reserved = 0` |
 
-Reply-Payload-Länge ist null. Größe und Alignment müssen positiv sein. `memory_type_bits` ist eine Bitmaske: Bit N erlaubt `memory_type_index = N`; Bits außerhalb von `memory_type_count` müssen null sein. Für einen erfolgreich abgefragten Buffer muss mindestens ein unterstützter Memory-Type-Bit gesetzt sein. Die Werte beziehen sich auf das Physical Device des angegebenen logischen Devices und bleiben für dessen Lebensdauer stabil.
+The reply payload length is zero. Size and alignment MUST be positive. `memory_type_bits` is a bitmask: bit N permits `memory_type_index = N`; bits beyond `memory_type_count` MUST be zero. A successful buffer query MUST return at least one supported memory-type bit. These values refer to the physical device associated with the specified logical device and remain stable for its lifetime.
 
 ## 5.4 `AllocateMemory`
 
@@ -102,7 +102,7 @@ Gesamtlänge: 32 Bytes.
 - Offset 24: `CARD32 memory_type_index`
 - Offset 28: `CARD32 reserved = 0`
 
-Die Allokationsgröße muss positiv sein, und der Memory-Type-Index muss für das Physical Device des logischen Devices existieren. `AllocateMemory` reserviert genau `allocation_size` Bytes und bindet keinen Buffer. Der Server darf die angeforderte Größe nicht stillschweigend aufrunden; notwendige interne Backend-Ausrichtung muss ohne Änderung der öffentlich sichtbaren Allokationsgröße umgesetzt werden. Kann die Allokation nicht bereitgestellt werden, wird `ALLOCATION_FAILED` gemeldet und die `memory_xid` bleibt unangelegt. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Bei einem nicht verfügbaren oder verlorenen logischen Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Der Request ist atomar: bei jedem Fehler bleibt die `memory_xid` unangelegt und es bleibt keine teilweise angelegte Allokation zurück.
+The allocation size MUST be positive, and the memory-type index MUST exist for the physical device associated with the logical device. `AllocateMemory` reserves exactly `allocation_size` bytes and does not bind a buffer. The server MUST NOT silently round up the requested size; required internal backend alignment must be implemented without changing the publicly visible allocation size. If allocation fails, `ALLOCATION_FAILED` is reported and `memory_xid` remains unallocated. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. The request is atomic: on any failure, `memory_xid` remains unallocated and no partial allocation remains.
 
 ## 5.5 `FreeMemory`
 
@@ -111,29 +111,29 @@ Gesamtlänge: 16 Bytes.
 - Offset 8: Device-XID
 - Offset 12: Memory-XID
 
-Der Memory-Block muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn irgendein intern noch lebender Buffer an diese Allokation gebunden ist (`BadMatch`) oder angenommene GPU-Arbeit auf die Allokation zugreift (`INVALID_SYNCHRONIZATION_STATE`). Das gilt auch für Buffer, deren öffentliche XID bereits durch `DestroyResource` invalidiert wurde, deren internes Objekt aber wegen Descriptor-Slots, interner Referenzen oder möglicher Backend-Zugriffe noch nicht freigegeben werden darf. Bei Ablehnung bleiben Memory-XID und Allokation unverändert.
+The memory block MUST belong to the specified logical device. The request is atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`) or accepted GPU work accesses the allocation (`INVALID_SYNCHRONIZATION_STATE`). This also applies to buffers whose public XID has already been invalidated by `DestroyResource` but whose internal object cannot yet be released because of descriptor slots, internal references, or possible backend accesses. On rejection, the memory XID and allocation remain unchanged.
 
-XAverius v0.1 unterstützt kein Unbind/Rebind. Daher müssen alle an die Allokation gebundenen Buffer vor `FreeMemory` erfolgreich zerstört werden. Bei Erfolg wird die öffentliche Memory-XID sofort ungültig; die interne Allokation darf erst freigegeben werden, wenn keine internen Referenzen oder Backend-Zugriffe mehr bestehen. Ein erfolgreicher `FreeMemory` setzt voraus, dass keine lebende interne Buffer-Identität mehr an die Allokation gebunden ist.
+XAverius v0.1 does not support unbinding or rebinding. Therefore, all buffers bound to an allocation MUST be successfully destroyed before `FreeMemory`. On success, the public memory XID becomes invalid immediately; the internal allocation may be released only when no internal references or backend accesses remain. Successful `FreeMemory` requires that no live internal buffer identity remains bound to the allocation.
 
 ## 5.6 `BindBufferMemory`
 
-Gesamtlänge: 28 Bytes.
+Total length: 28 bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Buffer-XID
 - Offset 16: Memory-XID
 - Offset 20: `CARD64 memory_offset`
 
-Buffer und Memory müssen zum angegebenen Device gehören. In v0.1 darf ein Buffer nur einmal gebunden werden.
+The buffer and memory MUST belong to the specified device. In v0.1, a buffer may be bound only once.
 
-Der `memory_type_index` der Allokation muss kleiner als `memory_type_count` sein und das entsprechende Bit in `memory_type_bits` muss gesetzt sein (`(memory_type_bits & (1u << memory_type_index)) != 0`). Der Offset ist in Bytes angegeben und muss ein Vielfaches des gemeldeten `alignment` sein. Für die Bindungsgrenze ist `requirements.size` maßgeblich, nicht lediglich die logische Buffer-Größe; die Allokation muss also den vollständigen vom Backend benötigten Bereich abdecken.
+The allocation's `memory_type_index` MUST be less than `memory_type_count`, and the corresponding bit in `memory_type_bits` MUST be set (`(memory_type_bits & (1u << memory_type_index)) != 0`). The offset is in bytes and MUST be a multiple of the reported `alignment`. The binding bound is determined by `requirements.size`, not merely the logical buffer size; the allocation must cover the complete range required by the backend.
 
-Die Bounds-Prüfung muss überlaufsicher erfolgen:
+Bounds checks MUST be performed without integer overflow:
 
 - `memory_offset <= allocation_size`
 - `requirements.size <= allocation_size - memory_offset`
 
-`BindBufferMemory` prüft in dieser Reihenfolge: (1) exakte Wire-Länge (`BadLength`); (2) Auflösung von Device-, Buffer- und Memory-XID in Wire-Reihenfolge, wobei unbekannte/nicht-live XIDs `BadValue` ergeben; (3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zuordnung (`BadMatch`); (4) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (5) bindungsabhängige Prüfungen: bereits gebundener Buffer, inkompatibler Memory-Type, ungültiges Alignment oder unzureichende Allocation ergeben `BadMatch`. Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen, aber nicht vor einem früheren XID- oder Ownership-Fehler. Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.
+`BindBufferMemory` validates in this order: (1) exact wire length (`BadLength`); (2) resolve device, buffer, and memory XIDs in wire order, with unknown or non-live XIDs resulting in `BadValue`; (3) resource type, client/device ownership, and cross-device association (`BadMatch`); (4) device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (5) binding-specific checks: an already-bound buffer, incompatible memory type, invalid alignment, or insufficient allocation results in `BadMatch`. Device loss takes precedence over these binding-specific state/backend checks, but not over an earlier XID or ownership error. The request is atomic: on rejection, der Buffer ungebunden.
 
 ## 5.7 `WriteBuffer`
 
