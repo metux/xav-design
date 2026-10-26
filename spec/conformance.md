@@ -518,3 +518,14 @@ This matrix closes cross-request gaps not covered by isolated golden replies. Ea
 For every modeled rejection, the test compares the complete state before and after the request, including accepted tokens, image state, and all wait states. The success case checks that token reservation, wait reservation, and the `ACQUIRED` to `PRESENT_PENDING` transition all occur together. Lifecycle changes are injected before validation and are retained; the rejected request itself adds no mutation.
 
 This is intentionally a **reference state model**, not a production server or proof that an implementation conforms. Its boolean fixture fields abstract away X11 resource lookup and backend behavior. The model and tests are useful as an executable semantic oracle while a server is not available; once a protocol implementation exists, the same precedence vectors should be replayed against it through a test harness and compare wire errors/replies plus externally observable state.
+
+
+## Executable compute state-model tests
+
+The dependency-free oracle in `tests/xa_state_model.py` now models three additional contracts:
+
+- `ShaderModuleData`: single-request CREATE|FINAL and multi-chunk assembly; malformed or failed chunks discard the entire in-progress shader assembly, FINAL publishes the module only on success, and ABORT releases assembly storage without starting GPU work.
+- `CommandBufferData`: CREATE, per-chunk append validation, FINAL, and ABORT. A failed chunk appends no entries and preserves previously accepted recording chunks; failed FINAL leaves the buffer RECORDING; ABORT clears a non-pending recording buffer back to INITIAL and is allowed after Device Loss.
+- `QueueSubmit`: framing/scalar/XID/type/device/state checks precede acceptance; all command buffers, waits, and signal reservations are validated before one acceptance commit. A rejected submission must not reserve its token or waits/signals, attach its Fence, transition command buffers to PENDING, or enqueue a pending submission.
+
+These are deliberately small reference models with injected validation outcomes, not a Vulkan backend and not proof of server conformance. When a server exists, replay the same vectors against its wire interface.
