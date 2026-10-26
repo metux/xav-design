@@ -1733,7 +1733,7 @@ def check_xge_abi(c: Check) -> None:
         (1, "CARD8", r"extension.*dynamisch zugewiesener XAverius-Major-Opcode"),
         (2, "CARD16", r"X11-Event-Sequenznummer"),
         (4, "CARD32", r"XGE.*length"),
-        (8, "CARD16", r"evtype.*Event-Type-ID"),
+        (8, "CARD16", r"evtype.*(?:Event-Type-ID|event type ID)"),
     ]
     for offset, typ, pattern in header_fields:
         c.require(re.search(rf"^\|\s*{offset}\s*\|\s*{typ}\s*\|[^\n]*{pattern}", header, re.M | re.I) is not None,
@@ -1745,7 +1745,7 @@ def check_xge_abi(c: Check) -> None:
     c.require(re.search(r"connection byte order applies to both header and payload", header, re.I) is not None,
               "XGE header: connection byte order must apply to header and payload")
     c.require(re.search(r"GenericEvent\s*\(35\)", wire) is not None and
-              re.search(r"there is no separate XAverius-XGE-event base", wire, re.I) is not None,
+              re.search(r"XAverius has no separately assigned server-side XGE event base", wire, re.I) is not None,
               "wire protocol: GenericEvent code and no separate XAverius event base must be explicit")
 
     expected = {
@@ -1778,7 +1778,7 @@ def check_xge_abi(c: Check) -> None:
         c.require(bool(body), f"{name}: missing event ABI section")
         if not body:
             continue
-        declaration = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE.*length\s*=\s*(\d+)", body)
+        declaration = re.search(r"(?:Total length:\s*(\d+)\s*bytes|Gesamtlänge:\s*(\d+)\s*Bytes);\s*XGE.*length\s*=\s*(\d+)", body)
         c.require(bool(declaration), f"{name}: missing total/XGE length declaration")
         if declaration:
             actual_total, actual_length = map(int, declaration.groups())
