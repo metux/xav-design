@@ -328,5 +328,68 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(lifetime_rule=phrase):
                 self.assertIn(phrase, lifetime + conformance)
 
+    def test_command_recording_and_submission_precedence_have_mixed_failure_vectors(self):
+        recording = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # Assert the normative phase ordering, not merely that each error is named.
+        cb_phases = (
+            "Request-Länge, ABORT-Länge",
+            "Common-Header-Flags",
+            "Ziel-XID, danach Pool-XID",
+            "Ressourcentyp, Client-Ownership",
+            "Zustand des zugehörigen Devices",
+        )
+        positions = [recording.index(phrase) for phrase in cb_phases]
+        self.assertEqual(positions, sorted(positions))
+        submit_phases = (
+            "falsche Gesamtlänge",
+            "submission_token = 0",
+            "erforderliche XIDs werden in Wire-Reihenfolge",
+            "Ressourcentyp, Client-/Device-Ownership",
+            "nicht verfügbares/verlorenes Device",
+            "veränderlichen Voraussetzungen in Wire-Reihenfolge",
+        )
+        positions = [queue.index(phrase) for phrase in submit_phases]
+        self.assertEqual(positions, sorted(positions))
+
+        # Mixed-failure vectors and atomic rejection must be present in the
+        # conformance oracle and agree with the normative/error descriptions.
+        for phrase in (
+            "bei ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt",
+            "bei strukturell abgeschnittenem Entry und ungültiger Ziel-XID gewinnt",
+            "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt",
+            "ABORT bleibt die Ausnahme",
+        ):
+            with self.subTest(command_buffer_vector=phrase):
+                self.assertIn(phrase, conformance)
+        for phrase in (
+            "Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
+            "falscher live Ressourcentyp/fremde Ownership",
+            "Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
+            "Wait-Stage-Maske mit reservierten Bits ergibt `BadValue`",
+        ):
+            with self.subTest(submit_vector=phrase):
+                self.assertIn(phrase, conformance)
+
+        # Every synchronous rejection remains non-mutating, even when earlier
+        # objects in the same request passed their individual validation.
+        for phrase in (
+            "kein Teil des aktuellen Chunks angehängt",
+            "Zustand, Entries und Referenzen unverändert",
+        ):
+            with self.subTest(command_buffer_atomicity=phrase):
+                self.assertIn(phrase, conformance + recording)
+        for phrase in (
+            "vollständig nicht-mutierend",
+            "keine Submission-Objekte",
+            "Semaphore-Counter, Signalverfügbarkeit, Pending-Slots",
+        ):
+            with self.subTest(submit_atomicity=phrase):
+                self.assertIn(phrase, queue + errors)
+
+
 if __name__ == "__main__":
     unittest.main()
