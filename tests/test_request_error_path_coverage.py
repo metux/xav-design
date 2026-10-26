@@ -358,16 +358,16 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Mixed-failure vectors and atomic rejection must be present in the
         # conformance oracle and agree with the normative/error descriptions.
         for phrase in (
-            "bei ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt",
-            "bei strukturell abgeschnittenem Entry und ungültiger Ziel-XID gewinnt",
+            "Bei `CommandBufferData` mit ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt",
+            "bei strukturell abgeschnittenem Entry und ungültiger Ziel-XID gewinnt `BadLength`",
             "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt",
             "ABORT bleibt die Ausnahme",
         ):
             with self.subTest(command_buffer_vector=phrase):
                 self.assertIn(phrase, conformance)
         for phrase in (
-            "Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
-            "falscher live Ressourcentyp/fremde Ownership",
+            "`QueueSubmit` mit Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
+            "falscher live Ressourcentyp/fremde Ownership `BadMatch`",
             "Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
             "Wait-Stage-Maske mit reservierten Bits ergibt `BadValue`",
         ):
