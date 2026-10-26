@@ -1023,8 +1023,14 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assert_atomic_rejection(state, SubmitRequest(attach_fence=True), "INVALID_SYNCHRONIZATION_STATE")
 
     def test_late_invalid_signal_rejects_all_reservations(self) -> None:
-        state = self.state(signal_slots=[None, 9])
-        self.assert_atomic_rejection(state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)), "BadValue")
+        state = self.state(
+            signal_slots=[None, 9],
+            pending_timeline_signals=[(98, 1, 9)],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)),
+            "BadValue",
+        )
 
     def test_timeline_signal_not_above_current_counter_is_bad_value(self) -> None:
         state = self.state(signal_counters=[6, 0])
