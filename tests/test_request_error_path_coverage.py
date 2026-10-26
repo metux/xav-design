@@ -215,10 +215,12 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
     def test_all_assigned_requests_are_named_in_error_and_conformance_contracts(self):
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
-        import re
-        requests = re.findall(r"^\\| `([^ `]+)` \\| (\\d+) \\|", registry, re.MULTILINE)
-        self.assertEqual(len(requests), 47, "the audit must cover the full assigned request inventory")
-        for request, subopcode in requests:
+        requests = []
+        for line in registry.splitlines():
+            fields = line.split("|")
+            if len(fields) >= 4 and fields[1].strip().startswith("`") and fields[2].strip().isdigit():
+                requests.append((fields[1].strip().strip("`"), fields[2].strip()))
+        self.assertEqual(len(requests), 47, "the audit must cover the full assigned request inventory")        for request, subopcode in requests:
             with self.subTest(request=request, subopcode=subopcode):
                 self.assertIn(f"`{request}` | {subopcode} |", registry)
                 self.assertIn(f"`{request}`", self.errors)
