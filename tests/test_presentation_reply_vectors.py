@@ -122,6 +122,8 @@ def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
         status = u32(wire, 32, order)
         if status not in range(statuses):
             raise ValueError("invalid presentation status")
+        if kind == "create_swapchain" and status == 0 and u32(wire, 36, order) == 0:
+            raise ValueError("successful CreateSwapchain has zero image count")
         if kind == "create_swapchain" and status and u32(wire, 36, order):
             raise ValueError("failed CreateSwapchain has nonzero image count")
         if kind == "acquire":
@@ -258,6 +260,7 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 84, "I", 0, "queue-family indices must cover every family in ascending order"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
                 ("create_swapchain", 32, "I", 6, "invalid presentation status"),
+                ("create_swapchain", 36, "I", 0, "successful CreateSwapchain has zero image count"),
                 ("create_swapchain", 36, "I", 1, "failed CreateSwapchain has nonzero image count"),
                 ("acquire", 32, "I", 7, "invalid presentation status"),
                 ("acquire", 36, "I", 1, "failed AcquireNextImage has nonzero image index"),
