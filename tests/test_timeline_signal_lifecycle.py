@@ -174,7 +174,7 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
                     signal_values=(10,),
                 ),
             ),
-            "BadValue",
+            "INVALID_SYNCHRONIZATION_STATE",
         )
         self.assertEqual(state, before)
 
