@@ -32,6 +32,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 
 ## Editorial conventions
 
+- Follow the [Specification Language and Layout Style Guide](style-guide.md): all normative and explanatory text in specification chapters and registries is English, and request field tables use the canonical headers and structure defined there.
 - Define generic framing, byte order, padding, and length rules once in the wire-protocol chapter.
 - Request descriptions focus on request-specific payload and behavior; describe generic headers once.
 - Do not list offsets when field order and explicit types make them unambiguous.
