@@ -1146,7 +1146,8 @@ def check_reply_matrix(c: Check) -> None:
               "compute baseline 1–40 and presentation-profile-only 41–47" in audit_text,
               "request audit: checker summary must describe the full 47-request inventory")
     c.require("matrix remains 40 rows" not in audit_text and
-              "central 40-request registry" not in audit_text,
+              "central 40-request registry" not in audit_text and
+              "cross-checks the 40-entry request matrix" not in audit_text,
               "request audit: obsolete 40-request inventory summaries must be removed")
     opcodes = [opcode for _name, opcode, _kind in registry_rows]
     names = [name for name, _opcode, _kind in registry_rows]
