@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterable
 
 
 class ImageState(str, Enum):
@@ -87,6 +86,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         return PresentResult("BadValue", False)
     if any(
         index < 0 or index >= len(state.valid_wait_xids)
+        or index >= len(state.wait_states)
         or not state.valid_wait_xids[index]
         for index in request.wait_indices
     ):
