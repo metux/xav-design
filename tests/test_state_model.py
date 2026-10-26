@@ -507,6 +507,70 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             self.assertEqual(queue_submit(state, op), "DEPENDENCY_FAILED")
             self.assertEqual(state, before)
 
+    def test_failed_binary_signal_with_proven_unchanged_payload_restores_unsignaled(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            wait_states=[WaitState.READY],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=150, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            finish_submission(
+                state, 150, success=False,
+                binary_payload_unchanged={("signal", 0)},
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=151, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+
+    def test_failed_binary_wait_with_proven_unchanged_payload_preserves_signal(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            wait_states=[WaitState.READY],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=160, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 160, success=True), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=161, command_buffer_indices=(1,),
+                                              wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            finish_submission(
+                state, 161, success=False,
+                binary_payload_unchanged={("wait", 0)},
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=162, command_buffer_indices=(2,),
+                                              wait_indices=(0,))),
+            "SUCCESS",
+        )
+
     def test_present_wait_reservation_is_released_only_when_wait_is_terminal(self) -> None:
         state = PresentState(
             valid_wait_xids=(True,),
