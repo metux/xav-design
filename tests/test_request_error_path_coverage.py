@@ -522,7 +522,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         errors = self.errors
         conformance = self.conformance
 
-        signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## `WaitSemaphores`") ]
+        signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## Semaphore-Zerstörung") ]
         signal_order = (
             "(1) Gesamtlänge exakt 24 Bytes",
             "(2) Device-XID, danach Semaphore-XID auflösen",
