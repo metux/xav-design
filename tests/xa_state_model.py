@@ -317,6 +317,7 @@ class SubmissionModel:
     wait_states: list[WaitState] = field(default_factory=list)
     wait_indices: tuple[int, ...] = ()
     signal_slots: list[int | None] = field(default_factory=list)
+    signal_counters: list[int] = field(default_factory=list)
     signal_values: tuple[int, ...] = ()
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
@@ -345,7 +346,6 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
-            or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
@@ -378,8 +378,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Validate all signal reservations before mutating any one of them.
     for index, value in zip(request.signal_indices, request.signal_values):
         slot = state.signal_slots[index]
-        if slot is not None and value <= slot:
-            return "INVALID_SYNCHRONIZATION_STATE"
+        counter = state.signal_counters[index]
+        if value <= counter or (slot is not None and value <= slot):
+            # Invalid timeline values are BadValue, not a mutable-state error.
+            return "BadValue"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
     for i in request.wait_indices:
