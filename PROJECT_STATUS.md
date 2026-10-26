@@ -1,5 +1,17 @@
 # Project status
 
+## Current branch-head status — 2026-10-26
+
+The current branch head is `98d9609f48dfba291aa0ad39c5b234fd3ff13263`. The latest workflow run, [40303024899](https://github.com/metux/xav-design/actions/runs/40303024899), completed successfully on that exact commit. It includes the presentation event/reacquisition contract checks. This is static specification and golden-wire validation only; there is no XAverius server/client implementation in this repository to exercise live X11/XGE interoperability or Vulkan backend behavior.
+
+The static request audit now covers 47 assigned request contracts: compute baseline 1–40 and presentation-profile requests 41–47. Presentation event IDs 7 and 8 remain profile-specific, separate from compute-only v0.1. The recent lifecycle tests assert that terminal-event delivery, internal backend release, and image reacquisition are distinct milestones; masking an event must not skip cleanup, and invalidated images must not emit `IMAGE_RELEASED`.
+
+**Remaining work is implementation validation, not missing protocol assignments:**
+- Live X11/XGE interoperability for extension discovery, `GEQueryVersion`, `SelectEvents`, framing, mask behavior, and connection isolation.
+- Backend conformance for queue ordering, `WriteBuffer` visibility, synchronization/device loss, and presentation acquire/present/release/resize/window-destruction transitions.
+- Continue targeted cross-chapter drift checks when normative semantics change. Keep static checks clearly distinguished from runtime conformance.
+
+
 ## Live XGE validation plan — 2026-10-23
 
 Added [spec/xge-interoperability-test-plan.md](spec/xge-interoperability-test-plan.md), with concrete positive and negative cases for dynamic `QueryExtension` opcode use, `GEQueryVersion`, `SelectEvents`, XGE frame sizes/reserved bytes, event-mask scoping, terminal-event exclusivity, and connection isolation. Linked it from [open issues](spec/open-issues.md). This is a test procedure, not evidence of live interoperability; that remains open until exercised against an actual implementation.
@@ -28,12 +40,13 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 
 ## Immediate next steps
 
-- Continue centralizing numeric registries that can be derived from already-settled protocol semantics; the checker now verifies request/event/error assignments plus command-entry, descriptor-type, device-type, queue-flag, shader-stage, and physical-property type registries.
-- Run implementation-level interoperability tests for `QueryExtension`, XGE framing, and `SelectEvents` when a live X11/XGE implementation is available; static checks do not prove runtime interoperability.
-- Validate queue-ordering and `WriteBuffer` visibility against backend behavior once a server implementation exists.
-- Continue the systematic request-specific error-mapping, lifetime, and conformance review. A cross-chapter audit found and corrected a summary/matrix omission for `DestroyFence`/`DestroySemaphore`: open host-wait registrations now block destruction by exact internal resource identity, while a wait with a serialized terminal result no longer blocks destruction merely because its reply is queued. Conformance cases and static drift guards cover both pending-use and open-wait behavior.
-- The latest explicitly recorded CI run for the request/error/lifetime audit passed `tools/check-wire-layout.py` (2,234 checks) and all 90 golden-wire unit tests (run 39830304211). Later SelectEvents test additions are not confirmed by a reported CI result. Static checks and reference vectors verify specification consistency, not live X11/XGE interoperability or Vulkan backend behavior.
-- The shared `DEVICE_STATUS_CHANGED.reason_code` / `DEVICE_LOST.reason_code` registry is defined in [reason-codes](registries/reason-codes.md); it is not an open design item. The only currently listed v0.1 validation issue is live XGE interoperability, as tracked in [open issues](spec/open-issues.md).
+- Use [open issues](spec/open-issues.md) as the authoritative list of remaining v0.1 validation blockers; it currently identifies live X11/XGE interoperability.
+- When an implementation becomes available, execute [the XGE interoperability plan](spec/xge-interoperability-test-plan.md), including standard extension discovery, XGE negotiation, `SelectEvents`, event framing, profile-gated presentation events, masks, and client isolation.
+- Validate the specified compute path against a real backend: queue ordering, successful `WriteBuffer` visibility, readback, synchronization, device loss, and resource teardown.
+- Validate presentation-profile backend behavior separately: acquisition, accepted/rejected presentation, exactly-once terminalization, internal image release versus event delivery, reacquisition, resize, and Window/Surface destruction.
+- Keep the automated wire-layout checker and golden vectors as static contract guards. A passing run does not prove runtime interoperability or full Vulkan conformance.
+- Numeric registries and request assignments are already centrally checked; add values append-only and do not renumber existing assignments.
+- The shared `DEVICE_STATUS_CHANGED.reason_code` / `DEVICE_LOST.reason_code` registry is defined in [reason-codes](registries/reason-codes.md) and is not an open design item.
 
 ## End-to-end compute-path audit — 2026-10-21
 
