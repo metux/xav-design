@@ -59,6 +59,42 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("an unsent reply alone does not keep destruction blocked", self.conformance)
         self.assertIn("offene `WaitForFence`-Registrierung", self.errors)
 
+    def test_discovery_allocation_and_transfer_negative_matrix(self):
+        section = self.conformance.split(
+            "## Discovery, allocation, and transfer rejection matrix", 1
+        )[1]
+        cases = {
+            "EnumeratePhysicalDevices": ("UTF-8", "empty reply"),
+            "GetPhysicalDeviceProperty": ("BadAtom", "NOT_SUPPORTED", "NOT_AVAILABLE"),
+            "GetPhysicalDeviceQueueFamilyProperties": ("BadLength", "BadValue", "BadMatch"),
+            "GetPhysicalDeviceMemoryProperties": ("BadLength", "BadValue", "BadMatch"),
+            "CreateDefaultDevice": ("BadValue", "BadIDChoice", "DEVICE_UNAVAILABLE"),
+            "CreateBuffer": ("BadLength", "BadValue", "BadIDChoice", "DEVICE_LOST", "ALLOCATION_FAILED"),
+            "AllocateMemory": ("BadLength", "BadValue", "BadIDChoice", "DEVICE_LOST", "ALLOCATION_FAILED"),
+            "GetBufferMemoryRequirements": ("BadLength", "BadValue", "BadMatch"),
+            "ReadBuffer": ("BadLength", "BadValue", "BadMatch", "DEVICE_LOST", "TRANSFER_FAILED", "ALLOCATION_FAILED", "DEPENDENCY_FAILED"),
+            "UpdateDescriptorSets": ("DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE"),
+        }
+        for request, outcomes in cases.items():
+            with self.subTest(request=request):
+                self.assertIn("`" + request + "`", section)
+                self.assertIn("`" + request + "`", self.errors)
+                for outcome in outcomes:
+                    self.assertIn(outcome, section)
+
+    def test_discovery_and_memory_request_names_match_registry(self):
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+        names = (
+            "EnumeratePhysicalDevices", "GetPhysicalDeviceProperty",
+            "GetPhysicalDeviceQueueFamilyProperties", "GetPhysicalDeviceMemoryProperties",
+            "CreateDefaultDevice", "CreateBuffer", "AllocateMemory",
+            "GetBufferMemoryRequirements", "ReadBuffer", "UpdateDescriptorSets",
+        )
+        for name in names:
+            with self.subTest(request=name):
+                self.assertIn("`" + name + "`", registry)
+                self.assertIn("`" + name + "`", self.conformance)
+
 
 if __name__ == "__main__":
     unittest.main()
