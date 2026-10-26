@@ -161,6 +161,7 @@ class ShaderChunk:
     padding_valid: bool = True
     chunk_valid: bool = True
     allocation_ok: bool = True
+    flags_valid: bool = True
 
 
 def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
@@ -168,24 +169,34 @@ def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
     if not request.framing_valid:
         state.assembly_active, state.assembly = False, b""
         return "BadLength"
-    if not request.padding_valid:
+    if not request.padding_valid or not request.flags_valid:
+        state.assembly_active, state.assembly = False, b""
+        return "BadValue"
+    # These are wire-field rules, so they precede XID resolution. A failed
+    # chunk for this assembly discards the assembly rather than leaving stale
+    # partial bytes addressable.
+    if ((request.abort and (request.create or request.final or request.data))
+            or (not request.abort and not request.data)):
         state.assembly_active, state.assembly = False, b""
         return "BadValue"
     if not state.xid_valid:
         return "BadValue"
     if not state.correct_type_and_ownership:
         return "BadMatch"
-    if request.abort:
-        if request.create or request.final or request.data:
-            return "BadValue"
-        state.assembly_active, state.assembly = False, b""
-        return "SUCCESS"
     if state.device_lost:
+        # Device loss terminates all upload assemblies. ABORT cannot revive one.
         state.assembly_active, state.assembly = False, b""
         return "DEVICE_LOST"
+    if request.abort:
+        if not state.assembly_active:
+            return "INVALID_SYNCHRONIZATION_STATE"
+        state.assembly_active, state.assembly = False, b""
+        return "SUCCESS"
     if request.create:
+        # CREATE reserves the XID immediately; a second CREATE collides with
+        # that reservation just as it collides with an already-live module.
         if state.module_live or state.assembly_active:
-            return "BadIDChoice" if state.module_live else "INVALID_SYNCHRONIZATION_STATE"
+            return "BadIDChoice"
         if not request.chunk_valid:
             return "BadValue"
         if not request.allocation_ok:
@@ -221,6 +232,9 @@ class CommandBufferModel:
     device_lost: bool = False
     buffer_live: bool = True
     pool_live: bool = True
+    pool_xid_valid: bool = True
+    pool_type_and_ownership_valid: bool = True
+    pool_matches_buffer: bool = True
     correct_type_and_ownership: bool = True
     entries: list[bytes] = field(default_factory=list)
 
@@ -233,6 +247,7 @@ class CommandBufferChunk:
     scalar_valid: bool = True
     target_xid_available: bool = True
     entries_valid: bool = True
+    entries_well_formed: bool = True
 
 
 def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) -> str:
@@ -241,13 +256,30 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         return "BadLength"
     if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
-    if request.operation in {"CREATE", "CREATE_FINAL"} and not request.target_xid_available:
-        return "BadIDChoice"
-    if not state.buffer_live or not state.pool_live:
+    if request.operation == "ABORT":
+        if request.entries:
+            return "BadLength"
+    else:
+        # Parse/validate every entry before any resource lookup. No prefix of a
+        # malformed chunk may be appended, and field errors beat XID errors.
+        if not request.entries_well_formed:
+            return "BadLength"
+        if not request.entries_valid:
+            return "BadValue"
+    if request.operation in {"CREATE", "CREATE_FINAL"}:
+        if not request.target_xid_available:
+            return "BadIDChoice"
+    elif not state.buffer_live:
         return "BadValue"
-    if not state.correct_type_and_ownership:
+    if not state.pool_xid_valid or not state.pool_live:
+        return "BadValue"
+    if (not state.correct_type_and_ownership
+            or not state.pool_type_and_ownership_valid
+            or not state.pool_matches_buffer):
         return "BadMatch"
     if request.operation == "ABORT":
+        # ABORT is allowed after device loss, but only for the exact parent
+        # pool and a live buffer still in RECORDING.
         if state.lifecycle is not CommandBufferLifecycle.RECORDING:
             return "INVALID_SYNCHRONIZATION_STATE"
         state.entries.clear()
@@ -258,8 +290,6 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     if request.operation in {"CREATE", "CREATE_FINAL"}:
         if state.lifecycle is not CommandBufferLifecycle.INITIAL:
             return "INVALID_SYNCHRONIZATION_STATE"
-        if not request.entries_valid:
-            return "BadValue"
         state.entries = list(request.entries)
         state.lifecycle = (
             CommandBufferLifecycle.EXECUTABLE if request.operation == "CREATE_FINAL"
@@ -268,8 +298,6 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         return "SUCCESS"
     if state.lifecycle is not CommandBufferLifecycle.RECORDING:
         return "INVALID_SYNCHRONIZATION_STATE"
-    if not request.entries_valid:
-        return "BadValue"
     # The complete chunk is checked before the append; prior chunks survive.
     state.entries.extend(request.entries)
     if request.operation == "FINAL":
@@ -281,6 +309,8 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
 class SubmissionModel:
     device_lost: bool = False
     device_xid_valid: bool = True
+    queue_xid_valid: bool = True
+    fence_state_valid: bool = True
     command_buffers: list[CommandBufferModel] = field(default_factory=list)
     token: int = 1
     accepted_tokens: set[int] = field(default_factory=set)
@@ -315,14 +345,19 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
             or (request.signal_values and len(request.signal_values) != len(state.signal_slots))):
         return "BadValue"
-    if not state.device_xid_valid or not state.xids_valid:
+    # Token reuse is a scalar error and therefore wins over XID resolution.
+    if request.token in state.accepted_tokens:
+        return "BadValue"
+    if not state.device_xid_valid or not state.xids_valid or not state.queue_xid_valid:
         return "BadValue"
     if not state.types_and_ownership_valid:
         return "BadMatch"
     if state.device_lost:
         return "DEVICE_LOST"
-    if request.token in state.accepted_tokens:
-        return "BadValue"
+    # Normative mutable-state order: optional Fence, Command Buffers, waits,
+    # then signals. The Fence is not attached until the acceptance commit.
+    if request.attach_fence and not state.fence_state_valid:
+        return "INVALID_SYNCHRONIZATION_STATE"
     if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
         return "BadValue"
     if any(i < 0 or i >= len(state.wait_states) for i in request.wait_indices):
