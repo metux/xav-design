@@ -177,7 +177,7 @@ Kann der Server bei Device-Zerstörung oder Device Loss nicht bestätigen, dass 
 
 Ein pending Command Buffer darf in v0.1 nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden.
 
-Ein Descriptor Set darf nicht aktualisiert oder freigegeben werden, solange eine angenommene Submission es verwenden kann. Command Buffer referenzieren das Descriptor-Set-Objekt; die Slot-Inhalte werden bei der späteren Ausführung aus dem aktuellen Set gelesen, nicht beim Recording eingefroren. Ein erfolgreiches `UpdateDescriptorSets` ersetzt deshalb atomar die betroffenen Slot-Inhalte und aktualisiert die daraus abgeleiteten internen Buffer-Referenzen aller nicht-pending Command Buffer, die das Set referenzieren. Ein `EXECUTABLE`-Command-Buffer bleibt durch das Update allein ausführbar; eine spätere Zerstörung einer nun nicht mehr referenzierten alten Ressource darf ihn nicht wegen dieser entfernten Abhängigkeit invalidieren.
+Ein Descriptor Set darf nicht aktualisiert oder freigegeben werden, solange eine angenommene Submission es verwenden kann. Command buffers reference the Descriptor Set object; slot contents are read from the current set at later execution time and are not frozen during recording. A successful `UpdateDescriptorSets` therefore atomically replaces the affected slot contents and updates the derived internal Buffer references of every non-pending command buffer that references the set. An `EXECUTABLE` command buffer remains executable after the update alone; later destruction of an old resource that is no longer referenced MUST NOT invalidate it because of that removed dependency.
 
 Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
