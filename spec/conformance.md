@@ -78,7 +78,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - Alle Create-Ziel-XIDs werden getrennt von Eingabe-XIDs geprüft: ungültige/belegte Ziel-XIDs ergeben `BadIDChoice`; Batch-Erzeugung hinterlässt bei Kollision keine Teilmenge
 - `ShaderModuleData` ohne passendes Upload-Assembly und `CommandBufferData` ohne passenden `RECORDING`-Buffer werden mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen; CREATE-XID-Kollisionen ergeben `BadIDChoice`
 - `ShaderModuleData`: jeder fehlerhafte Chunk verwirft das gesamte Assembly; nach Disconnect oder Device Loss bleibt kein altes Assembly adressierbar, und spätere Chunks/ABORTs dürfen es nicht wiederbeleben
-- `ShaderModuleData`- und `CommandBufferData`-Chunk-Fehler werden nur synchron als X11-Fehler gemeldet; sie erzeugen kein `ASYNC_ERROR`, da keine Submission angenommen wurde
+- `ShaderModuleData` and `CommandBufferData` chunk errors are reported synchronously as X11 errors only; they do not generate `ASYNC_ERROR`, because no submission was accepted.
 - `CreateDevice` weist null Queue-Family-Records, null Queue-Anzahl und doppelte Queue-Family-Records mit `BadValue` ab; eine nicht unterstützte Queue-Anzahl ergibt `BadMatch`
 - Binary semaphore: an accepted wait does not consume the signal before it is actually satisfied; the signal is consumed exactly once, and only then may a new signal cycle begin. Duplicate pending wait/signal operations are rejected atomically. Binary wait/signal values MUST be zero.
 - Timeline semaphore: accepted, non-terminal signal operations reserve their values but do not increase the observable counter until successful execution; new signal values must exceed all pending reserved values. Duplicate Timeline signal entries for the same semaphore are rejected in v0.1.
