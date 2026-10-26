@@ -282,14 +282,14 @@ class SelectEventsContractTests(unittest.TestCase):
 
     def test_submission_terminal_event_is_selected_at_linearization_point(self):
         required = (
-            "bei Eintritt des terminalen Submission-Ergebnisses",
-            "gemeinsamen serialisierten Serverzustand",
-            "Der erfolgreiche `SelectEvents`-Request wirkt ab seinem Linearisierungspunkt",
-            "die dann geltende Queue-Maske",
-            "bilden gegenüber `DestroyDevice` eine unteilbare Entscheidung",
-            "kein neues Event für dessen zerstörte Device-XID eingereiht",
-            "darf diese Entscheidung nicht nachträglich ändern",
-            "Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED`",
+            "when the terminal submission outcome occurs",
+            "one shared serialized server state",
+            "A successful `SelectEvents` request takes effect at its linearization point",
+            "the Queue mask then in effect",
+            "are atomic with respect to `DestroyDevice`",
+            "no new event for its destroyed Device XID is queued",
+            "MUST NOT retroactively change this decision",
+            "For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered",
         )
         for clause in required:
             with self.subTest(clause=clause):
@@ -351,13 +351,13 @@ class SelectEventsContractTests(unittest.TestCase):
                       LIFETIME)
 
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
-        self.assertIn("Nach erfolgreicher Verarbeitung von `DestroyDevice`", EVENTS)
-        self.assertIn("bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt", EVENTS)
-        self.assertIn("ändert nicht den internen terminalen Ausgang der Submission", EVENTS)
-        self.assertIn("Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event", SUBMISSIONS)
+        self.assertIn("After successful processing of `DestroyDevice`", EVENTS)
+        self.assertIn("events already queued in the X11 output stream remain unaffected", EVENTS)
+        self.assertIn("does not change the Submission's internal terminal outcome", EVENTS)
+        self.assertIn("Every synchronously rejected request is atomic and generates no submission event", SUBMISSIONS)
         self.assertIn("Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen", SUBMISSIONS)
-        self.assertIn("Device-Kaskadeninvalidierung bei erfolgreichem `DestroyDevice` oder Client-Disconnect", LIFETIME)
-        self.assertIn("Device Loss allein invalidiert keine öffentlichen XIDs", LIFETIME)
+        self.assertIn("device-wide cascading invalidation on successful `DestroyDevice` or client disconnect", LIFETIME)
+        self.assertIn("Device loss alone does not invalidate public XIDs", LIFETIME)
 
 
 if __name__ == "__main__":
