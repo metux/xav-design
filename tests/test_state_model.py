@@ -2302,6 +2302,7 @@ class BinaryWaitReservationFailureTests(unittest.TestCase):
         self.assertIsNone(shared.wait_reservation)
         self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
         self.assertEqual(present.wait_states, [WaitState.UNTRUSTED])
+        present.image_state = ImageState.ACQUIRED  # independent image-release callback
         before = copy.deepcopy(present)
         result = queue_present(present, PresentRequest(token=322, wait_indices=(0,)))
         self.assertEqual((result.result, result.accepted), ("DEPENDENCY_FAILED", False))
