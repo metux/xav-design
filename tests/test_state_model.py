@@ -508,7 +508,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             self.assertEqual(state, before)
 
     def test_present_wait_reservation_is_released_only_when_wait_is_terminal(self) -> None:
-        state = self.present_state(
+        state = PresentState(
             valid_wait_xids=(True,),
             wait_states=[WaitState.READY],
             binary_signal_states=[BinarySignalState.SIGNALED],
