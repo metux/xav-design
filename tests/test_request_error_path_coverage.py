@@ -425,5 +425,41 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("SURFACE_LOST", presentation)
 
 
+    def test_acquire_and_present_status_precedence_is_explicit(self):
+        errors = self.errors
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+
+        acquire = errors[errors.index("For a new `AcquireNextImage` evaluation"):errors.index("For `QueuePresent`, status replies") ]
+        for phrase in (
+            "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
+            "which takes precedence over `OUT_OF_DATE`",
+            "before mutable synchronization-state checks and timeout polling",
+            "even if no image is available or the timeout is zero",
+        ):
+            with self.subTest(acquire_precedence=phrase):
+                self.assertIn(phrase, acquire)
+
+        queue_present = errors[errors.index("### Normative validation precedence for the seven presentation requests"):errors.index("## Synchron versus asynchron") ]
+        queue_stages = (
+            "Device loss takes precedence over Surface loss",
+            "`QueuePresent` returns `SURFACE_LOST` before `OUT_OF_DATE`",
+            "reject reuse of a token from an earlier accepted presentation with `BadValue`",
+            "then check image state",
+            "validate wait semaphores in array order",
+        )
+        positions = [queue_present.index(phrase) for phrase in queue_stages]
+        self.assertEqual(positions, sorted(positions))
+
+        for phrase in (
+            "Device loss beats Surface loss and accepted-token reuse",
+            "Surface loss and OUT_OF_DATE beat accepted-token reuse",
+            "accepted-token reuse returns `BadValue` before image-state and semaphore-eligibility checks",
+        ):
+            with self.subTest(conformance_precedence=phrase):
+                self.assertIn(phrase, conformance)
+        self.assertIn("Device loss (without destruction) serializes first, `CreateSwapchain` returns `DEVICE_LOST`", presentation)
+
+
 if __name__ == "__main__":
     unittest.main()
