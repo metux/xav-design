@@ -987,5 +987,50 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(queue_submit(state, request), "SUCCESS")
 
 
+    def test_duplicate_submit_terminal_callback_after_device_loss_is_noop(self) -> None:
+        shared = SharedBinarySemaphore()
+        state = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=201, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 201, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+
+        # A later Device-Loss notification and duplicate terminal callback
+        # must not retroactively rewrite a completion already committed.
+        state.device_lost = True
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 201, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+    def test_late_duplicate_present_callback_cannot_clear_new_wait_reservation(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        state = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(state, PresentRequest(token=202, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(state, 202, 0, consumed=False), "SUCCESS")
+
+        # A later operation reuses the semaphore after the first operation is
+        # terminal. A duplicate callback for the old token must not consume or
+        # release the new operation's reservation.
+        state.image_state = ImageState.ACQUIRED
+        self.assertTrue(queue_present(state, PresentRequest(token=203, wait_indices=(0,))).accepted)
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_present_wait(state, 202, 0, consumed=None), "BadValue")
+        self.assertEqual(state, before)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
