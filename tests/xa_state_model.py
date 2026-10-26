@@ -321,7 +321,6 @@ class SubmissionModel:
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
     framing_valid: bool = True
-    counts_valid: bool = True
     scalar_valid: bool = True
     xids_valid: bool = True
     types_and_ownership_valid: bool = True
