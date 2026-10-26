@@ -669,9 +669,13 @@ def finish_submission(
         previous = state.binary_signal_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         current = state.binary_signal_states[index]
         if not effective_success:
+            # A cross-API wait callback may already have proved that this
+            # pending signal was consumed. Device Loss invalidates an
+            # unobserved completion, but must not erase that known consumption.
             state.binary_signal_states[index] = (
+                BinarySignalState.UNSIGNALED if consumed else
                 BinarySignalState.UNTRUSTED
-                if consumed or not (binary_payload_unchanged and ("signal", index) in binary_payload_unchanged)
+                if not (binary_payload_unchanged and ("signal", index) in binary_payload_unchanged)
                 else previous
             )
         elif current is BinarySignalState.UNTRUSTED:
