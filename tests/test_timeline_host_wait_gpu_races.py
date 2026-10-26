@@ -50,11 +50,12 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
     def test_timeout_final_check_prefers_already_satisfied_wait(self) -> None:
         timeline = Timeline(counter=2)
         self.assertEqual(timeline.begin_host_wait(25, 8), "PENDING")
-        self.assertEqual(timeline.reserve_gpu_signal(425, 8), "SUCCESS")
-        self.assertEqual(timeline.finish_gpu_signal(425, success=True), "SUCCESS")
 
-        # The signal callback serially completes this wait. A later timeout
-        # path must not attempt to complete it a second time.
+        # Model the counter becoming observable before the timeout path runs
+        # its final predicate check. The final check must prefer satisfaction
+        # and consume the pending registration exactly once.
+        timeline.counter = 8
+        self.assertEqual(timeline.finish_host_wait(25, "TIMEOUT"), "SUCCESS")
         self.assertEqual(timeline.terminal_waits, {25: "SUCCESS"})
         self.assertEqual(timeline.pending_host_waits, {})
 
