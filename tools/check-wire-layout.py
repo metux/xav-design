@@ -1994,7 +1994,7 @@ def check_presentation_profile(c: Check) -> None:
     c.require(re.search(r"\|\s*`QUEUE`\s*\|\s*2\s*\|\s*`IMAGE_RELEASED`\s*\|", events) is not None and
               re.search(r"\|\s*`QUEUE`\s*\|\s*3\s*\|\s*`PRESENTATION_COMPLETE`\s*\|", events) is not None,
               "presentation events: queue mask bits 2 and 3 must map to the corresponding events")
-    c.require("must reject the presentation-only queue event-mask bits" in events,
+    c.require("must reject the presentation-only queue event-mask bits" in event_registry,
               "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
     presentation_spec = read("spec/presentation.md")
