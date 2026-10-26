@@ -263,14 +263,14 @@ def check_events(c: Check) -> None:
               "QueueSubmit: semaphore value checks and rejected-submit atomicity must be covered")
     c.require("The `EXECUTABLE`-to-`PENDING` transitions and synchronization reservations therefore form one shared commit" in submissions and
               "the token remains unused" in submissions and
-              "semaphore counters, signal availability, pending slots, and Timeline reservations remain unchanged" in submissions,
+              "semaphore counters, signal availability, pending slots, and timeline reservations remain unchanged" in submissions,
               "QueueSubmit: all state changes and token reservation must share the acceptance commit")
     c.require("A FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk" in read("spec/command-recording.md") and
               re.search(r"the buffer remains `RECORDING`, all previously accepted entries and references remain unchanged", read("spec/command-recording.md")) is not None,
               "CommandBufferData: failed FINAL must preserve recording state and prior references")
     c.require("A failed FINAL chunk of `CommandBufferData` leaves the buffer `RECORDING`" in conformance and
               "On rejected `QueueSubmit`, every command buffer remains `EXECUTABLE`" in conformance and
-              "the same token may be used in a corrected request" in conformance and
+              "the token remains unused and may be reused in a corrected request" in submissions and
               "neither `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` nor `ASYNC_ERROR`" in conformance,
               "conformance: finalization and rejected-submit state transitions must be atomic")
     c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
@@ -282,9 +282,9 @@ def check_events(c: Check) -> None:
               "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
               "checks the optional Fence first after checking Device state in `QueueSubmit`" in conformance,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
-    c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
+    c.require(re.search(r"\| `QueueSubmit`: Device unavailable/lost.*?\n\| `QueueSubmit`: Command Buffer not `EXECUTABLE`", errors, re.S) is not None and
               re.search(r"type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter", errors) is not None and
-              re.search(r"for CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence", conformance) is not None,
+              re.search(r"for CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence", conformance, re.I) is not None,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
     c.require(
         "nicht größer als der beobachtbare Counter ist, `BadValue`" in submissions
@@ -295,7 +295,7 @@ def check_events(c: Check) -> None:
         "QueueSubmit: distinguish invalid timeline counter values from pending reservation conflicts",
     )
     c.require(
-        "Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen" in read("spec/memory-buffers.md")
+        "Device loss takes precedence over these binding-specific state/backend checks" in read("spec/memory-buffers.md")
         and "The Device-state check takes precedence over these request-specific compatibility and pending-state checks" in read("spec/shaders-pipelines.md")
         and "pending-set conflict" in conformance,
         "BindBufferMemory/UpdateDescriptorSets: device-loss precedence must follow valid XID/type/ownership checks and precede mutable/backend checks")
