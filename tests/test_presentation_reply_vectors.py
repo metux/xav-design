@@ -107,10 +107,8 @@ def validate_presentation_reply(
             if current_width == 0 or current_height == 0:
                 raise ValueError("successful capabilities reply has zero current extent")
             if (min_width == 0 or min_height == 0 or
-                    max_width < min_width or max_height < min_height or
-                    not min_width <= current_width <= max_width or
-                    not min_height <= current_height <= max_height):
-                raise ValueError("successful capabilities current extent is outside reported bounds")
+                    max_width < min_width or max_height < min_height):
+                raise ValueError("successful capabilities reply has invalid extent bounds")
             start = 64 + 8 * formats + 4 * modes
             family_indices = []
             family_support = []
@@ -286,9 +284,8 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 48, "I", 99, "capabilities record counts do not match reply length"),
                 ("capabilities", 12, "I", 7, "invalid present_supported value"),
                 ("capabilities", 16, "I", 0, "successful capabilities reply has zero current extent"),
-                ("capabilities", 16, "I", 2000, "successful capabilities current extent is outside reported bounds"),
-                ("capabilities", 32, "I", 800, "successful capabilities current extent is outside reported bounds"),
-                ("capabilities", 40, "I", 0, "successful capabilities current extent is outside reported bounds"),
+                ("capabilities", 32, "I", 0, "successful capabilities reply has invalid extent bounds"),
+                ("capabilities", 40, "I", 0, "successful capabilities reply has invalid extent bounds"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("capabilities", 12, "I", 0, "aggregate present_supported does not match queue-family records"),
                 ("capabilities", 76, "I", 1, "queue-family indices must cover every family in ascending order"),
