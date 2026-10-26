@@ -68,7 +68,7 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 
 ## Destruction Matrix
 
-| Ressource | Öffentliche Zerstörung | Regel bei ausstehender Verwendung |
+| Resource | Public Destruction | Rule for Pending Use |
 |---|---|---|
 | Device | Invalidiert Device und Kinder sofort | Interne Bereinigung wird verzögert |
 | CommandPool | Invalidiert Pool und Kind-Command-Buffer atomar | Abweisen, solange mindestens ein Kind pending ist |
