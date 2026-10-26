@@ -595,6 +595,35 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             "SUCCESS",
         )
 
+    def test_present_consumes_shared_pending_submit_signal_once(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=185, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=186, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 186, 0, consumed=True), "SUCCESS")
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(finish_submission(submit, 185, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+
     def test_queue_submit_wait_conflicts_with_pending_queue_present_wait(self) -> None:
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         present = PresentState(
