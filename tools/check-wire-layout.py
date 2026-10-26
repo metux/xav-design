@@ -135,7 +135,7 @@ def check_events(c: Check) -> None:
               "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
     c.require(re.search(r"(?:A client disconnect ends event delivery for that X11 connection only|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
               "Client disconnect: event delivery must stop for that exact X11 connection")
-    c.require(re.search(r"(?:must not enqueue events to a closed connection or deliver them through another connection|dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:MUST NOT enqueue events to a closed connection or deliver them through another connection|dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden)", lifetime, re.S) is not None,
               "Client disconnect: late backend events must not target a closed or different connection")
     c.require(re.search(r"(?:Accepted work still reaches its actual internal terminal outcome|Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt)", lifetime, re.S) is not None,
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
