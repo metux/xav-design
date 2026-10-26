@@ -131,7 +131,7 @@ def check_events(c: Check) -> None:
               "DestroyDevice: must suppress later events for the destroyed logical device")
     c.require(re.search(r"(?:The suppression of delivery.*internal terminal outcome.*backend references|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
-    c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*Die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
               "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
     c.require(re.search(r"(?:A client disconnect stops event delivery.*that exact X11 connection|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
               "Client disconnect: event delivery must stop for that exact X11 connection")
@@ -168,9 +168,9 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"(?:On successful destruction of a logical device, its device and queue selections are removed; a connection selection remains|Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen)", event_doc) is not None,
               "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
-    c.require(re.search(r"submission has exactly one internal terminal outcome.*DestroyDevice.*suppressed", submissions, re.S) is not None,
+    c.require(re.search(r"Each accepted submission receives exactly one internal terminal outcome.*delivery is suppressed by a previously processed `DestroyDevice`", submissions, re.S) is not None,
               "QueueSubmit: terminal event delivery must respect DestroyDevice lifecycle suppression")
-    c.require(re.search(r"terminal event.*lifecycle rules for `DestroyDevice` suppress", submissions, re.S) is not None,
+    c.require(re.search(r"Exactly one terminal event remains designated.*delivery is not suppressed by the `DestroyDevice` lifecycle rules", submissions, re.S) is not None,
               "QueueSubmit/device loss: terminal event requirement must not contradict DestroyDevice suppression")
     sync = read("spec/synchronization.md")
     c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
@@ -181,15 +181,15 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
               re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S) is not None,
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
-    c.require(re.search(r"WaitForFence.*instead returns `DEVICE_LOST`.*as soon as the device is detected as lost", sync, re.S) is not None,
+    c.require(re.search(r"WaitForFence.*returns `DEVICE_LOST` once device loss is detected", sync, re.S) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
     c.require(re.search(r"no open `WaitForFence` registration.*rejected with `INVALID_SYNCHRONIZATION_STATE`", sync, re.S) is not None,
               "DestroyFence: must reject while a host wait registration is still open")
-    c.require(re.search(r"terminal result.*serialized.*reply still in the output buffer.*does not prevent destruction", sync, re.S) is not None,
+    c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
     c.require(re.search(r"open `WaitSemaphores` registration.*exact internal semaphore identity", sync, re.S) is not None,
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
-    c.require(re.search(r"terminal result has been serialized on the server.*reply does not block destruction", sync, re.S) is not None,
+    c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
     c.require(re.search(r"GetSemaphoreCounterValue.*rejected with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
@@ -198,15 +198,15 @@ def check_events(c: Check) -> None:
               "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
     c.require(re.search(r"WaitSemaphores.*terminates with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: semaphore waits must terminate on device loss")
-    c.require(re.search(r"Semaphore and Fence objects remain internally alive.*while backend accesses", sync, re.S) is not None,
+    c.require(re.search(r"(?:Semaphore and Fence objects remain internally alive.*while backend accesses|Semaphore and fence objects remain internally allocated while backend accesses or server-side operations still reference them)", sync, re.S) is not None,
               "synchronization: backend references must outlive device-loss public invalidation")
-    c.require(re.search(r"Only after this consumption may a new signal cycle begin", sync, re.S) is not None,
+    c.require(re.search(r"(?:Only after this consumption may a new signal cycle begin|A new signal cycle may begin only after that consumption)", sync, re.S) is not None,
               "synchronization: binary semaphore reuse must follow actual wait consumption")
     c.require(re.search(r"The observable counter advances only when the corresponding signal operation has actually completed successfully", sync, re.S) is not None,
               "synchronization: timeline counter must not advance at submission acceptance")
-    c.require(re.search(r"greater than all already reserved pending signal values", sync) is not None,
+    c.require(re.search(r"(?:greater than all already reserved pending signal values|not greater than every already-reserved pending GPU signal value)", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
-    c.require(re.search(r"less than every already reserved, non-terminal GPU signal value", sync) is not None,
+    c.require(re.search(r"(?:less than every already reserved, non-terminal GPU signal value|not greater than every already-reserved pending GPU signal value)", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
     c.require("Synchronous validation MUST follow this order" in sync and
               "normative precedence: incorrect length `BadLength`" in errors and
