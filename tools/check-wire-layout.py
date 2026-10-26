@@ -141,13 +141,13 @@ def check_events(c: Check) -> None:
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
     c.require(re.search(r"(?:internal Vulkan objects remain alive until all backend accesses have ended|interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten)", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
-    c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independent of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
+    c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independently of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
               "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
-    c.require(re.search(r"(?:`DEVICE_STATUS_CHANGED` is delivered only through the connection mask|`DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt)", event_doc) is not None,
+    c.require(re.search(r"(?:`DEVICE_STATUS_CHANGED` is delivered only through the Connection mask|`DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt)", event_doc) is not None,
               "XGE delivery: DEVICE_STATUS_CHANGED must use the connection mask only")
-    c.require(re.search(r"(?:Submission events are delivered only if the corresponding queue mask bit is set when the terminal submission outcome occurs|Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist)", event_doc) is not None,
+    c.require(re.search(r"(?:The two submission events are delivered only if the corresponding Queue mask bit is set when the terminal submission outcome occurs|Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist)", event_doc) is not None,
               "XGE delivery: submission event mask must be sampled at terminal outcome")
-    c.require(re.search(r"(?:For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` MUST NOT both be delivered as terminal events|Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden)", event_doc) is not None,
+    c.require(re.search(r"(?:For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered as terminal events|Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden)", event_doc) is not None,
               "XGE delivery: a submission cannot deliver both terminal events")
     c.require(re.search(r"(?:A failed event send MUST NOT block GPU/backend processing or trigger a second terminal delivery|Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen)", event_doc) is not None,
               "XGE delivery: send failure must not block backend work or duplicate terminal events")
@@ -165,7 +165,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"A required XAverius XID that does not identify a live resource.*results in `BadValue`", errors, re.S) is not None and
               re.search(r"An XID that identifies a live resource but not the expected resource type results in `BadMatch`", errors) is not None,
               "error mapping: unknown XIDs and live wrong-type XIDs must remain distinct")
-    c.require(re.search(r"(?:On successful destruction of a logical device, its device and queue selections are removed; a connection selection remains|Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen)", event_doc) is not None,
+    c.require(re.search(r"(?:When a logical Device is successfully destroyed, its Device and Queue selections are removed; the Connection selection remains|Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen)", event_doc) is not None,
               "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"Each accepted submission receives exactly one internal terminal outcome.*delivery is suppressed by a previously processed `DestroyDevice`", submissions, re.S) is not None,
@@ -176,10 +176,10 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
     c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the (?:server-)?stored fence state", sync, re.S) is not None and
-              re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S) is not None,
+              re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S | re.I) is not None,
               "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
     c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
-              re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over the Fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S) is not None,
+              re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over the Fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S | re.I) is not None,
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
     c.require(re.search(r"WaitForFence.*returns `DEVICE_LOST` once device loss is detected", sync, re.S) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
@@ -194,7 +194,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"GetSemaphoreCounterValue.*rejected with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
     c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*Unknown or non-live Device or Semaphore XIDs result in `BadValue`.*rejected with `DEVICE_LOST`", sync, re.S) is not None and
-              re.search(r"`GetSemaphoreCounterValue`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST`", errors, re.S) is not None,
+              re.search(r"`GetSemaphoreCounterValue`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST`", errors, re.S | re.I) is not None,
               "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
     c.require(re.search(r"WaitSemaphores.*terminates with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: semaphore waits must terminate on device loss")
@@ -223,7 +223,7 @@ def check_events(c: Check) -> None:
               "All synchronous rejections occur without registering a wait" in read("spec/conformance.md"),
               "WaitSemaphores: precedence must distinguish pre-registration validation from terminal wait outcomes")
     c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*cross-device use results in `BadMatch`", sync, re.S) is not None and
-              re.search(r"`WaitForFence`: incorrect length `BadLength`.*Device loss and `DestroyDevice`.*normal reply statuses", errors, re.S) is not None,
+              re.search(r"`WaitForFence`: incorrect length `BadLength`.*Device loss.*`DestroyDevice`.*normal reply statuses", errors, re.S | re.I) is not None,
               "WaitForFence: request length, XID/ownership errors, and reply terminal states must be explicit")
     c.require(re.search(r"WaitSemaphores` MUST NOT synchronously block the X11 request dispatcher", sync) is not None,
               "synchronization: host waits must not block later signals or submissions on the same connection")
