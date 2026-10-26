@@ -14,14 +14,14 @@ A successfully destroyed public resource is no longer addressable by new request
 
 ## State Model
 
-Jedes Objekt besitzt mindestens zwei getrennte Lebensdaueransichten:
+Each object has at least two distinct lifetime views:
 
 **Public State**
 
 - `LIVE`
 - `INVALID`
 
-**Interner Zustand**
+**Internal State**
 
 - `ACTIVE`
 - `DESTROY_PENDING`
@@ -47,16 +47,16 @@ Internal references are tracked separately for recorded command buffers, accepte
 
 ## Ownership Hierarchy
 
-Explizite Eltern-Kind-Beziehungen:
+Explicit parent-child relationships:
 
-- X11-Verbindung → Surface (verbindungsgebundene Surface; kein Device-Child)
-- Surface → exakte interne Identität des referenzierten X11 Window (keine Ownership des Window; die Referenz darf nie durch erneute Auflösung der numerischen XID ersetzt werden)
-- Device → alle device-eigenen öffentlichen Ressourcen, einschließlich Swapchains
-- Surface → abhängige Swapchains (Referenzbeziehung; Surface-Zerstörung wird bei live Swapchains abgewiesen)
-- CommandPool → zugehörige Command Buffer
-- DescriptorPool → zugehörige Descriptor Sets
+- X11 connection → surface (connection-bound surface; not a device child)
+- Surface → exact internal identity of the referenced X11 window (the window is not owned; the reference MUST NOT be replaced by resolving the numeric XID again)
+- Device → all public resources owned by the device, including swapchains
+- Surface → dependent swapchains (reference relationship; surface destruction is rejected while swapchains remain live)
+- CommandPool → associated command buffers
+- DescriptorPool → associated descriptor sets
 
-Andere Beziehungen sind Abhängigkeiten, keine automatischen Ownership-Beziehungen:
+Other relationships are dependencies, not automatic ownership relationships:
 
 - Buffer ↔ Memory
 - Pipeline ↔ Pipeline Layout
@@ -64,15 +64,15 @@ Andere Beziehungen sind Abhängigkeiten, keine automatischen Ownership-Beziehung
 - Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
 - Command Buffer ↔ Ressourcen, die in aufgezeichneten Commands verwendet werden
 
-Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim Erstellen eines anderen Objekts verwendet wurde, dauerhaft existieren muss. Maßgeblich sind die tatsächlichen Vulkan-Lebensdauerregeln.
+The implementation MUST NOT assume that every object whose handle was used to create another object must remain alive indefinitely. The applicable Vulkan lifetime rules determine the required lifetime.
 
 ## Destruction Matrix
 
 | Resource | Public Destruction | Rule for Pending Use |
 |---|---|---|
-| Device | Invalidiert Device und Kinder sofort | Interne Bereinigung wird verzögert |
-| CommandPool | Invalidiert Pool und Kind-Command-Buffer atomar | Abweisen, solange mindestens ein Kind pending ist |
-| CommandBuffer | XID wird ungültig | Abweisen, solange pending |
+| Device | Invalidates device and children immediately | Internal cleanup is deferred |
+| CommandPool | Atomically invalidates the pool and child command buffers | Reject while any child is pending |
+| CommandBuffer | XID becomes invalid | Reject while pending |
 | DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, wenn ein Kind-Set pending ist oder ein Kind-Set von einem `RECORDING`-Command-Buffer referenziert wird |
 | DescriptorSet | XID wird ungültig | Abweisen, solange pending oder von einem `RECORDING`-Command-Buffer referenziert; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
 | Buffer | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer ihn referenziert oder angenommene Arbeit ihn direkt/indirekt verwendet; bei erfolgreichem Destroy werden nicht-pending `EXECUTABLE`-Command-Buffer mit dieser Referenz `INVALID`. Interne Freigabe verzögern, solange Serveroperationen oder Descriptor-Slots das Objekt noch referenzieren |
