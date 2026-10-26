@@ -437,6 +437,37 @@ def destroy_command_pool(command_buffers: list[CommandBufferModel]) -> str:
 
 
 @dataclass
+class ResourceDestroyModel:
+    """Minimal DestroyResource lifetime oracle for command-buffer references."""
+    resource_live: bool = True
+    xid_valid: bool = True
+    supported_type: bool = True
+    correct_type_and_ownership: bool = True
+    pending_use: bool = False
+    recording_refs: list[CommandBufferModel] = field(default_factory=list)
+    executable_refs: list[CommandBufferModel] = field(default_factory=list)
+
+
+def destroy_resource(state: ResourceDestroyModel) -> str:
+    """Apply the resource-destruction checks before any public-state mutation."""
+    if not state.xid_valid or not state.resource_live:
+        return "BadValue"
+    if not state.supported_type or not state.correct_type_and_ownership:
+        return "BadMatch"
+    if state.pending_use:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    if any(cb.lifecycle is CommandBufferLifecycle.RECORDING and cb.buffer_live
+           for cb in state.recording_refs):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    # Commit atomically: executable references become invalid only if Destroy succeeds.
+    for cb in state.executable_refs:
+        if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
+            cb.lifecycle = CommandBufferLifecycle.INVALID
+    state.resource_live = False
+    return "SUCCESS"
+
+
+@dataclass
 class SubmissionModel:
     device_lost: bool = False
     device_xid_valid: bool = True

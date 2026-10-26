@@ -17,6 +17,8 @@ from xa_state_model import (
     CommandBufferLifecycle,
     CommandBufferChunk,
     CommandBufferModel,
+    ResourceDestroyModel,
+    destroy_resource,
     ShaderAssemblyState,
     ShaderChunk,
     SubmissionModel,
@@ -1566,6 +1568,41 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class ResourceDestroyReferenceTests(unittest.TestCase):
+    def test_destroy_rejects_recording_reference_without_mutation(self) -> None:
+        recording = CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"recorded"])
+        executable = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"also recorded"])
+        state = ResourceDestroyModel(recording_refs=[recording], executable_refs=[executable])
+        before = copy.deepcopy((state, recording, executable))
+        self.assertEqual(destroy_resource(state), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((state, recording, executable), before)
+
+    def test_destroy_invalidates_executable_references_atomically(self) -> None:
+        first = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"a"])
+        second = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"b"])
+        state = ResourceDestroyModel(executable_refs=[first, second])
+        self.assertEqual(destroy_resource(state), "SUCCESS")
+        self.assertFalse(state.resource_live)
+        self.assertEqual((first.lifecycle, second.lifecycle), (
+            CommandBufferLifecycle.INVALID, CommandBufferLifecycle.INVALID,
+        ))
+        self.assertEqual((first.entries, second.entries), ([b"a"], [b"b"]))
+
+    def test_pending_use_rejection_preserves_resource_and_executable_buffers(self) -> None:
+        cb = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"keep"])
+        state = ResourceDestroyModel(pending_use=True, executable_refs=[cb])
+        before = copy.deepcopy((state, cb))
+        self.assertEqual(destroy_resource(state), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((state, cb), before)
+
+    def test_unsupported_resource_type_is_rejected_before_reference_checks(self) -> None:
+        recording = CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"keep"])
+        state = ResourceDestroyModel(supported_type=False, recording_refs=[recording])
+        before = copy.deepcopy((state, recording))
+        self.assertEqual(destroy_resource(state), "BadMatch")
+        self.assertEqual((state, recording), before)
 
 
 class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
