@@ -52,10 +52,10 @@ The defined states are:
 
 Transitions:
 
-- Allokation → `INITIAL`
-- Create-Chunk von `CommandBufferData` → `RECORDING`
-- erfolgreicher FINAL-Chunk → `EXECUTABLE`
-- angenommene Submission → `PENDING`
+- Allocation → `INITIAL`
+- Create chunk of `CommandBufferData` → `RECORDING`
+- successful FINAL chunk → `EXECUTABLE`
+- accepted submission → `PENDING`
 - Successful execution → `EXECUTABLE`
 - Asynchronous execution failure or device loss → `INVALID` after the pending phase ends
 - Pool or device destruction → public XID becomes invalid
@@ -78,7 +78,7 @@ Wire-Layout:
 - Offset 12: `CARD32 command_pool_xid`
 - Offset 16: Command-Entries
 
-Flags im Common-Header:
+Common-header flags:
 
 | Bit | Name | Meaning |
 |---:|---|---|
@@ -89,11 +89,11 @@ Flags im Common-Header:
 
 Allowed combinations:
 
-| CREATE | FINAL | ABORT | Bedeutung |
+| CREATE | FINAL | ABORT | Meaning |
 |---:|---:|---:|---|
 | 0 | 0 | 0 | Append entries to a buffer that is already recording |
 | 0 | 1 | 0 | Append final entries and end recording |
-| 1 | 0 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |
+| 1 | 0 | 0 | Create a command buffer, begin recording, and record the first chunk |
 | 1 | 1 | 0 | Create a command buffer, record the complete stream, and finish recording |
 | 0 | 0 | 1 | Abort recording; no entries are allowed |
 
