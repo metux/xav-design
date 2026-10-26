@@ -251,11 +251,11 @@ class GoldenXGEEventTests(unittest.TestCase):
                     actual.append((offset, size))
             self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
             field_labels = {
-                "device_xid": "Device-XID",
+                "device_xid": "Device XID",
                 "error_code": "`error_code`",
-                "origin": "Origin-Werte",
+                "origin": "Origin values",
                 "submission_token": "`submission_token`",
-                "resource_xid": "Ressourcen-XID",
+                "resource_xid": "affected resource XID",
                 "reserved": "reserved",
                 "reason_code": "`reason_code`",
                 "device_generation": "`device_generation`",
@@ -477,8 +477,8 @@ class GoldenXGEEventTests(unittest.TestCase):
             "ein abgewiesener \x60QueueSubmit\x60 darf nie als Token-Ziel eines \x60ASYNC_ERROR\x60 erscheinen",
             conformance,
         )
-        self.assertIn("Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event.", queue)
-        self.assertIn("Ein synchroner Fehler darf kein `ASYNC_ERROR` für eine nicht angenommene Submission erzeugen.", queue)
+        self.assertIn("Every synchronously rejected request is atomic and generates no submission event.", queue)
+        self.assertIn("An error detected before acceptance MUST NOT be emitted as `ASYNC_ERROR` for the same rejection.", queue)
 
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
@@ -630,7 +630,7 @@ class GoldenXGEEventTests(unittest.TestCase):
         self.assertEqual(offsets, set(range(9)))
         self.assertIn("For an accepted `QueueSubmit`", error_spec)
         self.assertIn("MUST NOT be reported as a delayed X11 request error", error_spec)
-        self.assertIn("nicht den absoluten X11-Fehlercode", events)
+        self.assertIn("not the absolute X11 error code", events)
         self.assertIn("not the absolute X11 error code", event_registry)
 
     def test_async_error_codes_match_central_error_registry(self):
