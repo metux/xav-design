@@ -2101,8 +2101,9 @@ def check_presentation_profile(c: Check) -> None:
     presentation_reply_tests = read("tests/test_presentation_reply_vectors.py")
     c.require("family_indices != list(range(families))" in presentation_reply_tests and
               "aggregate present_supported does not match queue-family records" in presentation_reply_tests and
-              "successful capabilities reply has zero current extent" in presentation_reply_tests,
-              "presentation reply tests must check complete family ordering and aggregate support")
+              "successful capabilities reply has zero current extent" in presentation_reply_tests and
+              "successful CreateSwapchain has zero image count" in presentation_reply_tests,
+              "presentation reply tests must check family ordering, aggregate support, and valid success payloads")
 
     for contract in (
         "total reply size is 40 bytes and `reply.length = 2`",
