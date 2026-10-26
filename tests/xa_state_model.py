@@ -1196,3 +1196,74 @@ def drop_buffer_internal_ref(
     buffer.backend_accesses -= backend_accesses
     _finish_buffer_release(buffer)
     return "SUCCESS"
+
+
+@dataclass
+class AsyncResourceIdentity:
+    """Immutable identity captured by backend work; XID is only a public name."""
+    identity: str
+    xid: int
+    device_identity: str
+    live: bool = True
+    backend_refs: int = 1
+    callback_count: int = 0
+
+
+@dataclass
+class AsyncDeviceIdentity:
+    identity: str
+    xid: int
+    live: bool = True
+
+
+@dataclass
+class AsyncCallbackRegistry:
+    """Oracle for delayed callbacks: never resolve callback targets by reused XID."""
+    resources_by_xid: dict[int, AsyncResourceIdentity] = field(default_factory=dict)
+    devices_by_xid: dict[int, AsyncDeviceIdentity] = field(default_factory=dict)
+    connections_live: set[str] = field(default_factory=set)
+    emitted_events: list[tuple[str, int, int]] = field(default_factory=list)
+
+    def register_device(self, device: AsyncDeviceIdentity) -> None:
+        self.devices_by_xid[device.xid] = device
+
+    def register_resource(self, resource: AsyncResourceIdentity) -> None:
+        self.resources_by_xid[resource.xid] = resource
+
+    def destroy_resource(self, resource: AsyncResourceIdentity) -> str:
+        if self.resources_by_xid.get(resource.xid) is not resource or not resource.live:
+            return "BadValue"
+        del self.resources_by_xid[resource.xid]
+        resource.live = False
+        return "SUCCESS"
+
+    def destroy_device(self, device: AsyncDeviceIdentity) -> str:
+        if self.devices_by_xid.get(device.xid) is not device or not device.live:
+            return "BadValue"
+        del self.devices_by_xid[device.xid]
+        device.live = False
+        for xid, resource in list(self.resources_by_xid.items()):
+            if resource.device_identity == device.identity:
+                del self.resources_by_xid[xid]
+                resource.live = False
+        return "SUCCESS"
+
+    def complete_backend_callback(
+        self, resource: AsyncResourceIdentity, device: AsyncDeviceIdentity,
+        connection_identity: str, *, token: str,
+    ) -> str:
+        """Finish captured work; event targets come from captured identities only."""
+        if resource.backend_refs <= 0:
+            return "BadValue"
+        resource.backend_refs -= 1
+        resource.callback_count += 1
+        # A stale resource/device or dead connection suppresses delivery. In
+        # particular, never look up resource.xid in resources_by_xid here.
+        if (device.live and self.devices_by_xid.get(device.xid) is device
+                and connection_identity in self.connections_live):
+            resource_xid = (
+                resource.xid if resource.live
+                and self.resources_by_xid.get(resource.xid) is resource else 0
+            )
+            self.emitted_events.append((token, device.xid, resource_xid))
+        return "SUCCESS"
