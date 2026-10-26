@@ -127,7 +127,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         event_contract = self.presentation.split(
             "## 6. Completion is three different things", 1
         )[1].split("\n## ", 1)[0]
-        race_contract = self.races.split(
+        race_contract = self.conformance.split(
             "- Presentation event race vectors MUST exercise", 1
         )[1].split("\n- ", 1)[0]
         self.assertIn("Image release / reacquisition eligibility", event_contract)
@@ -159,7 +159,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("if not, it invalidates that image and the Swapchain instead", event_contract)
         self.assertIn("no `IMAGE_RELEASED` is emitted", lifecycle_contract)
         self.assertIn("otherwise the image is invalidated and no release event is emitted", race_contract)
-        self.assertIn("terminal failure that invalidates the image MUST NOT emit `IMAGE_RELEASED`", self.races)
+        self.assertIn("terminal failure that invalidates the image MUST NOT emit `IMAGE_RELEASED`", self.conformance)
 
     def test_reacquisition_requires_internal_release_not_event_delivery(self) -> None:
         race_contract = self.races.split(
