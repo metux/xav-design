@@ -1,6 +1,6 @@
 # Resource lifetime and ownership
 
-## Client resources
+## Client Resources
 
 Client-created XAverius resources use valid XIDs allocatable by the client.
 
@@ -39,7 +39,7 @@ The following transitions are normative:
 - Rejected destroy request: no change to public state, internal state, dependent command-buffer states, or ownership.
 - Successful ordinary destruction: the public view becomes `INVALID` in the same request. If no internal references or backend accesses remain, the object may transition directly to `RELEASED`; otherwise it transitions to `DESTROY_PENDING`.
 - `DESTROY_PENDING` → `RELEASED`: only after all internal references are released, no backend access remains possible, and backend destruction has completed.
-- Device-Kaskadeninvalidierung bei erfolgreichem `DestroyDevice` oder Client-Disconnect: alle zugehörigen öffentlichen XIDs werden `INVALID`; Objekte mit verbleibenden internen Referenzen oder Backend-Zugriffen bleiben `DESTROY_PENDING`, die übrigen dürfen `RELEASED` werden. Device Loss allein invalidiert keine öffentlichen XIDs: das verlorene logische Device und seine Ressourcen bleiben bis zur expliziten Zerstörung adressierbar, soweit die jeweiligen Request-Verträge Statusabfragen oder logische Bereinigung zulassen. So bleiben insbesondere `GetFenceStatus` und `DestroyDevice` nach Device Loss nutzbar. Für angenommene Präsentationen müssen interne Terminalzustände und sichere Backend-Bereinigung auch dann abgeschlossen werden, wenn Lifecycle-Regeln die Zustellung von Presentation-Events unterdrücken. Ein noch offener `AcquireNextImage`-Request wird bei `DestroyDevice` mit `DEVICE_DESTROYED` terminalisiert, sofern sein Ergebnis nicht bereits zuvor terminal serialisiert wurde; beim Disconnect wird die Registrierung ohne Reply entfernt.
+- Device-wide cascading invalidation on successful `DestroyDevice` or client disconnect: all associated public XIDs become `INVALID`. Objects with remaining internal references or backend accesses remain `DESTROY_PENDING`; other objects may become `RELEASED`. Device loss alone does not invalidate public XIDs: the lost logical device and its resources remain addressable until explicitly destroyed, where the relevant request contracts permit status queries or logical cleanup. In particular, `GetFenceStatus` and `DestroyDevice` remain usable after device loss. For accepted presentations, internal terminal states and safe backend cleanup MUST complete even when lifecycle rules suppress delivery of presentation events. An open `AcquireNextImage` request is terminalized with `DEVICE_DESTROYED` by `DestroyDevice`, unless its result was already terminally serialized; on disconnect, the registration is removed without a reply.
 
 An object in `DESTROY_PENDING` cannot be addressed or destroyed again using its old XID. A reused XID identifies a new internal resource identity and MUST NOT inherit references to the old object. `RELEASED` is terminal.
 
@@ -189,14 +189,14 @@ Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
 ## Errors for Invalid Lifetime Operations
 
-- Unbekannte oder zerstörte XAverius-XID: `BadValue`
-- Falscher Typ oder inkompatible Ressource: normalerweise `BadMatch`
+- Unknown or destroyed XAverius XID: `BadValue`
+- Wrong type or incompatible resource: normally `BadMatch`
 - Falsches Device: `BadMatch`
-- Zerstörung eines pending Command Buffers oder Descriptor Sets: `INVALID_SYNCHRONIZATION_STATE`
-- Ungültiger Fence-Reset: `INVALID_SYNCHRONIZATION_STATE`
-- Verlorenes Device: `DEVICE_LOST`, sofern der Request nicht ausdrücklich noch die logische Invalidierung erlaubt
+- Destroying a pending command buffer or descriptor set: `INVALID_SYNCHRONIZATION_STATE`
+- Invalid fence reset: `INVALID_SYNCHRONIZATION_STATE`
+- Lost device: `DEVICE_LOST`, unless the request explicitly permits logical invalidation
 
-Die erfolgreiche Device-Kaskadeninvalidierung ist eine Sonderregel und wird nicht durch die normalen Pending-Use-Ablehnungen blockiert.
+Successful device-wide cascading invalidation is a special rule and is not blocked by normal pending-use rejections.
 
 
 Presentation lifecycle rule: an accepted present has one serialized terminal status and one internal cleanup. A later resize, Surface loss, or Device loss cannot overwrite an already terminal status. If still pending and forced to fail by OUT_OF_DATE, SURFACE_LOST, or DEVICE_LOST, its image is invalidated and IMAGE_RELEASED is not emitted. PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence and confirmation that the Swapchain remains usable. Event suppression never skips internal cleanup.
