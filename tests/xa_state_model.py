@@ -977,7 +977,7 @@ def free_descriptor_sets(
     """Validate all selected sets first, then invalidate and release their slots."""
     if any(not descriptor_set.live for descriptor_set in sets):
         return "BadValue"
-    if any(descriptor_set.pending_use or descriptor_set.recording_refs
+    if any(descriptor_set.pending_use or descriptor_set.pending_submission_refs or descriptor_set.recording_refs
            for descriptor_set in sets):
         return "INVALID_SYNCHRONIZATION_STATE"
     if _release_descriptor_slots(sets, buffers) != "SUCCESS":
@@ -1001,7 +1001,7 @@ def destroy_descriptor_pool(
     if not pool.correct_type_and_ownership:
         return "BadMatch"
     live_sets = [descriptor_set for descriptor_set in pool.sets if descriptor_set.live]
-    if any(descriptor_set.pending_use or descriptor_set.recording_refs
+    if any(descriptor_set.pending_use or descriptor_set.pending_submission_refs or descriptor_set.recording_refs
            for descriptor_set in live_sets):
         return "INVALID_SYNCHRONIZATION_STATE"
     if _release_descriptor_slots(live_sets, buffers) != "SUCCESS":

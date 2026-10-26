@@ -2170,5 +2170,7 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         buffer.backend_accesses = 1
         self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
         self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(free_descriptor_sets([descriptor_set], [buffer]), "SUCCESS")
+        self.assertEqual(buffer.descriptor_slot_refs, 0)
         self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
         self.assertEqual(buffer.internal_state, "RELEASED")
