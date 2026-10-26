@@ -1325,11 +1325,11 @@ def check_reply_layouts(c: Check) -> None:
         "WaitSemaphores": ("sync", [
             (r"total length: \x6028 \+ 12 \* semaphore_count\x60 bytes", "variable request length formula"),
             (r"(?:Array aus 12-Byte-Entries|array of 12-byte entries)", "12-byte wait entries"),
-            (r"Jeder Entry enthält Semaphore-XID und \x60CARD64 wait_value\x60", "wait entry fields"),
+            (r"(?:Jeder Entry enthält Semaphore-XID und \x60CARD64 wait_value\x60|Each entry contains a semaphore XID and \x60CARD64 wait_value\x60)", "wait entry fields"),
             (r"(?:Der Reply ist genau 32 Bytes lang|The reply is exactly 32 bytes long)", "fixed 32-byte reply"),
-            (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
+            (r"(?:Offset 8 enthält einen \x60CARD32 status\x60|Offset 8 contains a \x60CARD32 status\x60)", "wait status field"),
             (r"Offsets 12–31 are zero and \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
-            (r"\x60SUCCESS = 0\x60 oder \x60TIMEOUT = 1\x60", "wait reply status values"),
+            (r"(?:\x60SUCCESS = 0\x60 oder \x60TIMEOUT = 1\x60|\x60SUCCESS = 0\x60 or \x60TIMEOUT = 1\x60)", "wait reply status values"),
         ]),
         "GetFenceStatus": ("sync", [
             (r"Reply: 32 bytes", "fixed 32-byte reply"),
@@ -1342,7 +1342,7 @@ def check_reply_layouts(c: Check) -> None:
         "WaitForFence": ("sync", [
             (r"Request: exactly 24 bytes", "fixed request length"),
             (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
-            (r"Offsets 12–31 sind null und \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
+            (r"(?:Offsets 12–31 sind null und \x60reply\.length = 0\x60|offsets 12–31 are zero and \x60reply\.length = 0\x60)", "reserved bytes and zero payload"),
             (r"\x60SUCCESS = 0\x60", "reply status values"),
             (r"\x60TIMEOUT = 1\x60", "timeout status"),
             (r"\x60EXECUTION_FAILED = 2\x60", "execution failure status"),
