@@ -85,9 +85,11 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     # Stage 3: XID resolution in wire order: Device, Swapchain, then waits.
     if not state.valid_device_xid or not state.valid_swapchain_xid:
         return PresentResult("BadValue", False)
-    if len(state.valid_wait_xids) != len(request.wait_indices):
-        return PresentResult("BadValue", False)
-    if not all(state.valid_wait_xids):
+    if any(
+        index < 0 or index >= len(state.valid_wait_xids)
+        or not state.valid_wait_xids[index]
+        for index in request.wait_indices
+    ):
         return PresentResult("BadValue", False)
 
     # Stage 4: live type, ownership, and cross-device checks.
