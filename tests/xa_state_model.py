@@ -321,6 +321,7 @@ class SubmissionModel:
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
     framing_valid: bool = True
+    counts_valid: bool = True
     scalar_valid: bool = True
     xids_valid: bool = True
     types_and_ownership_valid: bool = True
@@ -332,23 +333,33 @@ class SubmitRequest:
     token: int = 1
     command_buffer_indices: tuple[int, ...] = (0,)
     wait_indices: tuple[int, ...] = ()
+    signal_indices: tuple[int, ...] = ()
     signal_values: tuple[int, ...] = ()
     attach_fence: bool = False
+    counts_valid: bool = True
 
 
 def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     """Atomic submission oracle: validate every member, then reserve all state."""
-    if not state.framing_valid:
+    if not state.framing_valid or not request.counts_valid:
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
-            or (request.signal_values and len(request.signal_values) != len(state.signal_slots))):
+            or len(set(request.signal_indices)) != len(request.signal_indices)
+            or len(request.signal_indices) != len(request.signal_values)):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
         return "BadValue"
     if not state.device_xid_valid or not state.xids_valid or not state.queue_xid_valid:
+        return "BadValue"
+    # Resolve every referenced resource before type/ownership and device state.
+    if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
+        return "BadValue"
+    if any(i < 0 or i >= len(state.wait_states) for i in request.wait_indices):
+        return "BadValue"
+    if any(i < 0 or i >= len(state.signal_slots) for i in request.signal_indices):
         return "BadValue"
     if not state.types_and_ownership_valid:
         return "BadMatch"
@@ -358,10 +369,6 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # then signals. The Fence is not attached until the acceptance commit.
     if request.attach_fence and not state.fence_state_valid:
         return "INVALID_SYNCHRONIZATION_STATE"
-    if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
-        return "BadValue"
-    if any(i < 0 or i >= len(state.wait_states) for i in request.wait_indices):
-        return "BadValue"
     if any(state.command_buffers[i].lifecycle is not CommandBufferLifecycle.EXECUTABLE
            for i in request.command_buffer_indices):
         return "INVALID_SYNCHRONIZATION_STATE"
@@ -370,7 +377,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
     # Validate all signal reservations before mutating any one of them.
-    for slot, value in zip(state.signal_slots, request.signal_values):
+    for index, value in zip(request.signal_indices, request.signal_values):
+        slot = state.signal_slots[index]
         if slot is not None and value <= slot:
             return "INVALID_SYNCHRONIZATION_STATE"
     # Acceptance commit point.
@@ -379,8 +387,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         state.wait_states[i] = WaitState.RESERVED
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
-    if request.signal_values:
-        state.signal_slots[:] = list(request.signal_values)
+    for index, value in zip(request.signal_indices, request.signal_values):
+        state.signal_slots[index] = value
     state.fence_attached = request.attach_fence
     state.pending_submissions.append(request.token)
     return "SUCCESS"
