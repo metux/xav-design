@@ -1,7 +1,7 @@
-"""Executable reference state model for XAverius QueuePresent validation.
+"""Executable reference state models for XAverius request validation.
 
-This is a specification-level oracle, not a server implementation. Keep stage
-ordering and commit effects aligned with spec/presentation.md and spec/errors.md.
+These are specification-level oracles, not server implementations. Keep stage
+ordering and commit effects aligned with normative spec and conformance rules.
 """
 from __future__ import annotations
 
@@ -312,13 +312,10 @@ class SubmissionModel:
     queue_xid_valid: bool = True
     fence_state_valid: bool = True
     command_buffers: list[CommandBufferModel] = field(default_factory=list)
-    token: int = 1
     accepted_tokens: set[int] = field(default_factory=set)
     wait_states: list[WaitState] = field(default_factory=list)
-    wait_indices: tuple[int, ...] = ()
     signal_slots: list[int | None] = field(default_factory=list)
     signal_counters: list[int] = field(default_factory=list)
-    signal_values: tuple[int, ...] = ()
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
     framing_valid: bool = True
