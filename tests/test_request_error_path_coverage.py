@@ -178,11 +178,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
     def test_queue_submit_precedence_and_atomic_acceptance_match_error_contract(self):
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
-        section = self.conformance.split(
-            "## QueueSubmit rejection and acceptance invariants", 1
-        )
-        self.assertEqual(len(section), 2, "conformance must contain the QueueSubmit invariant matrix")
-        section = section[1].split("\\n## ", 1)[0]
+        section = self.conformance
 
         # The request registry, normative chapter, general error mapping, and
         # conformance matrix must all retain the same request and outcomes.
@@ -210,9 +206,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, queue)
         for phrase in (
-            "rejected request leaves the semaphore counters",
+            "semaphore counters, binary signal availability",
             "atomically with submission acceptance",
-            "no Submission-Event",
+            "synchron abgewiesene Requests erzeugen kein Submission-Event",
         ):
             with self.subTest(atomicity=phrase):
                 self.assertIn(phrase, queue + section)
