@@ -2217,6 +2217,7 @@ def check_presentation_profile(c: Check) -> None:
         "Do not test whether a nonzero presentation token was previously accepted at this stage",
         "after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, reject reuse of a token",
         "For a new `AcquireNextImage` evaluation, after the preceding validation stages, `DEVICE_LOST` takes precedence over `SURFACE_LOST`, which takes precedence over `OUT_OF_DATE`;",
+        "validate every supplied semaphore/fence for acquisition-signal eligibility and absence of a conflicting pending acquire before polling or registering the wait",
     )
     for contract in precedence_contracts:
         c.require(contract in errors,
@@ -2339,6 +2340,7 @@ def check_presentation_profile(c: Check) -> None:
     # classes and the test oracle synchronized with the presentation rules.
     lifecycle_vectors = (
         "**Acquire timeout versus lifecycle:**",
+        "**Acquire synchronization eligibility versus timeout:**",
         "**DestroyDevice versus pending acquire:**",
         "**DestroySurface versus CreateSwapchain:**",
         "**DestroyDevice versus CreateSwapchain:**",
