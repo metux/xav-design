@@ -89,6 +89,55 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
         self.assertEqual(state.signal_counters, [7])
 
 
+    def test_same_semaphore_reverse_completion_keeps_counter_monotonic(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=80, value=12, command_buffer=0)
+        self.submit_signal(state, token=81, value=18, command_buffer=1)
+
+        # Both values remain reserved until their own operations are terminal.
+        self.assertEqual(
+            state.pending_timeline_signals, [(80, 0, 12), (81, 0, 18)]
+        )
+        # The higher-valued callback arrives first. The visible counter may
+        # advance to 18, but the lower reservation must remain tracked.
+        self.assertEqual(finish_submission(state, 81, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [18])
+        self.assertEqual(state.pending_timeline_signals, [(80, 0, 12)])
+        self.assertEqual(state.pending_submissions, [80])
+        # Host signaling may not bypass the still-pending lower reservation,
+        # even though the higher value has already become observable.
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            signal_timeline_host(state, 0, 19),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+
+        # Late completion of the lower signal must never move the counter back.
+        self.assertEqual(finish_submission(state, 80, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [18])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(signal_timeline_host(state, 0, 19), "SUCCESS")
+        self.assertEqual(state.signal_counters, [19])
+
+    def test_reverse_completion_with_lower_signal_failure_preserves_higher_value(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=90, value=12, command_buffer=0)
+        self.submit_signal(state, token=91, value=18, command_buffer=1)
+        self.assertEqual(finish_submission(state, 91, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [18])
+        self.assertEqual(finish_submission(state, 90, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [18])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(
+            [cb.lifecycle for cb in state.command_buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.EXECUTABLE],
+        )
+
     def test_device_loss_wins_over_late_backend_success_callback(self) -> None:
         state = self.state()
         self.submit_signal(state, token=50, value=12)
