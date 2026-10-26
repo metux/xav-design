@@ -1354,3 +1354,78 @@ class AsyncSubmissionEventRegistry:
         if connection in self.live_connections and device is not None and device.live:
             self.emitted_events.append(("ASYNC_ERROR", connection, device.xid, token))
         return "SUCCESS"
+
+@dataclass
+class AsyncFenceIdentity:
+    """Fence generation captured by one accepted backend operation."""
+    identity: str
+    xid: int
+    device_identity: str
+    status: str = "UNSIGNALED"
+    live: bool = True
+    generation: int = 0
+    pending_token: int | None = None
+    completed_tokens: set[int] = field(default_factory=set)
+
+
+@dataclass
+class AsyncFenceCallbackModel:
+    """Oracle ensuring delayed fence callbacks cannot signal a reused XID."""
+    fences: dict[int, AsyncFenceIdentity] = field(default_factory=dict)
+    devices: dict[str, bool] = field(default_factory=dict)
+
+    def register_device(self, identity: str) -> None:
+        self.devices[identity] = True
+
+    def register_fence(self, fence: AsyncFenceIdentity) -> str:
+        if fence.xid in self.fences and self.fences[fence.xid].live:
+            return "BadIDChoice"
+        if not self.devices.get(fence.device_identity, False):
+            return "BadValue"
+        self.fences[fence.xid] = fence
+        return "SUCCESS"
+
+    def accept(self, fence: AsyncFenceIdentity, token: int) -> str:
+        if not self.devices.get(fence.device_identity, False):
+            return "DEVICE_LOST"
+        if (not fence.live or self.fences.get(fence.xid) is not fence
+                or fence.status != "UNSIGNALED" or fence.pending_token is not None
+                or token == 0 or token in fence.completed_tokens):
+            return "INVALID_SYNCHRONIZATION_STATE"
+        fence.pending_token = token
+        fence.status = "PENDING"
+        return "SUCCESS"
+
+    def destroy(self, fence: AsyncFenceIdentity) -> str:
+        if not fence.live or self.fences.get(fence.xid) is not fence:
+            return "BadValue"
+        if fence.pending_token is not None:
+            return "INVALID_SYNCHRONIZATION_STATE"
+        fence.live = False
+        del self.fences[fence.xid]
+        return "SUCCESS"
+
+    def reset(self, fence: AsyncFenceIdentity) -> str:
+        if not self.devices.get(fence.device_identity, False):
+            return "DEVICE_LOST"
+        if not fence.live or self.fences.get(fence.xid) is not fence:
+            return "BadValue"
+        if fence.pending_token is not None or fence.status not in {"SIGNALED", "FAILED"}:
+            return "INVALID_SYNCHRONIZATION_STATE"
+        fence.generation += 1
+        fence.status = "UNSIGNALED"
+        return "SUCCESS"
+
+    def callback(self, captured_fence: AsyncFenceIdentity, token: int, success: bool) -> str:
+        if token in captured_fence.completed_tokens or captured_fence.pending_token != token:
+            return "BadValue"
+        captured_fence.completed_tokens.add(token)
+        captured_fence.pending_token = None
+        if captured_fence.live and self.fences.get(captured_fence.xid) is captured_fence:
+            # A backend success arriving after Device Loss is not a successful
+            # fence signal from the protocol's point of view.
+            captured_fence.status = (
+                "SIGNALED" if success and self.devices.get(captured_fence.device_identity, False)
+                else "FAILED"
+            )
+        return "SUCCESS"
