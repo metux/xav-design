@@ -2225,3 +2225,86 @@ class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
         self.assertEqual(second, before_second)
         self.assertEqual(shared.signal_reservation, ("submit", 203))
         self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+
+
+class BinaryWaitReservationFailureTests(unittest.TestCase):
+    def make_submit(self, shared: SharedBinarySemaphore) -> SubmissionModel:
+        return SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[shared.signal_state],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+
+    def test_failed_wait_with_unchanged_payload_releases_only_wait_reservation(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        state = self.make_submit(shared)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=301, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.wait_reservation, ("submit", 301))
+        self.assertEqual(
+            finish_submission(
+                state, 301, success=False,
+                binary_payload_unchanged={("wait", 0)},
+            ),
+            "SUCCESS",
+        )
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        # The confirmed signal is reusable by a later wait after terminal cleanup.
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=302, command_buffer_indices=(1,), wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.wait_reservation, ("submit", 302))
+
+    def test_failed_wait_with_unknown_payload_releases_reservation_but_poison_semaphore(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        state = self.make_submit(shared)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=311, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.wait_reservation, ("submit", 311))
+        self.assertEqual(finish_submission(state, 311, success=False), "SUCCESS")
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        self.assertEqual(state.wait_states, [WaitState.UNTRUSTED])
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=312, command_buffer_indices=(1,), wait_indices=(0,))),
+            "DEPENDENCY_FAILED",
+        )
+        self.assertEqual(state, before)
+        self.assertIsNone(shared.wait_reservation)
+
+    def test_unknown_present_wait_outcome_does_not_release_signal_as_available(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=321, wait_indices=(0,))).accepted)
+        self.assertEqual(shared.wait_reservation, ("present", 321))
+        self.assertEqual(finish_present_wait(present, 321, 0, consumed=None), "SUCCESS")
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(present.wait_states, [WaitState.UNTRUSTED])
+        before = copy.deepcopy(present)
+        self.assertEqual(
+            queue_present(present, PresentRequest(token=322, wait_indices=(0,))),
+            PresentResult("DEPENDENCY_FAILED", False),
+        )
+        self.assertEqual(present, before)
