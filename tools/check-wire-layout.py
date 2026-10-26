@@ -1038,7 +1038,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         elif request in fixed_lengths:
             expected_bytes = fixed_lengths[request]
             length_evidence = re.search(
-                rf"(?:Gesamtlänge|Request(?:-Länge| length)?|Request-Größe|Request size|hat|ist|beträgt)[^\n]{{0,100}}\b{expected_bytes}\s*Bytes?\b|"
+                rf"(?:Gesamtlänge|Total length|Request(?:-Länge| length)?|Request-Größe|Request size|hat|ist|beträgt)[^\n]{{0,100}}\b{expected_bytes}\s*Bytes?\b|"
                 rf"\b{expected_bytes}\s*Bytes?\b[^\n]{{0,80}}(?:Gesamtlänge|Request)",
                 section, re.I,
             )
@@ -1047,7 +1047,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
             c.require(normalize_length_formula(matrix_length).strip("\`") == str(expected_bytes),
                       f"{request}: audit matrix fixed length {matrix_length!r} disagrees with normative {expected_bytes} bytes")
         else:
-            c.require("mindestens 16 Bytes" in section and "exakt 16 Bytes" in section,
+            c.require(("at least 16 bytes" in section.lower() or "mindestens 16 Bytes" in section) and ("exactly 16 bytes" in section.lower() or "exakt 16 Bytes" in section),
                       "CommandBufferData: normative variable length must define 16-byte minimum and exact 16-byte ABORT")
 
 
@@ -1056,16 +1056,16 @@ def check_request_limit_contract(c: Check) -> None:
     wire = read("spec/wire-protocol.md")
     conformance = read("spec/conformance.md")
     c.require(
-        "BIG-REQUESTS wird in v0.1 nicht unterstützt" in wire
+        "BIG-REQUESTS is not supported in v0.1" in wire
         and "length = 0" in wire
-        and "`BadLength` zurückweisen" in wire
-        and "bevor er Bytes ab Offset 4 als XAverius-Subopcode" in wire,
+        and "reject a XAverius request" in wire
+        and "before interpreting bytes at offset 4 as the XAverius subopcode" in wire,
         "request framing: BIG-REQUESTS length must be rejected before common-header parsing",
     )
     c.require(
-        "eine erwartete Länge über 262140 Bytes" in wire
-        and "vor Payload-Allokation, XID-Auflösung und Zustandsänderungen" in wire
-        and "die maximale Länge gilt pro Request" in wire,
+        "an expected length greater than 262140 bytes" in wire
+        and "before payload allocation, XID resolution, or state changes" in wire
+        and "the maximum length applies per request" in wire,
         "request framing: checked arithmetic, maximum ordinary request size, and validation order must be normative",
     )
     matrix = read("spec/request-audit.md").split("## Per-request contract matrix", 1)
@@ -1252,13 +1252,13 @@ def check_reply_layouts(c: Check) -> None:
     }
     contracts = {
         "EnumeratePhysicalDevices": ("devices", [
-            (r"null oder mehr \x60PHYSICALDEVICEINFO\x60-Records", "variable PHYSICALDEVICEINFO records"),
-            (r"reply\.length = Summe aller Record-Längen / 4", "record-sum reply.length formula"),
-            (r"Fester Record-Anteil: 32 Bytes", "32-byte fixed record prefix"),
+            (r"zero or more \x60PHYSICALDEVICEINFO\x60 records", "variable PHYSICALDEVICEINFO records"),
+            (r"reply\.length = sum of all record lengths / 4", "record-sum reply.length formula"),
+            (r"Fixed record portion: 32 bytes", "32-byte fixed record prefix"),
             (r"32 \+ \(\(device_name_length \+ 3\) & ~3\)", "padded device-name record formula"),
             (r"\|\s*28\s*\|\s*CARD16\s*\|\s*\x60device_name_length\x60\s*\|", "device-name length field"),
             (r"\|\s*30\s*\|\s*CARD16\s*\|\s*\x60reserved = 0\x60\s*\|", "record reserved field"),
-            (r"Padding muss null sein", "zero record padding"),
+            (r"Padding MUST be zero", "zero record padding"),
             (r"\|\s*0\s*\|\s*XID\s*\|\s*\x60physical_device_xid\x60\s*\|", "physical-device XID at record offset 0"),
             (r"\|\s*4\s*\|\s*CARD32\s*\|\s*\x60device_type\x60\s*\|", "device type at record offset 4"),
             (r"\|\s*8\s*\|\s*CARD32\s*\|\s*\x60vendor_id\x60\s*\|", "vendor ID at record offset 8"),
@@ -1266,81 +1266,81 @@ def check_reply_layouts(c: Check) -> None:
             (r"\|\s*16\s*\|\s*CARD32\s*\|\s*\x60api_version\x60\s*\|", "API version at record offset 16"),
             (r"\|\s*20\s*\|\s*CARD32\s*\|\s*\x60driver_version\x60\s*\|", "driver version at record offset 20"),
             (r"\|\s*24\s*\|\s*CARD32\s*\|\s*\x60compute_queue_family_count\x60\s*\|", "compute queue count at record offset 24"),
-            (r"\|\s*32\s*\|\s*BYTE\[\]\s*\|\s*UTF-8-Gerätename", "device name payload at record offset 32"),
+            (r"\|\s*32\s*\|\s*BYTE\[\]\s*\|\s*UTF-8 device name", "device name payload at record offset 32"),
         ]),
         "GetPhysicalDeviceProperty": ("devices", [
             (r"\|\s*8\s*\|\s*CARD32\s*\|\s*\x60status\x60\s*\|", "status at offset 8"),
             (r"\|\s*12\s*\|\s*CARD32\s*\|\s*\x60property_type\x60\s*\|", "property type at offset 12"),
             (r"\|\s*16\s*\|\s*CARD32\s*\|\s*\x60value_length\x60 in Bytes\s*\|", "value length at offset 16"),
-            (r"\|\s*20–31\s*\|\s*BYTE\[12\]\s*\|\s*reserviert, null\s*\|", "reserved bytes 20–31"),
+            (r"\|\s*20–31\s*\|\s*BYTE\[12\]\s*\|\s*Reserved; MUST be zero\s*\|", "reserved bytes 20–31"),
             (r"reply\.length = ceil\(value_length / 4\)", "variable value payload formula"),
-            (r"Status ungleich \x60SUCCESS\x60.*?reply\.length = 0", "empty failure-status reply"),
-            (r"Bei einem Status ungleich \x60SUCCESS\x60 müssen \x60property_type\x60 und \x60value_length\x60 null sein", "property failure fields zero"),
-            (r"Bei Erfolg gilt", "property success payload rule"),
+            (r"status other than \x60SUCCESS\x60.*?reply\.length = 0", "empty failure-status reply"),
+            (r"For a status other than \x60SUCCESS\x60, \x60property_type\x60 and \x60value_length\x60 MUST be zero", "property failure fields zero"),
+            (r"On success", "property success payload rule"),
         ]),
         "GetPhysicalDeviceQueueFamilyProperties": ("devices", [
-            (r"\x60QUEUEFAMILYINFO\x60-Records mit je 12 Bytes", "12-byte queue-family records"),
+            (r"12-byte \x60QUEUEFAMILYINFO\x60 records", "12-byte queue-family records"),
             (r"reply\.length = 3 \* queue_family_count", "queue-family reply.length formula"),
             (r"\|\s*0\s*\|\s*CARD32\s*\|\s*\x60queue_flags\x60\s*\|", "queue flags at record offset 0"),
             (r"\|\s*4\s*\|\s*CARD32\s*\|\s*\x60queue_count\x60\s*\|", "queue count at record offset 4"),
             (r"\|\s*8\s*\|\s*CARD32\s*\|\s*\x60reserved = 0\x60\s*\|", "record reserved field"),
-            (r"Payload-Länge muss durch 12 teilbar sein", "payload divisible by record size"),
+            (r"payload length MUST be divisible by 12", "payload divisible by record size"),
         ]),
         "GetPhysicalDeviceMemoryProperties": ("memory", [
             (r"\x60CARD32 memory_type_count\x60", "memory-type count"),
             (r"\x60CARD32 memory_heap_count\x60", "memory-heap count"),
-            (r"\x60MEMORYTYPEINFO\x60 ist 8 Bytes groß", "8-byte memory-type records"),
-            (r"\x60MEMORYHEAPINFO\x60 ist 16 Bytes groß", "16-byte memory-heap records"),
+            (r"\x60MEMORYTYPEINFO\x60 is 8 bytes", "8-byte memory-type records"),
+            (r"\x60MEMORYHEAPINFO\x60 is 16 bytes", "16-byte memory-heap records"),
             (r"reply\.length = 4 \+ 2 \* memory_type_count \+ 4 \* memory_heap_count", "memory-properties reply.length formula"),
             (r"\x60CARD32 reserved = 0\x60", "reserved count/record fields"),
             (r"\x60CARD32 property_flags\x60.*?\x60CARD32 heap_index\x60", "memory-type record fields"),
             (r"\x60CARD64 size\x60.*?\x60CARD32 heap_flags\x60.*?\x60CARD32 reserved = 0\x60", "memory-heap record fields"),
-            (r"maximal 32 Memory Types und 16 Memory Heaps", "bounded record counts"),
+            (r"At most 32 memory types and 16 memory heaps are supported", "bounded record counts"),
         ]),
         "GetBufferMemoryRequirements": ("memory", [
             (r"\|\s*8\s*\|\s*CARD64\s*\|\s*\x60size\x60\s*\|", "size at reply offset 8"),
             (r"\|\s*16\s*\|\s*CARD64\s*\|\s*\x60alignment\x60\s*\|", "alignment at reply offset 16"),
             (r"\|\s*24\s*\|\s*CARD32\s*\|\s*\x60memory_type_bits\x60\s*\|", "memory type bits at reply offset 24"),
             (r"\|\s*28\s*\|\s*CARD32\s*\|\s*\x60reserved = 0\x60\s*\|", "reserved word at reply offset 28"),
-            (r"Reply-Payload-Länge ist null", "fixed 32-byte reply"),
+            (r"reply payload length is zero", "fixed 32-byte reply"),
         ]),
         "WriteBuffer": ("memory", [
-            (r"Gesamtlänge:\s*\n+\x60?28 \+ \(\(uint64\(data_length\) \+ 3\) & ~uint64\(3\)\)", "request payload length formula"),
+            (r"Total length:\s*\n+\x60?28 \+ \(\(uint64\(data_length\) \+ 3\) & ~uint64\(3\)\)", "request payload length formula"),
             (r"Byte-Payload", "byte payload"),
-            (r"Null-Padding bis zur nächsten Vierbytegrenze", "request zero padding"),
-            (r"Reply von 32 Bytes", "empty standard reply on success"),
-            (r"Bei einem fehlgeschlagenen \x60WriteBuffer\x60", "failure does not claim successful upload"),
+            (r"zero padding through the next four-byte boundary", "request zero padding"),
+            (r"empty standard 32-byte X11 reply", "empty standard reply on success"),
+            (r"A failed upload", "failure does not claim successful upload"),
         ]),
         "ReadBuffer": ("memory", [
-            (r"Gesamtlänge: 28 Bytes", "fixed 28-byte request"),
-            (r"Reply enthält nach dem 32-Byte-Header.*?ab Offset 32", "payload begins at reply offset 32"),
+            (r"Total length: 28 bytes", "fixed 28-byte request"),
+            (r"After the 32-byte header, the reply contains exactly .*? from offset 32", "payload begins at reply offset 32"),
             (r"reply\.length = floor\(\(uint64\(data_length\) \+ 3\) / 4\)", "readback reply.length formula"),
-            (r"Null-Padding auf vier Bytes", "readback zero padding"),
+            (r"zero padding to a four-byte boundary", "readback zero padding"),
         ]),
         "GetSemaphoreCounterValue": ("sync", [
             (r"Offset 8: \x60CARD64 counter_value\x60", "counter value at offset 8"),
-            (r"Offset 16–31: reserviert, null", "reserved reply bytes"),
-            (r"Reply-Payload-Länge: null", "fixed 32-byte reply"),
+            (r"Offset 16–31: reserved; MUST be zero", "reserved reply bytes"),
+            (r"Reply payload length: zero", "fixed 32-byte reply"),
         ]),
         "WaitSemaphores": ("sync", [
-            (r"Gesamtlänge: \x6028 \+ 12 \* semaphore_count\x60 Bytes", "variable request length formula"),
+            (r"total length: \x6028 \+ 12 \* semaphore_count\x60 bytes", "variable request length formula"),
             (r"Array aus 12-Byte-Entries", "12-byte wait entries"),
             (r"Jeder Entry enthält Semaphore-XID und \x60CARD64 wait_value\x60", "wait entry fields"),
             (r"Der Reply ist genau 32 Bytes lang", "fixed 32-byte reply"),
             (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
-            (r"Offsets 12–31 sind null und \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
+            (r"Offsets 12–31 are zero and \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
             (r"\x60SUCCESS = 0\x60 oder \x60TIMEOUT = 1\x60", "wait reply status values"),
         ]),
         "GetFenceStatus": ("sync", [
-            (r"Reply: 32 Bytes", "fixed 32-byte reply"),
-            (r"Byte 0: standardmäßiges X11-Reply", "response_type byte"),
-            (r"Byte 1: Fence-Status", "status byte"),
-            (r"Offsets 2–3: standardmäßige X11-Reply-Sequenznummer", "sequence field"),
-            (r"Offsets 4–7: standardmäßiges \x60reply\.length = 0\x60", "zero reply.length"),
-            (r"Offsets 8–31: XAverius-reserviert, null", "reserved reply bytes"),
+            (r"Reply: 32 bytes", "fixed 32-byte reply"),
+            (r"Byte 0: standard X11 reply", "response_type byte"),
+            (r"Byte 1: fence status", "status byte"),
+            (r"Offsets 2–3: standard X11 reply sequence number", "sequence field"),
+            (r"Offsets 4–7: standard \x60reply\.length = 0\x60", "zero reply.length"),
+            (r"Offsets 8–31: reserved for XAverius; MUST be zero", "reserved reply bytes"),
         ]),
         "WaitForFence": ("sync", [
-            (r"Request: 24 Bytes", "fixed request length"),
+            (r"Request: 24 bytes", "fixed request length"),
             (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
             (r"Offsets 12–31 sind null und \x60reply\.length = 0\x60", "reserved bytes and zero payload"),
             (r"\x60SUCCESS = 0\x60", "reply status values"),
@@ -1361,9 +1361,9 @@ def check_reply_layouts(c: Check) -> None:
                       f"{name}: missing or changed reply contract: {label}")
 
     wire = sources["wire"]
-    c.require(re.search(r"Replies verwenden den Standard-X11-Reply-Header von 32 Bytes", wire, re.I) is not None,
+    c.require(re.search(r"Replies use the standard 32-byte X11 reply header", wire, re.I) is not None,
               "reply layout: standard 32-byte X11 reply header")
-    c.require(re.search(r"\x60reply\.length\x60 gibt die Anzahl der Vierbyteeinheiten nach diesem Header an", wire, re.I) is not None,
+    c.require(re.search(r"\x60reply\.length\x60 gives the number of four-byte units following this header", wire, re.I) is not None,
               "reply layout: reply.length unit definition")
 
 
