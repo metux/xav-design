@@ -39,9 +39,9 @@ class NegativeContractRegressionTests(unittest.TestCase):
 
     def test_create_and_batch_rejection_preserves_public_xids(self) -> None:
         required = (
-            "failure leaves the Create-XID unallocated",
-            "Each error leaves all target XIDs unallocated",
-            "failed creation leaves the target XID unallocated",
+            "jeder Fehler lässt die Create-XID unangelegt",
+            "Failed creates leave target XIDs unallocated",
+            "a failed create leaves the target XID unallocated",
         )
         joined = self.conformance + self.errors
         for phrase in required:
@@ -52,7 +52,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
         self.assertIn("BindBufferMemory", self.conformance)
         self.assertIn("UpdateDescriptorSets", self.conformance)
         self.assertIn("Alle abgewiesenen Requests bleiben atomar", self.conformance)
-        self.assertIn("no partial resource or state change", self.conformance)
+        self.assertIn("Alle abgewiesenen Requests bleiben atomar und verändern keine Bindung, Descriptor-Slots oder internen Referenzen", self.conformance)
 
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
