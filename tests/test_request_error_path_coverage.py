@@ -416,7 +416,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "Device loss beats Surface loss and accepted-token reuse",
             "Failed creates leave target XIDs unallocated and retain no references",
-            "Every rejection leaves the complete CommandBufferData chunk unattached",
+            "A rejected request causes no partial state mutation attributable to that request",
         ):
             with self.subTest(conformance=phrase):
                 self.assertIn(phrase, conformance)
