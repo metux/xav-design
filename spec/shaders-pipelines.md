@@ -47,7 +47,7 @@ After successful creation of a Compute Pipeline, the Shader Module may be destro
 
 `CreateDescriptorSetLayout` ist ein Void-Request mit folgendem Wire-Layout. Die Gesamtlänge beträgt `24 + 16 * binding_count` Bytes.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `descriptor_set_layout_xid` |
@@ -57,7 +57,7 @@ After successful creation of a Compute Pipeline, the Shader Module may be destro
 
 Jeder Binding-Record ist 16 Bytes groß:
 
-| Relativer Offset | Typ | Feld |
+| Relative Offset | Type | Field |
 |---:|---|---|
 | 0 | CARD32 | `binding` |
 | 4 | CARD32 | `descriptor_type` |
@@ -132,7 +132,7 @@ Gesamtlänge: `20 + 8 * descriptor_set_count`; `descriptor_set_count` muss posit
 
 Jeder Write ist 36 Bytes groß.
 
-| Relativer Offset | Typ | Feld |
+| Relative Offset | Type | Field |
 |---:|---|---|
 | 0 | XID | Descriptor-Set-XID |
 | 4 | CARD32 | `binding` |
