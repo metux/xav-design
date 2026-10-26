@@ -4,7 +4,7 @@
 
 `CreateCommandPool` hat eine feste Gesamtlänge von 24 Bytes:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `command_pool_xid` |
@@ -27,7 +27,7 @@ Device Loss allein verhindert `DestroyCommandPool` nicht. Da alle betroffenen an
 
 `ResetCommandBuffer` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `command_buffer_xid` |
