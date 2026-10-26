@@ -1072,5 +1072,21 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
 
 
+    def test_stale_present_reservation_mismatch_rejection_is_mutation_free(self) -> None:
+        shared = SharedBinarySemaphore(
+            signal_state=BinarySignalState.SIGNALED,
+            wait_reservation=("present", 207),
+        )
+        state = PresentState(
+            wait_states=[],
+            binary_signal_states=[],
+            pending_present_waits=[(206, 0)],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_present_wait(state, 206, 0, consumed=None), "BadValue")
+        self.assertEqual(state, before)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
