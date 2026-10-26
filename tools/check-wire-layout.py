@@ -837,10 +837,10 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
     c.require(
-        "Device loss alone does not prevent `DestroyCommandPool`" in read("spec/command-recording.md")
-        and "Device loss alone does not prevent `DestroyDescriptorPool`" in read("spec/shaders-pipelines.md")
-        and "Device loss alone does not invalidate public XIDs" in errors
-        and "Device loss alone does not block `DestroyCommandPool` or `DestroyDescriptorPool`" in conformance,
+        re.search(r"Device loss alone does not prevent `DestroyCommandPool`", read("spec/command-recording.md"), re.I) is not None
+        and re.search(r"Device loss alone does not prevent `DestroyDescriptorPool`", read("spec/shaders-pipelines.md"), re.I) is not None
+        and re.search(r"Device loss alone does not invalidate public XIDs", errors, re.I) is not None
+        and re.search(r"Device loss alone does not block `DestroyCommandPool` or `DestroyDescriptorPool`", conformance, re.I) is not None,
         "device loss: logical command/descriptor pool destruction must remain available subject to lifetime guards",
     )
 
@@ -878,14 +878,14 @@ def check_request_document_coverage(c: Check) -> None:
 
     lifetime = read("spec/resource-lifetime.md")
     c.require(
-        "Device loss alone does not invalidate public XIDs" in lifetime
+        re.search(r"Device loss alone does not invalidate public XIDs", lifetime, re.I) is not None
         and re.search(r"`GetFenceStatus` and `DestroyDevice` remain usable after device loss", lifetime, re.I) is not None
-        and "Device loss alone does not invalidate public Device/resource XIDs" in read("spec/conformance.md"),
+        and re.search(r"Device loss alone does not invalidate public Device/resource XIDs", read("spec/conformance.md"), re.I) is not None,
         "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
     )
     c.require(
-        "Individual resource-specific Destroy/Free requests are not categorically forbidden after Device loss" in lifetime
-        and "`FreeMemory` remains blocked while an internally live Buffer is still bound" in lifetime
+        re.search(r"Individual resource-specific Destroy/Free requests are not categorically forbidden after Device loss", lifetime, re.I) is not None
+        and re.search(r"`FreeMemory` remains blocked while an internally live Buffer is still bound", lifetime, re.I) is not None
         and "Individual Destroy/Free requests are not categorically rejected with `DEVICE_LOST` after Device loss" in read("spec/conformance.md"),
         "device loss: resource-specific cleanup must preserve ordinary lifetime guards and memory safety",
     )
