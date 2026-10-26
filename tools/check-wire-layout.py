@@ -279,7 +279,6 @@ def check_events(c: Check) -> None:
               "required XIDs are resolved in wire order: device, optional fence, command-buffer XIDs in array order" in submissions and
               "takes precedence over mutable submission state" in submissions and
               "Type-dependent values such as binary wait/signal values are checked only after type resolution" in submissions and
-              "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
               "first the optional fence state, then command buffers in array order, wait entries in array order, and finally signal entries in array order" in submissions,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device unavailable/lost.*?\n\| `QueueSubmit`: a Command Buffer is not `EXECUTABLE`", errors, re.S) is not None and
