@@ -234,7 +234,7 @@ def check_events(c: Check) -> None:
               "`DEPENDENCY_FAILED`" in memory,
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
-    c.require(re.search(r"zurückgestellten Requests.*Timeline-Signal-Entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
+    c.require(re.search(r"deferred requests.*Timeline signal entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
               "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
