@@ -228,9 +228,9 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `DestroyDescriptorPool` oder `FreeDescriptorSets`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein betroffenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird.
 - `DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert.
 - `DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`, solange ein angenommener Queue-Wait/-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Host-Operation die Semaphore verwendet.
-- Bei beiden Requests blockiert ein Host-Wait die Zerstörung nicht mehr, sobald sein terminales Ergebnis serverseitig serialisiert festgestellt wurde; ein noch nicht versendeter Reply ist kein Hindernis. Device Loss allein invalidiert keine öffentlichen XIDs. Wenn anschließend `DestroyDevice` verarbeitet wird, darf dessen Device-weite Kaskadeninvalidierung diese normalen Ablehnungen umgehen.
+- Bei beiden Requests blockiert ein Host-Wait die Zerstörung nicht mehr, sobald sein terminales Ergebnis serverseitig serialisiert festgestellt wurde; ein noch nicht versendeter Reply ist kein Hindernis. Device loss alone does not invalidate public XIDs. If `DestroyDevice` is subsequently processed, its device-wide cascading invalidation may bypass these ordinary rejections.
 - `FreeMemory`: `BadMatch`, solange irgendein intern noch lebender Buffer an die Allokation gebunden ist, auch wenn dessen öffentliche XID bereits invalidiert wurde; `INVALID_SYNCHRONIZATION_STATE`, solange angenommene Arbeit auf die Allokation zugreift.
-- Ein Destroy-Request, der wegen Lebensdauerregeln abgewiesen wird, lässt alle öffentlichen XIDs und Command-Buffer-Zustände unverändert.
+- A destroy request rejected by lifetime rules leaves all public XIDs and command-buffer states unchanged.
 - Die Device-weite Kaskadeninvalidierung durch `DestroyDevice` ist von diesen normalen Pending-Use-Ablehnungen ausgenommen; Device Loss allein invalidiert keine öffentlichen XIDs. Interne Referenzen müssen in jedem Fall sicher erhalten bleiben.
 
 ### Buffer- und Memory-Requests
