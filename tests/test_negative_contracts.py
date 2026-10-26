@@ -25,7 +25,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
         cls.presentation = read("spec/presentation.md")
 
     def test_common_validation_stage_order_is_normative(self) -> None:
-        for phrase in ("Wire-Struktur zuerst", "Feldwerte", "Feldreihenfolge"):
+        for phrase in ("wire structure first", "field values", "field order"):
             with self.subTest(document="error mapping", contract=phrase):
                 self.assertIn(phrase, self.errors)
         self.assertIn("framing before scalar syntax", self.conformance)
@@ -47,7 +47,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
         self.assertIn("BindBufferMemory", self.conformance)
         self.assertIn("UpdateDescriptorSets", self.conformance)
         self.assertIn("Alle abgewiesenen Requests bleiben atomar", self.conformance)
-        self.assertIn("Alle abgewiesenen Requests bleiben atomar und verändern keine Bindung, Descriptor-Slots oder internen Referenzen", self.conformance)
+        self.assertIn("All rejected requests remain atomic and change no binding, descriptor slots, or internal references", self.conformance)
 
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
