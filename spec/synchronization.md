@@ -18,7 +18,7 @@ For binary semaphores, `initial_value` MUST be zero. Binary semaphores begin uns
 
 ## Binary Semaphores
 
-Binary-Semaphoren folgen den Vulkan-Signal-/Wait-Regeln.
+Binary semaphores follow the Vulkan signal/wait rules.
 
 - A signal MUST NOT satisfy multiple competing waits.
 - Host counter queries, host waits, and host signals are invalid for binary semaphores.
@@ -35,7 +35,7 @@ If an accepted presentation ends before its wait is known to have completed, eac
 
 ## Timeline Semaphores
 
-Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
+Timeline semaphores have a monotonically increasing unsigned 64-bit counter.
 
 - A wait is satisfied when the observable counter reaches or exceeds the requested value.
 - A wait MAY be queued before the signal that satisfies it is queued.
@@ -54,7 +54,7 @@ Timeline semaphores only. If the logical device is already known to be lost, the
 Reply:
 
 - Offset 8: `CARD64 counter_value`
-- Offset 16–31: reserviert, null
+- Offset 16–31: reserved, zero
 - Reply payload length: zero
 
 ## `WaitSemaphores`
@@ -69,7 +69,7 @@ Fixed request header: 28 bytes; total length: `28 + 12 * semaphore_count` bytes.
 
 Each entry contains a semaphore XID and `CARD64 wait_value`.
 
-Wait-Modi:
+Wait modes:
 
 - `WAIT_ANY = 0`
 - `WAIT_ALL = 1`
@@ -125,9 +125,9 @@ Defined states:
 
 Transitions:
 
-- Erstellung → `UNSIGNALED`
+- Creation → `UNSIGNALED`
 - accepted submission with a fence → `PENDING`
-- erfolgreiche Completion → `SIGNALED`
+- successful completion → `SIGNALED`
 - asynchronous execution failure → `FAILED`
 - reset from `SIGNALED` or `FAILED` → `UNSIGNALED`
 - rejected submission → state remains unchanged
@@ -153,7 +153,7 @@ Reply: 32 bytes.
 - Byte 1: Fence-Status (`UNSIGNALED = 0`, `PENDING = 1`, `SIGNALED = 2`, `FAILED = 3`)
 - Offsets 2–3: standard X11 reply sequence number
 - Offsets 4–7: standard `reply.length = 0`
-- Offsets 8–31: XAverius-reserviert, null
+- Offsets 8–31: reserved for XAverius, zero
 
 ## `WaitForFence`
 
