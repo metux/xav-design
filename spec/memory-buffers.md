@@ -4,7 +4,7 @@
 
 Gesamtlänge: 32 Bytes.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `buffer_xid` |
@@ -83,7 +83,7 @@ Request:
 
 Reply:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | CARD64 | `size` |
 | 16 | CARD64 | `alignment` |
