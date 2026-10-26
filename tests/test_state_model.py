@@ -42,6 +42,7 @@ from xa_state_model import (
     destroy_buffer_lifetime,
     free_memory_lifetime,
     drop_buffer_internal_ref,
+    descriptor_contents_submit_valid,
 )
 
 
@@ -1975,3 +1976,75 @@ class BufferAndMemoryDeferredLifetimeTests(unittest.TestCase):
         before = copy.deepcopy(buffer)
         self.assertEqual(drop_buffer_internal_ref(buffer, descriptor_slots=2), "BadValue")
         self.assertEqual(buffer, before)
+
+
+
+class StaleDescriptorBufferReferenceTests(unittest.TestCase):
+    def test_destroyed_buffer_keeps_memory_bound_until_stale_slot_is_rewritten(self) -> None:
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1)
+        memory = MemoryAllocationLifetime()
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={buffer.identity},
+        )
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(descriptor_contents_submit_valid([descriptor_set], [buffer]),
+                         "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "BadMatch")
+
+        replacement = BufferMemoryLifetime(identity="buffer-B", memory_identity="memory-B")
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 0, replacement.identity),),
+                [cb], buffers=[buffer, replacement],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(buffer.descriptor_slot_refs, 0)
+        self.assertEqual(buffer.internal_state, "RELEASED")
+        self.assertEqual(replacement.descriptor_slot_refs, 1)
+        self.assertEqual(cb.indirect_buffer_refs, {replacement.identity})
+        self.assertEqual(descriptor_contents_submit_valid([descriptor_set], [buffer, replacement]), "SUCCESS")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "SUCCESS")
+
+    def test_update_cannot_reintroduce_destroyed_buffer_and_is_atomic(self) -> None:
+        destroyed = BufferMemoryLifetime(xid_valid=False, live=False, internal_state="DESTROY_PENDING",
+                                         descriptor_slot_refs=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: destroyed.identity})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={destroyed.identity},
+        )
+        before = copy.deepcopy((destroyed, descriptor_set, cb))
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 1, destroyed.identity),),
+                [cb], buffers=[destroyed],
+            ),
+            "BadValue",
+        )
+        self.assertEqual((destroyed, descriptor_set, cb), before)
+
+    def test_rewriting_one_of_two_slots_preserves_other_internal_reference(self) -> None:
+        first = BufferMemoryLifetime(identity="buffer-A", descriptor_slot_refs=2)
+        second = BufferMemoryLifetime(identity="buffer-B")
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A", 1: "buffer-A"})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A"},
+        )
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 0, "buffer-B"),),
+                [cb], buffers=[first, second],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(first.descriptor_slot_refs, 1)
+        self.assertEqual(second.descriptor_slot_refs, 1)
+        self.assertEqual(cb.indirect_buffer_refs, {"buffer-A", "buffer-B"})

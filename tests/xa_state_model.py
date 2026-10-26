@@ -956,28 +956,57 @@ def update_descriptor_sets(
     command_buffers: list[CommandBufferModel],
     *,
     writes_valid: bool = True,
+    buffers: list[BufferMemoryLifetime] | None = None,
 ) -> str:
-    """Atomically apply descriptor writes and refresh non-pending derived refs.
+    """Atomically update slots, tracked slot refs, and nonpending CB refs.
 
-    None clears a slot. Validation covers the complete update batch before any
-    slot or CommandBuffer reference is changed.
+    When a Buffer registry is supplied, new writes must resolve to live public
+    Buffer XIDs. Existing stale slots may remain after Buffer destruction until
+    overwritten or their DescriptorSet is freed.
     """
     if not writes_valid:
         return "BadValue"
     if any(w.set_index < 0 or w.set_index >= len(sets)
            or not sets[w.set_index].live or w.slot < 0 for w in writes):
         return "BadValue"
-    # Prepare candidate slot maps first; duplicate writes are applied in wire order.
+    buffer_by_id = {buffer.identity: buffer for buffer in buffers or []}
+    if buffers is not None and any(
+        w.buffer_identity is not None and
+        (w.buffer_identity not in buffer_by_id
+         or not buffer_by_id[w.buffer_identity].xid_valid
+         or not buffer_by_id[w.buffer_identity].live)
+        for w in writes
+    ):
+        return "BadValue"
     candidate = [dict(descriptor_set.slots) for descriptor_set in sets]
     for w in writes:
         if w.buffer_identity is None:
             candidate[w.set_index].pop(w.slot, None)
         else:
             candidate[w.set_index][w.slot] = w.buffer_identity
-    # Commit slots and derived references together. Pending CBs retain their
-    # accepted-work references; only non-pending CB snapshots are refreshed.
+
+    # Compute refcount deltas before committing, including repeated slots that
+    # point to the same Buffer identity.
+    deltas: dict[str, int] = {}
+    for old, new in zip((s.slots for s in sets), candidate):
+        for identity in old.values():
+            deltas[identity] = deltas.get(identity, 0) - 1
+        for identity in new.values():
+            deltas[identity] = deltas.get(identity, 0) + 1
+    if buffers is not None and any(
+        identity in buffer_by_id
+        and buffer_by_id[identity].descriptor_slot_refs + delta < 0
+        for identity, delta in deltas.items()
+    ):
+        return "INVALID_SYNCHRONIZATION_STATE"
+
     for descriptor_set, slots in zip(sets, candidate):
         descriptor_set.slots = slots
+    if buffers is not None:
+        for identity, delta in deltas.items():
+            if identity in buffer_by_id:
+                buffer_by_id[identity].descriptor_slot_refs += delta
+                _finish_buffer_release(buffer_by_id[identity])
     for cb in command_buffers:
         if cb.lifecycle is CommandBufferLifecycle.PENDING:
             continue
@@ -986,6 +1015,22 @@ def update_descriptor_sets(
             if descriptor_set.live:
                 refs.update(descriptor_set.slots.values())
         cb.indirect_buffer_refs = refs
+    return "SUCCESS"
+
+
+def descriptor_contents_submit_valid(
+    descriptor_sets: list[DescriptorSetLifetime],
+    buffers: list[BufferMemoryLifetime],
+) -> str:
+    """Reject submission if any live set contains a stale Buffer identity."""
+    buffer_by_id = {buffer.identity: buffer for buffer in buffers}
+    for descriptor_set in descriptor_sets:
+        if not descriptor_set.live:
+            return "BadValue"
+        for identity in descriptor_set.slots.values():
+            buffer = buffer_by_id.get(identity)
+            if buffer is None or not buffer.xid_valid or not buffer.live:
+                return "INVALID_SYNCHRONIZATION_STATE"
     return "SUCCESS"
 
 
