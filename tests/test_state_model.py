@@ -1682,6 +1682,55 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(finish_submission(state, 417, success=False), "BadValue")
         self.assertEqual(state, before)
 
+    def test_host_signal_cannot_cross_lower_gpu_reservation_after_higher_callback(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[0],
+            signal_slots=[None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=419, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(7,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=420, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(11,),
+            )),
+            "SUCCESS",
+        )
+
+        # The higher GPU signal callback arrives first. Its successful value is
+        # observable, but the lower operation still owns its reservation until
+        # its own terminal callback; a host signal must not cross that gap.
+        self.assertEqual(finish_submission(state, 420, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [11])
+        self.assertEqual(state.pending_timeline_signals, [(419, 0, 7)])
+        self.assertEqual(state.signal_slots, [7])
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            signal_timeline_host(state, 0, 12),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+
+        # The delayed lower callback may fail without rolling back the already
+        # observed counter. Once its reservation is retired, host signaling can
+        # advance the counter normally.
+        self.assertEqual(finish_submission(state, 419, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [11])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(signal_timeline_host(state, 0, 12), "SUCCESS")
+        self.assertEqual(state.signal_counters, [12])
+
     def test_failed_timeline_signal_releases_only_its_own_reservation(self) -> None:
         state = self.state(
             command_buffers=[
