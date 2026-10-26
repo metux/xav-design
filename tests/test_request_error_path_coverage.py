@@ -174,5 +174,59 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, section)
 
+
+    def test_queue_submit_precedence_and_atomic_acceptance_match_error_contract(self):
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+        section = self.conformance.split(
+            "## QueueSubmit rejection and acceptance invariants", 1
+        )
+        self.assertEqual(len(section), 2, "conformance must contain the QueueSubmit invariant matrix")
+        section = section[1].split("\\n## ", 1)[0]
+
+        # The request registry, normative chapter, general error mapping, and
+        # conformance matrix must all retain the same request and outcomes.
+        self.assertIn("`QueueSubmit` | 28 |", registry)
+        self.assertIn("`QueueSubmit`", queue)
+        self.assertIn("`QueueSubmit`", self.errors)
+        self.assertIn("`QueueSubmit`", section)
+        for outcome in (
+            "BadLength", "BadValue", "BadMatch", "DEVICE_UNAVAILABLE",
+            "DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE", "DEPENDENCY_FAILED",
+        ):
+            with self.subTest(outcome=outcome):
+                self.assertIn(outcome, queue)
+                self.assertIn(outcome, self.errors)
+                self.assertIn(outcome, section)
+
+        # These ordering markers prevent an apparently harmless wording edit
+        # from reversing the phases or allowing partial reservation.
+        for phrase in (
+            "falsche Gesamtlänge", "submission_token = 0",
+            "Device, optionale Fence", "nicht verfügbares/verlorenes Device",
+            "in Wire-Reihenfolge", "vollständig nicht-mutierend",
+            "der Token bleibt unbenutzt", "keine Submission-Objekte",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, queue)
+        for phrase in (
+            "rejected request leaves the semaphore counters",
+            "atomically with submission acceptance",
+            "no Submission-Event",
+        ):
+            with self.subTest(atomicity=phrase):
+                self.assertIn(phrase, queue + section)
+
+    def test_all_assigned_requests_are_named_in_error_and_conformance_contracts(self):
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+        import re
+        requests = re.findall(r"^\\| `([^ `]+)` \\| (\\d+) \\|", registry, re.MULTILINE)
+        self.assertEqual(len(requests), 47, "the audit must cover the full assigned request inventory")
+        for request, subopcode in requests:
+            with self.subTest(request=request, subopcode=subopcode):
+                self.assertIn(f"`{request}` | {subopcode} |", registry)
+                self.assertIn(f"`{request}`", self.errors)
+                self.assertIn(f"`{request}`", self.conformance)
+
 if __name__ == "__main__":
     unittest.main()
