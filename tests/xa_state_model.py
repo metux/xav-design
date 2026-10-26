@@ -632,11 +632,13 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 for _token, pending_index, pending_value in state.pending_timeline_signals
                 if pending_index == index
             ]
-            if value <= counter or any(value <= pending for pending in pending_values):
+            if value <= counter:
+                return "BadValue"
+            if any(value <= pending for pending in pending_values):
                 # The reservation list is authoritative: the summary slot can
                 # change when callbacks for concurrent submissions arrive out
                 # of order, but every non-terminal reservation remains binding.
-                return "BadValue"
+                return "INVALID_SYNCHRONIZATION_STATE"
     # Snapshot indirect resources before acceptance. Every accepted token owns
     # an independent reference set, even when submissions share resources.
     selected_cbs = [state.command_buffers[i] for i in request.command_buffer_indices]
