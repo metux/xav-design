@@ -847,9 +847,9 @@ def check_request_document_coverage(c: Check) -> None:
     # The summary matrix must not contradict the normative recorded-reference
     # rules for descriptor sets and pipeline objects.
     c.require(
-        "| DescriptorSet | XID wird ungültig | Abweisen, solange pending oder von einem `RECORDING`-Command-Buffer referenziert; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime
-        and "| Pipeline | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer sie referenziert oder angenommene Arbeit sie verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime
-        and "| PipelineLayout | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer es referenziert oder angenommene Arbeit es verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |" in lifetime,
+        "| DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
+        and "| Pipeline | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
+        and "| PipelineLayout | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime,
         "resource lifetime: DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
     )
     c.require(
@@ -878,9 +878,9 @@ def check_request_document_coverage(c: Check) -> None:
 
     lifetime = read("spec/resource-lifetime.md")
     c.require(
-        "Device Loss allein invalidiert keine öffentlichen XIDs" in lifetime
-        and "`GetFenceStatus` und `DestroyDevice` nach Device Loss nutzbar" in lifetime
-        and "Device Loss allein invalidiert keine öffentlichen Device-/Ressourcen-XIDs" in read("spec/conformance.md"),
+        "Device loss alone does not invalidate public XIDs" in lifetime
+        and "`GetFenceStatus` and `DestroyDevice` remain usable after device loss" in lifetime
+        and "Device loss alone does not invalidate public Device/resource XIDs" in read("spec/conformance.md"),
         "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
     )
     c.require(
