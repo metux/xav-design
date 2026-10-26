@@ -28,6 +28,13 @@ class WaitState(str, Enum):
     RESERVED = "RESERVED"
 
 
+class BinarySignalState(str, Enum):
+    UNSIGNALED = "UNSIGNALED"
+    SIGNAL_PENDING = "SIGNAL_PENDING"
+    SIGNALED = "SIGNALED"
+    UNTRUSTED = "UNTRUSTED"
+
+
 @dataclass
 class PresentState:
     device_lost: bool = False
@@ -42,7 +49,10 @@ class PresentState:
     valid_image_index: bool = True
     image_state: ImageState = ImageState.ACQUIRED
     wait_states: list[WaitState] = field(default_factory=list)
+    binary_signal_states: list[BinarySignalState] = field(default_factory=list)
+    pending_binary_waits: list[tuple[int, int]] = field(default_factory=list)
     accepted_tokens: set[int] = field(default_factory=set)
+    pending_present_waits: list[tuple[int, int]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -314,9 +324,14 @@ class SubmissionModel:
     command_buffers: list[CommandBufferModel] = field(default_factory=list)
     accepted_tokens: set[int] = field(default_factory=set)
     wait_states: list[WaitState] = field(default_factory=list)
+    binary_signal_states: list[BinarySignalState] = field(default_factory=list)
+    pending_binary_waits: list[tuple[int, int]] = field(default_factory=list)
     signal_slots: list[int | None] = field(default_factory=list)
     signal_counters: list[int] = field(default_factory=list)
     semaphore_kinds: list[SemaphoreKind] = field(default_factory=list)
+    # Binary operations are tracked independently from timeline counters/slots.
+    pending_binary_signals: list[tuple[int, int]] = field(default_factory=list)
+    consumed_pending_binary_signals: set[tuple[int, int]] = field(default_factory=set)
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     # (submission token, semaphore index, reserved timeline signal value).
