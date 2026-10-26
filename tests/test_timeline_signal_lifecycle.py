@@ -53,6 +53,14 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
         self.assertEqual(state.signal_slots, [12])
         self.assertEqual(state.pending_timeline_signals, [(10, 0, 12)])
 
+    def test_host_signal_rejects_values_outside_unsigned_64_bit_range(self) -> None:
+        for value in (-1, 0x10000000000000000):
+            with self.subTest(value=value):
+                state = self.state()
+                before = copy.deepcopy(state)
+                self.assertEqual(signal_timeline_host(state, 0, value), "BadValue")
+                self.assertEqual(state, before)
+
     def test_host_signal_cannot_equal_or_jump_over_pending_gpu_signal(self) -> None:
         for host_value in (12, 13):
             with self.subTest(host_value=host_value):
