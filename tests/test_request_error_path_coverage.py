@@ -131,5 +131,48 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("QueuePresent reply status values are 0 SUCCESS", presentation)
         self.assertIn("normal reply statuses", self.errors)
 
+
+    def test_synchronization_request_rejection_matrix_matches_registry(self):
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        section = self.conformance.split(
+            "## Synchronization request rejection matrix", 1
+        )[1]
+        cases = {
+            "CreateSemaphore": ("BadLength", "BadValue", "BadIDChoice", "ALLOCATION_FAILED"),
+            "CreateFence": ("BadLength", "BadValue", "BadIDChoice", "ALLOCATION_FAILED"),
+            "SignalSemaphore": ("BadMatch", "DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE"),
+            "WaitSemaphores": ("BadLength", "BadValue", "BadMatch", "DEVICE_LOST"),
+            "WaitForFence": ("BadLength", "BadValue", "BadMatch", "TIMEOUT", "DEVICE_LOST", "DEVICE_DESTROYED"),
+            "GetFenceStatus": ("BadLength", "BadValue", "BadMatch"),
+            "GetSemaphoreCounterValue": ("BadLength", "BadValue", "BadMatch", "DEVICE_LOST"),
+            "ResetFence": ("BadLength", "BadValue", "BadMatch", "DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE"),
+            "DestroyFence": ("BadLength", "BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE"),
+            "DestroySemaphore": ("BadLength", "BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE"),
+        }
+        for request, outcomes in cases.items():
+            with self.subTest(request=request):
+                self.assertIn("`" + request + "`", registry)
+                self.assertIn("`" + request + "`", synchronization)
+                self.assertIn("`" + request + "`", section)
+                self.assertIn("`" + request + "`", self.errors)
+                for outcome in outcomes:
+                    self.assertIn(outcome, section)
+                    self.assertIn(outcome, self.errors)
+
+    def test_synchronization_rejections_preserve_wait_and_signal_state(self):
+        section = self.conformance.split(
+            "## Synchronization request rejection matrix", 1
+        )[1]
+        for phrase in (
+            "Every rejection leaves the target XID unallocated",
+            "counter and all reservations remain unchanged",
+            "No synchronous rejection may install a wait registration",
+            "all rejections preserve the stored state",
+            "an unsent reply alone must not block destruction",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, section)
+
 if __name__ == "__main__":
     unittest.main()
