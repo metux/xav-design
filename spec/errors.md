@@ -15,26 +15,26 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Inconsistent request length or count | `BadLength` |
 | Invalid field value, reserved bits, or flags | `BadValue` |
 | Invalid or already occupied create XID | `BadIDChoice` |
-| Falscher Ressourcentyp oder Cross-Device-Kombination | normalerweise `BadMatch` |
+| Wrong resource type or cross-device combination | normally `BadMatch` |
 | XID does not identify a live XAverius resource or is unknown in this resource context | `BadValue` |
 | Invalid Atom XID | `BadAtom` |
-| Live-XID hat einen anderen Ressourcentyp als erwartet | `BadMatch` |
+| Live XID has a resource type other than the expected type | `BadMatch` |
 | Live resource belongs to another client and no sharing path is defined | `BadMatch` |
 | Device unavailable | `DEVICE_UNAVAILABLE` |
-| Device verloren | `DEVICE_LOST` |
+| Device lost | `DEVICE_LOST` |
 | Logical device normally destroyed while a host wait is open (`WaitSemaphores`) | `DEVICE_DESTROYED` as an X11 error; `WaitForFence` instead uses the normal reply status `DEVICE_DESTROYED = 4` |
 | Invalid synchronization state | `INVALID_SYNCHRONIZATION_STATE` |
-| Synchroner Transferfehler | `TRANSFER_FAILED` |
-| Synchroner Allokationsfehler | `ALLOCATION_FAILED` |
+| Synchronous transfer failure | `TRANSFER_FAILED` |
+| Synchronous allocation failure | `ALLOCATION_FAILED` |
 | Invalid dependency prevents acceptance | `DEPENDENCY_FAILED` |
-| Unerwarteter Serverfehler | `INTERNAL_SERVER_ERROR` |
+| Unexpected server error | `INTERNAL_SERVER_ERROR` |
 
 ## Normative XID Error Rule
 
 The following baseline mapping applies to all XAverius requests unless a request defines an explicitly narrower rule:
 
 - A required XAverius XID that does not identify a live resource in the XAverius resource space results in `BadValue`. This includes unknown, destroyed, and no-longer-public XIDs. XAverius resources use extension-specific resource types, so there is no corresponding core error such as `BadWindow` or `BadPixmap`.
-- Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`.
+- An XID that identifies a live resource but not the expected resource type results in `BadMatch`.
 - A live resource owned by another client, with no explicit sharing path defined, results in `BadMatch`. The same applies to cross-device use.
 - An invalid `ATOM` value results in `BadAtom`, not `BadValue`.
 - An invalid or already-occupied create XID results in `BadIDChoice`; this differs from an invalid input XID.
@@ -48,24 +48,24 @@ The target XID of a create request is not an input XID to be resolved as an exis
 
 This rule applies in particular to target XIDs for `CreatePipelineLayout`, `CreateComputePipeline`, and descriptor sets requested by `AllocateDescriptorSets`. It also applies to `ShaderModuleData` and `CommandBufferData` when the `CREATE` flag is set. For `ShaderModuleData`, a successful CREATE chunk reserves the target XID for the upload assembly; a second CREATE or an already-live target XID results in `BadIDChoice`.
 
-Bei `ShaderModuleData` ohne `CREATE` muss ein passendes Upload-Assembly existieren. Ist die XID eine live Ressource eines anderen Typs, gilt `BadMatch`; andernfalls ergibt ein fehlendes Assembly `INVALID_SYNCHRONIZATION_STATE`, auch wenn noch kein öffentliches Shader-Module-Objekt existiert. Bei `CommandBufferData` ohne `CREATE` muss die Ziel-XID einen live Command Buffer bezeichnen: unbekannte/nicht-live XIDs ergeben `BadValue`, ein falscher live Ressourcentyp `BadMatch`, und ein Command Buffer außerhalb von `RECORDING` ergibt `INVALID_SYNCHRONIZATION_STATE`. Alle Prüfungen erfolgen vor einer Zustandsänderung.
+For `ShaderModuleData` without `CREATE`, a matching upload assembly MUST exist. If the XID identifies a live resource of another type, the result is `BadMatch`; otherwise, a missing assembly results in `INVALID_SYNCHRONIZATION_STATE`, even if no public shader-module object exists yet. For `CommandBufferData` without `CREATE`, the target XID MUST identify a live command buffer: unknown or non-live XIDs result in `BadValue`, a live resource of the wrong type results in `BadMatch`, and a command buffer outside `RECORDING` results in `INVALID_SYNCHRONIZATION_STATE`. All checks occur before any state change.
 
 
-## `CreateDevice`: Feature- und Extension-Anforderungen
+## `CreateDevice`: Feature and Extension Requirements
 
-Die Fehlerzuordnung unterscheidet fehlerhafte Eingaben von gültigen, aber nicht erfüllbaren Anforderungen:
+Error mapping distinguishes invalid input from valid but unsupported requirements:
 
-- `feature_id` ist nicht in der XAverius-Feature-Registry definiert: `BadValue`.
-- `feature_id` ist registriert, wird aber vom ausgewählten Physical Device nicht unterstützt: `BadMatch`.
-- Feature-Record mit `enabled != 1` oder doppelte Feature-ID: `BadValue`.
-- Extension-Name ist leer, länger als 255 Bytes oder syntaktisch ungültig: `BadValue`.
-- Extension-Name ist syntaktisch gültig, aber unbekannt in der XAverius-Extension-Registry oder vom Physical Device nicht unterstützt: `BadMatch`.
-- Doppelte Extension-Namen: `BadValue`.
-- Alle Anforderungen müssen vor der Device-Erzeugung geprüft werden. Bei jedem Fehler bleibt die angeforderte `device_xid` unangelegt; der Server darf Features oder Extensions nicht stillschweigend auslassen.
+- `feature_id` is not defined in the XAverius feature registry: `BadValue`.
+- `feature_id` is registered but is not supported by the selected physical device: `BadMatch`.
+- A feature record with `enabled != 1` or a duplicate feature ID: `BadValue`.
+- An extension name that is empty, longer than 255 bytes, or syntactically invalid: `BadValue`.
+- An extension name that is syntactically valid but unknown to the XAverius extension registry or unsupported by the physical device: `BadMatch`.
+- Duplicate extension names: `BadValue`.
+- All requirements MUST be checked before device creation. On any failure, the requested `device_xid` remains unallocated; the server MUST NOT silently omit features or extensions.
 
-Für `CreateDevice` gilt folgende Fehlerpräzedenz; sie konkretisiert die allgemeine XID-Regel für diesen Request:
+The following error precedence applies to `CreateDevice` and refines the general XID rule for this request:
 
-1. Request-Länge und die mit Wire-Daten allein prüfbaren Feldregeln: reservierte Felder, Queue- und Feature-Counts, Queue-Prioritäten, `enabled = 1`, doppelte Queue-Family-/Feature-/Extension-Einträge sowie Extension-Namenssyntax und Namenslänge. Fehler hier ergeben `BadLength` beziehungsweise `BadValue`.
+1. Request length and field rules checkable from wire data alone: reserved fields, queue and feature counts, queue priorities, `enabled = 1`, duplicate queue-family/feature/extension entries, and extension-name syntax and length. These failures result in `BadLength` or `BadValue`, respectively.
 2. Create-XID `device_xid`: ungültig oder bereits belegt ergibt `BadIDChoice`.
 3. `physical_device_xid`: unbekannt/nicht live ergibt `BadValue`; falscher live Ressourcentyp ergibt `BadMatch`.
 4. Ressourcen-Ownership und die für die Verbindung erforderliche erfolgreiche XGE-`GEQueryVersion)-Aushandlung mindestens Version 1.0. Ein fehlender XGE-Handshake ergibt `BadMatch`; ein Fehler darf die Ziel-XID nicht belegen.
