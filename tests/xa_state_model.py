@@ -324,6 +324,8 @@ class SubmissionModel:
     queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
+    # Command buffers are owned by individual pending submissions.
+    pending_command_buffers: list[tuple[int, int]] = field(default_factory=list)
     framing_valid: bool = True
     scalar_valid: bool = True
     xids_valid: bool = True
@@ -428,6 +430,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             state.wait_states[i] = WaitState.RESERVED
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
+        state.pending_command_buffers.append((request.token, i))
     for index, value in zip(request.signal_indices, request.signal_values):
         state.signal_slots[index] = value
         if (state.semaphore_kinds[index] if index < len(state.semaphore_kinds)
@@ -465,14 +468,18 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
 
 
 def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
-    """Finalize a submission once; failed work never advances timeline counters."""
+    """Finalize a submission once; Device Loss makes late success callbacks fail."""
     if token not in state.pending_submissions:
+        # Terminal callbacks are idempotently rejected without touching state.
         return "BadValue"
     state.pending_submissions.remove(token)
+    # A backend may race a Device-Loss notification and later report success.
+    # Once loss has been observed, that callback must not publish signal values.
+    effective_success = success and not state.device_lost
     for submission_token, index, value in list(state.pending_timeline_signals):
         if submission_token != token:
             continue
-        if success:
+        if effective_success:
             state.signal_counters[index] = max(state.signal_counters[index], value)
         state.pending_timeline_signals.remove((submission_token, index, value))
         if state.signal_slots[index] == value:
@@ -480,12 +487,13 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
-    for command_buffer in state.command_buffers:
-        if command_buffer.lifecycle is CommandBufferLifecycle.PENDING:
-            # This compact oracle does not model per-submission CB ownership;
-            # callers should use one pending CB per submission in these tests.
-            command_buffer.lifecycle = (
-                CommandBufferLifecycle.EXECUTABLE if success
-                else CommandBufferLifecycle.INVALID
-            )
+    for submission_token, index in list(state.pending_command_buffers):
+        if submission_token != token:
+            continue
+        command_buffer = state.command_buffers[index]
+        command_buffer.lifecycle = (
+            CommandBufferLifecycle.EXECUTABLE if effective_success
+            else CommandBufferLifecycle.INVALID
+        )
+        state.pending_command_buffers.remove((submission_token, index))
     return "SUCCESS"
