@@ -5,11 +5,11 @@ All events below use XGE. The seven compute-baseline events use IDs from the [ce
 | Offset | Type | Field |
 |---:|---|---|
 | 0 | CARD8 | `response_type = GenericEvent (35)` |
-| 1 | CARD8 | `extension`: dynamisch zugewiesener XAverius-Major-Opcode |
-| 2 | CARD16 | X11-Event-Sequenznummer |
+| 1 | CARD8 | `extension`: dynamically assigned XAverius major opcode |
+| 2 | CARD16 | X11 event sequence number |
 | 4 | CARD32 | XGE `length`, number of four-byte units after offset 32 |
 | 8 | CARD16 | `evtype`, static event type ID from the event registry |
-| 10–31 | — | XGE-reservierte Header-Bytes, null |
+| 10–31 | — | XGE-reserved header bytes, zero |
 
 Event-specific fields begin at offset 32. The total length is exactly `32 + 4 * length`; the connection byte order applies to both header and payload. The `extension` and `evtype` values are not interchangeable: the former is dynamically assigned by each X11 server, while the latter is statically assigned by XAverius.
 
@@ -21,10 +21,10 @@ Total length: 60 bytes; XGE `length = 7`.
 | Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device XID; zero if not device-related |
-| 36 | CARD32 | `error_code`, zentraler XAverius-Fehleroffset |
+| 36 | CARD32 | `error_code`, central XAverius error offset |
 | 40 | CARD32 | `origin` |
 | 44 | CARD64 | `submission_token`, 0 if not associated with a submission |
-| 52 | XID | betroffene Ressourcen-XID, null falls keine |
+| 52 | XID | affected resource XID, zero if none |
 | 56 | CARD32 | `reserved = 0` |
 
 Origin-Werte:
@@ -122,7 +122,7 @@ Total length: 56 bytes; XGE `length = 6`.
 
 The `queue_family_index` and `queue_index` fields identify exactly the queue to which the submission was passed through `QueueSubmit`. They are not global queue IDs and MUST identify a queue actually created for the specified logical device.
 
-Failure-Class-Werte:
+Failure-class values:
 
 - 0: `EXECUTION_FAILED`
 - 1: `DEVICE_LOST`
@@ -181,15 +181,15 @@ Compute-baseline event type IDs are defined in the [central event registry](../r
 | 24 | CARD32 | `event_mask` |
 | 28 | CARD32 | `reserved = 0` |
 
-Scope-Werte:
+Scope values:
 
-- `CONNECTION = 0`: `device_xid = 0`, `queue_family_index = 0`, `queue_index = 0`. Gilt für die X11-Verbindung als Ganzes.
-- `DEVICE = 1`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; beide Queue-Indizes müssen null sein.
-- `QUEUE = 2`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; das Tupel `(queue_family_index, queue_index)` muss eine tatsächlich angeforderte Queue dieses Devices identifizieren.
+- `CONNECTION = 0`: `device_xid = 0`, `queue_family_index = 0`, and `queue_index = 0`. Applies to the entire X11 connection.
+- `DEVICE = 1`: `device_xid` identifies a logical Device owned by this connection; both queue indices must be zero.
+- `QUEUE = 2`: `device_xid` identifies a logical Device owned by this connection; the tuple `(queue_family_index, queue_index)` must identify a queue actually requested from that Device.
 
 Unused fields must contain exactly the specified zero values. Unknown scope values, non-zero reserved fields, invalid mask bits, or invalid scope/field combinations result in `BadValue`. Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`. A nonexistent queue within a valid device results in `BadValue`. On any error, the previous selection remains unchanged.
 
-Die Masken sind scopeabhängig:
+The masks depend on the scope:
 
 | Scope | Bit | Event |
 |---|---:|---|
@@ -201,11 +201,11 @@ Die Masken sind scopeabhängig:
 | `QUEUE` | 2 | `IMAGE_RELEASED` |
 | `QUEUE` | 3 | `PRESENTATION_COMPLETE` |
 
-All other bits are reserved and must be rejected. Presentation bits are valid only in the presentation-capable profile; a compute-only server must reject them as unknown mask bits with `BadValue`. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
+All other bits are reserved and must be rejected. Presentation bits are valid only in the presentation-capable profile; a compute-only server must reject them as unknown mask bits with `BadValue`. `event_mask = 0` clears the selection for the specified scope. Clearing a Device or Queue mask does not remove selections for other scopes. When a logical Device is successfully destroyed, its Device and Queue selections are removed; the Connection selection remains.
 
-`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt, solange die Verbindung Events empfangen kann. Diese Regel unterliegt den Lebensdauergrenzen aus [Resource lifetime and ownership](resource-lifetime.md): Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt. `DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt. Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist. Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände. Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.
+`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable and are delivered independently of `SelectEvents` while the connection can receive events. This rule is subject to the lifecycle limits in [Resource lifetime and ownership](resource-lifetime.md): after successful processing of `DestroyDevice`, no new events using the destroyed `device_xid` may be generated or delivered; events already queued in the X11 output stream remain unaffected. `DEVICE_STATUS_CHANGED` is delivered only through the Connection mask. The two submission events are delivered only if the corresponding Queue mask bit is set when the terminal submission outcome occurs. Event selection never affects execution, internal terminal state, or Fence/Semaphore state. For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered as terminal events.
 
-**Serialisierung asynchroner Event-Entscheidungen:** Die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event müssen über einen gemeinsamen serialisierten Serverzustand geordnet werden. Der erfolgreiche `SelectEvents`-Request wirkt ab seinem Linearisierungspunkt; ein Submission-Abschluss wertet die dann geltende Queue-Maske aus. Der terminale Übergang und die Entscheidung, das zugehörige Event in den X11-Ausgabestrom einzureihen oder zu unterdrücken, bilden gegenüber `DestroyDevice` eine unteilbare Entscheidung: Wird der Submission-Abschluss zuerst linearisiert und das Event eingereiht, bleibt dieses bereits eingereihte Event unberührt; wird `DestroyDevice` zuerst erfolgreich linearisiert, wird kein neues Event für dessen zerstörte Device-XID eingereiht. Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen. Diese Serialisierung verändert weder die Reihenfolge der X11-Requests einer Verbindung noch die GPU-Abhängigkeiten zwischen Submissions.
+**Serialization of asynchronous event decisions:** Die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event müssen über einen gemeinsamen serialisierten Serverzustand geordnet werden. A successful `SelectEvents` request takes effect at its linearization point; submission completion evaluates the Queue mask then in effect. Der terminale Übergang und die Entscheidung, das zugehörige Event in den X11-Ausgabestrom einzureihen oder zu unterdrücken, bilden gegenüber `DestroyDevice` eine unteilbare Entscheidung: Wird der Submission-Abschluss zuerst linearisiert und das Event eingereiht, bleibt dieses bereits eingereihte Event unberührt; wird `DestroyDevice` zuerst erfolgreich linearisiert, wird kein neues Event für dessen zerstörte Device-XID eingereiht. Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen. Diese Serialisierung verändert weder die Reihenfolge der X11-Requests einer Verbindung noch die GPU-Abhängigkeiten zwischen Submissions.
 
 Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert. Das ändert nicht den internen terminalen Ausgang der Submission. Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.
 
