@@ -907,40 +907,76 @@ class DescriptorPoolLifetime:
     sets: list[DescriptorSetLifetime] = field(default_factory=list)
 
 
-def free_descriptor_sets(sets: list[DescriptorSetLifetime]) -> str:
-    """Validate all selected sets first, then invalidate them as one commit."""
+def _release_descriptor_slots(
+    descriptor_sets: list[DescriptorSetLifetime],
+    buffers: list[BufferMemoryLifetime] | None,
+) -> str:
+    if buffers is None:
+        return "SUCCESS"
+    by_id = {buffer.identity: buffer for buffer in buffers}
+    counts: dict[str, int] = {}
+    for descriptor_set in descriptor_sets:
+        if not descriptor_set.live:
+            continue
+        for identity in descriptor_set.slots.values():
+            counts[identity] = counts.get(identity, 0) + 1
+    if any(identity in by_id and by_id[identity].descriptor_slot_refs < count
+           for identity, count in counts.items()):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for identity, count in counts.items():
+        buffer = by_id.get(identity)
+        if buffer is not None:
+            buffer.descriptor_slot_refs -= count
+            _finish_buffer_release(buffer)
+    return "SUCCESS"
+
+
+def free_descriptor_sets(
+    sets: list[DescriptorSetLifetime],
+    buffers: list[BufferMemoryLifetime] | None = None,
+) -> str:
+    """Validate all selected sets first, then invalidate and release their slots."""
     if any(not descriptor_set.live for descriptor_set in sets):
         return "BadValue"
     if any(descriptor_set.pending_use or descriptor_set.recording_refs
            for descriptor_set in sets):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    if _release_descriptor_slots(sets, buffers) != "SUCCESS":
         return "INVALID_SYNCHRONIZATION_STATE"
     for descriptor_set in sets:
         for cb in descriptor_set.executable_refs:
             if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
                 cb.lifecycle = CommandBufferLifecycle.INVALID
         descriptor_set.live = False
+        descriptor_set.slots.clear()
     return "SUCCESS"
 
 
-def destroy_descriptor_pool(pool: DescriptorPoolLifetime) -> str:
-    """Apply pool-wide preflight checks, then invalidate pool, sets and CB refs."""
+def destroy_descriptor_pool(
+    pool: DescriptorPoolLifetime,
+    buffers: list[BufferMemoryLifetime] | None = None,
+) -> str:
+    """Apply pool-wide preflight checks, then invalidate pool, sets and refs."""
     if not pool.xid_valid or not pool.live:
         return "BadValue"
     if not pool.correct_type_and_ownership:
         return "BadMatch"
+    live_sets = [descriptor_set for descriptor_set in pool.sets if descriptor_set.live]
     if any(descriptor_set.pending_use or descriptor_set.recording_refs
-           for descriptor_set in pool.sets if descriptor_set.live):
+           for descriptor_set in live_sets):
         return "INVALID_SYNCHRONIZATION_STATE"
-    for descriptor_set in pool.sets:
-        if not descriptor_set.live:
-            continue
+    if _release_descriptor_slots(live_sets, buffers) != "SUCCESS":
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for descriptor_set in live_sets:
         for cb in descriptor_set.executable_refs:
             if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
                 cb.lifecycle = CommandBufferLifecycle.INVALID
         descriptor_set.live = False
+        descriptor_set.slots.clear()
     pool.live = False
     pool.xid_valid = False
     return "SUCCESS"
+
 
 
 @dataclass(frozen=True)

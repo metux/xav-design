@@ -2048,3 +2048,53 @@ class StaleDescriptorBufferReferenceTests(unittest.TestCase):
         self.assertEqual(first.descriptor_slot_refs, 1)
         self.assertEqual(second.descriptor_slot_refs, 1)
         self.assertEqual(cb.indirect_buffer_refs, {"buffer-A", "buffer-B"})
+
+
+
+class DescriptorPoolBufferReferenceReleaseTests(unittest.TestCase):
+    def test_free_descriptor_set_releases_stale_buffer_slot_and_unblocks_memory(self) -> None:
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1)
+        memory = MemoryAllocationLifetime()
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "BadMatch")
+        self.assertEqual(free_descriptor_sets([descriptor_set], [buffer]), "SUCCESS")
+        self.assertFalse(descriptor_set.live)
+        self.assertEqual(descriptor_set.slots, {})
+        self.assertEqual(buffer.descriptor_slot_refs, 0)
+        self.assertEqual(buffer.internal_state, "RELEASED")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "SUCCESS")
+
+    def test_destroy_pool_releases_all_child_slot_refs_atomically(self) -> None:
+        first = BufferMemoryLifetime(descriptor_slot_refs=2)
+        second = BufferMemoryLifetime(identity="buffer-B", descriptor_slot_refs=1)
+        memory = MemoryAllocationLifetime()
+        pool = DescriptorPoolLifetime(sets=[
+            DescriptorSetLifetime(slots={0: first.identity, 1: first.identity}),
+            DescriptorSetLifetime(slots={0: second.identity}),
+        ])
+        self.assertEqual(destroy_buffer_lifetime(first), "SUCCESS")
+        self.assertEqual(destroy_buffer_lifetime(second), "SUCCESS")
+        self.assertEqual(destroy_descriptor_pool(pool, [first, second]), "SUCCESS")
+        self.assertEqual((first.internal_state, second.internal_state), ("RELEASED", "RELEASED"))
+        self.assertEqual((first.descriptor_slot_refs, second.descriptor_slot_refs), (0, 0))
+        self.assertEqual(free_memory_lifetime(memory, [first, second]), "SUCCESS")
+
+    def test_pool_rejection_preserves_slot_refs_and_stale_buffer_lifetime(self) -> None:
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity}, recording_refs=1)
+        pool = DescriptorPoolLifetime(sets=[descriptor_set])
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        before = copy.deepcopy((buffer, descriptor_set, pool))
+        self.assertEqual(destroy_descriptor_pool(pool, [buffer]), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((buffer, descriptor_set, pool), before)
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+
+    def test_free_set_rejects_reference_count_underflow_without_partial_release(self) -> None:
+        first = BufferMemoryLifetime(descriptor_slot_refs=1)
+        second = BufferMemoryLifetime(identity="buffer-B", descriptor_slot_refs=0)
+        descriptor_set = DescriptorSetLifetime(slots={0: first.identity, 1: second.identity})
+        before = copy.deepcopy((first, second, descriptor_set))
+        self.assertEqual(free_descriptor_sets([descriptor_set], [first, second]),
+                         "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((first, second, descriptor_set), before)
