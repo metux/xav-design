@@ -259,8 +259,6 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     # Request/entry structure has precedence over flags and command values.
     if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
-    if request.operation != "ABORT" and not request.entries_valid:
-        return "BadValue"
     if request.operation in {"CREATE", "CREATE_FINAL"}:
         if not request.target_xid_available:
             return "BadIDChoice"
@@ -272,6 +270,8 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
             or not state.pool_type_and_ownership_valid
             or not state.pool_matches_buffer):
         return "BadMatch"
+    if request.operation != "ABORT" and not request.entries_valid:
+        return "BadValue"
     if request.operation == "ABORT":
         # ABORT is allowed after device loss, but only for the exact parent
         # pool and a live buffer still in RECORDING.
@@ -338,7 +338,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
-            or len(set(request.signal_indices)) != len(request.signal_indices)):
+            or len(set(request.signal_indices)) != len(request.signal_indices)
+            or bool(set(request.wait_indices) & set(request.signal_indices))):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
