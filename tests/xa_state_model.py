@@ -16,6 +16,11 @@ class ImageState(str, Enum):
     INVALID = "INVALID"
 
 
+class SemaphoreKind(str, Enum):
+    BINARY = "BINARY"
+    TIMELINE = "TIMELINE"
+
+
 class WaitState(str, Enum):
     READY = "READY"
     UNTRUSTED = "UNTRUSTED"
@@ -311,6 +316,8 @@ class SubmissionModel:
     wait_states: list[WaitState] = field(default_factory=list)
     signal_slots: list[int | None] = field(default_factory=list)
     signal_counters: list[int] = field(default_factory=list)
+    semaphore_kinds: list[SemaphoreKind] = field(default_factory=list)
+    queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
     framing_valid: bool = True
@@ -329,6 +336,8 @@ class SubmitRequest:
     signal_values: tuple[int, ...] = ()
     attach_fence: bool = False
     counts_valid: bool = True
+    wait_values: tuple[int, ...] = ()
+    wait_stage_masks: tuple[int, ...] = ()
 
 
 def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
@@ -339,7 +348,11 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)
-            or bool(set(request.wait_indices) & set(request.signal_indices))):
+            or bool(set(request.wait_indices) & set(request.signal_indices))
+            or (request.wait_values and len(request.wait_values) != len(request.wait_indices))
+            or (request.wait_stage_masks and len(request.wait_stage_masks) != len(request.wait_indices))
+            or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)):
+
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
@@ -366,6 +379,19 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         return "INVALID_SYNCHRONIZATION_STATE"
     if any(state.wait_states[i] is not WaitState.READY for i in request.wait_indices):
         return "INVALID_SYNCHRONIZATION_STATE"
+    # Values are interpreted according to the semaphore type. Binary values
+    # must be zero; timeline signal values must advance beyond both completed
+    # and pending reservations. Missing optional fixture kinds retain the
+    # legacy timeline default for signal slots and binary default for waits.
+    for pos, index in enumerate(request.wait_indices):
+        kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.BINARY
+        value = request.wait_values[pos] if request.wait_values else 0
+        if kind is SemaphoreKind.BINARY and value != 0:
+            return "BadValue"
+    for pos, index in enumerate(request.wait_indices):
+        mask = request.wait_stage_masks[pos] if request.wait_stage_masks else 0x1
+        if mask & ~state.queue_supported_stage_mask:
+            return "INVALID_SYNCHRONIZATION_STATE"
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
     # Validate all signal reservations before mutating any one of them.
