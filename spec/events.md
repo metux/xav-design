@@ -1,6 +1,6 @@
-# XAverius-Events
+# XAverius Events
 
-Alle folgenden Events verwenden XGE. Die sieben Compute-Baseline-Events verwenden IDs aus der [zentralen Event-Registry](../registries/event-types.md). Die presentation-only Events IMAGE_RELEASED (7) und PRESENTATION_COMPLETE (8) sowie deren Statuswerte stehen in der separaten [Presentation-Event-Registry](../registries/presentation-events.md) und dürfen nur vom presentation-capable Profil verwendet werden. Der gemeinsame 32-Byte-Header entspricht dem X Generic Event-Format:
+All events below use XGE. The seven compute-baseline events use IDs from the [central event registry](../registries/event-types.md). The presentation-only events `IMAGE_RELEASED` (7) and `PRESENTATION_COMPLETE` (8), together with their status values, are defined in the separate [Presentation Event Registry](../registries/presentation-events.md) and MUST be used only by the presentation-capable profile. The shared 32-byte header follows the X Generic Event format:
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -11,16 +11,16 @@ Alle folgenden Events verwenden XGE. Die sieben Compute-Baseline-Events verwende
 | 8 | CARD16 | `evtype`, statische Event-Type-ID aus der Event-Registry |
 | 10–31 | — | XGE-reservierte Header-Bytes, null |
 
-Event-spezifische Felder beginnen bei Offset 32. Die Gesamtlänge ist exakt `32 + 4 * length`; die Verbindung-byte-order gilt auch für Header und Payload. Die Werte `extension` und `evtype` sind nicht austauschbar: Ersterer ist pro X11-Server dynamisch, letzterer ist XAverius-statisch.
+Event-specific fields begin at offset 32. The total length is exactly `32 + 4 * length`; the connection byte order applies to both header and payload. The `extension` and `evtype` values are not interchangeable: the former is dynamically assigned by each X11 server, while the latter is statically assigned by XAverius.
 
 
 ## `ASYNC_ERROR`
 
-Gesamtlänge: 60 Bytes; XGE `length = 7`.
+Total length: 60 bytes; XGE `length = 7`.
 
 | Offset | Type | Field |
 |---:|---|---|
-| 32 | XID | Device-XID, null falls nicht gerätebezogen |
+| 32 | XID | Device XID; zero if not device-related |
 | 36 | CARD32 | `error_code`, zentraler XAverius-Fehleroffset |
 | 40 | CARD32 | `origin` |
 | 44 | CARD64 | `submission_token`, 0 falls nicht submissionbezogen |
@@ -41,7 +41,7 @@ Origin-Werte:
 
 ## `DEVICE_LOST`
 
-Gesamtlänge: 48 Bytes; XGE `length = 4`.
+Total length: 48 bytes; XGE `length = 4`.
 
 - Offset 32: Device-XID
 - Offset 36: `CARD32 reason_code`
@@ -66,7 +66,7 @@ Status:
 
 The `reason_code` field uses the shared [device reason-code registry](../registries/reason-codes.md). The reason is informational and does not change the status-transition rules.
 
-`REMOVED` ist für diesen XID endgültig. Nach einem Event mit `new_status = REMOVED` darf der Server für diese XID kein weiteres `DEVICE_STATUS_CHANGED`-Event mehr senden. Die XID wird nie einem anderen Device zugewiesen.
+`REMOVED` is final for this XID. After an event with `new_status = REMOVED`, the server MUST NOT send another `DEVICE_STATUS_CHANGED` event for this XID. The XID is never reassigned to another device.
 
 ## `DEVICE_MEMORY_PRESSURE`
 
@@ -92,7 +92,7 @@ Gesamtlänge: 48 Bytes; XGE `length = 4`.
 - Offset 36: `CARD32 idle_reason`
 - Offset 40: `CARD64 device_generation`
 
-Gründe:
+Reasons:
 
 - 0: `IDLE_REASON_UNSPECIFIED`
 - 1: `NO_PENDING_WORK`
@@ -100,15 +100,15 @@ Gründe:
 
 ## `SUBMISSION_COMPLETE`
 
-Gesamtlänge: 56 Bytes; XGE `length = 6`.
+Total length: 56 bytes; XGE `length = 6`.
 
 - Offset 32: Device-XID
 - Offset 36: `CARD32 queue_family_index`
 - Offset 40: `CARD32 queue_index`
 - Offset 44: `CARD32 reserved = 0`
-- Offset 48: `CARD64 submission_token`, der vom Client in `QueueSubmit` angegebene Token. Er ist ungleich null und innerhalb der zugehörigen X11-Client-Verbindung eindeutig; die Regeln aus [QueueSubmit](queue-submission.md) gelten unverändert.
+- Offset 48: `CARD64 submission_token`, the token supplied by the client in `QueueSubmit`. It is non-zero and unique within the associated X11 client connection; the rules in [QueueSubmit](queue-submission.md) apply unchanged.
 
-Die Felder `queue_family_index` und `queue_index` bezeichnen exakt die Queue, an die diese Submission mit `QueueSubmit` übergeben wurde. Sie sind keine globalen Queue-IDs und müssen eine für das angegebene logische Device tatsächlich erstellte Queue identifizieren.
+The `queue_family_index` and `queue_index` fields identify exactly the queue to which this submission was passed through `QueueSubmit`. They are not global queue IDs and MUST identify a queue actually created for the specified logical device.
 
 ## `SUBMISSION_FAILED`
 
@@ -130,7 +130,7 @@ Failure-Class-Werte:
 
 ## `IMAGE_RELEASED`
 
-Gesamtlänge: 64 Bytes; XGE `length = 8`.
+Total length: 64 bytes; XGE `length = 8`.
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -160,13 +160,13 @@ Gesamtlänge: 64 Bytes; XGE `length = 8`.
 
 Dieses Event bezeichnet den einmaligen internen terminalen Ausgang jeder akzeptierten Präsentationsoperation. Ein `PRESENTATION_COMPLETE`-Event wird genau dann eingereiht, wenn die Queue-Maske (Bit 3) beim Serialisieren dieses terminalen Ergebnisses gesetzt ist, die ursprüngliche Verbindung noch zustellbar ist und die Device-Lifecycle-Regeln die Event-Erzeugung erlauben. `SUCCESS` bedeutet, dass der definierte Completion-Punkt der Präsentationsbackend erfolgreich erreicht wurde; andere Statuswerte beschreiben den terminalen Fehlerzustand. Das Event darf unabhängig von `IMAGE_RELEASED` eintreffen. `PRESENTATION_COMPLETE` allein macht das Image nicht erneut erwerbbar. Wenn ein Fehler die Wiederverwendung verhindert, wird das Image invalidiert und die Swapchain als nicht mehr verwendbar markiert. Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit dessen Device-XID erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt. Nach Disconnect wird nichts mehr an die geschlossene Verbindung zugestellt, die interne Operation wird dennoch terminalisiert. Spätere Maskenänderungen ändern die Zustellentscheidung für dieses Event nicht. Beide Events haben voneinander unabhängige Masken- und Lifecycle-Entscheidungen, da ihre terminalen Zeitpunkte verschieden sein können.
 
-## Voraussetzung fuer lange XGE-Events
+## Prerequisite for Extended XGE Events
 
 Alle in diesem Kapitel definierten Events sind laenger als der normale 32-Byte-X11-Event. Vor dem Versand solcher Events muss der Server wissen, dass der jeweilige Client XGE unterstuetzt; andernfalls kann der X11-Bytestrom fuer einen Client ohne XGE-Unterstuetzung falsch ausgerichtet werden.
 
 Ein XAverius-Client muss deshalb vor dem Erzeugen eines logischen Devices oder vor jedem `SelectEvents`-Request erfolgreich `GEQueryVersion` ausfuehren und mindestens XGE 1.0 ausgehandelt haben. Der XAverius-Server muss diesen erfolgreichen Austausch pro Verbindung verfolgen. Ohne ausgehandelte XGE-Unterstuetzung werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unveraendert. Ein Server, der XGE nicht unterstuetzt, darf XAverius nicht als verfuegbare Extension anbieten.
 
-## Event-Auswahl: `SelectEvents`
+## Event Selection: `SelectEvents`
 
 Die Compute-Baseline-Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt; presentation-only IDs sind in der [Presentation-Event-Registry](../registries/presentation-events.md) festgelegt. Beide Namespaces verwenden dieselben append-only Event-Type-IDs und dürfen nicht miteinander kollidieren. Sie sind von Request-Subopcodes und Error-Offsets zu unterscheiden.
 
