@@ -1,6 +1,6 @@
 # Synchronization objects
 
-## Semaphoren erstellen
+## Creating Semaphores
 
 `CreateSemaphore` hat 28 Bytes:
 
@@ -14,52 +14,52 @@ Typen:
 - `BINARY = 0`
 - `TIMELINE = 1`
 
-Für Binary-Semaphoren muss `initial_value = 0` sein. Binary-Semaphoren beginnen unsignaled. In `QueueSubmit` müssen die `wait_value`- und `signal_value`-Felder für Binary-Semaphoren ebenfalls null sein. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Bei einem nicht verfügbaren oder verlorenen logischen Device wird `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` gemeldet. Backend-Allokationsfehler ergeben `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Semaphore-XID unangelegt.
+For binary semaphores, `initial_value` MUST be zero. Binary semaphores begin unsignaled. In `QueueSubmit`, the `wait_value` and `signal_value` fields for binary semaphores MUST also be zero. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. Backend allocation failures result in `ALLOCATION_FAILED`. Creation is atomic: on any failure, the semaphore XID remains unallocated.
 
-## Binary-Semaphoren
+## Binary Semaphores
 
 Binary-Semaphoren folgen den Vulkan-Signal-/Wait-Regeln.
 
-- Ein Signal darf nicht mehrere konkurrierende Waits erfüllen.
-- Host-Counter-Abfragen, Host-Waits und Host-Signals sind für Binary-Semaphoren ungültig.
-- Pending Signal-/Wait-Zustände müssen atomar validiert werden.
-- Ein Signal und ein Wait müssen nach den geltenden Vulkan-Regeln zusammenpassen.
+- A signal MUST NOT satisfy multiple competing waits.
+- Host counter queries, host waits, and host signals are invalid for binary semaphores.
+- Pending signal and wait states MUST be validated atomically.
+- A signal and a wait MUST be compatible under the applicable Vulkan rules.
 
 In v0.1 darf für eine Binary-Semaphore höchstens eine Signaloperation und höchstens eine Wait-Operation gleichzeitig pending sein. Ein einzelner pending Wait darf auf ein Signal warten, das noch nicht eingereiht wurde; ebenso darf ein Signal pending sein, bevor der passende Wait eingereiht wird. Der Server verfolgt dafür getrennt den Signalzustand (`UNSIGNALED`, `SIGNAL_PENDING`, `SIGNALED` oder `UNTRUSTED`) und die Referenzen auf angenommene Wait-/Signaloperationen. `UNTRUSTED` bedeutet, dass der Server den Backend-Payload-Zustand nach einem fehlgeschlagenen Vorgang nicht sicher bestimmen kann; dieser Zustand ist nicht gleichbedeutend mit `UNSIGNALED`. Die Annahme eines Waits konsumiert das Signal nicht sofort: konsumiert wird es erst, wenn der Wait auf GPU-/Backend-Seite erfolgreich erfüllt ist. Erst nach dieser Konsumption darf ein neuer Signalzyklus beginnen; eine bloß angenommene oder noch pending Wait-Operation gibt das Signal nicht frei. Ein Signal, dessen Operation erfolgreich abgeschlossen wurde, bleibt verfügbar, bis genau ein Wait es konsumiert. Eine zweite Signaloperation wird abgewiesen, solange ein Signal bereits verfügbar ist oder eine Signaloperation pending ist; eine zweite pending Wait-Operation wird abgewiesen, solange ein vorheriger Wait noch nicht erfüllt/abgeschlossen ist. Solche Ablehnungen bei `QueueSubmit` erfolgen atomar mit `INVALID_SYNCHRONIZATION_STATE`. Ein Fehler oder Device Loss darf ein Signal nicht als erfolgreich verfügbar oder konsumiert markieren, wenn das nicht tatsächlich eingetreten ist; beim Device Loss werden betroffene Submissions fehlgeschlagen und das Semaphore-Objekt folgt den Device-Loss-Regeln. Kann der Server nach einem angenommenen, fehlgeschlagenen Backend-Vorgang nicht sicher nachweisen, ob eine Binary-Semaphore-Signal- oder Wait-Operation wirksam wurde, muss er die Binary-Semaphore als `UNTRUSTED` markieren. Dieser Zustand ist terminal für normale Nutzung: weitere Queue-Waits und Queue-Signals auf dieser Semaphore werden vor Annahme mit `DEPENDENCY_FAILED` abgewiesen. Der Server darf die Semaphore nicht als signalverfügbar oder unsignaled behandeln und darf sie nicht durch einen lokalen Zustandsreset wieder nutzbar machen. Die öffentliche Semaphore-XID bleibt bis zu ihrer zulässigen Zerstörung live; interne Backend-Referenzen bleiben bis zur Quieszenz erhalten. Ist dagegen nachweisbar, dass die fehlgeschlagene Operation das Semaphore-Payload nicht verändert hat, bleibt der vorherige bestätigte Signalzustand erhalten. Device Loss folgt weiterhin den strengeren Device-weiten Regeln.
 
-## Presentation-Waits auf Binary-Semaphoren
+## Presentation Waits on Binary Semaphores
 
 `QueuePresent` verwendet dieselbe globale Zustandsmaschine und dieselbe Pending-Wait-Exklusivität wie `QueueSubmit`. Ein angenommener Present reserviert atomar einen Wait-Slot pro angegebenem Binary-Semaphore; ein bereits inkompatibel wartender oder `UNTRUSTED` Semaphore führt zur synchronen atomaren Ablehnung. Die Annahme selbst konsumiert kein Signal. Konsumption wird erst registriert, wenn der Backend-Wait nachweislich erfolgreich war.
 
 Endet eine angenommene Präsentation, bevor der Wait sicher erfüllt wurde, wird jede betroffene Semaphore separat abgewickelt: Nachweislich nicht konsumierte Payloads behalten ihren bestätigten Zustand und gültige Signalreservierungen; nachweislich konsumierte Payloads werden als konsumiert verbucht; bei unklarem Payload-Ergebnis wird die Semaphore `UNTRUSTED`. Die Wait-Reservierung wird genau einmal aufgehoben, wenn der Wait terminal ist. Eine unsichere Operation darf weder als erfolgreich konsumiert noch als ungesignaled zurückgesetzt werden. Bei Device Loss gelten die strengeren Device-weiten Regeln oben.
 
-## Timeline-Semaphoren
+## Timeline Semaphores
 
 Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
-- Ein Wait ist erfüllt, sobald der beobachtbare Counter mindestens den angeforderten Wert erreicht.
-- Ein Wait darf eingereiht werden, bevor das Signal eingereiht wurde, das ihn erfüllt.
+- A wait is satisfied when the observable counter reaches or exceeds the requested value.
+- A wait MAY be queued before the signal that satisfies it is queued.
 - Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein. Zur atomaren Validierung zählt ein angenommenes, noch nicht terminales Signal als pending, auch wenn sein Counter-Wert noch nicht erreicht ist; neue GPU-Signalwerte müssen größer als alle bereits reservierten pending Signalwerte derselben Semaphore sein. Ein pending GPU-Signal reserviert seinen Wert, erhöht aber den beobachtbaren Counter nicht.
-- Der beobachtbare Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde. Die bloße Annahme einer `QueueSubmit`-Anforderung reserviert den Signalwert, erhöht aber nicht vorzeitig den Counter.
-- Ein erfolgreich ausgeführtes Signal erfüllt alle bereits eingereihten Waits, deren Werte dadurch erreicht werden; ein Wait verändert den Counter nicht.
+- The observable counter advances only when the corresponding signal operation has actually completed successfully. Acceptance of a `QueueSubmit` request reserves the signal value but MUST NOT advance the counter prematurely.
+- A successfully executed signal satisfies all previously queued waits whose values are reached; a wait does not modify the counter.
 - Mehrere Signal-Entries derselben Timeline-Semaphore in einem einzelnen `QueueSubmit` sind in v0.1 nicht erlaubt.
-- Nach fehlgeschlagener Submission oder Device Loss darf ein nur reservierter, aber nicht erfolgreich signalisierter Wert nicht als erreicht ausgegeben werden. Reservierungen werden erst aufgehoben, wenn die zugehörige Operation terminal ist; bei Device Loss gelten keine weiteren normalen Signaloperationen für das Device.
+- After a failed submission or device loss, a value that was only reserved and never successfully signaled MUST NOT be reported as reached. Reservations are released only when the corresponding operation becomes terminal; after device loss, no further normal signal operations are permitted on that device.
 
 ## `GetSemaphoreCounterValue`
 
-Request: exakt 16 Bytes; Device-XID bei Offset 8, Semaphore-XID bei Offset 12. Eine andere Gesamtlänge ergibt `BadLength`. Unbekannte/nicht-live Device- oder Semaphore-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergeben `BadMatch`.
+Request: exactly 16 bytes; device XID at offset 8 and semaphore XID at offset 12. Any other total length results in `BadLength`. Unknown or non-live device or semaphore XIDs result in `BadValue`; a live resource of the wrong type, foreign client/device ownership, or cross-device use results in `BadMatch`.
 
-Nur für Timeline-Semaphoren. Bei einem bereits als verloren erkannten logischen Device wird der Request mit `DEVICE_LOST` abgewiesen: Das Wire-Reply besitzt kein Statusfeld, mit dem ein Fehler sicher von einem Counter-Wert unterschieden werden könnte. Der Server darf keinen vermeintlich aktuellen Counter als erfolgreichen Reply ausgeben.
+Timeline semaphores only. If the logical device is already known to be lost, the request is rejected with `DEVICE_LOST`: the wire reply has no status field that can reliably distinguish an error from a counter value. The server MUST NOT return a purported current counter as a successful reply.
 
 Reply:
 
 - Offset 8: `CARD64 counter_value`
 - Offset 16–31: reserviert, null
-- Reply-Payload-Länge: null
+- Reply payload length: zero
 
 ## `WaitSemaphores`
 
-Fester Request-Header: 28 Bytes; Gesamtlänge: `28 + 12 * semaphore_count` Bytes.
+Fixed request header: 28 bytes; total length: `28 + 12 * semaphore_count` bytes.
 
 - Offset 8: Device-XID
 - Offset 12: `CARD32 semaphore_count`
@@ -108,13 +108,13 @@ Der Server führt das Host-Signal aus, bevor er mit der regulären Verarbeitung 
 
 Validierungsfehler und unmittelbar feststellbare Vulkan-Fehler werden als normale X11-Request-Fehler gemeldet; der Request hinterlässt dann keine teilweise ausgeführte Signaloperation. Ein nach Annahme der Operation auftretender Device Loss wird über die normalen Device-Loss-/asynchronen Fehlermechanismen gemeldet. Da der Request kein Reply erzeugt, kann der Client Fehler mit der üblichen X11-Fehlerbehandlung beziehungsweise `XSync` erkennen. Ein späterer Request derselben Verbindung darf nicht vor Abschluss der Host-Signaloperation ausgeführt werden.
 
-## Semaphore-Zerstörung
+## Destroying Semaphores
 
 `DestroySemaphore` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes: Device-XID bei Offset 8 und Semaphore-XID bei Offset 12. `DestroySemaphore` verwendet die allgemeinen Lebensdauerregeln aus [Resource lifetime and ownership](resource-lifetime.md). Die Zerstörung wird mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal oder eine offene `WaitSemaphores`-Registrierung die exakte interne Semaphore-Identität referenziert oder eine andere laufende serverseitige Host-Operation die Semaphore verwendet. Eine Ablehnung ändert weder XID noch Synchronisationszustand. Eine Wait-Registrierung gilt nicht mehr als offen, sobald ihr terminales Ergebnis serverseitig serialisiert festgestellt wurde; ein noch nicht versendeter Reply blockiert die Zerstörung dann nicht. Nach erfolgreicher Zerstörung wird die öffentliche XID sofort ungültig; interne Daten bleiben erhalten, solange Backend-Zugriffe möglich sind. Bei Device Loss darf die Device-weite Kaskadeninvalidierung diese normale Ablehnung umgehen.
 
 ## Fences
 
-## Zustände
+## States
 
 Vorgesehene Zustände:
 
@@ -183,7 +183,7 @@ Request: exakt 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12. Eine 
 
 Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden. Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`. Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`; falscher live Ressourcentyp oder fremde Client-/Device-Ownership ergibt `BadMatch`. Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben. Eine Ablehnung lässt den Fence-Zustand unverändert.
 
-## Fence-Zerstörung
+## Destroying Fences
 
 `DestroyFence` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes: Device-XID bei Offset 8 und Fence-XID bei Offset 12.
 
