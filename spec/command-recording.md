@@ -1,8 +1,8 @@
-# 7. Command Pools, Command Buffer und Command Streams
+# 7. Command Pools, Command Buffers, and Command Streams
 
 ## 7.1 Command Pools
 
-`CreateCommandPool` hat eine feste Gesamtlänge von 24 Bytes:
+`CreateCommandPool` has a fixed total length of 24 bytes:
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -11,38 +11,38 @@
 | 16 | CARD32 | `queue_family_index` |
 | 20 | CARD32 | `flags` |
 
-In v0.1 sind die Pool-Flags:
+The pool flags defined in v0.1 are:
 
 - Bit 0: `TRANSIENT`
 - Bit 1: `RESET_COMMAND_BUFFER`
-- Bits 2–31: reserviert und müssen null sein.
+- Bits 2–31 are reserved and MUST be zero.
 
-Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`; ein ungültiger Queue-Family-Index ergibt `BadValue`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Pool-XID unangelegt. Der Server darf keine Flags stillschweigend hinzufügen. `TRANSIENT` ist ein Hinweis zur Optimierung und ändert keine beobachtbare Semantik. `RESET_COMMAND_BUFFER` erlaubt den expliziten Request `ResetCommandBuffer` für einzelne nicht-pending Command Buffer. Ohne dieses Flag muss `ResetCommandBuffer` mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen werden. 
+The queue-family index MUST identify a queue family of the logical device that supports command buffers. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or ownership by another device results in `BadMatch`; an invalid queue-family index results in `BadValue`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; a backend allocation failure results in `ALLOCATION_FAILED`. Creation is atomic: on any failure, the pool XID remains unallocated. The server MUST NOT silently add flags. `TRANSIENT` is an optimization hint and does not change observable semantics. `RESET_COMMAND_BUFFER` permits the explicit `ResetCommandBuffer` request for individual non-pending command buffers. Without this flag, `ResetCommandBuffer` MUST be rejected with `INVALID_SYNCHRONIZATION_STATE`. 
 
-`DestroyCommandPool` hat eine feste Gesamtlänge von 16 Bytes: `device_xid` bei Offset 8 und `command_pool_xid` bei Offset 12.
+`DestroyCommandPool` has a fixed total length of 16 bytes: `device_xid` is at offset 8 and `command_pool_xid` is at offset 12.
 
-Der Pool muss zum angegebenen logischen Device gehören. Unbekannte/nicht-live Device- oder Pool-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-Ownership oder Cross-Device-Verwendung ergibt `BadMatch`. Die Zerstörung wird atomar mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen, solange mindestens ein Kind-Command-Buffer noch `PENDING` ist. Bei Ablehnung bleiben Pool, Kind-XIDs und Zustände unverändert. Bei Erfolg werden Pool und alle Kind-Command-Buffer öffentlich invalidiert; interne Objekte bleiben bis zum Ende möglicher Backend-Zugriffe erhalten.
+The pool MUST belong to the specified logical device. Unknown or non-live device or pool XIDs result in `BadValue`; a live resource of the wrong type, ownership by another client, or cross-device use results in `BadMatch`. Destruction is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while any child command buffer is `PENDING`. On rejection, the pool, child XIDs, and states remain unchanged. On success, the pool and all child command buffers are publicly invalidated; internal objects remain alive until possible backend accesses have ended.
 
-Device Loss allein verhindert `DestroyCommandPool` nicht. Da alle betroffenen angenommenen Submissions terminalisiert werden und ihre Command Buffer nach Ende der Pending-Phase `INVALID` sind, blockiert eine abgeschlossene Device-Loss-Abwicklung die Zerstörung nicht mehr allein wegen früherer GPU-Arbeit. Es darf keine neue GPU-Arbeit gestartet werden; interne Backend-Referenzen bleiben bis zur sicheren Quieszenz erhalten oder werden quarantänisiert.
+Device loss alone does not prevent `DestroyCommandPool`. Once affected accepted submissions have been terminalized and their command buffers become `INVALID` after the pending phase ends, completed device-loss handling no longer blocks destruction solely because of earlier GPU work. No new GPU work may be started; internal backend references remain until safe quiescence or are quarantined.
 
-`ResetCommandBuffer` ist ein Void-Request mit fester Gesamtlänge von 16 Bytes:
+`ResetCommandBuffer` is a void request with a fixed total length of 16 bytes:
 
 | Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `command_buffer_xid` |
 
-Das angegebene logische Device und der Command Buffer müssen live sein und zusammengehören. Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp, fremde Client-Ownership oder Cross-Device-Verwendung ergibt `BadMatch`. Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device `DEVICE_UNAVAILABLE` und ein verlorenes Device `DEVICE_LOST`. Erst danach prüft der Server das `RESET_COMMAND_BUFFER`-Flag des zugehörigen Pools und den Buffer-Zustand. Fehlt das Flag oder ist der Buffer pending, wird der Request mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Sämtliche Prüfungen erfolgen vor jeder Zustandsänderung.
+The specified logical device and command buffer MUST both be live and belong together. Unknown or non-live device or buffer XIDs result in `BadValue`; a live resource of the wrong type, ownership by another client, or cross-device use results in `BadMatch`. After successful XID and ownership validation, an unavailable device results in `DEVICE_UNAVAILABLE` and a lost device in `DEVICE_LOST`. Only then does the server check the pool's `RESET_COMMAND_BUFFER` flag and the buffer state. If the flag is absent or the buffer is pending, the request is rejected with `INVALID_SYNCHRONIZATION_STATE`. All validation occurs before any state change.
 
-Bei Erfolg setzt `ResetCommandBuffer` einen Buffer aus `INITIAL`, `RECORDING`, `EXECUTABLE` oder `INVALID` auf `INITIAL` zurück. Alle aufgezeichneten Entries und ihre Ressourcenreferenzen werden verworfen. Bei Ablehnung bleiben Zustand, Entries und Referenzen unverändert. Das Zurücksetzen eines `RECORDING`-Buffers verwirft damit auch eine noch nicht finalisierte Aufzeichnung.
+On success, `ResetCommandBuffer` resets a buffer in `INITIAL`, `RECORDING`, `EXECUTABLE`, or `INVALID` to `INITIAL`. All recorded entries and their resource references are discarded. On rejection, the state, entries, and references remain unchanged. Resetting a `RECORDING` buffer therefore also discards an unfinished recording.
 
-`TRANSIENT` und `RESET_COMMAND_BUFFER` sind unabhängige Bits. `TRANSIENT` ändert weder Zulässigkeit noch Ergebnis von Reset-Operationen. Reservierte Bits müssen null sein; der Server darf weder unbekannte Flags akzeptieren noch Flags stillschweigend ergänzen. 
+`TRANSIENT` and `RESET_COMMAND_BUFFER` are independent bits. `TRANSIENT` changes neither the validity nor the result of reset operations. Reserved bits MUST be zero; the server MUST NOT accept unknown flags or silently add flags. 
 
-Ein Command Pool ist Elternobjekt der daraus allozierten Command Buffer. Die Zerstörung des Pools invalidiert die öffentlichen XIDs aller zugehörigen Command Buffer atomar. In v0.1 wird die Pool-Zerstörung abgelehnt, solange ein Kind-Command-Buffer ausstehend ausgeführt wird.
+A command pool is the parent object of the command buffers allocated from it. Destroying the pool atomically invalidates the public XIDs of all its command buffers. In v0.1, pool destruction is rejected while any child command buffer is pending execution.
 
-## 7.2 Command-Buffer-Zustände
+## 7.2 Command Buffer States
 
-Vorgesehene Zustände:
+The defined states are:
 
 - `INITIAL`
 - `RECORDING`
@@ -50,25 +50,25 @@ Vorgesehene Zustände:
 - `PENDING`
 - `INVALID`
 
-Übergänge:
+Transitions:
 
 - Allokation → `INITIAL`
 - Create-Chunk von `CommandBufferData` → `RECORDING`
 - erfolgreicher FINAL-Chunk → `EXECUTABLE`
 - angenommene Submission → `PENDING`
-- erfolgreiche Ausführung → `EXECUTABLE`
-- asynchroner Ausführungsfehler oder Device Loss → nach Ende der Pending-Phase `INVALID`
-- Pool- oder Device-Zerstörung → öffentliche XID ungültig
+- Successful execution → `EXECUTABLE`
+- Asynchronous execution failure or device loss → `INVALID` after the pending phase ends
+- Pool or device destruction → public XID becomes invalid
 
-Es gibt in v0.1 keinen separaten `FAILED`-Command-Buffer-Zustand. Eine fehlgeschlagene Submission macht jeden davon betroffenen Command Buffer nach Ende der Pending-Phase `INVALID`. Er darf nicht erneut eingereicht werden; er muss zurückgesetzt und neu aufgezeichnet werden. Ein fehlgeschlagener Command Buffer wird niemals automatisch wieder `EXECUTABLE`.
+There is no separate `FAILED` command-buffer state in v0.1. A failed submission makes every affected command buffer `INVALID` after the pending phase ends. It MUST NOT be submitted again; it must be reset and recorded again. A failed command buffer never automatically returns to `EXECUTABLE`.
 
-Ein `PENDING`-Command-Buffer darf nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden. Gleichzeitige ausstehende Submissions desselben Command Buffers sind in v0.1 nicht vorgesehen.
+A `PENDING` command buffer MUST NOT be modified, reset, freed, or submitted again. Multiple concurrent pending submissions of the same command buffer are not supported in v0.1.
 
 Der Server verfolgt die direkten und indirekten Ressourcenreferenzen jedes aufgezeichneten Command Buffers. Das Binden eines Descriptor Sets zeichnet eine Referenz auf das Set-Objekt auf; die Descriptor-Slot-Inhalte werden nicht als unveränderlicher Snapshot in den Command Buffer kopiert. Ein erfolgreiches `UpdateDescriptorSets` aktualisiert atomar die abgeleiteten Buffer-Referenzen aller nicht-pending Command Buffer, die das betroffene Set referenzieren. Ein nicht-pending `EXECUTABLE`-Command-Buffer verwendet bei Submission die aktuellen Inhalte des gebundenen Sets und wird allein durch ein erfolgreiches Descriptor-Update nicht invalidiert. Wird eine referenzierte Ressource während `RECORDING` zerstört, muss der Destroy-Request abgewiesen werden. Wird sie zerstört, während der Command Buffer `EXECUTABLE` ist und nicht pending verwendet wird, wechselt der Command Buffer vor erfolgreichem Abschluss der Zerstörung in `INVALID`. Ein solcher Command Buffer muss neu aufgezeichnet werden, bevor er erneut eingereicht werden darf. Eine angenommene Submission behält ihre internen Ressourcenreferenzen bis zum terminalen Abschluss.
 
 ## 7.3 `CommandBufferData`
 
-`CommandBufferData` ist ein Void-Request. Seine Gesamtlänge beträgt mindestens 16 Bytes und ist durch die Summe des 16-Byte-Headers und der vollständigen Command-Entries bestimmt; der Payload muss vollständig aus ganzen Entries bestehen. Bei `ABORT` muss die Gesamtlänge exakt 16 Bytes betragen.
+`CommandBufferData` is a void request. Its total length is at least 16 bytes and consists of the 16-byte header plus complete command entries; the payload MUST contain only whole entries. For `ABORT`, the total length MUST be exactly 16 bytes.
 
 Wire-Layout:
 
@@ -85,9 +85,9 @@ Flags im Common-Header:
 | 0 | `CREATE` | Command Buffer neu anlegen und Recording beginnen |
 | 1 | `FINAL` | Letzten Chunk anhängen und Recording beenden |
 | 2 | `ABORT` | Laufendes Recording verwerfen und Buffer auf `INITIAL` zurücksetzen |
-| 3–7 | reserviert | Müssen null sein |
+| 3–7 | Reserved | MUST be zero |
 
-Zulässige Kombinationen:
+Allowed combinations:
 
 | CREATE | FINAL | ABORT | Bedeutung |
 |---:|---:|---:|---|
@@ -97,26 +97,26 @@ Zulässige Kombinationen:
 | 1 | 1 | 0 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |
 | 0 | 0 | 1 | Recording abbrechen; keine Entries erlaubt |
 
-Alle anderen Kombinationen sind ungültig. Ein ABORT-Request muss außer dem festen Header keine Payload enthalten. `command_pool_xid` muss auch bei ABORT dem Pool des Buffers entsprechen.
+All other combinations are invalid. An ABORT request MUST contain no payload beyond the fixed header. `command_pool_xid` MUST match the buffer's pool even for ABORT.
 
-`FINAL` entspricht dem Ende der Aufzeichnung. Ein separater `EndCommandBuffer`-Request ist nicht vorgesehen.
+`FINAL` ends recording. No separate `EndCommandBuffer` request is defined.
 
-### Fehlerpräzedenz für `CommandBufferData`
+### Error Precedence for `CommandBufferData`
 
-Die Fehlerauswertung erfolgt in verbindlichen Phasen; der erste Fehler in der frühesten zutreffenden Phase wird gemeldet:
+Errors are evaluated in ordered phases; the first error in the earliest applicable phase is reported:
 
-1. Request-Länge, ABORT-Länge, vollständige Entry-Header und deklarierte Entry-Grenzen; strukturelle Fehler ergeben `BadLength`.
-2. Common-Header-Flags, reservierte Bits/Felder, zulässige CREATE/FINAL/ABORT-Kombination, Padding sowie semantische Entry-Feldwerte und Command-IDs; ungültige Werte ergeben `BadValue`.
-3. Ziel-XID, danach Pool-XID. Bei CREATE ergibt eine ungültige/belegte Ziel-XID `BadIDChoice`; ohne CREATE ergibt eine unbekannte Ziel-XID `BadValue`. Anschließend werden Pool-XID und live Ressourcentypen aufgelöst.
-4. Ressourcentyp, Client-Ownership, Device-Zugehörigkeit und exakte Eltern-Pool-Zuordnung; falscher live Typ, fremde Ownership oder falsche Zuordnung ergeben `BadMatch`.
-5. Für CREATE, Append und FINAL wird der Zustand des zugehörigen Devices geprüft; `DEVICE_UNAVAILABLE`/`DEVICE_LOST` hat Vorrang vor einem Buffer-Zustandsfehler. Bei funktionsfähigem Device muss ein nicht-CREATE-Buffer `RECORDING` sein, sonst `INVALID_SYNCHRONIZATION_STATE`.
+1. Request length, ABORT length, complete entry headers, and declared entry boundaries; structural errors result in `BadLength`.
+2. Common-header flags, reserved bits/fields, valid CREATE/FINAL/ABORT combinations, padding, semantic entry field values, and command IDs; invalid values result in `BadValue`.
+3. Target XID, then pool XID. For CREATE, an invalid or occupied target XID results in `BadIDChoice`; without CREATE, an unknown target XID results in `BadValue`. The pool XID and live resource types are then resolved.
+4. Resource type, client ownership, device association, and exact parent-pool association; a live resource of the wrong type, foreign ownership, or incorrect association results in `BadMatch`.
+5. For CREATE, append, and FINAL, the associated device state is checked; `DEVICE_UNAVAILABLE`/`DEVICE_LOST` takes precedence over a buffer-state error. If the device is operational, a non-CREATE buffer MUST be `RECORDING`, otherwise `INVALID_SYNCHRONIZATION_STATE` is returned.
 
-Damit gilt ausdrücklich: Wire-Strukturfehler schlagen Feldfehler; Feldfehler schlagen Ziel-/Pool-XID-Fehler; XID-/Typ-/Ownership-Fehler schlagen Device- und Buffer-Zustandsfehler. Innerhalb der XID-Phase wird die Ziel-XID vor der Pool-XID ausgewertet.
+Thus, wire-structure errors take precedence over field errors; field errors take precedence over target/pool XID errors; and XID/type/ownership errors take precedence over device and buffer-state errors. Within the XID phase, the target XID is checked before the pool XID.
 
-`ABORT` ist die definierte Ausnahme von Phase 5: nach den Phasen 1–4 wird geprüft, ob der Buffer `RECORDING` und nicht pending ist. Diese logische Bereinigung bleibt auch bei Device Loss zulässig, startet keine Vulkan-Arbeit und ist bei falschem Buffer-Zustand mit `INVALID_SYNCHRONIZATION_STATE` abzuweisen. Jede Ablehnung lässt alle vorher akzeptierten Entries und Referenzen unverändert; der aktuelle Chunk wird nie teilweise übernommen.
+`ABORT` is the defined exception to phase 5: after phases 1–4, the server checks that the buffer is `RECORDING` and not pending. This logical cleanup remains permitted after device loss, starts no Vulkan work, and is rejected with `INVALID_SYNCHRONIZATION_STATE` if the buffer is in the wrong state. Every rejection leaves previously accepted entries and references unchanged; the current chunk is never partially accepted.
 
 
-Chunks dürfen nur zwischen vollständigen Command-Entries geteilt werden. Kein einzelner Entry darf über mehrere Requests verteilt sein.
+Chunks may split only between complete command entries. An individual entry MUST NOT span multiple requests.
 
 ## 7.4 Entry-Header
 
@@ -127,11 +127,11 @@ CARD16 command_id;
 CARD16 entry_length; /* 32-bit words, including header and padding */
 ```
 
-Maximale Entry-Größe: 65535 Wörter beziehungsweise 262140 Bytes. Jeder Entry muss vollständig in einen X11-Request passen.
+Maximum entry size: 65535 words (262140 bytes). Every entry MUST fit entirely within one X11 request.
 
-Command-IDs sind in der [Command-Entry-Registry](../registries/command-entries.md) numerisch festgelegt. Sie sind XAverius-Wire-IDs und dürfen nicht als native Vulkan-Command-IDs interpretiert werden.
+Command IDs are numerically defined in the [Command Entry Registry](../registries/command-entries.md). They are XAverius wire IDs and MUST NOT be interpreted as native Vulkan command IDs.
 
-## 7.5 Unterstützte Command-Entries
+## 7.5 Supported Command Entries
 
 ### `CMD_BIND_PIPELINE`
 
@@ -165,7 +165,7 @@ Gesamtlänge: 16 Bytes.
 - Offset 8: `CARD32 group_count_y`
 - Offset 12: `CARD32 group_count_z`
 
-Die Dispatch-Werte müssen innerhalb der vom Device unterstützten Limits liegen.
+Dispatch values MUST be within the limits supported by the device.
 
 ### `CMD_PUSH_CONSTANTS`
 
@@ -179,11 +179,11 @@ Die Dispatch-Werte müssen innerhalb der vom Device unterstützten Limits liegen
 
 Entry-Länge: `5 + ceil(data_length / 4)` Wörter.
 
-Für v0.1 muss `stage_flags` exakt dem in der [Shader-Stage-Registry](../registries/shader-stages.md) definierten `COMPUTE`-Bit entsprechen. `offset` und `data_length` müssen Vielfache von vier sein. `data_length` muss positiv sein.
+For v0.1, `stage_flags` MUST equal exactly the `COMPUTE` bit defined in the [Shader Stage Registry](../registries/shader-stages.md). `offset` and `data_length` MUST be multiples of four. `data_length` MUST be positive.
 
-Der Bereich muss innerhalb von `maxPushConstantsSize` liegen und von einem kompatiblen Push-Constant-Range des angegebenen Pipeline Layouts abgedeckt werden.
+The range MUST fit within `maxPushConstantsSize` and be covered by a compatible push-constant range in the specified pipeline layout.
 
-Die Datenbytes sind opak. Wire-Padding gehört nicht zum Push-Constant-Bereich.
+The data bytes are opaque. Wire padding is not part of the push-constant range.
 
 
 ### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` — presentation-capable profile only
@@ -214,7 +214,7 @@ The presentation-only command-entry ID is 5. Every new numeric ID must be alloca
 
 ## 7.6 Command-Validierung
 
-Der Server validiert Command-Buffer-Zustand, Entry-Längen, Ressourcen-Typen, Device-Ownership, reservierte Felder, Pipeline- und Layout-Kompatibilität, Descriptor-Bindings, Push-Constant-Ranges und Dispatch-Limits.
+The server validates command-buffer state, entry lengths, resource types, device ownership, reserved fields, pipeline and layout compatibility, descriptor bindings, push-constant ranges, and dispatch limits.
 
 Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Die vollständigen Entries des aktuellen Requests werden erst nach erfolgreicher Validierung aller Entries atomar an den Recording-Stream angehängt. Scheitert ein Chunk, bleibt der Command Buffer im Zustand `RECORDING`; zuvor erfolgreich angehängte Chunks bleiben erhalten, der fehlgeschlagene Chunk wird vollständig verworfen. Der Client kann einen korrigierten Chunk senden oder das Recording mit `ABORT` verwerfen. `ABORT` setzt einen nicht-pending Command Buffer auf `INITIAL` und verwirft alle bis dahin aufgezeichneten Entries und Ressourcenreferenzen. Dieses `ABORT` ist ausschließlich die Recovery-Operation für ein laufendes, chunk-basiertes `CommandBufferData`-Recording und benötigt deshalb nicht das Pool-Flag `RESET_COMMAND_BUFFER`; es ersetzt nicht den expliziten `ResetCommandBuffer`-Request für bereits abgeschlossene oder anderweitig ungültige Buffer. Ein fehlgeschlagener CREATE-Request hinterlässt weder einen Command Buffer noch einen Pool-Kind-Eintrag. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer im Zustand `RECORDING`, sodass der Client korrigierte letzte Entries senden oder abbrechen kann. ABORT ist nicht zulässig, wenn der Buffer nicht `RECORDING` oder bereits pending ist.
 
