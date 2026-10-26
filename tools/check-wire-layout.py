@@ -207,7 +207,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
     c.require(
-        "nicht größer als der beobachtbare Counter ist, ergibt `BadValue`" in submissions
+        "nicht größer als der beobachtbare Counter ist, ist ein ungültiger Wert (`BadValue`)" in submissions
         and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
         and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
         and "kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe" in errors
