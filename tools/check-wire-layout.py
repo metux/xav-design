@@ -230,7 +230,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"The timeout deadline starts when the wait request is taken for execution and continues to run", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
     memory = read("spec/memory-buffers.md")
-    c.require(re.search(r"signal entries of deferred `QueueSubmit` requests", memory) is not None and
+    c.require(re.search(r"signal entries in deferred `QueueSubmit` requests", memory) is not None and
               "`DEPENDENCY_FAILED`" in memory,
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
