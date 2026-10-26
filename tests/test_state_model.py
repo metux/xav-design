@@ -326,9 +326,15 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(command_buffer_indices=(99,)), "BadValue"
         )
 
-    def test_queue_xid_precedes_device_loss(self) -> None:
+    def test_queue_mismatch_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, queue_xid_valid=False)
-        self.assert_atomic_rejection(state, SubmitRequest(), "BadValue")
+        self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
+
+    def test_unknown_resource_xid_precedes_queue_mismatch(self) -> None:
+        state = self.state(queue_xid_valid=False)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(command_buffer_indices=(99,)), "BadValue"
+        )
 
     def test_type_ownership_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, types_and_ownership_valid=False)
