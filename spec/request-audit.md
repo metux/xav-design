@@ -350,7 +350,7 @@ The first CI run passed with the new check enabled: [run 39968554690](https://gi
 
 ## Request error/conformance coverage audit — 2026-10-23
 
-Extended `check_error_registry` so error validation now cross-checks the 40-entry request matrix against the central subopcode registry, requires every registered request to appear in both `spec/errors.md` and `spec/conformance.md`, and guards the normative validation order and atomic-failure rules. This is a coverage floor, not a claim that every request has a separate exhaustive error table: shared rules are intentionally centralized, while request-specific precedence and exceptional cases remain in the error chapter.
+Extended `check_error_registry` so error validation now cross-checks the complete request matrix (47 assigned requests in the current presentation-aware branch; 40 in a compute-only baseline) against the central subopcode registry, requires every registered request to appear in both `spec/errors.md` and `spec/conformance.md`, and guards the normative validation order and atomic-failure rules. This is a coverage floor, not a claim that every request has a separate exhaustive error table: shared rules are intentionally centralized, while request-specific precedence and exceptional cases remain in the error chapter.
 
 The first run exposed a wording mismatch in the checker assertion (the normative text used the singular adjective form); the assertion was corrected without changing the protocol contract. The follow-up CI run passed: [run 39969925813](https://github.com/metux/xav-design/actions/runs/39969925813). Checker commit: `446f512`; wording assertion follow-up: `a9f83dc`. `master` remains unchanged.
 
