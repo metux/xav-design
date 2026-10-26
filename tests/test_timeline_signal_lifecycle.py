@@ -88,6 +88,71 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
         self.assertEqual(signal_timeline_host(state, 0, 7), "SUCCESS")
         self.assertEqual(state.signal_counters, [7])
 
+
+    def test_device_loss_wins_over_late_backend_success_callback(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=50, value=12)
+        state.device_lost = True
+        before_counter = list(state.signal_counters)
+        self.assertEqual(finish_submission(state, 50, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, before_counter)
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(
+            state.command_buffers[0].lifecycle, CommandBufferLifecycle.INVALID
+        )
+        before_host_signal = copy.deepcopy(state)
+        self.assertEqual(signal_timeline_host(state, 0, 13), "DEVICE_LOST")
+        self.assertEqual(state, before_host_signal)
+
+    def test_concurrent_submission_callbacks_only_finalize_their_own_state(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=60, value=12, command_buffer=0)
+        # A second timeline signal on the same semaphore cannot be reserved
+        # until the first one is terminal; use a second semaphore to model two
+        # independently completing submissions.
+        state.signal_slots.append(None)
+        state.signal_counters.append(4)
+        state.semaphore_kinds.append(SemaphoreKind.TIMELINE)
+        state.signal_counters[1] = 4
+        self.assertEqual(
+            queue_submit(
+                state,
+                SubmitRequest(
+                    token=61,
+                    command_buffer_indices=(1,),
+                    signal_indices=(1,),
+                    signal_values=(8,),
+                ),
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 60, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [2, 4])
+        self.assertEqual(state.signal_slots, [None, 8])
+        self.assertEqual(state.pending_timeline_signals, [(61, 1, 8)])
+        self.assertEqual(state.pending_submissions, [61])
+        self.assertEqual(
+            [cb.lifecycle for cb in state.command_buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.PENDING],
+        )
+        self.assertEqual(finish_submission(state, 61, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [2, 8])
+        self.assertEqual(
+            [cb.lifecycle for cb in state.command_buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.EXECUTABLE],
+        )
+
+    def test_device_loss_callback_race_does_not_double_finalize(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=70, value=12)
+        state.device_lost = True
+        self.assertEqual(finish_submission(state, 70, success=False), "SUCCESS")
+        after_terminal = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 70, success=True), "BadValue")
+        self.assertEqual(state, after_terminal)
+
     def test_duplicate_terminal_callback_cannot_release_or_advance_again(self) -> None:
         state = self.state()
         self.submit_signal(state, token=40, value=12)
