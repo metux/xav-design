@@ -163,6 +163,14 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
 
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
+    if accepted_sets:
+        state.accepted_descriptor_set_refs[request.token] = list(accepted_sets)
+        for descriptor_set in accepted_sets:
+            descriptor_set.pending_submission_refs += 1
+    if accepted_buffers:
+        state.accepted_buffer_refs[request.token] = list(accepted_buffers)
+        for buffer in accepted_buffers:
+            buffer.accepted_uses += 1
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
         state.pending_present_waits.append((request.token, index))
@@ -506,6 +514,10 @@ class SubmissionModel:
     xids_valid: bool = True
     types_and_ownership_valid: bool = True
     dependencies_valid: bool = True
+    # Optional lifetime registry enables accepted work to own explicit internal refs.
+    buffer_registry: list[BufferMemoryLifetime] = field(default_factory=list)
+    accepted_descriptor_set_refs: dict[int, list[DescriptorSetLifetime]] = field(default_factory=dict)
+    accepted_buffer_refs: dict[int, list[BufferMemoryLifetime]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

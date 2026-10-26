@@ -2098,3 +2098,70 @@ class DescriptorPoolBufferReferenceReleaseTests(unittest.TestCase):
         self.assertEqual(free_descriptor_sets([descriptor_set], [first, second]),
                          "INVALID_SYNCHRONIZATION_STATE")
         self.assertEqual((first, second, descriptor_set), before)
+
+
+
+class AcceptedSubmissionResourceReferenceTests(unittest.TestCase):
+    def test_submission_holds_descriptor_and_buffer_refs_until_terminal_callback(self) -> None:
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={buffer.identity},
+        )
+        state = SubmissionModel(
+            command_buffers=[cb], buffer_registry=[buffer],
+        )
+        self.assertEqual(queue_submit(state, SubmitRequest(token=77)), "SUCCESS")
+        self.assertEqual(descriptor_set.pending_submission_refs, 1)
+        self.assertEqual(buffer.accepted_uses, 1)
+        self.assertEqual(free_descriptor_sets([descriptor_set], [buffer]),
+                         "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(destroy_buffer_lifetime(buffer), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(finish_submission(state, 77, True), "SUCCESS")
+        self.assertEqual(descriptor_set.pending_submission_refs, 0)
+        self.assertEqual(buffer.accepted_uses, 0)
+        self.assertEqual(cb.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+        self.assertEqual(finish_submission(state, 77, True), "BadValue")
+        self.assertEqual(buffer.accepted_uses, 0)
+
+    def test_descriptor_update_does_not_replace_accepted_buffer_snapshot(self) -> None:
+        old = BufferMemoryLifetime(identity="buffer-old", descriptor_slot_refs=1)
+        new = BufferMemoryLifetime(identity="buffer-new", memory_identity="memory-B")
+        descriptor_set = DescriptorSetLifetime(slots={0: old.identity})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={old.identity},
+        )
+        state = SubmissionModel(command_buffers=[cb], buffer_registry=[old, new])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=78)), "SUCCESS")
+        self.assertEqual(update_descriptor_sets(
+            [descriptor_set], (DescriptorWrite(0, 0, new.identity),), [cb],
+            buffers=[old, new],
+        ), "SUCCESS")
+        self.assertEqual((old.accepted_uses, new.accepted_uses), (1, 0))
+        self.assertEqual(finish_submission(state, 78, False), "SUCCESS")
+        self.assertEqual((old.accepted_uses, new.accepted_uses), (0, 0))
+
+    def test_terminal_callback_releases_destroy_pending_buffer_only_after_backend_quiescence(self) -> None:
+        buffer = BufferMemoryLifetime(backend_accesses=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={buffer.identity},
+        )
+        state = SubmissionModel(command_buffers=[cb], buffer_registry=[buffer])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=79)), "SUCCESS")
+        self.assertEqual(destroy_buffer_lifetime(buffer), "INVALID_SYNCHRONIZATION_STATE")
+        # Model the accepted operation becoming terminal after public destroy
+        # was already performed by an independent valid lifecycle path.
+        buffer.xid_valid = False
+        buffer.live = False
+        buffer.internal_state = "DESTROY_PENDING"
+        self.assertEqual(finish_submission(state, 79, True), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "RELEASED")
