@@ -707,8 +707,8 @@ def check_request_document_coverage(c: Check) -> None:
               "ABORT" in command_recording and
               "takes precedence over an incompatible Buffer state" in errors,
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
-    c.require("CommandBufferData`-Fehlerpräzedenz: fehlerhafte Request-/Entry-Struktur" in conformance and
-              "ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt `BadValue`" in conformance and
+    c.require("`CommandBufferData` error precedence: malformed request/entry structure" in conformance and
+              "an invalid flag combination combined with an invalid target XID returns `BadValue`" in conformance and
               "ist die definierte Ausnahme von Phase 5" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
