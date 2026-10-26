@@ -468,7 +468,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
 
         # ResetCommandBuffer: structural and identity failures precede device/state checks.
-        reset = recording[recording.index("`ResetCommandBuffer` ist ein Void-Request"):recording.index("Ein Command Pool ist Elternobjekt") ]
+        reset_start = recording.index("`ResetCommandBuffer` ist ein Void-Request")
+        reset = recording[reset_start:recording.index("`TRANSIENT` und `RESET_COMMAND_BUFFER` sind unabhängige Bits", reset_start)]
         reset_order = (
             "feste Gesamtlänge von 16 Bytes",
             "Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`",
