@@ -36,6 +36,14 @@ class BinarySignalState(str, Enum):
 
 
 @dataclass
+class SharedBinarySemaphore:
+    """Canonical semaphore state shared by submission and presentation models."""
+    signal_state: BinarySignalState = BinarySignalState.UNSIGNALED
+    wait_reservation: tuple[str, int] | None = None
+    signal_reservation: tuple[str, int] | None = None
+
+
+@dataclass
 class PresentState:
     device_lost: bool = False
     surface_lost: bool = False
@@ -53,6 +61,7 @@ class PresentState:
     pending_binary_waits: list[tuple[int, int]] = field(default_factory=list)
     accepted_tokens: set[int] = field(default_factory=set)
     pending_present_waits: list[tuple[int, int]] = field(default_factory=list)
+    shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -138,14 +147,17 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     if wait_error:
         return PresentResult(wait_error, False)
     for index in request.wait_indices:
+        shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
         signal_state = (
+            shared.signal_state if shared is not None else
             state.binary_signal_states[index]
             if index < len(state.binary_signal_states)
             else BinarySignalState.UNSIGNALED
         )
         if signal_state is BinarySignalState.UNTRUSTED:
             return PresentResult("DEPENDENCY_FAILED", False)
-        if any(pending_index == index for _token, pending_index in state.pending_present_waits):
+        if ((shared is not None and shared.wait_reservation is not None)
+                or any(pending_index == index for _token, pending_index in state.pending_present_waits)):
             return PresentResult("INVALID_SYNCHRONIZATION_STATE", False)
 
     # Commit point: all acceptance-visible changes happen together.
@@ -153,6 +165,8 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
         state.pending_present_waits.append((request.token, index))
+        if index < len(state.shared_semaphores):
+            state.shared_semaphores[index].wait_reservation = ("present", request.token)
     state.image_state = ImageState.PRESENT_PENDING
     return PresentResult("SUCCESS", True)
 
@@ -170,15 +184,27 @@ def finish_present_wait(
             [BinarySignalState.UNSIGNALED]
             * (semaphore_index + 1 - len(state.binary_signal_states))
         )
+    shared = (
+        state.shared_semaphores[semaphore_index]
+        if semaphore_index < len(state.shared_semaphores) else None
+    )
+    if shared is not None and shared.wait_reservation != ("present", token):
+        return "BadValue"
     if consumed is None:
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
         state.wait_states[semaphore_index] = WaitState.UNTRUSTED
+        if shared is not None:
+            shared.signal_state = BinarySignalState.UNTRUSTED
     elif consumed:
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNSIGNALED
         state.wait_states[semaphore_index] = WaitState.READY
+        if shared is not None:
+            shared.signal_state = BinarySignalState.UNSIGNALED
     else:
         # A known non-consumed payload retains its confirmed signal state.
         state.wait_states[semaphore_index] = WaitState.READY
+    if shared is not None:
+        shared.wait_reservation = None
     state.pending_present_waits.remove(reservation)
     return "SUCCESS"
 
@@ -371,6 +397,7 @@ class SubmissionModel:
     consumed_pending_binary_signals: set[tuple[int, int]] = field(default_factory=set)
     binary_signal_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
     binary_wait_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
+    shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     # (submission token, semaphore index, reserved timeline signal value).
@@ -460,7 +487,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
                         else "INVALID_SYNCHRONIZATION_STATE")
         else:
+            shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
             binary_state = (
+                shared.signal_state if shared is not None else
                 state.binary_signal_states[index]
                 if index < len(state.binary_signal_states)
                 else BinarySignalState.UNSIGNALED
@@ -470,7 +499,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             if wait_state is not WaitState.READY:
                 return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
                         else "INVALID_SYNCHRONIZATION_STATE")
-            if any(pending_index == index for _token, pending_index in state.pending_binary_waits):
+            if (shared is not None and shared.wait_reservation is not None) or any(
+                pending_index == index for _token, pending_index in state.pending_binary_waits
+            ):
                 return "INVALID_SYNCHRONIZATION_STATE"
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
@@ -482,7 +513,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         if kind is SemaphoreKind.BINARY:
             if value != 0:
                 return "BadValue"
+            shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
             binary_state = (
+                shared.signal_state if shared is not None else
                 state.binary_signal_states[index]
                 if index < len(state.binary_signal_states)
                 else BinarySignalState.UNSIGNALED
@@ -491,9 +524,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 return "DEPENDENCY_FAILED"
             if binary_state is not BinarySignalState.UNSIGNALED:
                 return "INVALID_SYNCHRONIZATION_STATE"
-            if slot is not None or any(
-                pending_index == index for _token, pending_index in state.pending_binary_signals
-            ):
+            if ((shared is not None and shared.signal_reservation is not None)
+                    or slot is not None or any(
+                        pending_index == index for _token, pending_index in state.pending_binary_signals
+                    )):
                 return "INVALID_SYNCHRONIZATION_STATE"
         else:
             pending_values = [
@@ -522,6 +556,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 )
             state.binary_wait_previous_states[(request.token, i)] = state.binary_signal_states[i]
             state.pending_binary_waits.append((request.token, i))
+            if i < len(state.shared_semaphores):
+                state.shared_semaphores[i].wait_reservation = ("submit", request.token)
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
         state.pending_command_buffers.append((request.token, i))
@@ -539,6 +575,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             state.binary_signal_previous_states[(request.token, index)] = state.binary_signal_states[index]
             state.binary_signal_states[index] = BinarySignalState.SIGNAL_PENDING
             state.pending_binary_signals.append((request.token, index))
+            if index < len(state.shared_semaphores):
+                state.shared_semaphores[index].signal_state = BinarySignalState.SIGNAL_PENDING
+                state.shared_semaphores[index].signal_reservation = ("submit", request.token)
     if request.attach_fence:
         state.fence_attached = True
         state.fence_state_valid = False
