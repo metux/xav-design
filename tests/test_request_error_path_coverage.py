@@ -391,5 +391,39 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, queue + errors)
 
 
+    def test_presentation_create_and_status_precedence_match_error_contract(self):
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # Create ordering must be identical in the normative chapter and test oracle.
+        create_order = (
+            "For `CreateSwapchain`, validate in this order after scalar syntax: `device_xid`, target `swapchain_xid`, then `surface_xid`.",
+        )
+        for phrase in create_order:
+            with self.subTest(create_order=phrase):
+                self.assertIn(phrase, presentation)
+                self.assertIn("`CreateSwapchain` validates `device_xid`, target `swapchain_xid`, then `surface_xid` after scalar syntax", conformance)
+        for phrase in (
+            "After wire-length and scalar-field validation, XID validation follows request field order: resolve `device_xid`, validate the target `swapchain_xid` as a create-XID, then resolve `surface_xid`.",
+            "A syntactically valid but unsupported configuration returns `UNSUPPORTED_CONFIGURATION`",
+            "`SURFACE_LOST`, `DEVICE_LOST`, and `ALLOCATION_FAILED` are normal reply statuses",
+        ):
+            with self.subTest(error_mapping=phrase):
+                self.assertIn(phrase, errors)
+
+        # The mixed-failure oracle must preserve status precedence and failed-create atomicity.
+        for phrase in (
+            "Device loss beats Surface loss and accepted-token reuse",
+            "Failed creates leave target XIDs unallocated and retain no references",
+            "Every rejection leaves the complete CommandBufferData chunk unattached",
+        ):
+            with self.subTest(conformance=phrase):
+                self.assertIn(phrase, conformance)
+        self.assertIn("If Device loss (without destruction) serializes first, `CreateSwapchain` returns `DEVICE_LOST`", presentation)
+        self.assertIn("OUT_OF_DATE", presentation)
+        self.assertIn("SURFACE_LOST", presentation)
+
+
 if __name__ == "__main__":
     unittest.main()
