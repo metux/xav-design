@@ -131,7 +131,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         section = re.search(r"^## Event Selection: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", document, re.M)
         self.assertIsNotNone(section)
         body = section.group(1)
-        self.assertRegex(body, r"fest(?:e|er) Gesamtlänge von 32 Bytes")
+        self.assertRegex(body, r"fixed total length of 32 bytes")
         expected = [
             (8, "CARD32", "scope"), (12, "XID", "device_xid"),
             (16, "CARD32", "queue_family_index"), (20, "CARD32", "queue_index"),
@@ -189,7 +189,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
                 with self.subTest(order=order, bit=bit, profile="compute-only-raw"):
                     with self.assertRaisesRegex(ValueError, "scope/profile"):
                         validate_select_events_wire(wire, order)
-        self.assertIn("Die Präsentationsbits sind nur im presentation-capable Profil gültig",
+        self.assertIn("Presentation bits are valid only in the presentation-capable profile",
                       (ROOT / "spec" / "events.md").read_text(encoding="utf-8"))
     def test_zero_mask_is_valid_for_each_scope_and_byte_order(self):
         import copy
@@ -283,13 +283,13 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         # Wire-level failures and runtime resource failures are distinct.
-        self.assertRegex(events, r"Unbekannte Scope-Werte.*ungültige Maskenbits.*BadValue")
-        self.assertRegex(events, r"Unbekannte/nicht-live XIDs ergeben `BadValue`")
+        self.assertRegex(events, r"Unknown scope values.*invalid mask bits.*BadValue")
+        self.assertRegex(events, r"Unknown or non-live XIDs result in `BadValue`")
         self.assertRegex(events, r"falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`")
-        self.assertRegex(events, r"nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`")
-        self.assertRegex(events, r"(?i)ohne ausgehandelte XGE-Unterst(?:ützung|uetzung) werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen")
-        self.assertRegex(events, r"(?i)Bei jedem Fehler bleibt die vorherige Auswahl unver(?:ändert|aendert)")
-        self.assertRegex(events, r"Der Request ersetzt atomar die bisherige Maske für genau einen Scope")
+        self.assertRegex(events, r"A nonexistent queue within a valid device results in `BadValue`")
+        self.assertRegex(events, r"(?i)Without negotiated XGE support.*`CreateDevice`, `CreateDefaultDevice`, and `SelectEvents`.*`BadMatch`")
+        self.assertRegex(events, r"(?i)On any error, the previous selection remains unchanged")
+        self.assertRegex(events, r"The request atomically replaces the existing mask for exactly one scope")
         self.assertRegex(errors, r"Eine erforderliche XAverius-XID, die keine live Ressource.*ergibt `BadValue`")
         self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
 
@@ -323,11 +323,11 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIsNotNone(queue_scope)
         self.assertRegex(
             queue_scope.group(0),
-            r"tatsächlich angeforderte Queue dieses Devices identifizieren",
+            r"must identify a queue actually requested from that Device",
         )
         self.assertRegex(
             events,
-            r"Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen",
+            r"When a logical Device is successfully destroyed, its Device and Queue selections are removed; the Connection selection remains",
         )
         self.assertRegex(
             events,
@@ -335,7 +335,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
         self.assertRegex(
             events,
-            r"Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt",
+            r"after successful processing of `DestroyDevice`, no new events using the destroyed `device_xid` may be generated or delivered; events already queued in the X11 output stream remain unaffected",
         )
         self.assertRegex(
             events,
@@ -423,7 +423,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt",
+            "`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable and are delivered independently of `SelectEvents`",
             events,
         )
         self.assertIn(
@@ -486,15 +486,15 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Die Verarbeitung eines erfolgreichen `SelectEvents`, die erfolgreiche Verarbeitung von `DestroyDevice` und der terminale Übergang einer Submission einschließlich Entscheidung über das zugehörige terminale Event",
+            "Processing a successful `SelectEvents`, successful processing of `DestroyDevice`, and a Submission's terminal transition—including the decision about its terminal event—MUST be ordered by one shared serialized server state",
             events,
         )
         self.assertIn(
-            "Der erfolgreiche `SelectEvents`-Request wirkt ab seinem Linearisierungspunkt; ein Submission-Abschluss wertet die dann geltende Queue-Maske aus.",
+            "A successful `SelectEvents` request takes effect at its linearization point; submission completion evaluates the Queue mask then in effect.",
             events,
         )
         self.assertIn(
-            "Wird der Submission-Abschluss zuerst linearisiert und das Event eingereiht, bleibt dieses bereits eingereihte Event unberührt; wird `DestroyDevice` zuerst erfolgreich linearisiert, wird kein neues Event für dessen zerstörte Device-XID eingereiht.",
+            "if submission completion linearizes first and queues the event, that queued event remains unaffected; if `DestroyDevice` successfully linearizes first, no new event for its destroyed Device XID is queued.",
             events,
         )
         self.assertIn(
@@ -502,7 +502,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             events,
         )
         self.assertIn(
-            "Die Event-Zuordnung muss an die konkrete X11-Verbindung und interne Ressourcenidentität gebunden bleiben, nicht nur an eine numerische XID.",
+            "Event associations MUST be bound to the specific X11 connection and internal resource identity, not only to a numeric XID.",
             lifetime,
         )
 
@@ -550,19 +550,19 @@ class GoldenSelectEventsTests(unittest.TestCase):
             lifetime,
         )
         self.assertIn(
-            "Beim Abschluss darf der Server die Zielressource nicht anhand einer numerischen XID erneut aus der aktuellen XID-Tabelle auflösen.",
+            "The server MUST NOT resolve an XID again from the current table to construct a delayed event.",
             lifetime,
         )
         self.assertIn(
-            "Vor einer Event-Einreihung muss er prüfen, dass genau die ursprüngliche Verbindung noch aktiv und zustellbar ist",
+            "Before queueing an event, the server MUST verify that the original connection remains active and able to receive events",
             lifetime,
         )
         self.assertIn(
-            "Eine geschlossene Verbindung, eine zerstörte Device-Identität oder eine inzwischen wiederverwendete XID darf niemals auf ein neues Objekt oder eine andere Verbindung umgebogen werden.",
+            "A closed connection, destroyed Device identity, or reused XID MUST NOT be redirected to a new object or another connection.",
             lifetime,
         )
         self.assertIn(
-            "interne Submission-, Fence-/Semaphore- und Backend-Aufräumzustände müssen trotzdem genau einmal terminalisiert werden.",
+            "internal submission, Fence/Semaphore, and backend cleanup states must still be terminalized exactly once.",
             lifetime,
         )
 
@@ -570,27 +570,27 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_submission_terminalization_is_single_winner_and_cleanup_is_idempotent(self):
         submission = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Der Wechsel einer angenommenen Submission von nicht-terminal zu genau einem terminalen Ergebnis (`COMPLETE` oder `FAILED`) ist ein einmaliger, serialisierter Zustandsübergang.",
+            "The transition of an accepted submission from non-terminal to exactly one terminal result (`COMPLETE` or `FAILED`) is a one-time serialized state transition.",
             submission,
         )
         self.assertIn(
-            "Erfolgs-Callbacks, Fehler-Callbacks und Device-Loss-Verarbeitung konkurrieren um denselben Übergang; der erste vom Server serialisiert festgestellte gültige Ausgang gewinnt.",
+            "Success callbacks, failure callbacks, and Device-loss processing compete for the same transition; the first valid outcome serialized by the server wins.",
             submission,
         )
         self.assertIn(
-            "Ein Callback, der nach einem bereits festgestellten terminalen Zustand eintrifft, darf weder das Ergebnis, Fence-/Semaphore-Zustände noch Event-Entscheidungen verändern.",
+            "A callback arriving after a terminal state has been established MUST NOT change the result, Fence/Semaphore state, or event decisions.",
             submission,
         )
         self.assertIn(
-            "darf ein späterer Erfolg weder `SIGNALED` setzen noch den Timeline-Counter erhöhen oder ein Signal als erfolgreich verbraucht markieren.",
+            "a later success MUST NOT set `SIGNALED`, increment the Timeline counter, or mark a signal as successfully consumed.",
             submission,
         )
         self.assertIn(
-            "Jede Wait-/Signal-Reservierung, Fence-Zuordnung, Pending-Referenz und Pending-Markierung des Command Buffers wird höchstens einmal freigegeben beziehungsweise abgeschlossen.",
+            "Each wait/signal reservation, Fence assignment, pending reference, and command-buffer pending marker is released or completed at most once.",
             submission,
         )
         self.assertIn(
-            "Event-Zustellung ist ein nachgelagerter Effekt der terminalen Entscheidung und kann diese weder zurückrollen noch wiederholen.",
+            "Event delivery is a downstream effect of the terminal decision and cannot roll it back or repeat it.",
             submission,
         )
 
