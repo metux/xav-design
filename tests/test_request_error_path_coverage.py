@@ -42,12 +42,12 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         )[1]
         self.assertIn("no earlier Set freed", section)
         self.assertIn("Pool, all child Sets, and all Pool capacity accounting remain unchanged", section)
-        self.assertIn("leaves the allocation unchanged", self.errors)
+        self.assertIn("Bei Ablehnung bleibt die Allokation unverändert", self.errors)
         self.assertIn("no partial free", section)
 
     def test_memory_free_checks_internal_buffer_liveness(self):
         self.assertIn(
-            "internally live, bound Buffer", self.errors
+            "intern noch lebender, gebundener Buffer", self.errors
         )
         self.assertIn(
             "internally live Buffer remains bound", self.conformance
