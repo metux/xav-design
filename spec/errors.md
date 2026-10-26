@@ -200,23 +200,18 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 
 Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler gemeldet; der Request darf keine Teiländerungen hinterlassen. Nach angenommener `QueueSubmit` werden Ausführungsfehler ausschließlich über die Submission-Terminalereignisse und zugehörige Zustände gemeldet, nicht als nachträglicher X11-Fehler. Ein nicht verfügbarer Zustand wird nur dann gemeldet, wenn der Request tatsächlich weitere Backend-Arbeit benötigt; rein logische Bereinigung nach Device Loss folgt den jeweiligen Lebensdauerregeln.
 
-### Synchronisations-Requests
+### Synchronization Requests
 
-- `CreateSemaphore`: exakt 28 Bytes; `CreateFence`: exakt 24 Bytes; `DestroySemaphore`, `GetSemaphoreCounterValue`, `DestroyFence`, `GetFenceStatus` und `ResetFence`: exakt 16 Bytes; `SignalSemaphore` und `WaitForFence`: exakt 24 Bytes.
-- `WaitSemaphores`: exakt `28 + 12 * semaphore_count` Bytes; Count null oder nicht exakt passende Länge wird abgewiesen (`BadValue` bei null Count, `BadLength` bei Längenabweichung).
-- Unbekannte/nicht-live Semaphore-/Fence-XIDs: `BadValue`; falscher Typ oder Device `BadMatch`; unzulässige Zustandsübergänge `INVALID_SYNCHRONIZATION_STATE`.
-- `WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status und keinen X11-Fehler.
-- Device Loss während `WaitSemaphores` wird als `DEVICE_LOST`-X11-Fehler gemeldet; bei `WaitForFence` wird `DEVICE_LOST` als normaler Reply-Status zurückgegeben.
-- Verarbeitung von `DestroyDevice` beendet offene `WaitSemaphores`-Requests mit `DEVICE_DESTROYED`; offene `WaitForFence`-Requests erhalten den Reply-Status `DEVICE_DESTROYED`. Dies ist von `DEVICE_LOST` getrennt.
-
-### Fence-Requests
-
-- Falsche Länge: `BadLength`
-- Ungültige Flags oder reservierte Felder: `BadValue`
-- Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ oder Device: `BadMatch`
-- Ungültiger Reset-/Destroy-Zustand: `INVALID_SYNCHRONIZATION_STATE`
-- `WaitForFence`: falsche Länge `BadLength`; unbekannte/nicht-live Device- oder Fence-XIDs `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Verwendung `BadMatch`; Timeout, Ausführungsfehler, Device Loss und `DestroyDevice` werden als normale Reply-Statuswerte zurückgegeben
+- `CreateSemaphore`: incorrect length `BadLength`; invalid type, value, flags, or reserved fields `BadValue`; invalid or already allocated create XID `BadIDChoice`; unknown or non-live Device XID `BadValue`; wrong live resource type or foreign Device ownership `BadMatch`; unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; backend allocation failure `ALLOCATION_FAILED`. On rejection, the target XID remains unallocated.
+- `CreateFence`: incorrect length `BadLength`; invalid flags or reserved fields `BadValue`; invalid or already allocated create XID `BadIDChoice`; unknown or non-live Device XID `BadValue`; wrong live resource type or foreign Device ownership `BadMatch`; unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; backend allocation failure `ALLOCATION_FAILED`. On rejection, the target XID remains unallocated.
+- `GetSemaphoreCounterValue`: incorrect length `BadLength`; unknown or non-live Device or Semaphore XIDs `BadValue`; wrong live resource type, foreign ownership, or cross-device use `BadMatch`; only Timeline semaphores are valid; after Device loss, return `DEVICE_LOST` rather than a counter reply.
+- `SignalSemaphore`: normative precedence: incorrect length `BadLength`; resolve Device XID, then Semaphore XID (`BadValue` for unknown or non-live XIDs); validate resource type, ownership, and cross-device use (`BadMatch`); check Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); finally validate semaphore type and signal-value/reservation rules (Binary semaphore `BadMatch`, invalid counter or reservation relation `INVALID_SYNCHRONIZATION_STATE`). A synchronous rejection performs no partial host signal and leaves counters and reservations unchanged.
+- `WaitSemaphores`: normative precedence: length and overflow `BadLength`; then zero count, invalid wait mode, or duplicate Semaphore XIDs `BadValue`; then resolve Device and Semaphore XIDs in array order (`BadValue` for unknown or non-live XIDs); validate type, ownership, and cross-device use (`BadMatch`); check Device state (`DEVICE_LOST`); finally require every Semaphore to be `TIMELINE` (`BadMatch`). These errors occur before wait registration and leave state unchanged. Device loss of an already registered wait is terminal and reported as X11 error `DEVICE_LOST`; `DestroyDevice` terminates an open wait with `DEVICE_DESTROYED` unless Device loss was already terminally established. `TIMEOUT` is only a normal reply status.
+- `GetFenceStatus`: incorrect length `BadLength`; unknown or non-live Device or Fence XIDs `BadValue`; wrong live resource type, foreign ownership, or cross-device use `BadMatch`. After Device loss, query and return the stored Fence state.
+- `ResetFence`: incorrect length `BadLength`; unknown or non-live Device or Fence XIDs `BadValue`; wrong live resource type, foreign ownership, or cross-device use `BadMatch`. After valid XID, type, and ownership checks, `DEVICE_LOST` takes precedence over the Fence state. Only when the Device is available may `SIGNALED` and `FAILED` be reset; other states return `INVALID_SYNCHRONIZATION_STATE`.
+- `WaitForFence`: incorrect length `BadLength`; unknown or non-live Device or Fence XIDs `BadValue`; wrong live resource type, foreign ownership, or cross-device use `BadMatch`. Timeout, execution failure, Device loss, and `DestroyDevice` are returned as normal reply statuses, not X11 errors.
+- `DestroyFence`: incorrect length `BadLength`; unknown or non-live Device or Fence XIDs `BadValue`; wrong live type, foreign client ownership, or cross-device use `BadMatch`; `INVALID_SYNCHRONIZATION_STATE` while the Fence is `PENDING` or an open `WaitForFence` registration references that exact internal Fence identity. A terminally established wait no longer blocks destruction, even if its reply has not yet been sent. Rejection leaves the XID and Fence state unchanged.
+- `DestroySemaphore`: incorrect length `BadLength`; unknown or non-live Device or Semaphore XIDs `BadValue`; wrong live type, foreign client ownership, or cross-device use `BadMatch`; `INVALID_SYNCHRONIZATION_STATE` while an accepted queue wait, queue signal, an open `WaitSemaphores` registration for that exact internal Semaphore identity, or another active host operation uses the Semaphore. A terminally established wait no longer blocks destruction, even if its reply has not yet been sent. Rejection leaves the XID and synchronization state unchanged. Device loss alone does not invalidate public XIDs; subsequent `DestroyDevice` cascade invalidation may bypass these ordinary rejection rules.
 
 ### `DestroyResource`
 
