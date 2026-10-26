@@ -627,7 +627,7 @@ def check_request_document_coverage(c: Check) -> None:
         and "live resource of the wrong type or foreign Device ownership `BadMatch`" in errors
         and "unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "on rejection, the target XID remains unallocated" in errors
-        and "die `memory_xid` bleibt unangelegt" in read("spec/memory-buffers.md"),
+        and "`memory_xid` remains unallocated" in read("spec/memory-buffers.md"),
         "error mapping: AllocateMemory must define device-state errors and atomic create-XID behavior",
     )
     c.require(
@@ -728,7 +728,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "A later chunk or ABORT for a discarded assembly" in shader_upload
         and "They do not emit `ASYNC_ERROR`" in shader_upload
-        and "Fehler bei `ShaderModuleData` erzeugen kein `ASYNC_ERROR`" in errors
+        and "Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`" in errors
         and "Errors during `ShaderModuleData` upload and `CommandBufferData` recording chunks are always synchronous" in event_doc,
         "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
     )
@@ -740,7 +740,7 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: device-loss failures must preserve accepted chunks while ABORT remains logical cleanup",
     )
     c.require(
-        "Chunk errors are synchronous to the respective `CommandBufferData` request and do not generate `ASYNC_ERROR`" in command_recording
+        "Chunk errors are synchronous errors associated with the corresponding `CommandBufferData` request and do not generate `ASYNC_ERROR`" in command_recording
         and "Errors during `ShaderModuleData` upload and `CommandBufferData` recording chunks are always synchronous" in event_doc
         and "do not generate `ASYNC_ERROR`" in conformance,
         "chunked shader/command-buffer operations must not emit async errors before submission acceptance",
@@ -879,7 +879,7 @@ def check_request_document_coverage(c: Check) -> None:
     lifetime = read("spec/resource-lifetime.md")
     c.require(
         "Device loss alone does not invalidate public XIDs" in lifetime
-        and "`GetFenceStatus` and `DestroyDevice` remain usable after device loss" in lifetime
+        and re.search(r"`GetFenceStatus` and `DestroyDevice` remain usable after device loss", lifetime, re.I) is not None
         and "Device loss alone does not invalidate public Device/resource XIDs" in read("spec/conformance.md"),
         "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
     )
@@ -896,9 +896,9 @@ def check_request_document_coverage(c: Check) -> None:
         "lifetime: fence/semaphore destroy matrix must include open waits and terminal release",
     )
     c.require(
-        "an open `WaitForFence` registration references that exact internal Fence identity" in errors
-        and "an open `WaitSemaphores` registration for that exact internal Semaphore identity" in errors
-        and "even if its reply has not yet been sent" in errors,
+        re.search(r"an open `WaitForFence` registration references that exact internal Fence identity", errors, re.I) is not None
+        and re.search(r"an open `WaitSemaphores` registration for that exact internal Semaphore identity", errors, re.I) is not None
+        and re.search(r"even if its reply has not yet been sent", errors, re.I) is not None,
         "error mapping: summary must agree with specialized fence/semaphore destroy rules",
     )
     c.require(
@@ -1056,7 +1056,7 @@ def check_request_limit_contract(c: Check) -> None:
     conformance = read("spec/conformance.md")
     c.require(
         "BIG-REQUESTS is not supported in v0.1" in wire
-        and "length = 0" in wire
+        and "X11 header `length` field is zero" in wire
         and "reject a XAverius request" in wire
         and "before interpreting bytes at offset 4 as the XAverius subopcode" in wire,
         "request framing: BIG-REQUESTS length must be rejected before common-header parsing",
