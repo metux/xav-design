@@ -393,7 +393,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("`event_mask = 0` hebt die Auswahl für den angegebenen Scope auf.", body)
         self.assertIn("Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes.", body)
         self.assertIn("eine Connection-Auswahl bleibt bestehen", body)
-        self.assertIn("Alle anderen Bits sind reserviert und müssen abgewiesen werden.", body)
+        self.assertIn("All other bits are reserved and must be rejected.", body)
 
     def test_disconnect_cleans_selections_and_prevents_cross_connection_delivery(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
@@ -431,7 +431,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             events,
         )
         self.assertIn(
-            "bei `ASYNC_ERROR` darf die zerstörte Device-XID nicht als `device_xid` oder `resource_xid` ausgegeben werden",
+            "for `ASYNC_ERROR`, the destroyed Device XID MUST NOT be emitted as `device_xid` or `resource_xid`",
             lifetime,
         )
         self.assertIn(
@@ -445,19 +445,19 @@ class GoldenSelectEventsTests(unittest.TestCase):
         conformance = (ROOT / "spec" / "conformance.md").read_text(encoding="utf-8")
 
         self.assertIn(
-            "Ist die betroffene Ressource zum Linearisierungspunkt der Event-Einreihung nicht mehr als öffentliche XID live, MUSS `resource_xid = 0` gesetzt werden.",
+            "If the affected resource XID is no longer publicly live at the event-enqueue linearization point, `resource_xid` MUST be zero.",
             events,
         )
         self.assertIn(
-            "Bei `ASYNC_ERROR` darf eine inzwischen zerstörte oder wiederverwendete Ressourcen-XID nicht als `resource_xid` ausgegeben werden",
+            "For `ASYNC_ERROR`, a resource XID that has since been destroyed or reused MUST NOT be emitted as `resource_xid`",
             lifetime,
         )
         self.assertIn(
-            "ist die öffentliche Ressourcen-XID beim Linearisierungspunkt nicht mehr live, wird `resource_xid = 0` serialisiert",
+            "if the public resource XID is no longer live at the linearization point, `resource_xid = 0` is serialized",
             lifetime,
         )
         self.assertIn(
-            "muss `resource_xid = 0` sein; ein späterer Callback darf die numerische XID nicht auf das neue Objekt umbiegen",
+            "the event MUST have `resource_xid = 0`; a later callback MUST NOT retarget the numeric XID to the new object",
             conformance,
         )
 
@@ -465,19 +465,19 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.",
+            "For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered as terminal events.",
             events,
         )
         self.assertIn(
-            "Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen.",
+            "A failed event send MUST NOT block GPU/backend processing or trigger a second terminal delivery.",
             events,
         )
         self.assertIn(
-            "Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt",
+            "Accepted work still reaches its actual internal terminal outcome",
             lifetime,
         )
         self.assertIn(
-            "Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions",
+            "Suppressing delivery does not change the internal terminal outcome of accepted submissions",
             lifetime,
         )
 
@@ -498,7 +498,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             events,
         )
         self.assertIn(
-            "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen.",
+            "A later backend callback MUST NOT retroactively change this decision or requeue a suppressed event.",
             events,
         )
         self.assertIn(
@@ -513,12 +513,12 @@ class GoldenSelectEventsTests(unittest.TestCase):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
 
         required_cases = (
-            "unbekannte Maskenbits",
-            "falschen Nullwerten",
-            "nicht angeforderter Queue-Kombination",
-            "nicht maskierbare `DEVICE_LOST`- und `ASYNC_ERROR`-Events",
-            "gemeinsamer serialisierter Linearisierungspunkt",
-            "höchstens eines von `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED`",
+            "unknown mask bits",
+            "invalid zero values",
+            "unrequested queue combination",
+            "unmaskable `DEVICE_LOST` and `ASYNC_ERROR` events",
+            "shared serialized linearization point",
+            "at most one of `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`",
         )
         for phrase in required_cases:
             with self.subTest(case=phrase):
@@ -527,26 +527,26 @@ class GoldenSelectEventsTests(unittest.TestCase):
         # Conformance examples must be backed by the normative delivery and
         # lifetime rules, not just repeat the intended behavior as checklist text.
         self.assertIn(
-            "Alle anderen Bits sind reserviert und müssen abgewiesen werden.",
+            "All other bits are reserved and must be rejected.",
             events,
         )
         self.assertIn(
-            "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern oder ein unterdrücktes Event erneut einreihen.",
+            "A later backend callback MUST NOT retroactively change this decision or requeue a suppressed event.",
             events,
         )
         self.assertIn(
-            "bei `ASYNC_ERROR` darf die zerstörte Device-XID nicht als `device_xid` oder `resource_xid` ausgegeben werden",
+            "for `ASYNC_ERROR`, the destroyed Device XID MUST NOT be emitted as `device_xid` or `resource_xid`",
             lifetime,
         )
         self.assertIn(
-            "Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions",
+            "Suppressing delivery does not change the internal terminal outcome of accepted submissions",
             lifetime,
         )
 
     def test_backend_completion_keeps_original_connection_and_resource_identity(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Jeder beim Backend registrierte Callback oder Completion-Datensatz muss die unveränderliche interne Identität der konkreten Submission beziehungsweise Ressource und die Identität der ursprünglichen X11-Verbindung mitführen.",
+            "Backend callbacks and completion records MUST carry the immutable internal identity of the specific submission or resource and the identity of the original X11 connection.",
             lifetime,
         )
         self.assertIn(
