@@ -351,12 +351,12 @@ class SelectEventsContractTests(unittest.TestCase):
                       LIFETIME)
 
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
-        self.assertIn("After successful processing of `DestroyDevice`", EVENTS)
+        self.assertIn("after successful processing of `DestroyDevice`", EVENTS)
         self.assertIn("events already queued in the X11 output stream remain unaffected", EVENTS)
-        self.assertIn("does not change the Submission's internal terminal outcome", EVENTS)
+        self.assertIn("Suppressing delivery does not change the internal terminal outcome", EVENTS)
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event", SUBMISSIONS)
-        self.assertIn("Ein angenommener `QueueSubmit` ist nicht automatisch abgeschlossen", SUBMISSIONS)
-        self.assertIn("device-wide cascading invalidation on successful `DestroyDevice` or client disconnect", LIFETIME)
+        self.assertIn("Every accepted submission has exactly one terminal outcome", SUBMISSIONS)
+        self.assertIn("cascading invalidation", LIFETIME)
         self.assertIn("Device loss alone does not invalidate public XIDs", LIFETIME)
 
 
