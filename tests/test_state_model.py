@@ -388,6 +388,33 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
                     "BadValue",
                 )
 
+    def test_wait_entries_are_validated_in_array_order(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            wait_states=[WaitState.UNTRUSTED, WaitState.READY],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(
+                wait_indices=(0, 1), wait_values=(0, 1),
+                wait_stage_masks=(0x1, 0x1),
+            ),
+            "DEPENDENCY_FAILED",
+        )
+
+    def test_signal_entries_are_validated_in_array_order(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            binary_signal_states=[
+                BinarySignalState.SIGNALED, BinarySignalState.UNSIGNALED,
+            ],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0, 1), signal_values=(0, 1)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
     def test_signal_entry_value_error_precedes_generic_dependency_failure(self) -> None:
         state = self.state(
             dependencies_valid=False,
