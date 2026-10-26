@@ -508,9 +508,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 pending_index == index for _token, pending_index in state.pending_binary_waits
             ):
                 return "INVALID_SYNCHRONIZATION_STATE"
-    if not state.dependencies_valid:
-        return "DEPENDENCY_FAILED"
     # Validate all signal reservations before mutating any one of them.
+    # Concrete per-entry errors precede the generic dependency fallback.
     for index, value in zip(request.signal_indices, request.signal_values):
         slot = state.signal_slots[index]
         counter = state.signal_counters[index]
@@ -547,6 +546,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 # change when callbacks for concurrent submissions arrive out
                 # of order, but every non-terminal reservation remains binding.
                 return "BadValue"
+    # A generic dependency failure is the fallback only after all concrete
+    # wait and signal entry errors have been ruled out.
+    if not state.dependencies_valid:
+        return "DEPENDENCY_FAILED"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
     for pos, i in enumerate(request.wait_indices):
