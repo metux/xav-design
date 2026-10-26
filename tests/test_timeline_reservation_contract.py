@@ -80,6 +80,7 @@ class TimelineReservationRegressionTests(unittest.TestCase):
         state = self.state(
             pending_timeline_waits=[(41, 0, 10)],
             signal_slots=[None, 15],
+            pending_timeline_signals=[(40, 1, 15)],
         )
         before = copy.deepcopy(state)
         result = queue_submit(

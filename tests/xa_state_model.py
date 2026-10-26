@@ -512,7 +512,6 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Concrete per-entry errors precede the generic dependency fallback.
     for index, value in zip(request.signal_indices, request.signal_values):
         slot = state.signal_slots[index]
-        counter = state.signal_counters[index]
         kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.TIMELINE
         if kind is SemaphoreKind.BINARY:
             if value != 0:
@@ -534,6 +533,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                     )):
                 return "INVALID_SYNCHRONIZATION_STATE"
         else:
+            counter = state.signal_counters[index] if index < len(state.signal_counters) else 0
             if not 0 <= value <= 0xFFFFFFFFFFFFFFFF:
                 return "BadValue"
             pending_values = [

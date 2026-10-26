@@ -294,6 +294,15 @@ class CommandBufferDataModelTests(unittest.TestCase):
 
 
 class QueueSubmitAtomicityTests(unittest.TestCase):
+    def present_state(self, **changes) -> PresentState:
+        state = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+        )
+        for name, value in changes.items():
+            setattr(state, name, value)
+        return state
+
     def state(self, **changes) -> SubmissionModel:
         state = SubmissionModel(
             command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
@@ -1053,13 +1062,13 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             wait_states=[WaitState.READY, WaitState.READY],
         )
         self.assert_atomic_rejection(
-            state, SubmitRequest(wait_indices=(0,), signal_indices=(0, 1), signal_values=(3, 4), attach_fence=True),
+            state, SubmitRequest(command_buffer_indices=(0,), wait_indices=(0,), signal_indices=(0, 1), signal_values=(3, 4), attach_fence=True),
             "INVALID_SYNCHRONIZATION_STATE",
         )
 
     def test_success_commits_all_submission_state_together(self) -> None:
         state = self.state()
-        result = queue_submit(state, SubmitRequest(token=42, wait_indices=(0, 1), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
+        result = queue_submit(state, SubmitRequest(token=42, command_buffer_indices=(0,), wait_indices=(0, 1), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
         self.assertEqual(result, "SUCCESS")
         self.assertEqual(state.command_buffers[0].lifecycle, CommandBufferLifecycle.PENDING)
         self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
