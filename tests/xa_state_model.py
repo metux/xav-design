@@ -357,8 +357,11 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)
             or bool(set(request.wait_indices) & set(request.signal_indices))
-            or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)):
-
+            or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)
+            or any(value < 0 or value > 0xFFFFFFFFFFFFFFFF
+                   for value in request.wait_values)
+            or any(value < 0 or value > 0xFFFFFFFFFFFFFFFF
+                   for value in request.signal_values)):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
@@ -459,6 +462,8 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
             else SemaphoreKind.TIMELINE)
     if kind is not SemaphoreKind.TIMELINE:
         return "BadMatch"
+    if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
+        return "BadValue"
     if value <= state.signal_counters[semaphore_index]:
         return "INVALID_SYNCHRONIZATION_STATE"
     pending_values = [
