@@ -153,13 +153,13 @@ def check_events(c: Check) -> None:
               "XGE delivery: send failure must not block backend work or duplicate terminal events")
     c.require(re.search(r"(?:On any error, the previous selection remains unchanged|Bei jedem Fehler bleibt die vorherige Auswahl unverändert|On any error, the previous selection remains unchanged)", event_doc) is not None,
               "SelectEvents: failed validation must preserve the previous event selection")
-    c.require(re.search(r"(?:Unknown or non-live XIDs result in `BadValue`.*a wrong resource type or foreign client ownership results in `BadMatch`|Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`), event_doc, re.S) is not None,
+    c.require(re.search(r"(?:Unknown or non-live XIDs result in `BadValue`.*a wrong resource type or foreign client ownership results in `BadMatch`|Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`)", event_doc, re.S) is not None,
               "SelectEvents: unknown XIDs must map to BadValue, wrong type/foreign ownership to BadMatch")
-    c.require(re.search(r"(?:A queue that does not exist within a valid device results in `BadValue`|A nonexistent queue within a valid device results in `BadValue`), event_doc) is not None,
+    c.require(re.search(r"(?:A queue that does not exist within a valid device results in `BadValue`|A nonexistent queue within a valid device results in `BadValue`)", event_doc) is not None,
               "SelectEvents: nonexistent queue on a valid device must map to BadValue")
     c.require(re.search(r"Without negotiated XGE support, `CreateDevice`, `CreateDefaultDevice`, and `SelectEvents` are rejected with `BadMatch`; for `SelectEvents`, the previous selection remains unchanged", event_doc, re.I) is not None,
               "SelectEvents: missing XGE negotiation must return BadMatch without changing prior selection")
-    c.require(re.search(r"(?:The request atomically replaces the previous mask for exactly one scope|request atomically replaces the existing mask for exactly one scope), event_doc) is not None,
+    c.require(re.search(r"(?:The request atomically replaces the previous mask for exactly one scope|request atomically replaces the existing mask for exactly one scope)", event_doc) is not None,
               "SelectEvents: successful replacement must be atomic and scoped")
     errors = read("spec/errors.md")
     c.require(re.search(r"A required XAverius XID that does not identify a live resource.*results in `BadValue`", errors, re.S) is not None and
