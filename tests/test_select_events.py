@@ -343,12 +343,10 @@ class SelectEventsContractTests(unittest.TestCase):
         self.assertEqual(state.queued_events, [(11, new_identity, 108)])
 
     def test_resource_lifetime_spec_requires_identity_bound_callbacks(self):
-        self.assertIn("nicht anhand einer numerischen XID erneut aus der aktuellen XID-Tabelle auflösen",
+        self.assertIn("MUST NOT resolve the target resource again from the current XID table using only a numeric XID",
                       LIFETIME)
-        self.assertIn("Eine wiederverwendete XID bezeichnet eine neue interne Ressourcenidentität",
-                      LIFETIME)
-        self.assertIn("eine inzwischen wiederverwendete XID darf niemals auf ein neues Objekt",
-                      LIFETIME)
+        self.assertIn("reused XID", LIFETIME)
+        self.assertIn("MUST NOT be redirected to a new object", LIFETIME)
 
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
         self.assertIn("after successful processing of `DestroyDevice`", EVENTS)
