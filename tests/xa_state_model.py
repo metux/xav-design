@@ -668,6 +668,12 @@ def finish_submission(
         state.consumed_pending_binary_signals.discard(reservation)
         previous = state.binary_signal_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         current = state.binary_signal_states[index]
+        # QueuePresent owns the canonical cross-API payload outcome. If its
+        # callback made the semaphore untrusted, a later Submit callback must
+        # not overwrite that knowledge with a local stale snapshot.
+        if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
+            current = BinarySignalState.UNTRUSTED
+            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
         if not effective_success:
             # A cross-API wait callback may already have proved that this
             # pending signal was consumed. Device Loss invalidates an
