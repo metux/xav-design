@@ -96,10 +96,10 @@ class ReplySpecCoverageTests(unittest.TestCase):
 
     def test_memory_count_limits_and_formula_match_maximum_fixture(self):
         body = section(self.memory, "GetPhysicalDeviceMemoryProperties")
-        limits = re.search(r"maximal\s+(\d+)\s+Memory Types und\s+(\d+)\s+Memory Heaps", body, re.I)
+        limits = re.search(r"at most\s+(\d+)\s+memory types and\s+(\d+)\s+memory heaps", body, re.I)
         self.assertIsNotNone(limits, "normative memory type/heap limits missing")
         type_limit, heap_limit = map(int, limits.groups())
-        formula = re.search(r"Reply-Payload-Länge beträgt\s+`(\d+)\s*\+\s*(\d+)\s*\*\s*memory_type_count\s*\+\s*(\d+)\s*\*\s*memory_heap_count`", body)
+        formula = re.search(r"reply payload length is\s+`(\d+)\s*\+\s*(\d+)\s*\*\s*memory_type_count\s*\+\s*(\d+)\s*\*\s*memory_heap_count`", body)
         self.assertIsNotNone(formula, "normative memory payload formula missing")
         base, type_size, heap_size = map(int, formula.groups())
         expected_size = base + type_size * type_limit + heap_size * heap_limit
@@ -138,7 +138,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
         fence_statuses = assignments(sync, {"UNSIGNALED", "PENDING", "SIGNALED", "FAILED"})
         self.assertEqual(set(fence_statuses.values()), {0, 1, 2, 3})
         memory = section(self.memory, "GetPhysicalDeviceMemoryProperties")
-        limits = re.search(r"maximal\s+(\d+)\s+Memory Types und\s+(\d+)\s+Memory Heaps", memory, re.I)
+        limits = re.search(r"at most\s+(\d+)\s+memory types and\s+(\d+)\s+memory heaps", memory, re.I)
         self.assertIsNotNone(limits)
         max_types, max_heaps = map(int, limits.groups())
         for rule, offset, limit in (("memory-type-count-range", 32, max_types),
