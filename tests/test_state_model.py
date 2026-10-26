@@ -31,6 +31,12 @@ from xa_state_model import (
     finish_submission,
     signal_timeline_host,
     reset_fence,
+    DescriptorSetLifetime,
+    DescriptorPoolLifetime,
+    DescriptorWrite,
+    free_descriptor_sets,
+    destroy_descriptor_pool,
+    update_descriptor_sets,
 )
 
 
