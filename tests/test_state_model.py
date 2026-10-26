@@ -221,6 +221,15 @@ class CommandBufferDataModelTests(unittest.TestCase):
         )
         self.assertEqual(state, before)
 
+    def test_device_loss_precedes_buffer_lifecycle_after_resource_checks(self) -> None:
+        state = CommandBufferModel(
+            device_lost=True, lifecycle=CommandBufferLifecycle.INITIAL,
+        )
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="FINAL")),
+            "DEVICE_LOST",
+        )
+
     def test_malformed_entry_precedes_target_xid_resolution(self) -> None:
         state = CommandBufferModel()
         self.assertEqual(
@@ -305,6 +314,16 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
     def test_queue_xid_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, queue_xid_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadValue")
+
+    def test_type_ownership_precedes_device_loss(self) -> None:
+        state = self.state(device_lost=True, types_and_ownership_valid=False)
+        self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
+
+    def test_signal_count_mismatch_is_bad_length(self) -> None:
+        state = self.state(scalar_valid=False, xids_valid=False)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0,), signal_values=()), "BadLength"
+        )
 
     def test_fence_state_precedes_command_buffer_state(self) -> None:
         state = self.state(
