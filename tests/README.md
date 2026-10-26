@@ -81,3 +81,25 @@ A passing fixture suite proves consistency between the reference encoders and
 the committed expected bytes. It does not establish interoperability with an
 unimplemented client or server; a future implementation should consume these
 fixtures as an independent wire-format oracle.
+
+
+## Timeline semaphore state-model regressions
+
+The Timeline semaphore regressions use only Python's standard library and do
+not require a running X server or third-party packages. From the repository
+root, run:
+
+```sh
+python3 tests/run_timeline_regressions.py
+```
+
+The runner resolves the `tests/` import path relative to its own location, so
+it also works when invoked from another current working directory. It selects
+all `QueueSubmitAtomicityTests` whose test names contain `timeline`, including
+future-value waits, competing signal reservations, host-signal boundaries,
+reservation cleanup, and callbacks after device loss. To run the complete state
+model suite instead, use:
+
+```sh
+python3 -m unittest discover -s tests -p 'test_state_model.py' -v
+```
