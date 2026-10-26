@@ -289,9 +289,9 @@ Die vollständige XID-, Ownership-, Feldwert- und Device-Fehlerzuordnung steht i
 
 Jeder Request muss vor Implementierungsfreigabe eine vollständige, konkrete Fehlerzuordnung besitzen.
 
-### Presentation requests (provisional wire layouts)
+### Presentation requests (presentation-capable profile)
 
-These rules apply to the presentation-capable profile only. They do not allocate request subopcodes and do not make the presentation profile part of the compute-only v0.1 baseline.
+These rules apply to the presentation-capable profile only. The central request registry assigns `CreateSurface` through `QueuePresent` append-only subopcodes 41–47. This assignment does not make the presentation profile part of the compute-only v0.1 baseline; a compute-only server rejects these requests with core `BadRequest` before payload parsing or XID resolution.
 
 - All presentation requests validate the exact fixed or formula-based request length first; a mismatch or overflow in `40 + 4 * wait_semaphore_count` is `BadLength`. Non-zero reserved fields, invalid enum/flag values, zero presentation tokens, duplicate wait semaphore XIDs, and malformed count/field combinations are `BadValue`. Reuse of a token from an already accepted presentation is a stateful acceptance check, not scalar syntax.
 - `CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`; an unknown, destroyed, or non-Window core X11 `window_xid` is core X11 `BadWindow`; a live Window owned by another X11 client is `BadMatch`. A failed create leaves the target XID unallocated and retains no window reference.
