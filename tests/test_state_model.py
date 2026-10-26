@@ -197,6 +197,15 @@ class CommandBufferDataModelTests(unittest.TestCase):
         self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"c",), entries_valid=False)), "BadValue")
         self.assertEqual(state, before)
 
+    def test_single_create_final_is_executable(self) -> None:
+        state = CommandBufferModel()
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="CREATE_FINAL", entries=(b"one",))),
+            "SUCCESS",
+        )
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+        self.assertEqual(state.entries, [b"one"])
+
     def test_abort_resets_recording_buffer_and_discards_entries(self) -> None:
         state = CommandBufferModel()
         command_buffer_data(state, CommandBufferChunk(operation="CREATE", entries=(b"a", b"b")))
