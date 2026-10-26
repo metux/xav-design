@@ -1136,6 +1136,15 @@ def check_reply_matrix(c: Check) -> None:
         )
     ]
     registry = parse_request_registry(registry_text)
+    # Keep user-facing inventory summaries in sync with the actual registry. These
+    # labels are easy to overlook when a profile adds append-only request IDs.
+    readme = read("README.md")
+    c.require("47 assigned request subopcodes" in readme and "compute baseline 1–40 and presentation-profile-only 41–47" in readme,
+              "README: request registry summary must describe all 47 assignments and the profile boundary")
+    audit_text = read("spec/request-audit.md")
+    c.require("all 47 assigned request contracts" in audit_text and
+              "compute baseline 1–40 and presentation-profile-only 41–47" in audit_text,
+              "request audit: checker summary must describe the full 47-request inventory")
     opcodes = [opcode for _name, opcode, _kind in registry_rows]
     names = [name for name, _opcode, _kind in registry_rows]
     c.require(len(registry_rows) in (40, 47),
