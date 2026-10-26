@@ -434,7 +434,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
             "which takes precedence over `OUT_OF_DATE`",
-            "before mutable synchronization-state checks and timeout polling",
+            "these outcomes precede mutable synchronization-state checks and timeout polling",
             "even if no image is available or the timeout is zero",
         ):
             with self.subTest(acquire_precedence=phrase):
