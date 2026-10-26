@@ -331,7 +331,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
         self.assertRegex(
             events,
-            r"`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt",
+            r"`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable and are delivered independently of `SelectEvents`",
         )
         self.assertRegex(
             events,
@@ -339,15 +339,15 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
         self.assertRegex(
             events,
-            r"Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist",
+            r"The two submission events are delivered only if the corresponding Queue mask bit is set when the terminal submission outcome occurs",
         )
         self.assertRegex(
             events,
-            r"Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände",
+            r"Event selection never affects execution, internal terminal state, or Fence/Semaphore state",
         )
         self.assertRegex(
             events,
-            r"Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden",
+            r"For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered as terminal events",
         )
 
 
@@ -358,11 +358,11 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIsNotNone(section)
         error_body = section.group(1)
         for text in (
-            "Falsche Request-Länge: `BadLength`.",
-            "Erfolgreicher `GEQueryVersion`-Austausch mindestens mit XGE 1.0 fehlt: `BadMatch`.",
-            "Unbekannter Scope, nicht-null Flags/reservierte Felder, ungültige Maskenbits oder nicht-null Felder außerhalb des ausgewählten Scopes: `BadValue`.",
-            "Unbekannte/nicht-live Device-XID oder ungültiger Queue-Family-/Queue-Index: `BadValue`; falscher live Ressourcentyp oder fremde Client-Ownership: `BadMatch`.",
-            "Ein Fehler muss die bisherige Event-Auswahl unverändert lassen; eine erfolgreiche Anfrage ersetzt atomar nur die Auswahl für den angegebenen Scope.",
+            "An incorrect request length results in `BadLength`.",
+            "If the client has not successfully negotiated at least XGE 1.0 with `GEQueryVersion`, the request results in `BadMatch`.",
+            "An unknown scope, nonzero flags/reserved fields, invalid mask bits, or nonzero fields outside the selected scope results in `BadValue`.",
+            "An unknown or non-live Device XID, or an invalid queue-family/queue index, results in `BadValue`; a live resource of the wrong type or foreign client ownership results in `BadMatch`.",
+            "An error leaves the previous event selection unchanged; a successful request atomically replaces only the selection for the specified scope.",
         ):
             self.assertIn(text, error_body)
         self.assertIn("A nonexistent queue within a valid device results in `BadValue`.", events)
@@ -390,32 +390,32 @@ class GoldenSelectEventsTests(unittest.TestCase):
             )
         ]
         self.assertEqual(actual, expected)
-        self.assertIn("`event_mask = 0` hebt die Auswahl für den angegebenen Scope auf.", body)
-        self.assertIn("Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes.", body)
-        self.assertIn("eine Connection-Auswahl bleibt bestehen", body)
+        self.assertIn("`event_mask = 0` clears the selection for the specified scope.", body)
+        self.assertIn("Clearing a Device or Queue mask does not remove selections for other scopes.", body)
+        self.assertIn("the Connection selection remains", body)
         self.assertIn("All other bits are reserved and must be rejected.", body)
 
     def test_disconnect_cleans_selections_and_prevents_cross_connection_delivery(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung.",
+            "A client disconnect ends event delivery for that X11 connection only.",
             lifetime,
         )
         self.assertIn(
-            "ihre Event-Auswahlen sowie die öffentlichen XID-Zuordnungen aus dem aktiven Verbindungszustand entfernen",
+            "remove its event selections and public XID mappings from active connection state.",
             lifetime,
         )
         self.assertIn(
-            "Asynchrone Backend-Abschlüsse dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden.",
+            "Asynchronous backend completions MUST NOT enqueue events to a closed connection or deliver them through another connection.",
             lifetime,
         )
         self.assertIn(
-            "Die Event-Zuordnung muss an die konkrete X11-Verbindung und interne Ressourcenidentität gebunden bleiben, nicht nur an eine numerische XID.",
+            "Event associations MUST be bound to the specific X11 connection and internal resource identity, not only to a numeric XID.",
             lifetime,
         )
         self.assertIn(
-            "Wenn die Verbindung geschlossen ist oder der X11-Server Events für diese Verbindung nicht mehr zustellen kann, ist keine Eventzustellung garantiert.",
+            "If the connection is closed or the X11 server can no longer deliver events to it, event delivery is not guaranteed.",
             events,
         )
 
@@ -427,7 +427,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             events,
         )
         self.assertIn(
-            "Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden",
+            "after successful processing of `DestroyDevice`, no new events using the destroyed `device_xid` may be generated or delivered",
             events,
         )
         self.assertIn(
@@ -435,7 +435,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             lifetime,
         )
         self.assertIn(
-            "Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event für die bereits zerstörte `device_xid` erzeugt oder zugestellt",
+            "If device loss is first detected during or after processing of `DestroyDevice`, no new event for the already destroyed `device_xid` is generated or delivered",
             lifetime,
         )
 
