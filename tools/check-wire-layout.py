@@ -124,7 +124,7 @@ def check_events(c: Check) -> None:
               "DEVICE_STATUS_CHANGED: REMOVED must prohibit subsequent status events for that XID")
     c.require(re.search(r"After emitting.*new_status = REMOVED.*MUST NOT emit another.*DEVICE_STATUS_CHANGED", registry, re.I) is not None,
               "event registry: REMOVED must prohibit subsequent status events for that XID")
-    c.require(re.search(r"heap_index.*UINT32_MAX.*kleiner als.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
+    c.require(re.search(r"heap_index.*UINT32_MAX.*less than.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
               "DEVICE_MEMORY_PRESSURE: heap_index must be a valid heap index or UINT32_MAX")
     lifetime = read("spec/resource-lifetime.md")
     c.require(re.search(r"After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events", lifetime, re.S) is not None,
@@ -165,76 +165,76 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"A required XAverius XID that does not identify a live resource.*results in `BadValue`", errors, re.S) is not None and
               re.search(r"An XID that identifies a live resource but not the expected resource type results in `BadMatch`", errors) is not None,
               "error mapping: unknown XIDs and live wrong-type XIDs must remain distinct")
-    c.require(re.search(r"Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen", event_doc) is not None,
+    c.require(re.search(r"On successful destruction of a logical device, its device and queue selections are removed; a connection selection remains", event_doc) is not None,
               "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
-    c.require(re.search(r"Submission erhält intern genau einen terminalen Ausgang.*DestroyDevice.*unterdrückt", submissions, re.S) is not None,
+    c.require(re.search(r"submission has exactly one internal terminal outcome.*DestroyDevice.*suppressed", submissions, re.S) is not None,
               "QueueSubmit: terminal event delivery must respect DestroyDevice lifecycle suppression")
-    c.require(re.search(r"terminales Event vorgesehen.*Lifecycle-Regeln für `DestroyDevice` unterdrückt", submissions, re.S) is not None,
+    c.require(re.search(r"terminal event.*lifecycle rules for `DestroyDevice` suppress", submissions, re.S) is not None,
               "QueueSubmit/device loss: terminal event requirement must not contradict DestroyDevice suppression")
     sync = read("spec/synchronization.md")
-    c.require(re.search(r"GetFenceStatus.*nach Device Loss.*gespeicherten Zustand", sync, re.S) is not None,
+    c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
-    c.require(re.search(r"`GetFenceStatus`.*Request: exakt 16 Bytes.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*gespeicherten Fence-Zustand zurück", sync, re.S) is not None and
-              re.search(r"`GetFenceStatus`: falsche Länge `BadLength`.*nach Device Loss", errors, re.S) is not None,
+    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the stored fence state", sync, re.S) is not None and
+              re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S) is not None,
               "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
-    c.require(re.search(r"`ResetFence`.*Request: exakt 16 Bytes.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
-              re.search(r"`ResetFence`: falsche Länge `BadLength`.*Cross-Device-Verwendung `BadMatch`.*`DEVICE_LOST` Vorrang vor dem Fence-Zustand.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S) is not None,
+    c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
+              re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S) is not None,
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
-    c.require(re.search(r"WaitForFence.*liefert dagegen `DEVICE_LOST`.*sobald das Device als verloren erkannt wurde", sync, re.S) is not None,
+    c.require(re.search(r"WaitForFence.*instead returns `DEVICE_LOST`.*as soon as the device is detected as lost", sync, re.S) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
-    c.require(re.search(r"keine offene `WaitForFence`-Registrierung.*`INVALID_SYNCHRONIZATION_STATE` abgewiesen", sync, re.S) is not None,
+    c.require(re.search(r"no open `WaitForFence` registration.*rejected with `INVALID_SYNCHRONIZATION_STATE`", sync, re.S) is not None,
               "DestroyFence: must reject while a host wait registration is still open")
-    c.require(re.search(r"terminales Ergebnis.*serialisiert festgestellt.*Reply noch im Ausgabepuffer.*verhindert die Zerstörung nicht", sync, re.S) is not None,
+    c.require(re.search(r"terminal result.*serialized.*reply still in the output buffer.*does not prevent destruction", sync, re.S) is not None,
               "DestroyFence: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"offene `WaitSemaphores`-Registrierung.*exakte interne Semaphore-Identität", sync, re.S) is not None,
+    c.require(re.search(r"open `WaitSemaphores` registration.*exact internal semaphore identity", sync, re.S) is not None,
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
-    c.require(re.search(r"terminales Ergebnis serverseitig serialisiert festgestellt.*Reply blockiert die Zerstörung dann nicht", sync, re.S) is not None,
+    c.require(re.search(r"terminal result has been serialized on the server.*reply does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"GetSemaphoreCounterValue.*mit `DEVICE_LOST` abgewiesen", sync, re.S) is not None,
+    c.require(re.search(r"GetSemaphoreCounterValue.*rejected with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
-    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exakt 16 Bytes.*Unbekannte/nicht-live Device- oder Semaphore-XIDs ergeben `BadValue`.*`DEVICE_LOST` abgewiesen", sync, re.S) is not None and
-              re.search(r"`GetSemaphoreCounterValue`: falsche Länge `BadLength`.*Cross-Device-Verwendung `BadMatch`.*`DEVICE_LOST`", errors, re.S) is not None,
+    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*Unknown or non-live Device or Semaphore XIDs result in `BadValue`.*rejected with `DEVICE_LOST`", sync, re.S) is not None and
+              re.search(r"`GetSemaphoreCounterValue`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST`", errors, re.S) is not None,
               "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
-    c.require(re.search(r"WaitSemaphores.*wird mit `DEVICE_LOST` beendet", sync, re.S) is not None,
+    c.require(re.search(r"WaitSemaphores.*terminates with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: semaphore waits must terminate on device loss")
-    c.require(re.search(r"Semaphore- und Fence-Objekte bleiben intern erhalten.*solange Backend-Zugriffe", sync, re.S) is not None,
+    c.require(re.search(r"Semaphore and Fence objects remain internally alive.*while backend accesses", sync, re.S) is not None,
               "synchronization: backend references must outlive device-loss public invalidation")
-    c.require(re.search(r"Erst nach dieser Konsumption darf ein neuer Signalzyklus beginnen", sync, re.S) is not None,
+    c.require(re.search(r"Only after this consumption may a new signal cycle begin", sync, re.S) is not None,
               "synchronization: binary semaphore reuse must follow actual wait consumption")
     c.require(re.search(r"The observable counter advances only when the corresponding signal operation has actually completed successfully", sync, re.S) is not None,
               "synchronization: timeline counter must not advance at submission acceptance")
-    c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
+    c.require(re.search(r"greater than all already reserved pending signal values", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
-    c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
+    c.require(re.search(r"less than every already reserved, non-terminal GPU signal value", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
-    c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
-              "verbindliche Präzedenz: falsche Länge `BadLength`" in errors and
-              "gemischten Fehlern gewinnt die frühere Phase" in read("spec/conformance.md") and
-              "Counter sowie Reservierungen bleiben unverändert" in errors,
+    c.require("Synchronous validation MUST follow this order" in sync and
+              "normative precedence: incorrect length `BadLength`" in errors and
+              "in mixed-error cases the earlier phase wins" in read("spec/conformance.md") and
+              "counter and reservations remain unchanged" in errors,
               "SignalSemaphore: validation precedence and atomic rejection must be explicit")
     c.require("total length: `28 + 12 * semaphore_count` bytes" in sync and
               "Duplicate wait or signal entries are invalid in v0.1 and result in `BadValue`" in sync and
               "verbindliche Präzedenz" in errors and "`DEVICE_DESTROYED`" in errors,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
-    c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
-              "zuletzt muss jeder Semaphore-Typ `TIMELINE` sein (`BadMatch`)" in errors and
-              "gemischten Fehlern gewinnt die frühere Phase" in read("spec/conformance.md") and
-              "Alle synchronen Ablehnungen erfolgen ohne Wait-Registrierung" in read("spec/conformance.md"),
+    c.require("Synchronous validation MUST follow this order" in sync and
+              "finally, every semaphore MUST be of type `TIMELINE` (`BadMatch`)" in errors and
+              "in mixed-error cases the earlier phase wins" in read("spec/conformance.md") and
+              "All synchronous rejections occur without registering a wait" in read("spec/conformance.md"),
               "WaitSemaphores: precedence must distinguish pre-registration validation from terminal wait outcomes")
-    c.require(re.search(r"`WaitForFence`.*Request: 24 Bytes exakt.*Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`.*Cross-Device-Verwendung ergeben `BadMatch`", sync, re.S) is not None and
-              re.search(r"`WaitForFence`: falsche Länge `BadLength`.*Device Loss und `DestroyDevice`.*Reply-Statuswerte", errors, re.S) is not None,
+    c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*cross-device use results in `BadMatch`", sync, re.S) is not None and
+              re.search(r"`WaitForFence`: incorrect length `BadLength`.*Device Loss and `DestroyDevice`.*reply status values", errors, re.S) is not None,
               "WaitForFence: request length, XID/ownership errors, and reply terminal states must be explicit")
-    c.require(re.search(r"WaitSemaphores` darf den X11-Request-Dispatcher nicht synchron blockieren", sync) is not None,
+    c.require(re.search(r"WaitSemaphores` MUST NOT synchronously block the X11 request dispatcher", sync) is not None,
               "synchronization: host waits must not block later signals or submissions on the same connection")
-    c.require(re.search(r"Timeout-Frist beginnt bei der Übernahme des Wait-Requests und läuft auch dann weiter", sync) is not None,
+    c.require(re.search(r"The timeout deadline starts when the wait request is taken for execution and continues to run", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
     memory = read("spec/memory-buffers.md")
-    c.require(re.search(r"Signal-Entries zurückgestellter `QueueSubmit`-Requests", memory) is not None and
+    c.require(re.search(r"signal entries of deferred `QueueSubmit` requests", memory) is not None and
               "`DEPENDENCY_FAILED`" in memory,
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
-    c.require(re.search(r"zurückgestellten Requests.*Timeline-Signal-Entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
+    c.require(re.search(r"deferred requests.*Timeline signal entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
               "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
@@ -254,33 +254,33 @@ def check_events(c: Check) -> None:
               "QueueSubmit: semaphore references must not follow a reused XID")
     c.require(re.search(r"backend can no longer access the semaphore", submissions, re.S) is not None,
               "QueueSubmit: semaphore backend references must survive until safe release")
-    c.require("Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig" in submissions and
-              "Dieselbe Semaphore darf in einer Submission nicht gleichzeitig im Wait- und Signal-Array stehen" in submissions,
+    c.require("Duplicate wait or signal entries are invalid in v0.1" in submissions and
+              "The same semaphore MUST NOT appear in both the wait and signal arrays of one submission" in submissions,
               "QueueSubmit: duplicate semaphore entries and wait/signal aliasing must be rejected")
-    c.require("Binary-Wait-/Signalwerte müssen null sein" in conformance and
-              "doppelte Timeline-Signal-Entries derselben Semaphore" in conformance and
-              "reserviert weder `submission_token` noch Semaphore-Wait-/Signal-Slots" in conformance,
+    c.require("Binary wait/signal values MUST be zero" in conformance and
+              "duplicate Timeline signal entries for the same semaphore" in conformance and
+              "reserves neither `submission_token` nor semaphore wait/signal slots" in conformance,
               "QueueSubmit: semaphore value checks and rejected-submit atomicity must be covered")
-    c.require("Die `EXECUTABLE`-zu-`PENDING`-Übergänge und die Synchronisationsreservierungen sind somit ein gemeinsamer Commit" in submissions and
-              "der Token bleibt unbenutzt" in submissions and
-              "Semaphore-Counter, Signalverfügbarkeit, Pending-Slots und Timeline-Reservierungen bleiben unverändert" in submissions,
+    c.require("The `EXECUTABLE`-to-`PENDING` transitions and synchronization reservations are therefore one shared commit" in submissions and
+              "the token remains unused" in submissions and
+              "semaphore counters, signal availability, pending slots, and Timeline reservations remain unchanged" in submissions,
               "QueueSubmit: all state changes and token reservation must share the acceptance commit")
-    c.require("Ein FINAL-Chunk führt den Übergang `RECORDING` → `EXECUTABLE` erst nach erfolgreicher Validierung" in read("spec/command-recording.md") and
-              "der Buffer bleibt `RECORDING`, alle vorher akzeptierten Entries und ihre Referenzen bleiben unverändert" in read("spec/command-recording.md"),
+    c.require("A FINAL chunk transitions `RECORDING` → `EXECUTABLE` only after successful validation" in read("spec/command-recording.md") and
+              "the buffer remains `RECORDING`, and all previously accepted entries and their references remain unchanged" in read("spec/command-recording.md"),
               "CommandBufferData: failed FINAL must preserve recording state and prior references")
     c.require("Ein fehlerhafter FINAL-Chunk von `CommandBufferData` lässt den Buffer `RECORDING`" in conformance and
-              "Bei abgewiesenem `QueueSubmit` bleibt jeder Command Buffer `EXECUTABLE`" in conformance and
-              "kann derselbe Token in einem korrigierten Request verwendet werden" in conformance and
-              "weder `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` noch `ASYNC_ERROR`" in conformance,
+              "On rejected `QueueSubmit`, every command buffer remains `EXECUTABLE`" in conformance and
+              "the same token may be used in a corrected request" in conformance and
+              "neither `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` nor `ASYNC_ERROR`" in conformance,
               "conformance: finalization and rejected-submit state transitions must be atomic")
     c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
               "QueueSubmit: error map must state non-mutating synchronous rejection")
     c.require("Fehlerpräzedenz (erste zutreffende Phase gewinnt)" in submissions and
-              "erforderliche XIDs werden in Wire-Reihenfolge aufgelöst: Device, optionale Fence, Command-Buffer-XIDs in Array-Reihenfolge" in submissions and
-              "Vorrang vor veränderlichen Submit-Zuständen" in submissions and
-              "Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft" in submissions and
-              "zuerst der Zustand der optionalen Fence, dann die Command Buffer in Array-Reihenfolge, danach die Wait-Entries in Array-Reihenfolge" in submissions and
-              "prüft `QueueSubmit` nach Device-Zustand zuerst die optionale Fence" in conformance,
+              "required XIDs are resolved in wire order: Device, optional Fence, then Command Buffer XIDs in array order" in submissions and
+              "take precedence over mutable submit state" in submissions and
+              "Type-dependent values such as binary wait/signal values are checked only after type resolution" in submissions and
+              "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
+              "checks the optional Fence first after checking Device state in `QueueSubmit`" in conformance,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
               "typabhängiger Binary-Wert ist nicht null oder Timeline-Signalwert ist nicht größer als der beobachtbare Counter" in errors and
@@ -305,7 +305,7 @@ def check_events(c: Check) -> None:
         if name not in doc_sections:
             continue
         body = doc_sections[name]
-        total_match = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE `length\s*=\s*(\d+)`", body)
+        total_match = re.search(r"(?:Total length|Gesamtlänge):\s*(\d+)\s*bytes?;\s*XGE `length\s*=\s*(\d+)`", body)
         c.require(bool(total_match), f"{name}: total length and XGE length declaration missing")
         if total_match:
             declared_total, declared_length = map(int, total_match.groups())
@@ -1740,12 +1740,12 @@ def check_xge_abi(c: Check) -> None:
                   f"XGE header: missing or changed {typ} field at offset {offset}")
     c.require(re.search(r"^\|\s*10–31\s*\|\s*—\s*\|[^|]*null", header, re.M | re.I) is not None,
               "XGE header: reserved bytes 10–31 must be zero")
-    c.require(re.search(r"Gesamtlänge ist exakt.*32.*4.*length", header, re.I) is not None,
+    c.require(re.search(r"The total length is exactly.*32.*4.*length", header, re.I) is not None,
               "XGE header: exact total-size formula missing")
-    c.require(re.search(r"Verbindung-byte-order gilt auch für Header und Payload", header, re.I) is not None,
+    c.require(re.search(r"connection byte order applies to both header and payload", header, re.I) is not None,
               "XGE header: connection byte order must apply to header and payload")
-    c.require(re.search(r"GenericEvent\s*=\s*35", wire) is not None and
-              re.search(r"kein eigenes serverseitig zugewiesenes XGE-Event-Base", wire, re.I) is not None,
+    c.require(re.search(r"GenericEvent\s*\(35\)", wire) is not None and
+              re.search(r"there is no separate XAverius-XGE-event base", wire, re.I) is not None,
               "wire protocol: GenericEvent code and no separate XAverius event base must be explicit")
 
     expected = {
@@ -1863,11 +1863,11 @@ def check_xge_abi(c: Check) -> None:
     for pattern, label in expected_masks:
         c.require(re.search(pattern, select_body) is not None, f"SelectEvents: missing {label}")
     for pattern, label in [
-        (r"atomar die bisherige Maske", "atomic mask replacement"),
-        (r"Bei jedem Fehler bleibt die vorherige Auswahl unverändert", "failed request preserves prior mask"),
-        (r"ASYNC_ERROR.*DEVICE_LOST.*nicht maskierbar", "unmaskable events"),
+        (r"atomically replaces the existing mask", "atomic mask replacement"),
+        (r"On any error, the previous selection remains unchanged", "failed request preserves prior mask"),
+        (r"`ASYNC_ERROR`.*`DEVICE_LOST`.*unmaskable", "unmaskable events"),
         (r"erfolgreich\s+" + chr(96) + r"?GEQueryVersion" + chr(96) + r"?", "XGE version negotiation prerequisite"),
-        (r"ohne ausgehandelte XGE-Unterst(?:ü|ue)tzung.*BadMatch", "pre-negotiation rejection"),
+        (r"Without negotiated XGE support.*BadMatch", "pre-negotiation rejection"),
     ]:
         c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
                   f"SelectEvents/XGE: missing {label}")
@@ -1877,40 +1877,40 @@ def check_xge_abi(c: Check) -> None:
               "conformance checklist: must cover SelectEvents/XGE ABI")
 
     # Semantic negative cases that cannot be inferred from field offsets alone.
-    c.require("`origin = ORIGIN_QUEUE_SUBMIT` erfordert einen nicht-null Token" in conformance and
+    c.require("`origin = ORIGIN_QUEUE_SUBMIT` requires a non-zero token" in conformance and
               "`ASYNC_ERROR`" in events and
-              re.search(r"Bei `origin = ORIGIN_QUEUE_SUBMIT` MUSS `submission_token` daher ungleich null sein", events) is not None and
-              re.search(r"ein nicht-null Token darf niemals eine abgewiesene `QueueSubmit`-Anforderung bezeichnen", events) is not None,
+              re.search(r"For `origin = ORIGIN_QUEUE_SUBMIT`, `submission_token` MUST therefore be non-zero", events) is not None and
+              re.search(r"a non-zero token MUST never identify a rejected `QueueSubmit` request", events) is not None,
               "XGE ASYNC_ERROR: origin/token relationship and rejected-submit exclusion must be normative and tested")
-    c.require("unbekannte `origin`-Werte" in conformance and
+    c.require("unknown `origin` values" in conformance and
               "`reserved = 0`" in doc_sections.get("ASYNC_ERROR", "") and
               re.search(r"reserved = 0", doc_sections.get("ASYNC_ERROR", "")) is not None,
               "XGE ASYNC_ERROR: invalid origin and reserved-field negative cases must be covered")
-    c.require("muss `resource_xid = 0` sein" in conformance and
-              "muss `resource_xid = 0` gesetzt werden" in read("spec/events.md").lower() and
+    c.require("must have `resource_xid = 0`" in conformance and
+              "must set `resource_xid = 0`" in read("spec/events.md").lower() and
               "resource_xid = 0` serialisiert" in read("spec/resource-lifetime.md").lower() and
-              "wiederverwendete ressourcen-xid nicht als `resource_xid` ausgegeben werden" in read("spec/resource-lifetime.md").lower(),
+              "reused resource XIDs MUST NOT be emitted as `resource_xid`" in read("spec/resource-lifetime.md").lower(),
               "XGE ASYNC_ERROR: destroyed/reused resource XIDs must be scrubbed instead of retargeted")
-    c.require("unbekannte Maskenbits" in conformance and
-              "falschen Nullwerten" in conformance and
-              "Jeder solche Fehler lässt die bisherige Maske unverändert" in conformance and
-              "Unbekannte Scope-Werte" in select_body and
-              "Bei jedem Fehler bleibt die vorherige Auswahl unverändert" in select_body,
+    c.require("unknown mask bits" in conformance and
+              "incorrect zero values" in conformance and
+              "Every such error leaves the previous mask unchanged" in conformance and
+              "Unknown scope values" in select_body and
+              "On any error, the previous selection remains unchanged" in select_body,
               "SelectEvents: malformed scope/mask/unused fields must reject atomically")
-    c.require("nicht angeforderter Queue-Kombination" in conformance and
-              "fremder Ownership" in conformance and
-              "Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`" in select_body,
+    c.require("unrequested queue combination" in conformance and
+              "foreign ownership" in conformance and
+              "A nonexistent queue within a valid device results in `BadValue`" in select_body,
               "SelectEvents: queue lookup and ownership failures must be distinguished")
-    c.require("nicht maskierbare `DEVICE_LOST`- und `ASYNC_ERROR`-Events" in conformance and
+    c.require("unmaskable `DEVICE_LOST` and `ASYNC_ERROR` events" in conformance and
               "resource_xid" in conformance and
-              "Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events" in read("spec/resource-lifetime.md"),
+              "After successful processing of `DestroyDevice`, the server MUST NOT generate or deliver new XAverius events" in read("spec/resource-lifetime.md"),
               "XGE event delivery: DestroyDevice suppression must cover all event XID fields")
     c.require("gemeinsamer serialisierter Linearisierungspunkt" in conformance and
               "gemeinsamen serialisierten Serverzustand" in events and
-              "Ein späterer Backend-Callback darf diese Entscheidung nicht nachträglich ändern" in events,
+              "A later backend callback MUST NOT change this decision retroactively" in events,
               "XGE event delivery: SelectEvents/DestroyDevice/completion race must be serialized")
-    c.require("höchstens eines von `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED`" in conformance and
-              "Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED`" in events,
+    c.require("at most one of `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`" in conformance and
+              "For each accepted submission, the server MUST NOT deliver both `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`" in events,
               "XGE submission events: exactly one terminal event per accepted submission")
 
     # Exercise the XGE length and reserved-header rules in both byte orders.
@@ -1994,7 +1994,7 @@ def check_presentation_profile(c: Check) -> None:
     c.require(re.search(r"\|\s*`QUEUE`\s*\|\s*2\s*\|\s*`IMAGE_RELEASED`\s*\|", events) is not None and
               re.search(r"\|\s*`QUEUE`\s*\|\s*3\s*\|\s*`PRESENTATION_COMPLETE`\s*\|", events) is not None,
               "presentation events: queue mask bits 2 and 3 must map to the corresponding events")
-    c.require("Compute-only Server muss sie als unbekannte Maskenbits mit `BadValue` zurückweisen" in events,
+    c.require("Compute-only Server muss sie als unknown mask bits mit `BadValue` zurückweisen" in events,
               "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
     presentation_spec = read("spec/presentation.md")
@@ -2018,7 +2018,7 @@ def check_presentation_profile(c: Check) -> None:
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
         c.require(name in event_docs, f"presentation events: missing {name} layout")
         body = event_docs.get(name, "")
-        match = re.search(r"Gesamtlänge:\s*(\d+)\s*Bytes;\s*XGE `length\s*=\s*(\d+)`", body)
+        match = re.search(r"(?:Total length|Gesamtlänge):\s*(\d+)\s*bytes?;\s*XGE `length\s*=\s*(\d+)`", body)
         c.require(match is not None, f"{name}: missing total/XGE length declaration")
         if match:
             total, length = map(int, match.groups())
