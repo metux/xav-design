@@ -103,6 +103,7 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
         self.assertEqual(finish_submission(state, 81, success=True), "SUCCESS")
         self.assertEqual(state.signal_counters, [18])
         self.assertEqual(state.pending_timeline_signals, [(80, 0, 12)])
+        self.assertEqual(state.signal_slots, [12])
         self.assertEqual(state.pending_submissions, [80])
         # Host signaling may not bypass the still-pending lower reservation,
         # even though the higher value has already become observable.
@@ -195,9 +196,9 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
     def test_concurrent_submission_callbacks_only_finalize_their_own_state(self) -> None:
         state = self.state()
         self.submit_signal(state, token=60, value=12, command_buffer=0)
-        # A second timeline signal on the same semaphore cannot be reserved
-        # until the first one is terminal; use a second semaphore to model two
-        # independently completing submissions.
+        # Multiple increasing values may be reserved on one timeline
+        # semaphore. Use a second semaphore here to isolate callback ownership
+        # and prove that finalizing one submission cannot alter another's slot.
         state.signal_slots.append(None)
         state.signal_counters.append(4)
         state.semaphore_kinds.append(SemaphoreKind.TIMELINE)
