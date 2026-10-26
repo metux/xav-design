@@ -1994,26 +1994,26 @@ def check_presentation_profile(c: Check) -> None:
     c.require(re.search(r"\|\s*`QUEUE`\s*\|\s*2\s*\|\s*`IMAGE_RELEASED`\s*\|", events) is not None and
               re.search(r"\|\s*`QUEUE`\s*\|\s*3\s*\|\s*`PRESENTATION_COMPLETE`\s*\|", events) is not None,
               "presentation events: queue mask bits 2 and 3 must map to the corresponding events")
-    c.require("Compute-only Server muss sie als unknown mask bits mit `BadValue` zurückweisen" in events,
+    c.require("must reject the presentation-only queue event-mask bits" in events,
               "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
     presentation_spec = read("spec/presentation.md")
     lifetime = read("spec/resource-lifetime.md")
-    c.require("Dieser Freigabeübergang darf pro akzeptierter Präsentationsoperation höchstens einmal stattfinden" in event_docs.get("IMAGE_RELEASED", "") and
-              "Ein `IMAGE_RELEASED`-Event wird genau dann eingereiht" in event_docs.get("IMAGE_RELEASED", "") and
-              "Queue-Maske (Bit 2)" in event_docs.get("IMAGE_RELEASED", ""),
+    c.require("This release transition may occur at most once per accepted presentation operation" in event_docs.get("IMAGE_RELEASED", "") and
+              "An `IMAGE_RELEASED` event is queued exactly when" in event_docs.get("IMAGE_RELEASED", "") and
+              "queue mask bit 2" in event_docs.get("IMAGE_RELEASED", ""),
               "IMAGE_RELEASED: internal release cardinality and conditional event delivery must be explicit")
-    c.require("einmaligen internen terminalen Ausgang jeder akzeptierten Präsentationsoperation" in event_docs.get("PRESENTATION_COMPLETE", "") and
-              "Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events" in event_docs.get("PRESENTATION_COMPLETE", "") and
-              "Queue-Maske (Bit 3)" in event_docs.get("PRESENTATION_COMPLETE", ""),
+    c.require("unique internal terminal outcome of each accepted presentation operation" in event_docs.get("PRESENTATION_COMPLETE", "") and
+              "After `DestroyDevice` has been processed successfully, no new events" in event_docs.get("PRESENTATION_COMPLETE", "") and
+              "queue mask bit 3" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "PRESENTATION_COMPLETE: terminal outcome, queue mask, and DestroyDevice suppression must be explicit")
-    c.require("Queue-Maske (Bit 2)" in event_docs.get("IMAGE_RELEASED", "") and
-              "Queue-Maske (Bit 3)" in event_docs.get("PRESENTATION_COMPLETE", ""),
+    c.require("queue mask bit 2" in event_docs.get("IMAGE_RELEASED", "") and
+              "queue mask bit 3" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "presentation events: queue mask must be sampled independently at each event milestone")
     c.require("Accepted presentation failures set the internal terminal status" in presentation_spec and
               "Queue mask bit 3" in presentation_spec and "Queue mask bit 2" in presentation_spec,
               "presentation: internal terminal cleanup and independently masked event delivery must be explicit")
-    c.require("interne Terminalzustände und sichere Backend-Bereinigung" in lifetime,
+    c.require("internal terminal states and safe backend cleanup" in lifetime,
               "presentation: device teardown must preserve internal terminal cleanup when events are suppressed")
     for name in ("IMAGE_RELEASED", "PRESENTATION_COMPLETE"):
         c.require(name in event_docs, f"presentation events: missing {name} layout")
@@ -2092,8 +2092,8 @@ def check_presentation_profile(c: Check) -> None:
     c.require("same per-Semaphore pending-wait accounting as `QueueSubmit` waits" in presentation and
               "marks that binary semaphore `UNTRUSTED`" in presentation,
               "QueuePresent: accepted wait reservations and uncertain-consumption handling must be explicit")
-    c.require("`QueuePresent` verwendet dieselbe globale Zustandsmaschine" in read("spec/synchronization.md") and
-              "bei unklarem Payload-Ergebnis wird die Semaphore `UNTRUSTED`" in read("spec/synchronization.md"),
+    c.require("`QueuePresent` uses the same global state machine" in read("spec/synchronization.md") and
+              "each affected semaphore is handled independently" in read("spec/synchronization.md"),
               "synchronization: presentation waits must follow binary semaphore state rules")
     c.require("already marked `UNTRUSTED` is rejected with `DEPENDENCY_FAILED`" in read("spec/errors.md"),
               "QueuePresent: untrusted binary wait must fail with DEPENDENCY_FAILED")
