@@ -388,6 +388,42 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
                     "BadValue",
                 )
 
+    def test_signal_entry_value_error_precedes_generic_dependency_failure(self) -> None:
+        state = self.state(
+            dependencies_valid=False,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[0, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(0x10000000000000000,)),
+            "BadValue",
+        )
+
+    def test_signal_entry_state_error_precedes_generic_dependency_failure(self) -> None:
+        state = self.state(
+            dependencies_valid=False,
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(0,)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
+    def test_generic_dependency_failure_follows_valid_signal_entries(self) -> None:
+        state = self.state(
+            dependencies_valid=False,
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[0, 0],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(5,)),
+            "DEPENDENCY_FAILED",
+        )
+
     def test_timeline_wait_value_validation_follows_device_validation(self) -> None:
         state = self.state(
             device_lost=True,
