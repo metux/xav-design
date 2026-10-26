@@ -623,10 +623,10 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: CreateBuffer must distinguish device state from backend allocation failure",
     )
     c.require(
-        "`AllocateMemory`: falsche Länge `BadLength`" in errors
-        and "falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "bei Ablehnung bleibt die Ziel-XID unangelegt" in errors
+        "`AllocateMemory`: incorrect length `BadLength`" in errors
+        and "live resource of the wrong type or foreign Device ownership `BadMatch`" in errors
+        and "unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "on rejection, the target XID remains unallocated" in errors
         and "die `memory_xid` bleibt unangelegt" in read("spec/memory-buffers.md"),
         "error mapping: AllocateMemory must define device-state errors and atomic create-XID behavior",
     )
@@ -639,12 +639,12 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: CreateDescriptorPool must define device-state errors and atomic create-XID behavior",
     )
     c.require(
-        "`CreateSemaphore` und `CreateFence`:" in errors
-        and "falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "bei Ablehnung bleibt die jeweilige Ziel-XID unangelegt" in errors
-        and "bei jedem Fehler bleibt die Semaphore-XID unangelegt" in read("spec/synchronization.md")
-        and "bei jedem Fehler bleibt die Fence-XID unangelegt" in read("spec/synchronization.md"),
+        "`CreateSemaphore`:" in errors and "`CreateFence`:" in errors
+        and "wrong live resource type or foreign Device ownership `BadMatch`" in errors
+        and "unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "On rejection, the target XID remains unallocated" in errors
+        and "Creation is atomic: on any failure, the semaphore XID remains unallocated" in read("spec/synchronization.md")
+        and "Creation is atomic: on any failure, the fence XID remains unallocated" in read("spec/synchronization.md"),
         "error mapping: CreateSemaphore/CreateFence must define device-state errors and atomic XID behavior",
     )
     c.require(
@@ -673,9 +673,9 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "### `CreateCommandPool`" in errors
-        and "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
-        and "Bei Ablehnung bleibt die Pool-XID unangelegt" in errors
+        and "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in errors
+        and "backend allocation failure results in `ALLOCATION_FAILED`" in errors
+        and "On rejection, the pool XID remains unallocated" in errors
         and "Creation is atomic: on any failure, the pool XID remains unallocated" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
     )
