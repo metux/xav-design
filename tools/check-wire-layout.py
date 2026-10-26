@@ -268,7 +268,7 @@ def check_events(c: Check) -> None:
     c.require("A FINAL chunk transitions `RECORDING` → `EXECUTABLE` only after successful validation" in read("spec/command-recording.md") and
               "the buffer remains `RECORDING`, and all previously accepted entries and their references remain unchanged" in read("spec/command-recording.md"),
               "CommandBufferData: failed FINAL must preserve recording state and prior references")
-    c.require("Ein fehlerhafter FINAL-Chunk von `CommandBufferData` lässt den Buffer `RECORDING`" in conformance and
+    c.require("A failed FINAL chunk of `CommandBufferData` leaves the buffer `RECORDING`" in conformance and
               "On rejected `QueueSubmit`, every command buffer remains `EXECUTABLE`" in conformance and
               "the same token may be used in a corrected request" in conformance and
               "neither `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` nor `ASYNC_ERROR`" in conformance,
