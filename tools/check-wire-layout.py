@@ -1341,7 +1341,7 @@ def check_reply_layouts(c: Check) -> None:
         ]),
         "WaitForFence": ("sync", [
             (r"Request: exactly 24 bytes", "fixed request length"),
-            (r"Offset 8 enthält einen \x60CARD32 status\x60", "wait status field"),
+            (r"Offset 8 (?:contains a|enthält einen) \x60CARD32 status\x60", "wait status field"),
             (r"(?:Offsets 12–31 sind null und \x60reply\.length = 0\x60|offsets 12–31 are zero and \x60reply\.length = 0\x60)", "reserved bytes and zero payload"),
             (r"\x60SUCCESS = 0\x60", "reply status values"),
             (r"\x60TIMEOUT = 1\x60", "timeout status"),
