@@ -109,6 +109,9 @@ def validate_presentation_reply(
             if (min_width == 0 or min_height == 0 or
                     max_width < min_width or max_height < min_height):
                 raise ValueError("successful capabilities reply has invalid extent bounds")
+            min_images, max_images = u32(wire, 24, order), u32(wire, 28, order)
+            if min_images == 0 or (max_images != 0 and max_images < min_images):
+                raise ValueError("successful capabilities reply has invalid image-count bounds")
             start = 64 + 8 * formats + 4 * modes
             family_indices = []
             family_support = []
@@ -286,6 +289,8 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 16, "I", 0, "successful capabilities reply has zero current extent"),
                 ("capabilities", 32, "I", 0, "successful capabilities reply has invalid extent bounds"),
                 ("capabilities", 40, "I", 0, "successful capabilities reply has invalid extent bounds"),
+                ("capabilities", 24, "I", 0, "successful capabilities reply has invalid image-count bounds"),
+                ("capabilities", 28, "I", 1, "successful capabilities reply has invalid image-count bounds"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("capabilities", 12, "I", 0, "aggregate present_supported does not match queue-family records"),
                 ("capabilities", 76, "I", 1, "queue-family indices must cover every family in ascending order"),
