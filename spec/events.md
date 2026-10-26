@@ -162,15 +162,15 @@ Dieses Event bezeichnet den einmaligen internen terminalen Ausgang jeder akzepti
 
 ## Prerequisite for Extended XGE Events
 
-Alle in diesem Kapitel definierten Events sind laenger als der normale 32-Byte-X11-Event. Vor dem Versand solcher Events muss der Server wissen, dass der jeweilige Client XGE unterstuetzt; andernfalls kann der X11-Bytestrom fuer einen Client ohne XGE-Unterstuetzung falsch ausgerichtet werden.
+All events defined in this chapter are longer than the standard 32-byte X11 event. Before sending such events, the server must know that the client supports XGE; otherwise, the X11 byte stream could become misaligned for a client without XGE support.
 
-Ein XAverius-Client muss deshalb vor dem Erzeugen eines logischen Devices oder vor jedem `SelectEvents`-Request erfolgreich `GEQueryVersion` ausfuehren und mindestens XGE 1.0 ausgehandelt haben. Der XAverius-Server muss diesen erfolgreichen Austausch pro Verbindung verfolgen. Ohne ausgehandelte XGE-Unterstuetzung werden `CreateDevice`, `CreateDefaultDevice` und `SelectEvents` mit `BadMatch` abgewiesen; bei `SelectEvents` bleibt die vorherige Auswahl unveraendert. Ein Server, der XGE nicht unterstuetzt, darf XAverius nicht als verfuegbare Extension anbieten.
+An XAverius client must successfully execute `GEQueryVersion` and negotiate at least XGE 1.0 before creating a logical device or issuing any `SelectEvents` request. The XAverius server must track successful negotiation per connection. Without negotiated XGE support, `CreateDevice`, `CreateDefaultDevice`, and `SelectEvents` are rejected with `BadMatch`; for `SelectEvents`, the previous selection remains unchanged. A server that does not support XGE must not advertise XAverius as an available extension.
 
 ## Event Selection: `SelectEvents`
 
-Die Compute-Baseline-Event-Type-IDs sind in der [zentralen Event-Registry](../registries/event-types.md) festgelegt; presentation-only IDs sind in der [Presentation-Event-Registry](../registries/presentation-events.md) festgelegt. Beide Namespaces verwenden dieselben append-only Event-Type-IDs und dürfen nicht miteinander kollidieren. Sie sind von Request-Subopcodes und Error-Offsets zu unterscheiden.
+Compute-baseline event type IDs are defined in the [central event registry](../registries/event-types.md); presentation-only IDs are defined in the [Presentation Event Registry](../registries/presentation-events.md). Both namespaces use the same append-only event type IDs and must not collide. They are distinct from request sub-opcodes and error offsets.
 
-`SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Das Common-Header-Feld `flags` bei Offset 5 muss 0 sein; das reservierte Common-Header-Feld bei Offset 6 muss ebenfalls 0 sein. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
+`SelectEvents` is a void request with a fixed total length of 32 bytes. The common-header `flags` field at offset 5 must be zero; the reserved common-header field at offset 6 must also be zero. The request atomically replaces the existing mask for exactly one scope of this X11 connection; it does not add bits or remove other scopes.
 
 | Offset | Type | Field |
 |---:|---|---|
@@ -187,7 +187,7 @@ Scope-Werte:
 - `DEVICE = 1`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; beide Queue-Indizes müssen null sein.
 - `QUEUE = 2`: `device_xid` bezeichnet ein logisches Device dieser Verbindung; das Tupel `(queue_family_index, queue_index)` muss eine tatsächlich angeforderte Queue dieses Devices identifizieren.
 
-Für nicht verwendete Felder müssen die genannten Nullwerte exakt eingehalten werden. Unbekannte Scope-Werte, nicht-null reservierte Felder, ungültige Maskenbits oder Scope/Feld-Kombinationen ergeben `BadValue`. Unbekannte/nicht-live XIDs ergeben `BadValue`; falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`. Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`. Bei jedem Fehler bleibt die vorherige Auswahl unverändert.
+Unused fields must contain exactly the specified zero values. Unknown scope values, non-zero reserved fields, invalid mask bits, or invalid scope/field combinations result in `BadValue`. Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`. A nonexistent queue within a valid device results in `BadValue`. On any error, the previous selection remains unchanged.
 
 Die Masken sind scopeabhängig:
 
@@ -201,7 +201,7 @@ Die Masken sind scopeabhängig:
 | `QUEUE` | 2 | `IMAGE_RELEASED` |
 | `QUEUE` | 3 | `PRESENTATION_COMPLETE` |
 
-Alle anderen Bits sind reserviert und müssen abgewiesen werden. Die Präsentationsbits sind nur im presentation-capable Profil gültig; ein Compute-only Server muss sie als unbekannte Maskenbits mit `BadValue` zurückweisen. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
+All other bits are reserved and must be rejected. Presentation bits are valid only in the presentation-capable profile; a compute-only server must reject them as unknown mask bits with `BadValue`. `event_mask = 0` hebt die Auswahl für den angegebenen Scope auf. Das Aufheben einer Device- oder Queue-Maske entfernt keine Auswahl anderer Scopes. Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen.
 
 `ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt, solange die Verbindung Events empfangen kann. Diese Regel unterliegt den Lebensdauergrenzen aus [Resource lifetime and ownership](resource-lifetime.md): Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit der zerstörten `device_xid` erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt. `DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt. Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist. Die Auswahl beeinflusst niemals die Ausführung, den internen terminalen Zustand oder die Fence-/Semaphore-Zustände. Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden.
 
