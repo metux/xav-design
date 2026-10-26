@@ -273,7 +273,7 @@ def check_events(c: Check) -> None:
               "the token remains unused and may be reused in a corrected request" in submissions and
               "neither `SUBMISSION_COMPLETE`/`SUBMISSION_FAILED` nor `ASYNC_ERROR`" in conformance,
               "conformance: finalization and rejected-submit state transitions must be atomic")
-    c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
+    c.require("synchronous error before acceptance | no state changes" in errors,
               "QueueSubmit: error map must state non-mutating synchronous rejection")
     c.require("Error precedence (the first applicable phase wins)" in submissions and
               "required XIDs are resolved in wire order: Device, optional Fence, then Command Buffer XIDs in array order" in submissions and
@@ -282,15 +282,15 @@ def check_events(c: Check) -> None:
               "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
               "checks the optional Fence first after checking Device state in `QueueSubmit`" in conformance,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
-    c.require(re.search(r"\| `QueueSubmit`: Device unavailable/lost.*?\n\| `QueueSubmit`: Command Buffer not `EXECUTABLE`", errors, re.S) is not None and
+    c.require(re.search(r"\| `QueueSubmit`: Device unavailable/lost.*?\n\| `QueueSubmit`: a Command Buffer is not `EXECUTABLE`", errors, re.S) is not None and
               re.search(r"type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter", errors) is not None and
               re.search(r"for CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence", conformance, re.I) is not None,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
     c.require(
-        "nicht größer als der beobachtbare Counter ist, `BadValue`" in submissions
-        and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
+        re.search(r"not greater than the observable counter results in `BadValue`", submissions) is not None
+        and "conflicts with an existing pending GPU signal reservation" in conformance
         and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
-        and re.search(r"conflicts with an already reserved pending GPU signal value", errors) is not None
+        and "conflicts with an already reserved pending GPU signal value" in errors
         and "`BadValue`" in errors,
         "QueueSubmit: distinguish invalid timeline counter values from pending reservation conflicts",
     )
