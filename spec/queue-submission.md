@@ -1,8 +1,8 @@
 # Queue submission and ordering
 
-## Queue-Adressierung
+## Queue Addressing
 
-Queues werden durch Device-XID, Queue-Family-Index und Queue-Index adressiert. Der Server muss prüfen, ob die Queue für dieses logische Device tatsächlich erstellt wurde.
+Queues are addressed by device XID, queue-family index, and queue index. The server MUST verify that the queue was actually created for this logical device.
 
 ## `QueueSubmit`
 
@@ -21,32 +21,32 @@ Request-Layout:
 | 32 | CARD64 | `submission_token` |
 | 40 | variable | Command-Buffer-XIDs, Wait-Entries, Signal-Entries |
 
-Jeder Wait-Entry ist 16 Bytes groß:
+Each wait entry is 16 bytes:
 
 - Relativer Offset 0: Semaphore-XID
 - Offset 4: `CARD64 wait_value`
 - Offset 12: `CARD32 wait_stage_mask`
 
-Für Binary-Semaphoren muss `wait_value = 0` sein. Für Timeline-Semaphoren ist `wait_value` der erforderliche Counter-Wert.
+For binary semaphores, `wait_value` MUST be zero. For timeline semaphores, `wait_value` is the required counter value.
 
-Jeder Signal-Entry ist 12 Bytes groß:
+Each signal entry is 12 bytes:
 
 - Relativer Offset 0: Semaphore-XID
 - Offset 4: `CARD64 signal_value`
 
-Für Binary-Semaphoren muss `signal_value = 0` sein. Für Timeline-Semaphoren ist `signal_value` der zu signalisierende Counter-Wert.
+For binary semaphores, `signal_value` MUST be zero. For timeline semaphores, `signal_value` is the counter value to signal.
 
-Gesamtlänge:
+Total length:
 
 `40 + 4*C + 16*W + 12*S`
 
-`submission_token` wird vom Client vergeben und als undurchsichtiger 64-Bit-Wert behandelt. Er muss innerhalb derselben X11-Client-Verbindung für jede `QueueSubmit`-Anforderung eindeutig sein; Wiederverwendung ist auch nach Abschluss einer Submission nicht zulässig, solange die Verbindung besteht. Der Wert `0` ist reserviert und ungültig. Tokens müssen keiner Reihenfolge folgen und haben keine zeitliche oder numerische Bedeutung. Ein Zeitstempel oder Hash ist zulässig, sofern der Client die Eindeutigkeit tatsächlich sicherstellt.
+`submission_token` is supplied by the client and treated as an opaque 64-bit value. It MUST be unique for every `QueueSubmit` request on the same X11 client connection; reuse is forbidden even after a submission completes, for as long as the connection remains open. Value `0` is reserved and invalid. Tokens need not be ordered and have no temporal or numeric meaning. A timestamp or hash is permitted if the client actually guarantees uniqueness.
 
-Fehlerpräzedenz (erste zutreffende Phase gewinnt): (1) falsche Gesamtlänge, inkonsistente Counts, arithmetischer Überlauf oder abgeschnittene Einträge ergeben `BadLength`; (2) rein syntaktische Felder werden geprüft: `submission_token = 0`, ein bereits auf derselben Verbindung verwendeter Token, nicht-null reservierte Felder, Wait-Stage-Masken mit 0/reservierten Bits, doppelte rohe Semaphore-XIDs und ungültige Werte, die ohne Auflösung eines Ressourcentyps bestimmbar sind, ergeben `BadValue`; (3) erforderliche XIDs werden in Wire-Reihenfolge aufgelöst: Device, optionale Fence, Command-Buffer-XIDs in Array-Reihenfolge, Wait-Semaphore-XIDs in Array-Reihenfolge, Signal-Semaphore-XIDs in Array-Reihenfolge. Unbekannte/nicht-live XIDs ergeben `BadValue`; (4) erst danach werden Ressourcentyp, Client-/Device-Ownership und Queue-Zuordnung geprüft; falscher live Typ, fremde Ownership, Cross-Device-Zuordnung oder eine nicht für dieses Device erstellte Queue ergeben `BadMatch`; (5) nach erfolgreicher XID-/Typ-/Ownership-/Queue-Prüfung hat ein nicht verfügbares/verlorenes Device Vorrang vor veränderlichen Submit-Zuständen und ergibt `DEVICE_UNAVAILABLE`/`DEVICE_LOST`; (6) bei funktionsfähigem Device werden die veränderlichen Voraussetzungen in Wire-Reihenfolge geprüft: zuerst der Zustand der optionalen Fence, dann die Command Buffer in Array-Reihenfolge, danach die Wait-Entries in Array-Reihenfolge und zuletzt die Signal-Entries in Array-Reihenfolge. Innerhalb jedes Wait-/Signal-Entries werden zuerst typabhängige numerische Werte geprüft, danach Stage-Family-Kompatibilität (nur Wait-Entries) und anschließend die Zulässigkeit der jeweiligen Semaphore-Operation samt Pending-/Signalreservierungen. Unzulässige Fence-/Command-Buffer-/Semaphore-Zustände oder eine nicht unterstützte Stage ergeben `INVALID_SYNCHRONIZATION_STATE`; ungültige typabhängige numerische Werte ergeben `BadValue`. Insbesondere ist ein Timeline-Signalwert, der nicht größer als der beobachtbare Counter ist, `BadValue`; ein Wert, der zwar numerisch größer als der Counter, aber nicht größer als jede bereits reservierte pending GPU-Signalstufe ist, ergibt `INVALID_SYNCHRONIZATION_STATE`, wie bei `SignalSemaphore`. Eine sonstige Abhängigkeit, die die Annahme verhindert, ergibt `DEPENDENCY_FAILED`. Typabhängige Werte wie Binary-Wait-/Signalwerte werden erst nach Typauflösung geprüft. Innerhalb jeder Phase wird die im Request angegebene Feld-/Array-Reihenfolge eingehalten. Jeder synchron abgewiesene Request bleibt atomar und erzeugt kein Submission-Event. Nach Annahme gemeldete Ausführungsfehler sind keine X11-Fehler.
+Error precedence (the first applicable phase wins): (1) incorrect total length, inconsistent counts, arithmetic overflow, or truncated entries results in `BadLength`; (2) syntactic fields are checked: `submission_token = 0`, a token already used on this connection, non-zero reserved fields, wait-stage masks containing zero or reserved bits, duplicate raw semaphore XIDs, and invalid values that can be identified without resolving a resource type result in `BadValue`; (3) required XIDs are resolved in wire order: device, optional fence, command-buffer XIDs in array order, wait-semaphore XIDs in array order, then signal-semaphore XIDs in array order. Unknown or non-live XIDs result in `BadValue`; (4) only then are resource type, client/device ownership, and queue association checked; a live resource of the wrong type, foreign ownership, cross-device association, or a queue not created for this device results in `BadMatch`; (5) after successful XID/type/ownership/queue validation, an unavailable or lost device takes precedence over mutable submission state and results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`; (6) if the device is operational, mutable preconditions are checked in wire order: first the optional fence state, then command buffers in array order, wait entries in array order, and finally signal entries in array order. Within each wait/signal entry, type-dependent numeric values are checked first, then stage-family compatibility (wait entries only), and then whether the semaphore operation is permitted, including pending/signal reservations. Invalid fence/command-buffer/semaphore states or an unsupported stage result in `INVALID_SYNCHRONIZATION_STATE`; invalid type-dependent numeric values result in `BadValue`. In particular, a timeline signal value that is not greater than the observable counter results in `BadValue`; a value that exceeds the counter but is not greater than every already-reserved pending GPU signal value results in `INVALID_SYNCHRONIZATION_STATE`, as for `SignalSemaphore`. Any other dependency that prevents acceptance results in `DEPENDENCY_FAILED`. Type-dependent values such as binary wait/signal values are checked only after type resolution. Within each phase, the field/array order in the request is preserved. Every synchronously rejected request is atomic and generates no submission event. Execution failures reported after acceptance are not X11 errors.
 
-Der Server übernimmt den Token unverändert in das zugehörige `SUBMISSION_COMPLETE`- oder `SUBMISSION_FAILED`-Event sowie in submissionbezogene `ASYNC_ERROR`-Events. Die X11-Event-Sequence-Number ist davon unabhängig und identifiziert nicht die Submission.
+The server copies the token unchanged into the corresponding `SUBMISSION_COMPLETE` or `SUBMISSION_FAILED` event and into submission-related `ASYNC_ERROR` events. The X11 event sequence number is independent and does not identify the submission.
 
-### Wait-Stage-Maske
+### Wait Stage Mask
 
 `wait_stage_mask` ist eine XAverius-eigene `CARD32`-Bitmaske; die Bits sind **nicht** die numerischen Vulkan-`VkPipelineStageFlags`-Werte. Die v0.1-Zuordnung ist festgelegt:
 
@@ -57,29 +57,29 @@ Der Server übernimmt den Token unverändert in das zugehörige `SUBMISSION_COMP
 | `TRANSFER` | `0x00000004` | `VK_PIPELINE_STAGE_TRANSFER_BIT` |
 | `ALL_COMMANDS` | `0x00000008` | `VK_PIPELINE_STAGE_ALL_COMMANDS_BIT` |
 
-Bits 4–31 sind reserviert und müssen null sein. Die Maske muss mindestens ein Bit setzen. `ALL_COMMANDS` darf wie in Vulkan mit anderen unterstützten Bits kombiniert werden; solche Kombinationen sind semantisch redundant, aber gültig. XAverius übersetzt jedes gesetzte Bit explizit in den entsprechenden Vulkan-Wert und verknüpft die Vulkan-Bits per bitwise OR; die XAverius-Maske darf nicht unverändert als Vulkan-Maske durchgereicht werden.
+Bits 4–31 are reserved and MUST be zero. The mask MUST set at least one bit. As in Vulkan, `ALL_COMMANDS` may be combined with other supported bits; such combinations are semantically redundant but valid. XAverius explicitly translates each set bit to its corresponding Vulkan value and combines the Vulkan bits using bitwise OR; the XAverius mask MUST NOT be passed through unchanged as a Vulkan mask.
 
-Die gesetzten Stages müssen auf der adressierten Queue-Family unterstützt sein, entsprechend Vulkan-Synchronisationsregeln:
+The set stages MUST be supported by the addressed queue family under the Vulkan synchronization rules:
 
 - `DRAW_INDIRECT`: Queue-Family mit `GRAPHICS` oder `COMPUTE`.
 - `COMPUTE_SHADER`: Queue-Family mit `COMPUTE`.
 - `TRANSFER`: Queue-Family mit `GRAPHICS`, `COMPUTE` oder `TRANSFER`.
-- `ALL_COMMANDS`: auf jeder Queue-Family zulässig, die für das logische Device erstellt wurde.
+- `ALL_COMMANDS`: permitted on every queue family created for the logical device.
 
-Eine Maske mit unbekannten/reservierten Bits oder ohne gesetztes Bit ist syntaktisch ungültig und ergibt `BadValue`. Eine syntaktisch gültige Maske, deren Stage nicht von der adressierten Queue-Family unterstützt wird, ergibt `INVALID_SYNCHRONIZATION_STATE`. Diese Prüfung erfolgt vor Annahme; ein Fehler lässt Submission, Fence und Semaphore-Zustände unverändert.
+A mask with unknown/reserved bits or no set bits is syntactically invalid and results in `BadValue`. A syntactically valid mask whose stage is unsupported by the addressed queue family results in `INVALID_SYNCHRONIZATION_STATE`. This check occurs before acceptance; failure leaves submission, fence, and semaphore states unchanged.
 
-Für den Compute-only-Referenzablauf sind `COMPUTE_SHADER`, `TRANSFER` und `ALL_COMMANDS` gültige Einzelmasken auf einer Compute-fähigen Queue. `DRAW_INDIRECT` ist ebenfalls stage-seitig auf einer Compute-Queue zulässig, auch wenn der v0.1-Command-Stream keine indirekten Dispatch-Commands definiert. Der Wait wird am gewählten Vulkan-Ziel-Stage wirksam; er ist keine allgemeine Ersetzung für notwendige Memory-Dependencies zwischen Commands.
+For the compute-only reference workflow, `COMPUTE_SHADER`, `TRANSFER`, and `ALL_COMMANDS` are valid single-bit masks on a compute-capable queue. `DRAW_INDIRECT` is also permitted as a stage on a compute queue, even though the v0.1 command stream defines no indirect-dispatch commands. The wait takes effect at the selected Vulkan destination stage; it is not a general substitute for required memory dependencies between commands.
 
-Vor der Annahme werden alle Command Buffer und Synchronisationsobjekte geprüft. Alle Ressourcen müssen zum angegebenen Device gehören. Jeder Command Buffer muss ausführbar sein. Eine angegebene Fence muss `UNSIGNALED` sein und darf nicht bereits pending sein.
+Before acceptance, all command buffers and synchronization objects are validated. All resources MUST belong to the specified device. Every command buffer MUST be executable. A specified fence MUST be `UNSIGNALED` and MUST NOT already be pending.
 
-Doppelte Wait- oder Signal-Einträge sind in v0.1 ungültig und ergeben `BadValue`. Dieselbe Semaphore darf in einer Submission nicht gleichzeitig im Wait- und Signal-Array stehen; auch dieser Konflikt ergibt `BadValue`.
+Duplicate wait or signal entries are invalid in v0.1 and result in `BadValue`. The same semaphore MUST NOT appear in both the wait and signal arrays of one submission; this conflict also results in `BadValue`.
 
-**Atomaritätsgarantie:** Wird der Request abgelehnt, wird keine Submission angelegt und kein Synchronisationszustand verändert. Bei Annahme bedeutet der Request nur, dass die Arbeit eingereiht wurde; nicht, dass sie bereits abgeschlossen ist.
+**Atomicity guarantee:** If the request is rejected, no submission is created and no synchronization state changes. Acceptance means only that the work has been queued, not that it has completed.
 
-`QueueSubmit` ist ein Void-Request. Die Annahme oder Ablehnung wird synchron über die normalen X11-Fehlerregeln signalisiert; der Token dient ausschließlich der Korrelation späterer asynchroner Ergebnisse.
+`QueueSubmit` is a void request. Acceptance or rejection is reported synchronously through the normal X11 error rules; the token is used exclusively to correlate later asynchronous results.
 
 
-### Validation und atomare Annahme
+### Validation and Atomic Acceptance
 
 Die Validierung ist zweiphasig. Zuerst prüft der Server Request-Framing und Längen/Counts, reservierte Felder und Token-Syntax, danach löst er Ressourcen in der definierten Feldreihenfolge auf und prüft Typ, Client-/Device-Ownership sowie Queue-Zuordnung. Anschließend prüft er den Device-Zustand und sämtliche veränderlichen Submit-Voraussetzungen: jeder Command Buffer muss `EXECUTABLE`, nicht `PENDING` oder `INVALID`, sein; Fence und Semaphore müssen submitbar sein; Wait-Stages, Semaphore-Typen/-Werte, Timeline-Signalreservierungen und alle sonstigen Abhängigkeiten müssen gültig sein. Die allgemeine XID-Fehlerpräzedenz und die request-spezifische Reihenfolge gelten auch bei mehreren fehlerhaften Feldern; eine Implementierung darf nicht vorzeitig Zustand reservieren, nur weil sie einen früheren Eintrag bereits validiert hat.
 
@@ -88,7 +88,7 @@ Erst wenn alle Prüfungen erfolgreich sind, nimmt der Server die Submission als 
 Jede Ablehnung vor diesem Commit-Punkt ist vollständig nicht-mutierend: der Token bleibt unbenutzt und darf in einem korrigierten Request wiederverwendet werden; kein Command Buffer verlässt `EXECUTABLE`; keine Fence wechselt ihren Zustand oder wird einer Submission zugeordnet; Semaphore-Counter, Signalverfügbarkeit, Pending-Slots und Timeline-Reservierungen bleiben unverändert; es entstehen keine Submission-Objekte, internen Submission-Referenzen oder Submission-Events. Das gilt auch dann, wenn mehrere Command Buffer oder Synchronisationsobjekte bereits einzeln validiert wurden, bevor ein späterer Eintrag fehlschlägt. Ein synchroner Fehler darf kein `ASYNC_ERROR` für eine nicht angenommene Submission erzeugen.
 
 Die `EXECUTABLE`-zu-`PENDING`-Übergänge und die Synchronisationsreservierungen sind somit ein gemeinsamer Commit, nicht voneinander getrennte schrittweise Änderungen. Nach diesem Commit ist die Submission angenommen; spätere Backend-Fehler werden ausschließlich über den terminalen Submission-Ausgang und die definierten Synchronisationszustände verarbeitet.
-## Terminaler Submission-Zustand und Device Loss
+## Terminal Submission State and Device Loss
 
 Jede angenommene Submission hat genau einen terminalen Ausgang:
 
@@ -113,7 +113,7 @@ For an accepted submission, all semaphore wait/signal reservations and internal 
 
 A successful wait releases its pending-wait slot only after the wait has actually been satisfied. A successful signal releases its pending-signal slot only after its signal operation has actually completed; for a binary semaphore the signal then remains available until consumed by one successful wait. For a timeline semaphore, the successful signal updates the observable counter and removes its pending-value reservation. If a submission fails before an operation succeeds, the server must not fabricate a successful signal or wait consumption; it releases only reservations whose operation is known to be terminal, and applies the device-loss quarantine rules if backend quiescence cannot be established. Device loss fails all affected non-terminal submissions and prohibits new work on that device; it does not imply that backend references can be freed immediately.
 
-# Queue-Reihenfolge und queueübergreifende Abhängigkeiten
+# Queue Ordering and Cross-Queue Dependencies
 
 Die folgenden Regeln gelten für angenommene Submissions desselben logischen Devices:
 
@@ -126,7 +126,7 @@ Die folgenden Regeln gelten für angenommene Submissions desselben logischen Dev
 
 Diese Regeln spezifizieren notwendige Vulkan-kompatible Ordnungsgrenzen, nicht Scheduler-Implementierungsdetails. Insbesondere gibt es in v0.1 keine Zusage zu Fairness, maximaler Scheduling-Latenz oder Fortschritt innerhalb einer festen Frist.
 
-# Ordering- und Synchronisationsgarantien
+# Ordering and Synchronization Guarantees
 
 1. Requests derselben X11-Verbindung werden grundsätzlich in X11-Protokollreihenfolge validiert und verarbeitet. Ein Request, der auf GPU-Fortschritt wartet, darf den Dispatcher aber nicht so blockieren, dass ein späterer `SignalSemaphore`-Request derselben Verbindung den Fortschritt nicht mehr ermöglichen kann.
 2. Ein erfolgreicher `WriteBuffer`-Reply ist ein Ordnungsübergang innerhalb des angegebenen logischen Devices: alle zuvor angenommenen Submissions dieses Devices sind terminal, der Transfer ist abgeschlossen, und jede danach angenommene Submission auf jeder Queue dieses Devices sieht die geschriebenen Bytes. Es gibt keine geräteübergreifende Synchronisation. Während `WriteBuffer` wartet, darf ein späterer `SignalSemaphore`-Request ausgeführt werden, um frühere Arbeit freizugeben; spätere `QueueSubmit`-Requests bleiben bis zum Erfolg oder Fehlschlag des `WriteBuffer` zurückgestellt. Die Details sind in [Memory und Buffers](memory-buffers.md#57-writebuffer) normativ festgelegt. Erkennt der Server unter diesen zurückgestellten Requests einen Binary- oder Timeline-Signal-Entry, der einen Wait einer früheren nicht-terminalen Submission erfüllen würde, ohne dass bereits ein angenommener Signalvorgang diesen Wait erfüllen kann, muss `WriteBuffer` mit `DEPENDENCY_FAILED` fehlschlagen. Bei Timeline-Semaphoren muss der Signalwert den wartenden Wert erreichen oder überschreiten; bei Binary-Semaphoren muss es sich um dieselbe Semaphore handeln. Die Prüfung berücksichtigt nur bereits angenommene Signaloperationen als mögliche Freigabe, nicht Signal-Entries aus zurückgestellten Submissions. Der zurückgestellte `QueueSubmit` wird danach normal verarbeitet; er darf nicht vor einem erfolgreichen `WriteBuffer` angenommen werden. Solange er zurückgestellt ist, gilt er nicht als angenommen: Er darf weder Semaphore-/Fence-Zustände oder Pending-Reservierungen verändern noch interne Ressourcenreferenzen als angenommene Submission festschreiben. Seine vollständige Validierung und atomare Zustandsübernahme erfolgen erst bei der normalen Annahme nach Abschluss des `WriteBuffer`.
