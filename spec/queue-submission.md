@@ -50,7 +50,7 @@ The server copies the token unchanged into the corresponding `SUBMISSION_COMPLET
 
 `wait_stage_mask` ist eine XAverius-eigene `CARD32`-Bitmaske; die Bits sind **nicht** die numerischen Vulkan-`VkPipelineStageFlags`-Werte. Die v0.1-Zuordnung ist festgelegt:
 
-| XAverius-Bit | Maske | Vulkan-Stage |
+| XAverius Bit | Mask | Vulkan Stage |
 |---|---:|---|
 | `DRAW_INDIRECT` | `0x00000001` | `VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT` |
 | `COMPUTE_SHADER` | `0x00000002` | `VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT` |
