@@ -319,6 +319,49 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         state = self.state(device_lost=True, types_and_ownership_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
 
+    def test_binary_semaphore_nonzero_wait_value_is_bad_value(self) -> None:
+        state = self.state(semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY])
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,), wait_values=(1,)), "BadValue"
+        )
+
+    def test_binary_semaphore_nonzero_signal_value_is_bad_value(self) -> None:
+        state = self.state(semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY])
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0,), signal_values=(1,)), "BadValue"
+        )
+
+    def test_binary_semaphore_signal_slot_must_be_available(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            signal_slots=[1, None],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0,), signal_values=(0,)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
+    def test_reserved_wait_stage_bits_precede_xid_resolution(self) -> None:
+        state = self.state(xids_valid=False)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,), wait_stage_masks=(0x10,)), "BadValue"
+        )
+
+    def test_unsupported_wait_stage_follows_device_loss(self) -> None:
+        state = self.state(
+            device_lost=True, queue_supported_stage_mask=0x4,
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,), wait_stage_masks=(0x2,)), "DEVICE_LOST"
+        )
+
+    def test_unsupported_wait_stage_rejected_after_device_check(self) -> None:
+        state = self.state(queue_supported_stage_mask=0x4)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,), wait_stage_masks=(0x2,)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
     def test_same_semaphore_in_wait_and_signal_arrays_is_bad_value(self) -> None:
         state = self.state()
         self.assert_atomic_rejection(
