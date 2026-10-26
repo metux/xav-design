@@ -478,7 +478,7 @@ class GoldenXGEEventTests(unittest.TestCase):
             conformance,
         )
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event.", queue)
-        self.assertIn("An error detected before acceptance MUST NOT be emitted as `ASYNC_ERROR` for the same rejection.", queue)
+        self.assertIn("A synchronous error MUST NOT produce `ASYNC_ERROR` for a submission that was never accepted.", queue)
 
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
