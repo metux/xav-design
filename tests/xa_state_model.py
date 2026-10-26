@@ -241,7 +241,7 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         return "BadLength"
     if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
-    if request.operation == "CREATE" and not request.target_xid_available:
+    if request.operation in {"CREATE", "CREATE_FINAL"} and not request.target_xid_available:
         return "BadIDChoice"
     if not state.buffer_live or not state.pool_live:
         return "BadValue"
