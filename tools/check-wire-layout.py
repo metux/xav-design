@@ -1744,7 +1744,7 @@ def check_xge_abi(c: Check) -> None:
               "XGE header: exact total-size formula missing")
     c.require(re.search(r"connection byte order applies to both header and payload", header, re.I) is not None,
               "XGE header: connection byte order must apply to header and payload")
-    c.require(re.search(r"GenericEvent\s*\(35\)", wire) is not None and
+    c.require(re.search(r"GenericEvent\s*(?:=\s*35|\(35\))", wire) is not None and
               re.search(r"XAverius has no separately assigned server-side XGE event base", wire, re.I) is not None,
               "wire protocol: GenericEvent code and no separate XAverius event base must be explicit")
 
