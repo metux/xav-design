@@ -138,6 +138,43 @@ class TimelineSignalLifecycleTests(unittest.TestCase):
             [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.EXECUTABLE],
         )
 
+    def test_failed_higher_signal_keeps_lower_reservation_binding(self) -> None:
+        state = self.state()
+        self.submit_signal(state, token=92, value=12, command_buffer=0)
+        self.submit_signal(state, token=93, value=18, command_buffer=1)
+
+        # The higher reservation fails first. The lower signal is still
+        # non-terminal and must remain the slot summary and a binding limit.
+        self.assertEqual(finish_submission(state, 93, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [2])
+        self.assertEqual(state.pending_timeline_signals, [(92, 0, 12)])
+        self.assertEqual(state.signal_slots, [12])
+
+        # Use a fresh command buffer so validation reaches the signal value.
+        state.command_buffers.append(
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+        )
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            queue_submit(
+                state,
+                SubmitRequest(
+                    token=94,
+                    command_buffer_indices=(2,),
+                    signal_indices=(0,),
+                    signal_values=(10,),
+                ),
+            ),
+            "BadValue",
+        )
+        self.assertEqual(state, before)
+
+        # The lower operation can then finish and publish its own value.
+        self.assertEqual(finish_submission(state, 92, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [12])
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(state.pending_timeline_signals, [])
+
     def test_device_loss_wins_over_late_backend_success_callback(self) -> None:
         state = self.state()
         self.submit_signal(state, token=50, value=12)
