@@ -62,7 +62,7 @@ Other relationships are dependencies, not automatic ownership relationships:
 - Pipeline ↔ Pipeline Layout
 - Pipeline ↔ Shader Module während der Erstellung
 - Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
-- Command Buffer ↔ Ressourcen, die in aufgezeichneten Commands verwendet werden
+- Command buffer ↔ resources used by recorded commands
 
 The implementation MUST NOT assume that every object whose handle was used to create another object must remain alive indefinitely. The applicable Vulkan lifetime rules determine the required lifetime.
 
@@ -73,51 +73,51 @@ The implementation MUST NOT assume that every object whose handle was used to cr
 | Device | Invalidates device and children immediately | Internal cleanup is deferred |
 | CommandPool | Atomically invalidates the pool and child command buffers | Reject while any child is pending |
 | CommandBuffer | XID becomes invalid | Reject while pending |
-| DescriptorPool | Invalidiert Pool und alle Kind-Sets atomar | Abweisen, wenn ein Kind-Set pending ist oder ein Kind-Set von einem `RECORDING`-Command-Buffer referenziert wird |
-| DescriptorSet | XID wird ungültig | Abweisen, solange pending oder von einem `RECORDING`-Command-Buffer referenziert; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
-| Buffer | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer ihn referenziert oder angenommene Arbeit ihn direkt/indirekt verwendet; bei erfolgreichem Destroy werden nicht-pending `EXECUTABLE`-Command-Buffer mit dieser Referenz `INVALID`. Interne Freigabe verzögern, solange Serveroperationen oder Descriptor-Slots das Objekt noch referenzieren |
-| Memory | Nur bei erfolgreicher Prüfung invalidiert | `FreeMemory` wird abgewiesen, solange irgendein Buffer daran gebunden ist oder angenommene Arbeit die Allokation verwendet |
-| Pipeline | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer sie referenziert oder angenommene Arbeit sie verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
-| PipelineLayout | XID wird ungültig | Abweisen, solange ein `RECORDING`-Command-Buffer es referenziert oder angenommene Arbeit es verwendet; bei Erfolg werden referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID` |
-| ShaderModule | Nach erfolgreicher Pipeline-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
-| DescriptorSetLayout | Nach erfolgreicher Pipeline-Layout-Erstellung unabhängig zerstörbar | Vulkan-Lebensdauerregeln bleiben maßgeblich |
-| Fence | XID wird ungültig | Abweisen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
-| Semaphore | XID wird ungültig | Abweisen, solange ein angenommener Queue-Wait/-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Server-Host-Operation die Semaphore verwendet; terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply |
-| Physical Device | Nicht durch Client zerstörbar | Server-Ownership; XID wird nie neu zugewiesen |
-| Surface (presentation profile) | XID wird bei erfolgreichem `DestroySurface` oder Connection-Teardown ungültig; die interne Window-Identität/Referenz wird erst freigegeben, wenn Surface-, Swapchain- und Backend-Referenzen sicher beendet sind | Zerstörung wird atomar abgewiesen, solange eine live Swapchain darauf verweist; Window-Zerstörung markiert die weiterhin adressierbare Surface als `SURFACE_LOST` und erzeugt weder implizite Surface-Zerstörung noch Rebinding bei XID-Wiederverwendung |
-| Swapchain (presentation profile) | XID wird ungültig; Image-/Backend-Speicher ggf. verzögert freigegeben | Zerstörung wird abgewiesen, solange Recording-Command-Buffer, pending Acquires, angenommene Queue-/Präsentationsarbeit oder mögliche Backend-Zugriffe die Images referenzieren; ein acquired-but-idle Image allein blockiert nicht. Device-Zerstörung invalidiert die XID und verzögert interne Freigabe bis Quieszenz |
+| DescriptorPool | Atomically invalidates the pool and all child sets | Reject if any child set is pending or referenced by a `RECORDING` command buffer |
+| DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
+| Buffer | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used directly/indirectly by accepted work; on successful destruction, non-pending `EXECUTABLE` command buffers with this reference become `INVALID`. Defer internal release while server operations or descriptor slots still reference the object |
+| Memory | Invalidated only after successful validation | Reject `FreeMemory` while any buffer remains bound to it or accepted work uses the allocation |
+| Pipeline | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
+| PipelineLayout | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
+| ShaderModule | May be destroyed independently after successful pipeline creation | Vulkan lifetime rules remain authoritative |
+| DescriptorSetLayout | May be destroyed independently after successful pipeline-layout creation | Vulkan lifetime rules remain authoritative |
+| Fence | XID becomes invalid | Reject while the fence belongs to a non-terminal submission or an open `WaitForFence` registration references that exact internal fence identity; a wait already determined to be terminal does not block destruction merely because its reply is still pending |
+| Semaphore | XID becomes invalid | Reject while an accepted queue wait/signal, an open `WaitSemaphores` registration for that exact internal semaphore identity, or another active server-side host operation uses the semaphore; a wait already determined to be terminal does not block destruction merely because its reply is still pending |
+| Physical Device | Cannot be destroyed by a client | Server-owned; XID is never reassigned |
+| Surface (presentation profile) | XID becomes invalid after successful `DestroySurface` or connection teardown; the internal window identity/reference is released only after surface, swapchain, and backend references have safely ended | Destruction is atomically rejected while a live swapchain references the surface; window destruction marks the still-addressable surface as `SURFACE_LOST` and causes neither implicit surface destruction nor rebinding when the XID is reused |
+| Swapchain (presentation profile) | XID becomes invalid; image/backend storage may be released later | Destruction is rejected while recording command buffers, pending acquires, accepted queue/presentation work, or possible backend accesses reference the images; an acquired-but-idle image alone does not block destruction. Device destruction invalidates the XID and defers internal release until quiescence |
 
-Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
+These rules are XAverius API decisions; they do not claim that Vulkan defines identical lifetime restrictions for all resource types.
 
 ## Recorded References and Command Buffer Invalidation
 
-Der Server verfolgt für jeden Command Buffer die Ressourcen, auf die seine aufgezeichneten Commands direkt oder indirekt verweisen. Dazu gehören insbesondere Pipelines, Pipeline Layouts, Descriptor Sets, Buffer und die über Descriptor Sets referenzierten Buffer. Diese Abhängigkeiten bleiben bestehen, solange der Command Buffer aufgezeichnet oder ausführbar ist. Eine Submission übernimmt eigene interne Referenzen, die bis zum terminalen Submission-Ausgang und bis zum Ende aller Backend-Zugriffe bestehen bleiben. Ein XID-Invalidieren darf nie einen Backend-Handle auf ein anderes Objekt umleiten.
+For each command buffer, the server tracks resources referenced directly or indirectly by its recorded commands. These include pipelines, pipeline layouts, descriptor sets, buffers, and buffers referenced through descriptor sets. These dependencies remain while the command buffer is recording or executable. A submission takes its own internal references, which remain until the submission reaches a terminal outcome and all backend accesses have ended. Invalidating an XID MUST never redirect a backend handle to another object.
 
-- Wird eine Ressource zerstört, auf die ein `RECORDING`-Command-Buffer verweist, wird die Zerstörung mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen. Der Client muss die Aufzeichnung beenden oder den Command Buffer verwerfen, bevor er die Ressource zerstört.
-- Wird eine Ressource zerstört, auf die ein `EXECUTABLE`-Command-Buffer verweist, werden diese Command Buffer vor erfolgreichem Abschluss des Destroy-Requests in `INVALID` überführt. Sie dürfen danach nicht eingereicht werden; eine erneute Aufzeichnung ist erforderlich.
-- Ist die Ressource in einer angenommenen Submission noch in Verwendung, gilt die ressourcenspezifische Pending-Regel aus der Zerstörungsmatrix. Ein Destroy-Request, der wegen Pending-Use abgewiesen wird, lässt XID und Command-Buffer-Zustände unverändert.
-- Ein Destroy-Request ist atomar: Wenn die ressourcenspezifische Regel die Zerstörung ablehnt, werden weder die öffentliche XID invalidiert noch Command-Buffer-Zustände geändert.
+- If a resource referenced by a `RECORDING` command buffer is destroyed, destruction is rejected with `INVALID_SYNCHRONIZATION_STATE`. The client must end recording or discard the command buffer before destroying the resource.
+- If a resource referenced by an `EXECUTABLE` command buffer is destroyed, those command buffers transition to `INVALID` before the destroy request completes successfully. They MUST NOT be submitted afterward; recording them again is required.
+- If the resource is still in use by an accepted submission, the resource-specific pending-use rule in the destruction matrix applies. A destroy request rejected due to pending use leaves the XID and command-buffer states unchanged.
+- A destroy request is atomic: if the resource-specific rule rejects destruction, neither the public XID nor command-buffer states are changed.
 
-Das gilt auch für indirekte Abhängigkeiten, die über Descriptor Set → Buffer oder Buffer → gebundenen Memory verlaufen. Der Server darf einen ausführbaren Command Buffer nicht als gültig behandeln, wenn eine seiner aufgezeichneten Ressourcenabhängigkeiten öffentlich zerstört wurde.
+This also applies to indirect dependencies through descriptor set → buffer or buffer → bound memory. The server MUST NOT treat an executable command buffer as valid if one of its recorded resource dependencies has been publicly destroyed.
 
 ## `DestroyResource`
 
-`DestroyResource` ist ein generischer Void-Request mit fester Gesamtlänge von 12 Bytes:
+`DestroyResource` is a generic void request with a fixed total length of 12 bytes:
 
 | Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `resource_xid` |
 
-Das logische Device und der Eigentümer werden aus der adressierten Ressource ermittelt. Der Request darf nur eine live Ressource adressieren, die dem aufrufenden Client gehört. Es gibt kein zusätzliches `device_xid`-Feld; dadurch kann der Request keine Ressource eines anderen Clients oder Devices umdeuten.
+The logical device and owner are determined from the addressed resource. The request may address only a live resource owned by the calling client. There is no additional `device_xid` field, so the request cannot reinterpret a resource belonging to another client or device.
 
-In v0.1 ist `DestroyResource` ausschließlich für Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline vorgesehen.
+In v0.1, `DestroyResource` is defined only for buffers, shader modules, descriptor set layouts, pipeline layouts, and pipelines.
 
-Der Request ist nicht für Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets, Memory, Fences oder Semaphores zulässig. Diese Typen besitzen eigene Lebensdauer- beziehungsweise Kaskadenregeln und müssen über `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence` oder `DestroySemaphore` behandelt werden. Ein `DestroyResource` auf einem ausgeschlossenen Typ wird mit `BadMatch` abgewiesen. Diese Ausschlüsse sind normativ; Implementierungen dürfen nicht stillschweigend einen anderen Destroy-Pfad wählen.
+The request is not valid for physical devices, logical devices, command pools, descriptor pools, command buffers, descriptor sets, memory, fences, or semaphores. These types have their own lifetime or cascading rules and must be handled through `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence`, or `DestroySemaphore`. `DestroyResource` on an excluded type is rejected with `BadMatch`. These exclusions are normative; implementations MUST NOT silently choose another destruction path.
 
-Die Eignung für den generischen Request ersetzt keine typabhängigen Lebensdauerprüfungen:
+Eligibility for the generic request does not replace type-specific lifetime checks:
 
-- Buffer: Pending-Use-Regeln, Command-Buffer-Invalidierung und stale Descriptor-Slots gelten wie oben beschrieben.
-- Pipeline und Pipeline Layout: Referenzen aus einem `RECORDING`-Command-Buffer verhindern die Zerstörung; Pending-Use verhindert sie ebenfalls. Bei erfolgreicher Zerstörung werden nicht-pending `EXECUTABLE`-Command-Buffer mit entsprechenden Referenzen `INVALID`.
+- Buffer: the pending-use rules, command-buffer invalidation, and stale descriptor-slot rules described above apply.
+- Pipeline and pipeline layout: references from a `RECORDING` command buffer prevent destruction; pending use also prevents it. On successful destruction, non-pending `EXECUTABLE` command buffers with matching references become `INVALID`.
 - Shader Module und Descriptor Set Layout: Nach Ende ihrer erforderlichen Erstellungs-/Pipeline-Layout-Abhängigkeit gelten die jeweiligen Vulkan-Lebensdauerregeln.
 
 Jede Ablehnung ist atomar und lässt die öffentliche XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert. Bei Erfolg wird die öffentliche XID im Request sofort ungültig; interne Objekte bleiben bis zum Ende aller erforderlichen Referenzen und Backend-Zugriffe erhalten. Die Device-weite Kaskadeninvalidierung bei `DestroyDevice` oder Client-Disconnect bleibt davon unberührt. Device Loss allein invalidiert keine öffentlichen XIDs; er terminalisiert angenommene Arbeit und verändert die betroffenen Ressourcen- und Synchronisationszustände gemäß den nachfolgenden Regeln.
