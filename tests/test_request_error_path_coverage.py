@@ -321,7 +321,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "alle zugehörigen öffentlichen XIDs werden `INVALID`",
             "bleiben `DESTROY_PENDING`",
-            "Event-Zustellung nicht durch",
+            "Event-Zustellung nicht durch die Lifecycle-Regeln",
             "ohne Completion zu erfinden",
             "Backend-Ressourcen vorzeitig freizugeben",
         ):
