@@ -25,6 +25,7 @@ from xa_state_model import (
     queue_submit,
     shader_module_data,
     finish_submission,
+    signal_timeline_host,
     reset_fence,
 )
 
