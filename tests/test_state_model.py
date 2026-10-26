@@ -512,6 +512,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
             signal_slots=[None, 12],
             signal_counters=[0, 0],
+            pending_timeline_signals=[(99, 1, 12)],
         )
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(1,), signal_values=(11,)),
