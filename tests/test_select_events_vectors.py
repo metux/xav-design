@@ -128,7 +128,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
 
     def test_layout_and_registry_match_normative_spec(self):
         document = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
-        section = re.search(r"^## Event-Auswahl: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", document, re.M)
+        section = re.search(r"^## Event Selection: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", document, re.M)
         self.assertIsNotNone(section)
         body = section.group(1)
         self.assertRegex(body, r"fest(?:e|er) Gesamtlänge von 32 Bytes")
@@ -365,12 +365,12 @@ class GoldenSelectEventsTests(unittest.TestCase):
             "Ein Fehler muss die bisherige Event-Auswahl unverändert lassen; eine erfolgreiche Anfrage ersetzt atomar nur die Auswahl für den angegebenen Scope.",
         ):
             self.assertIn(text, error_body)
-        self.assertIn("Eine nicht existierende Queue innerhalb eines gültigen Devices ergibt `BadValue`.", events)
-        self.assertIn("Bei jedem Fehler bleibt die vorherige Auswahl unverändert.", events)
+        self.assertIn("A nonexistent queue within a valid device results in `BadValue`.", events)
+        self.assertIn("On any error, the previous selection remains unchanged.", events)
 
     def test_event_mask_mapping_and_scope_reset_are_exhaustive(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
-        section = re.search(r"^## Event-Auswahl: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", events, re.M)
+        section = re.search(r"^## Event Selection: `SelectEvents`\s*$([\s\S]*?)(?=^## |\Z)", events, re.M)
         self.assertIsNotNone(section)
         body = section.group(1)
         expected = [
