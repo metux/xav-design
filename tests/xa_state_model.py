@@ -672,6 +672,11 @@ def finish_submission(
         else:
             state.binary_signal_states[index] = BinarySignalState.SIGNALED
         state.signal_slots[index] = None
+        if index < len(state.shared_semaphores):
+            shared = state.shared_semaphores[index]
+            if shared.signal_reservation == ("submit", token):
+                shared.signal_reservation = None
+                shared.signal_state = state.binary_signal_states[index]
     for reservation in list(state.pending_binary_waits):
         wait_token, index = reservation
         if wait_token != token:
@@ -704,6 +709,11 @@ def finish_submission(
                 previous if unchanged else BinarySignalState.UNTRUSTED
             )
             state.wait_states[index] = WaitState.READY if unchanged else WaitState.UNTRUSTED
+        if index < len(state.shared_semaphores):
+            shared = state.shared_semaphores[index]
+            if shared.wait_reservation == ("submit", token):
+                shared.wait_reservation = None
+                shared.signal_state = state.binary_signal_states[index]
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
