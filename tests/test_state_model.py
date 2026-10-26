@@ -9,6 +9,7 @@ from xa_state_model import (
     PresentRequest,
     PresentState,
     WaitState,
+    SemaphoreKind,
     queue_present,
     CommandBufferLifecycle,
     CommandBufferChunk,
