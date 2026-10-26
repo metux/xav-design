@@ -30,21 +30,20 @@ Omit sections that do not apply, but do not reorder sections without a reason. D
 Use this exact header for absolute request/reply/event offsets:
 
 ```markdown
-| Offset | Type | Field | Description |
+| Offset | Type | Field |
 |---:|---|---|---|
 ```
 
 Use this exact header for offsets relative to the beginning of a variable-length record:
 
 ```markdown
-| Relative Offset | Type | Field | Description |
+| Relative Offset | Type | Field |
 |---:|---|---|---|
 ```
 
 - Use decimal byte offsets unless the protocol explicitly defines another unit.
 - Use `CARD8`, `CARD16`, `CARD32`, `CARD64`, `FLOAT32`, `BYTE[n]`, `XID`, and other registered wire types exactly as defined by the protocol.
-- Put the wire field name in backticks. Put constraints, reserved-value requirements, and semantic meaning in Description.
-- Include Description even when a brief description repeats the field name; avoid leaving column meanings implicit.
+- Put the wire field name in backticks. Put constraints, reserved-value requirements, and semantic meaning in the Field cell after the field name, separated by a semicolon where useful.
 - For a fixed layout, list every field and every reserved/padding range. For variable payloads, specify the start offset, record size or formula, alignment, and padding requirements.
 - Do not mix prose-style field lists and tables for equivalent fixed layouts in neighboring request definitions. Use the canonical table unless the layout is a compact repeated record embedded in a larger request and the same field-list format is used consistently for that record family.
 
