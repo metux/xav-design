@@ -2099,6 +2099,9 @@ def check_presentation_profile(c: Check) -> None:
               "`present_supported` is 1 if and only if at least one queue-family record" in presentation,
               "CreateSwapchain/GetSurfaceCapabilities: capability validation and failure reply fields must be explicit")
     presentation_reply_tests = read("tests/test_presentation_reply_vectors.py")
+    c.require('validate_presentation_reply(kind, wire, order)' in presentation_reply_tests and
+              'for kind, statuses, total, reply_words in cases:' in presentation_reply_tests,
+              "presentation reply tests must pass every documented status through the validator in both byte orders")
     c.require("family_indices != list(range(families))" in presentation_reply_tests and
               "successful capabilities reply has zero queue families" in presentation_reply_tests and
               "aggregate present_supported does not match queue-family records" in presentation_reply_tests and
