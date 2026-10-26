@@ -1882,11 +1882,11 @@ def check_xge_abi(c: Check) -> None:
               re.search(r"For `origin = ORIGIN_QUEUE_SUBMIT`, `submission_token` MUST therefore be non-zero", events) is not None and
               re.search(r"a non-zero token MUST never identify a rejected `QueueSubmit` request", events) is not None,
               "XGE ASYNC_ERROR: origin/token relationship and rejected-submit exclusion must be normative and tested")
-    c.require("unknown `origin` values" in conformance and
+    c.require("Unknown `origin` values" in conformance and
               "`reserved = 0`" in doc_sections.get("ASYNC_ERROR", "") and
               re.search(r"reserved = 0", doc_sections.get("ASYNC_ERROR", "")) is not None,
               "XGE ASYNC_ERROR: invalid origin and reserved-field negative cases must be covered")
-    c.require("must have `resource_xid = 0`" in conformance and
+    c.require("MUST have `resource_xid = 0`" in conformance and
               "must set `resource_xid = 0`" in read("spec/events.md").lower() and
               "resource_xid = 0` serialisiert" in read("spec/resource-lifetime.md").lower() and
               "reused resource XIDs MUST NOT be emitted as `resource_xid`" in read("spec/resource-lifetime.md").lower(),
@@ -1903,14 +1903,14 @@ def check_xge_abi(c: Check) -> None:
               "SelectEvents: queue lookup and ownership failures must be distinguished")
     c.require("unmaskable `DEVICE_LOST` and `ASYNC_ERROR` events" in conformance and
               "resource_xid" in conformance and
-              "After successful processing of `DestroyDevice`, the server MUST NOT generate or deliver new XAverius events" in read("spec/resource-lifetime.md"),
+              "after successful processing of `DestroyDevice`, no new events using the destroyed `device_xid` may be generated or delivered" in read("spec/resource-lifetime.md"),
               "XGE event delivery: DestroyDevice suppression must cover all event XID fields")
-    c.require("gemeinsamer serialisierter Linearisierungspunkt" in conformance and
-              "gemeinsamen serialisierten Serverzustand" in events and
-              "A later backend callback MUST NOT change this decision retroactively" in events,
+    c.require("shared serialized linearization point" in conformance and
+              "one shared serialized server state" in events and
+              "A later backend callback MUST NOT retroactively change this decision" in events,
               "XGE event delivery: SelectEvents/DestroyDevice/completion race must be serialized")
     c.require("at most one of `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`" in conformance and
-              "For each accepted submission, the server MUST NOT deliver both `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`" in events,
+              "For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered" in events,
               "XGE submission events: exactly one terminal event per accepted submission")
 
     # Exercise the XGE length and reserved-header rules in both byte orders.
