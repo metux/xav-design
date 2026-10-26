@@ -605,6 +605,18 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(1,), signal_values=(11,)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
+    def test_timeline_signal_not_above_observed_counter_is_bad_value(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_slots=[None],
+            signal_counters=[12],
+            pending_timeline_signals=[],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0,), signal_values=(12,)),
             "BadValue",
         )
 
