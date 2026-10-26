@@ -470,8 +470,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # ResetCommandBuffer: structural and identity failures precede device/state checks.
         reset = recording[recording.index("`ResetCommandBuffer` ist ein Void-Request"):recording.index("Ein Command Pool ist Elternobjekt") ]
         reset_order = (
-            "Request-Länge",
-            "Unbekannte/nicht-live Device- oder Buffer-XIDs",
+            "feste Gesamtlänge von 16 Bytes",
+            "Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`",
             "falscher live Ressourcentyp",
             "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device",
             "Erst danach prüft der Server das `RESET_COMMAND_BUFFER`-Flag",
