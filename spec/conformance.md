@@ -6,22 +6,22 @@ Ziel-Workload:
 
 Typischer Ablauf:
 
-1. Physical Device enumerieren oder Default Device erstellen.
-2. Memory-Properties abfragen und logisches Device mit Compute-Queue erstellen.
-3. A-, B- und C-Buffer erstellen.
-4. Memory-Anforderungen abfragen, Speicher allozieren und Buffer binden.
-5. A und B mit unabhängigen `WriteBuffer`-Requests hochladen.
-6. Shader Module erstellen.
-7. Descriptor Set Layout, Descriptor Pool und Descriptor Set erstellen.
-8. Pipeline Layout und Compute Pipeline erstellen.
-9. Descriptor Set mit A, B und C aktualisieren.
-10. Command Pool und Command Buffer erstellen.
-11. Pipeline binden.
-12. Descriptor Sets binden.
-13. Bei Bedarf Push Constants setzen.
-14. `Dispatch` aufzeichnen und Command Buffer finalisieren.
-15. Fence/Semaphoren erstellen, sofern erforderlich.
-16. `QueueSubmit` ausführen.
+1. Enumerate physical devices or create the default device.
+2. Query memory properties and create a logical device with a compute queue.
+3. Create buffers A, B, and C.
+4. Query memory requirements, allocate memory, and bind the buffers.
+5. Upload A and B using independent `WriteBuffer` requests.
+6. Create the shader module.
+7. Create the descriptor set layout, descriptor pool, and descriptor set.
+8. Create the pipeline layout and compute pipeline.
+9. Update the descriptor set with A, B, and C.
+10. Create the command pool and command buffer.
+11. Bind the pipeline.
+12. Bind the descriptor sets.
+13. Set push constants if needed.
+14. Record `Dispatch` and finalize the command buffer.
+15. Create fences/semaphores if required.
+16. Execute `QueueSubmit`.
 17. Completion mit Fence oder Semaphore abwarten.
 18. C über `ReadBuffer` zurücklesen.
 19. Ressourcen nach den Lebenszyklusregeln zerstören.
