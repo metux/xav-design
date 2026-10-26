@@ -96,5 +96,36 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn("`" + name + "`", self.conformance)
 
 
+    def test_presentation_request_error_paths_match_registry(self):
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+        cases = {
+            "CreateSurface": ("BadIDChoice", "BadWindow", "BadMatch"),
+            "DestroySurface": ("BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE"),
+            "GetSurfaceCapabilities": ("BadValue", "BadMatch", "SURFACE_LOST", "DEVICE_LOST"),
+            "CreateSwapchain": ("BadIDChoice", "BadValue", "BadMatch", "OUT_OF_DATE", "SURFACE_LOST", "DEVICE_LOST", "ALLOCATION_FAILED", "UNSUPPORTED_CONFIGURATION"),
+            "DestroySwapchain": ("BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE"),
+            "AcquireNextImage": ("BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE", "NOT_READY", "TIMEOUT", "OUT_OF_DATE", "SURFACE_LOST", "DEVICE_LOST", "DEVICE_DESTROYED"),
+            "QueuePresent": ("BadValue", "BadMatch", "INVALID_SYNCHRONIZATION_STATE", "DEPENDENCY_FAILED", "OUT_OF_DATE", "SURFACE_LOST", "DEVICE_LOST"),
+        }
+        for subopcode, (request, outcomes) in enumerate(cases.items(), start=41):
+            with self.subTest(request=request):
+                self.assertIn("`" + request + "`", registry)
+                self.assertIn("`" + request + "`", presentation)
+                self.assertIn("`" + request + "`", self.errors)
+                self.assertIn(f"`{request}` | {subopcode} |", registry)
+                for outcome in outcomes:
+                    self.assertIn(outcome, self.errors)
+                    self.assertIn(outcome, presentation)
+
+    def test_presentation_rejections_preserve_state_and_status_is_not_x11_error(self):
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        self.assertIn("leaves the target XID unallocated", presentation)
+        self.assertIn("no partial object, reference, image-state, synchronization-state, or token change", self.errors)
+        self.assertIn("Token uniqueness is checked against previously accepted presentations", self.errors)
+        self.assertIn("first terminal result serialized", self.errors)
+        self.assertIn("QueuePresent reply status values are 0 SUCCESS", presentation)
+        self.assertIn("normal reply statuses", self.errors)
+
 if __name__ == "__main__":
     unittest.main()
