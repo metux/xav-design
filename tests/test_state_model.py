@@ -1249,5 +1249,42 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.signal_slots, [None])
 
 
+    def test_timeline_wait_callbacks_remove_only_their_own_pending_waits(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[1],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=421, command_buffer_indices=(0,),
+                wait_indices=(0,), wait_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=422, command_buffer_indices=(1,),
+                wait_indices=(0,), wait_values=(12,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            state.pending_timeline_waits, [(421, 0, 8), (422, 0, 12)]
+        )
+
+        self.assertEqual(finish_submission(state, 421, success=True), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [(422, 0, 12)])
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 421, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+        self.assertEqual(finish_submission(state, 422, success=False), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
