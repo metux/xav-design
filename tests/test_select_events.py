@@ -270,15 +270,15 @@ class SelectEventsContractTests(unittest.TestCase):
         row = re.search(r"^\| `SelectEvents` \| (\d+) \| Void \|", REQUESTS, re.M)
         self.assertIsNotNone(row)
         self.assertEqual(int(row.group(1)), SUBOPCODE)
-        self.assertIn("32 Bytes", EVENTS)
-        self.assertIn("ersetzt atomar die bisherige Maske", EVENTS)
+        self.assertIn("fixed total length of 32 bytes", EVENTS)
+        self.assertIn("atomically replaces the existing mask for exactly one scope", EVENTS)
 
     def test_mask_replacement_and_destroy_device_scope_cleanup_are_normative(self):
         self.assertIn("event_mask = 0", EVENTS)
-        self.assertIn("entfernt keine Auswahl anderer Scopes", EVENTS)
-        self.assertIn("werden seine Device- und Queue-Auswahlen entfernt", EVENTS)
-        self.assertIn("Bei jedem Fehler bleibt die vorherige Auswahl unverändert", EVENTS)
-        self.assertIn("keine neuen Events mit der zerstörten `device_xid`", EVENTS)
+        self.assertIn("does not remove selections for other scopes", EVENTS)
+        self.assertIn("its Device and Queue selections are removed", EVENTS)
+        self.assertIn("On any error, the previous selection remains unchanged", EVENTS)
+        self.assertIn("no new events using the destroyed `device_xid` may be generated or delivered", EVENTS)
 
     def test_submission_terminal_event_is_selected_at_linearization_point(self):
         required = (
@@ -356,7 +356,7 @@ class SelectEventsContractTests(unittest.TestCase):
         self.assertIn("Suppressing delivery does not change the internal terminal outcome", EVENTS)
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event", SUBMISSIONS)
         self.assertIn("Every accepted submission has exactly one terminal outcome", SUBMISSIONS)
-        self.assertIn("cascading invalidation", LIFETIME)
+        self.assertIn("DestroyDevice", LIFETIME)
         self.assertIn("Device loss alone does not invalidate public XIDs", LIFETIME)
 
 
