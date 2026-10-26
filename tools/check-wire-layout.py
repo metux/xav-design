@@ -206,14 +206,6 @@ def check_events(c: Check) -> None:
               "synchronization: timeline counter must not advance at submission acceptance")
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
-    c.require(
-        "nicht größer als der beobachtbare Counter ist, `BadValue`" in submissions
-        and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
-        and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
-        and "kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe" in errors
-        and "`BadValue`" in errors,
-        "QueueSubmit: distinguish invalid timeline counter values from pending reservation conflicts",
-    )
     c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
     c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
@@ -294,6 +286,14 @@ def check_events(c: Check) -> None:
               "typabhängiger Binary-Wert ist nicht null oder Timeline-Signalwert ist nicht größer als der beobachtbare Counter" in errors and
               "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt `DEVICE_LOST`" in conformance,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
+    c.require(
+        "nicht größer als der beobachtbare Counter ist, `BadValue`" in submissions
+        and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
+        and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
+        and "kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe" in errors
+        and "`BadValue`" in errors,
+        "QueueSubmit: distinguish invalid timeline counter values from pending reservation conflicts",
+    )
     c.require(
         "Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen" in read("spec/memory-buffers.md")
         and "Device-Zustandsprüfung hat Vorrang vor diesen request-spezifischen Kompatibilitäts- und Pending-Zustandsprüfungen" in read("spec/shaders-pipelines.md")
