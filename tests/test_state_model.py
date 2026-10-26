@@ -2303,8 +2303,6 @@ class BinaryWaitReservationFailureTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
         self.assertEqual(present.wait_states, [WaitState.UNTRUSTED])
         before = copy.deepcopy(present)
-        self.assertEqual(
-            queue_present(present, PresentRequest(token=322, wait_indices=(0,))),
-            PresentResult("DEPENDENCY_FAILED", False),
-        )
+        result = queue_present(present, PresentRequest(token=322, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted), ("DEPENDENCY_FAILED", False))
         self.assertEqual(present, before)
