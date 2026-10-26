@@ -27,6 +27,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
     def test_all_required_serialized_race_pairs_are_present(self) -> None:
         labels = (
             "**Acquire timeout versus lifecycle:**",
+            "**Acquire synchronization eligibility versus timeout:**",
             "**DestroyDevice versus pending acquire:**",
             "**DestroySurface versus CreateSwapchain:**",
             "**DestroyDevice versus CreateSwapchain:**",
@@ -52,6 +53,8 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`", self.presentation)
         self.assertIn("Registration-only references are released exactly once", self.races)
         self.assertIn("signals neither object", self.presentation)
+        self.assertIn("before polling or registering a wait", self.presentation)
+        self.assertIn("INVALID_SYNCHRONIZATION_STATE` before `NOT_READY`/`TIMEOUT`", self.races)
 
     def test_surface_and_swapchain_lifetimes_are_atomic(self) -> None:
         self.assertIn("A Surface must not be destroyed while a live Swapchain references it.", self.presentation)
