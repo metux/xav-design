@@ -133,11 +133,11 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("Image release / reacquisition eligibility", event_contract)
         self.assertIn("Presentation completion", event_contract)
         self.assertIn("These milestones may occur at different times", event_contract)
-        self.assertIn("An image is reacquirable only after internal release", race_contract)
+        self.assertIn("An image is reacquirable only after internal release", self.conformance)
         self.assertIn("both milestone orders", race_contract)
 
     def test_event_masks_are_sampled_independently_at_each_milestone(self) -> None:
-        race_contract = self.races.split(
+        race_contract = self.conformance.split(
             "- Presentation event race vectors MUST exercise", 1
         )[1].split("\n- ", 1)[0]
         self.assertIn("image release before presentation completion", race_contract)
@@ -165,9 +165,9 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         race_contract = self.races.split(
             "- Presentation event race vectors MUST exercise", 1
         )[1].split("\n- ", 1)[0]
-        self.assertIn("Masking or suppressed delivery never skips internal cleanup", race_contract)
+        self.assertIn("Masking or suppressed delivery never skips internal cleanup", self.conformance)
         self.assertIn("An image is reacquirable only after internal release", race_contract)
-        self.assertIn("event is visible only under its delivery conditions", race_contract)
+        self.assertIn("event is visible only under its delivery conditions", self.conformance)
         self.assertIn("exactly one image-release-or-invalidation transition", race_contract)
 
 
