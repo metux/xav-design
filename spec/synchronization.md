@@ -167,7 +167,7 @@ Unknown or non-live device or fence XIDs result in `BadValue`; a live resource o
 
 The reply is exactly 32 bytes long. Offset 8 contains a `CARD32 status`; offsets 12–31 are zero and `reply.length = 0`.
 
-Reply-Status:
+Reply status:
 
 - `SUCCESS = 0`
 - `TIMEOUT = 1`
