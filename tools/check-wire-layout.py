@@ -1319,7 +1319,7 @@ def check_reply_layouts(c: Check) -> None:
         ]),
         "GetSemaphoreCounterValue": ("sync", [
             (r"Offset 8: \x60CARD64 counter_value\x60", "counter value at offset 8"),
-            (r"(?:Offset 16–31: reserved; MUST be zero|Offset 16–31: reserviert, null)", "reserved reply bytes"),
+            (r"(?:Offset 16–31: reserved, zero|Offset 16–31: reserviert, null)", "reserved reply bytes"),
             (r"Reply payload length: zero", "fixed 32-byte reply"),
         ]),
         "WaitSemaphores": ("sync", [
@@ -1337,7 +1337,7 @@ def check_reply_layouts(c: Check) -> None:
             (r"(?:Byte 1: Fence-Status|Byte 1: fence status)", "status byte"),
             (r"Offsets 2–3: standard X11 reply sequence number", "sequence field"),
             (r"Offsets 4–7: standard \x60reply\.length = 0\x60", "zero reply.length"),
-            (r"(?:Offsets 8–31: reserved for XAverius; MUST be zero|Offsets 8–31: XAverius-reserviert, null)", "reserved reply bytes"),
+            (r"(?:Offsets 8–31: reserved for XAverius, zero|Offsets 8–31: XAverius-reserviert, null)", "reserved reply bytes"),
         ]),
         "WaitForFence": ("sync", [
             (r"Request: exactly 24 bytes", "fixed request length"),
