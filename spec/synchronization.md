@@ -2,14 +2,14 @@
 
 ## Creating Semaphores
 
-`CreateSemaphore` hat 28 Bytes:
+`CreateSemaphore` has a total length of 28 bytes:
 
 - Offset 8: Device-XID
 - Offset 12: Semaphore-XID
 - Offset 16: `CARD32 semaphore_type`
 - Offset 20: `CARD64 initial_value`
 
-Typen:
+Types:
 
 - `BINARY = 0`
 - `TIMELINE = 1`
@@ -65,9 +65,9 @@ Fixed request header: 28 bytes; total length: `28 + 12 * semaphore_count` bytes.
 - Offset 12: `CARD32 semaphore_count`
 - Offset 16: `CARD32 wait_mode`
 - Offset 20: `CARD64 timeout_ns`
-- Offset 28: Array aus 12-Byte-Entries
+- Offset 28: array of 12-byte entries
 
-Jeder Entry enthält Semaphore-XID und `CARD64 wait_value`.
+Each entry contains a semaphore XID and `CARD64 wait_value`.
 
 Wait-Modi:
 
@@ -78,10 +78,10 @@ Die Request-Länge muss exakt `28 + 12 * semaphore_count` Bytes betragen; eine L
 
 ### Timeout-Semantik
 
-Für `timeout_ns` gilt:
+The following rules apply to `timeout_ns`:
 
-- `0`: nicht blockierend; der Server prüft den Zustand einmal und antwortet sofort.
-- `UINT64_MAX`: unbegrenzt warten, bis die Bedingung erfüllt ist oder das Device verloren geht.
+- `0`: non-blocking; the server checks the condition once and replies immediately.
+- `UINT64_MAX`: wait indefinitely until the condition is satisfied or the device is lost.
 - Jeder andere Wert: Timeout in Nanosekunden, gemessen mit einer monotonen, nicht durch Systemzeitkorrekturen verstellten Uhr. Die Frist beginnt, sobald der Server diesen Request zur Ausführung übernimmt.
 
 Der Server darf eine endliche Wartefrist intern in mehrere Warteabschnitte aufteilen, muss aber die ursprüngliche Frist beibehalten. Scheduler-Verzögerungen dürfen die Frist nicht absichtlich neu starten. Ist die Bedingung bei der abschließenden Zustandsprüfung erfüllt, wird `SUCCESS` zurückgegeben; andernfalls nach Ablauf der Frist `TIMEOUT`. Der Server muss keine Antwort exakt am Nanosekunden-Grenzpunkt liefern; die tatsächliche Antwort darf durch Scheduling verzögert eintreffen.
@@ -94,7 +94,7 @@ Der Reply ist genau 32 Bytes lang. Offset 8 enthält einen `CARD32 status` mit `
 
 ## `SignalSemaphore`
 
-Request: 24 Bytes; Void-Request ohne Reply.
+Request: 24 bytes; void request with no reply.
 
 - Offset 8: Device-XID
 - Offset 12: Semaphore-XID
@@ -116,25 +116,25 @@ Validierungsfehler und unmittelbar feststellbare Vulkan-Fehler werden als normal
 
 ## States
 
-Vorgesehene Zustände:
+Defined states:
 
 - `UNSIGNALED = 0`
 - `PENDING = 1`
 - `SIGNALED = 2`
 - `FAILED = 3`
 
-Übergänge:
+Transitions:
 
 - Erstellung → `UNSIGNALED`
-- angenommene Submission mit Fence → `PENDING`
+- accepted submission with a fence → `PENDING`
 - erfolgreiche Completion → `SIGNALED`
-- asynchroner Ausführungsfehler → `FAILED`
-- Reset aus `SIGNALED` oder `FAILED` → `UNSIGNALED`
-- abgelehnte Submission → Zustand bleibt unverändert
+- asynchronous execution failure → `FAILED`
+- reset from `SIGNALED` or `FAILED` → `UNSIGNALED`
+- rejected submission → state remains unchanged
 
 ## `CreateFence`
 
-Gesamtlänge: 24 Bytes.
+Total length: 24 bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Fence-XID
@@ -147,12 +147,12 @@ Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourc
 
 Request: exakt 16 Bytes; Device-XID bei Offset 8, Fence-XID bei Offset 12. Andere Längen ergeben `BadLength`. Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`; falscher live Ressourcentyp, fremde Client-/Device-Ownership oder Cross-Device-Verwendung ergeben `BadMatch`. Die Abfrage gibt den serverseitig gespeicherten Fence-Zustand zurück, auch nach Device Loss.
 
-Reply: 32 Bytes.
+Reply: 32 bytes.
 
-- Byte 0: standardmäßiges X11-Reply-`response_type`
+- Byte 0: standard X11 reply `response_type`
 - Byte 1: Fence-Status (`UNSIGNALED = 0`, `PENDING = 1`, `SIGNALED = 2`, `FAILED = 3`)
-- Offsets 2–3: standardmäßige X11-Reply-Sequenznummer
-- Offsets 4–7: standardmäßiges `reply.length = 0`
+- Offsets 2–3: standard X11 reply sequence number
+- Offsets 4–7: standard `reply.length = 0`
 - Offsets 8–31: XAverius-reserviert, null
 
 ## `WaitForFence`
