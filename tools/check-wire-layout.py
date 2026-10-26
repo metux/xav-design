@@ -207,7 +207,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
     c.require(
-        "nicht größer als der beobachtbare Counter ist, ist ein ungültiger Wert (`BadValue`)" in submissions
+        "nicht größer als der beobachtbare Counter ist, `BadValue`" in submissions
         and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
         and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
         and "kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe" in errors
@@ -291,7 +291,7 @@ def check_events(c: Check) -> None:
               "prüft `QueueSubmit` nach Device-Zustand zuerst die optionale Fence" in conformance,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device nicht verfügbar/verloren.*?\n\| `QueueSubmit`: Command Buffer nicht `EXECUTABLE`", errors, re.S) is not None and
-              "typabhängiger Binary-/Timeline-Semaphore-Wert ist ungültig" in errors and
+              "typabhängiger Binary-Wert ist nicht null oder Timeline-Signalwert ist nicht größer als der beobachtbare Counter" in errors and
               "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt `DEVICE_LOST`" in conformance,
               "QueueSubmit: error table and conformance must follow device-before-state precedence")
     c.require(
