@@ -1130,7 +1130,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)),
-            "BadValue",
+            "INVALID_SYNCHRONIZATION_STATE",
         )
 
     def test_timeline_signal_not_above_current_counter_is_bad_value(self) -> None:
