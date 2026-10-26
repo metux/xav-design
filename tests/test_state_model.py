@@ -284,12 +284,22 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(queue_submit(state, request), expected)
         self.assertEqual(state, before, "rejected submission partially mutated state")
 
+    def test_counts_length_precedes_scalar_and_xid_errors(self) -> None:
+        state = self.state(xids_valid=False, scalar_valid=False)
+        self.assert_atomic_rejection(state, SubmitRequest(counts_valid=False), "BadLength")
+
     def test_reused_token_precedes_xid_type_and_device_errors(self) -> None:
         state = self.state(
             accepted_tokens={7}, xids_valid=False, types_and_ownership_valid=False,
             device_lost=True,
         )
         self.assert_atomic_rejection(state, SubmitRequest(token=7), "BadValue")
+
+    def test_bad_command_buffer_index_precedes_device_loss(self) -> None:
+        state = self.state(device_lost=True)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(command_buffer_indices=(99,)), "BadValue"
+        )
 
     def test_queue_xid_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, queue_xid_valid=False)
@@ -304,7 +314,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
     def test_late_invalid_signal_rejects_all_reservations(self) -> None:
         state = self.state(signal_slots=[None, 9])
-        self.assert_atomic_rejection(state, SubmitRequest(signal_values=(5, 8)), "INVALID_SYNCHRONIZATION_STATE")
+        self.assert_atomic_rejection(state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)), "INVALID_SYNCHRONIZATION_STATE")
 
     def test_device_loss_precedes_command_buffer_state_after_xid_checks(self) -> None:
         state = self.state(device_lost=True, command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)])
@@ -320,13 +330,13 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             wait_states=[WaitState.READY, WaitState.READY],
         )
         self.assert_atomic_rejection(
-            state, SubmitRequest(wait_indices=(0,), signal_values=(3, 4), attach_fence=True),
+            state, SubmitRequest(wait_indices=(0,), signal_indices=(0, 1), signal_values=(3, 4), attach_fence=True),
             "INVALID_SYNCHRONIZATION_STATE",
         )
 
     def test_success_commits_all_submission_state_together(self) -> None:
         state = self.state()
-        result = queue_submit(state, SubmitRequest(token=42, wait_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
+        result = queue_submit(state, SubmitRequest(token=42, wait_indices=(0, 1), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
         self.assertEqual(result, "SUCCESS")
         self.assertEqual(state.command_buffers[0].lifecycle, CommandBufferLifecycle.PENDING)
         self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
