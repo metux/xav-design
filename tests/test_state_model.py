@@ -1385,6 +1385,51 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.signal_slots, [None])
 
 
+    def test_device_loss_callbacks_in_reverse_order_do_not_publish_timeline_values(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3],
+            signal_slots=[None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=413, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=414, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(13,),
+            )),
+            "SUCCESS",
+        )
+
+        # Device loss wins over a late backend success. The higher reservation
+        # completes first but must not publish its value or release token 413.
+        state.device_lost = True
+        self.assertEqual(finish_submission(state, 414, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(state.pending_timeline_signals, [(413, 0, 8)])
+        self.assertEqual(state.signal_slots, [8])
+
+        # The lower callback is also late; it must drain its own reservation
+        # without advancing the counter after Device Loss.
+        self.assertEqual(finish_submission(state, 413, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 414, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+
     def test_timeline_wait_callbacks_remove_only_their_own_pending_waits(self) -> None:
         state = self.state(
             command_buffers=[
