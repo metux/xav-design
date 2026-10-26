@@ -39,10 +39,10 @@ Timeline-Semaphoren besitzen einen monoton steigenden unsigned 64-bit Counter.
 
 - A wait is satisfied when the observable counter reaches or exceeds the requested value.
 - A wait MAY be queued before the signal that satisfies it is queued.
-- Signalwerte müssen größer als der aktuelle Counter und mit allen Pending-Signalen konsistent sein. Zur atomaren Validierung zählt ein angenommenes, noch nicht terminales Signal als pending, auch wenn sein Counter-Wert noch nicht erreicht ist; neue GPU-Signalwerte müssen größer als alle bereits reservierten pending Signalwerte derselben Semaphore sein. Ein pending GPU-Signal reserviert seinen Wert, erhöht aber den beobachtbaren Counter nicht.
+- Signal values MUST be greater than the current counter and consistent with all pending signals. For atomic validation, an accepted signal that has not reached a terminal state counts as pending even if its counter value has not yet been reached; new GPU signal values MUST be greater than all already reserved pending signal values for the same semaphore. A pending GPU signal reserves its value but does not increase the observable counter.
 - The observable counter advances only when the corresponding signal operation has actually completed successfully. Acceptance of a `QueueSubmit` request reserves the signal value but MUST NOT advance the counter prematurely.
 - A successfully executed signal satisfies all previously queued waits whose values are reached; a wait does not modify the counter.
-- Mehrere Signal-Entries derselben Timeline-Semaphore in einem einzelnen `QueueSubmit` sind in v0.1 nicht erlaubt.
+- Multiple signal entries for the same timeline semaphore in a single `QueueSubmit` are not permitted in v0.1.
 - After a failed submission or device loss, a value that was only reserved and never successfully signaled MUST NOT be reported as reached. Reservations are released only when the corresponding operation becomes terminal; after device loss, no further normal signal operations are permitted on that device.
 
 ## `GetSemaphoreCounterValue`
@@ -74,7 +74,7 @@ Wait-Modi:
 - `WAIT_ANY = 0`
 - `WAIT_ALL = 1`
 
-Die Request-Länge muss exakt `28 + 12 * semaphore_count` Bytes betragen; eine Längenabweichung oder ein arithmetischer Überlauf ergibt `BadLength`. Die synchrone Validierung folgt verbindlich dieser Reihenfolge: (1) Länge und checked-arithmetic, (2) `semaphore_count != 0`, gültiger `wait_mode` und keine doppelten Semaphore-XIDs (`BadValue`), (3) Device-XID und danach Semaphore-XIDs in Array-Reihenfolge auflösen (`BadValue` bei unbekannt/nicht-live), (4) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zugehörigkeit prüfen (`BadMatch`), (5) Device-Zustand prüfen, (6) prüfen, dass alle Semaphoren Timeline-Semaphoren sind (`BadMatch`). Die Prüfungen bis einschließlich Schritt 6 erfolgen vor Registrierung des Waits; jede synchrone Ablehnung hinterlässt keine Wait-Registrierung. Ein bereits verlorenes Device führt nach erfolgreicher XID-/Typ-/Ownership-Prüfung zu `DEVICE_LOST` als X11-Fehler. Für einen bereits registrierten offenen Wait ist Device Loss dagegen ein terminales Wait-Ergebnis und kein nachträglicher Request-Validierungsfehler; wird `DestroyDevice` verarbeitet, solange der Wait noch offen ist und Device Loss nicht zuvor terminal festgestellt wurde, ergibt sich `DEVICE_DESTROYED`.
+The request length MUST be exactly `28 + 12 * semaphore_count` bytes; a length mismatch or arithmetic overflow results in `BadLength`. Synchronous validation MUST follow this order: (1) length and checked arithmetic; (2) `semaphore_count != 0`, a valid `wait_mode`, and no duplicate semaphore XIDs (`BadValue`); (3) resolve the device XID and then semaphore XIDs in array order (`BadValue` for unknown or non-live XIDs); (4) check resource type, client/device ownership, and cross-device association (`BadMatch`); (5) check device state; (6) verify that all semaphores are timeline semaphores (`BadMatch`). Checks through step 6 occur before registering the wait; every synchronous rejection leaves no wait registration. If the device is already lost, validation after successful XID/type/ownership checks returns the X11 error `DEVICE_LOST`. For a wait that is already registered and open, device loss is instead a terminal wait result, not a subsequent request-validation error. If `DestroyDevice` is processed while the wait remains open and device loss has not already been established as terminal, the result is `DEVICE_DESTROYED`.
 
 ### Timeout-Semantik
 
@@ -82,7 +82,7 @@ The following rules apply to `timeout_ns`:
 
 - `0`: non-blocking; the server checks the condition once and replies immediately.
 - `UINT64_MAX`: wait indefinitely until the condition is satisfied or the device is lost.
-- Jeder andere Wert: Timeout in Nanosekunden, gemessen mit einer monotonen, nicht durch Systemzeitkorrekturen verstellten Uhr. Die Frist beginnt, sobald der Server diesen Request zur Ausführung übernimmt.
+- Any other value: timeout in nanoseconds measured with a monotonic clock that is not adjusted by wall-clock corrections. The deadline starts when the server takes the request for execution.
 
 Der Server darf eine endliche Wartefrist intern in mehrere Warteabschnitte aufteilen, muss aber die ursprüngliche Frist beibehalten. Scheduler-Verzögerungen dürfen die Frist nicht absichtlich neu starten. Ist die Bedingung bei der abschließenden Zustandsprüfung erfüllt, wird `SUCCESS` zurückgegeben; andernfalls nach Ablauf der Frist `TIMEOUT`. Der Server muss keine Antwort exakt am Nanosekunden-Grenzpunkt liefern; die tatsächliche Antwort darf durch Scheduling verzögert eintreffen.
 
