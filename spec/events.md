@@ -7,8 +7,8 @@ All events below use XGE. The seven compute-baseline events use IDs from the [ce
 | 0 | CARD8 | `response_type = GenericEvent (35)` |
 | 1 | CARD8 | `extension`: dynamisch zugewiesener XAverius-Major-Opcode |
 | 2 | CARD16 | X11-Event-Sequenznummer |
-| 4 | CARD32 | XGE `length`, Anzahl der Vierbyteeinheiten nach Offset 32 |
-| 8 | CARD16 | `evtype`, statische Event-Type-ID aus der Event-Registry |
+| 4 | CARD32 | XGE `length`, number of four-byte units after offset 32 |
+| 8 | CARD16 | `evtype`, static event type ID from the event registry |
 | 10–31 | — | XGE-reservierte Header-Bytes, null |
 
 Event-specific fields begin at offset 32. The total length is exactly `32 + 4 * length`; the connection byte order applies to both header and payload. The `extension` and `evtype` values are not interchangeable: the former is dynamically assigned by each X11 server, while the latter is statically assigned by XAverius.
@@ -23,7 +23,7 @@ Total length: 60 bytes; XGE `length = 7`.
 | 32 | XID | Device XID; zero if not device-related |
 | 36 | CARD32 | `error_code`, zentraler XAverius-Fehleroffset |
 | 40 | CARD32 | `origin` |
-| 44 | CARD64 | `submission_token`, 0 falls nicht submissionbezogen |
+| 44 | CARD64 | `submission_token`, 0 if not associated with a submission |
 | 52 | XID | betroffene Ressourcen-XID, null falls keine |
 | 56 | CARD32 | `reserved = 0` |
 
@@ -51,7 +51,7 @@ The `reason_code` values are defined by the shared [device reason-code registry]
 
 ## `DEVICE_STATUS_CHANGED`
 
-Gesamtlänge: 48 Bytes; XGE `length = 4`.
+Total length: 48 bytes; XGE `length = 4`.
 
 - Offset 32: Physical-Device-XID
 - Offset 36: `CARD32 new_status`
@@ -70,10 +70,10 @@ The `reason_code` field uses the shared [device reason-code registry](../registr
 
 ## `DEVICE_MEMORY_PRESSURE`
 
-Gesamtlänge: 48 Bytes; XGE `length = 4`.
+Total length: 48 bytes; XGE `length = 4`.
 
 - Offset 32: Device-XID
-- Offset 36: `CARD32 heap_index`; `UINT32_MAX` bedeutet kein bestimmter Heap. Jeder andere Wert MUSS kleiner als `memory_heap_count` aus `GetPhysicalDeviceMemoryProperties` des physischen Devices sein, auf dem das logische Device basiert; andernfalls darf dieses Event nicht gesendet werden.
+- Offset 36: `CARD32 heap_index`; `UINT32_MAX` means no specific heap. Any other value MUST be less than `memory_heap_count` from `GetPhysicalDeviceMemoryProperties` for the physical device underlying the logical device; otherwise, this event MUST NOT be sent.
 - Offset 40: `CARD32 pressure_level`
 - Offset 44: `CARD32 reserved = 0`
 
@@ -86,7 +86,7 @@ Pressure-Level:
 
 ## `DEVICE_IDLE`
 
-Gesamtlänge: 48 Bytes; XGE `length = 4`.
+Total length: 48 bytes; XGE `length = 4`.
 
 - Offset 32: Device-XID
 - Offset 36: `CARD32 idle_reason`
@@ -112,7 +112,7 @@ The `queue_family_index` and `queue_index` fields identify exactly the queue to 
 
 ## `SUBMISSION_FAILED`
 
-Gesamtlänge: 56 Bytes; XGE `length = 6`.
+Total length: 56 bytes; XGE `length = 6`.
 
 - Offset 32: Device-XID
 - Offset 36: `CARD32 queue_family_index`
@@ -135,28 +135,28 @@ Total length: 64 bytes; XGE `length = 8`.
 | Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device-XID |
-| 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
-| 40 | CARD32 | `queue_index` der akzeptierten Präsentationsoperation |
+| 36 | CARD32 | `queue_family_index` of the accepted presentation operation |
+| 40 | CARD32 | `queue_index` of the accepted presentation operation |
 | 44 | XID | Swapchain-XID |
 | 48 | CARD32 | `image_index` |
 | 52 | CARD32 | `reserved = 0` |
-| 56 | CARD64 | `presentation_token` aus dem Client-Request |
+| 56 | CARD64 | `presentation_token` from the client request |
 
 Dieses Event bezeichnet den internen Übergang, bei dem die Präsentationsbackend-Zugriffe auf dieses Image beendet sind und es wieder erworben werden darf. Es beweist nicht, dass die Präsentation ihren Completion-Punkt erreicht hat. Dieser Freigabeübergang darf pro akzeptierter Präsentationsoperation höchstens einmal stattfinden. Ein `IMAGE_RELEASED`-Event wird genau dann eingereiht, wenn das Image wiederverwendbar ist, die Queue-Maske (Bit 2) am Freigabe-Linearisierungspunkt gesetzt ist, die ursprüngliche Verbindung noch zustellbar ist und die Device-Lifecycle-Regeln die Event-Erzeugung erlauben. Wird das Image stattdessen invalidiert, wird kein `IMAGE_RELEASED`-Event eingereiht; `PRESENTATION_COMPLETE` meldet den terminalen Fehler, sofern dessen eigene Zustellbedingungen erfüllt sind. Maskierung oder unterdrückte Zustellung überspringt niemals den internen Freigabe-/Invalidierungsübergang. Eine spätere Änderung der Maske ändert die bereits getroffene Zustellentscheidung nicht.
 
 ## `PRESENTATION_COMPLETE`
 
-Gesamtlänge: 64 Bytes; XGE `length = 8`.
+Total length: 64 bytes; XGE `length = 8`.
 
 | Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device-XID |
-| 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
-| 40 | CARD32 | `queue_index` der akzeptierten Präsentationsoperation |
+| 36 | CARD32 | `queue_family_index` of the accepted presentation operation |
+| 40 | CARD32 | `queue_index` of the accepted presentation operation |
 | 44 | XID | Swapchain-XID |
 | 48 | CARD32 | `image_index` |
-| 52 | CARD32 | `status` aus der Präsentations-Event-Status-Registry |
-| 56 | CARD64 | `presentation_token` aus dem Client-Request |
+| 52 | CARD32 | `status` from the presentation event status registry |
+| 56 | CARD64 | `presentation_token` from the client request |
 
 Dieses Event bezeichnet den einmaligen internen terminalen Ausgang jeder akzeptierten Präsentationsoperation. Ein `PRESENTATION_COMPLETE`-Event wird genau dann eingereiht, wenn die Queue-Maske (Bit 3) beim Serialisieren dieses terminalen Ergebnisses gesetzt ist, die ursprüngliche Verbindung noch zustellbar ist und die Device-Lifecycle-Regeln die Event-Erzeugung erlauben. `SUCCESS` bedeutet, dass der definierte Completion-Punkt der Präsentationsbackend erfolgreich erreicht wurde; andere Statuswerte beschreiben den terminalen Fehlerzustand. Das Event darf unabhängig von `IMAGE_RELEASED` eintreffen. `PRESENTATION_COMPLETE` allein macht das Image nicht erneut erwerbbar. Wenn ein Fehler die Wiederverwendung verhindert, wird das Image invalidiert und die Swapchain als nicht mehr verwendbar markiert. Nach erfolgreicher Verarbeitung von `DestroyDevice` dürfen keine neuen Events mit dessen Device-XID erzeugt oder zugestellt werden; bereits vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt. Nach Disconnect wird nichts mehr an die geschlossene Verbindung zugestellt, die interne Operation wird dennoch terminalisiert. Spätere Maskenänderungen ändern die Zustellentscheidung für dieses Event nicht. Beide Events haben voneinander unabhängige Masken- und Lifecycle-Entscheidungen, da ihre terminalen Zeitpunkte verschieden sein können.
 
