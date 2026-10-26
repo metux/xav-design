@@ -2174,3 +2174,54 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         self.assertEqual(buffer.descriptor_slot_refs, 0)
         self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
         self.assertEqual(buffer.internal_state, "RELEASED")
+
+
+class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
+    def test_duplicate_old_signal_callback_cannot_mutate_reused_semaphore_cycle(self) -> None:
+        shared = SharedBinarySemaphore()
+        first = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(first, SubmitRequest(token=201, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(first, 201, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=202, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 202, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+
+        second = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(second, SubmitRequest(token=203, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        before_shared = copy.deepcopy(shared)
+        before_second = copy.deepcopy(second)
+        # Duplicate terminal notification for the old submission must be a
+        # mutation-free rejection, not clear the new signal reservation.
+        self.assertEqual(finish_submission(first, 201, success=False), "BadValue")
+        self.assertEqual(shared, before_shared)
+        self.assertEqual(second, before_second)
+        self.assertEqual(shared.signal_reservation, ("submit", 203))
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
