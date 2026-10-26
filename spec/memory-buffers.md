@@ -94,7 +94,7 @@ The reply payload length is zero. Size and alignment MUST be positive. `memory_t
 
 ## 5.4 `AllocateMemory`
 
-Gesamtlänge: 32 Bytes.
+Total length: 32 bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Memory-XID
@@ -106,7 +106,7 @@ The allocation size MUST be positive, and the memory-type index MUST exist for t
 
 ## 5.5 `FreeMemory`
 
-Gesamtlänge: 16 Bytes.
+Total length: 16 bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Memory-XID
@@ -144,37 +144,37 @@ Request:
 - Offset 16: `CARD64 buffer_offset`
 - Offset 24: `CARD32 data_length`
 - Offset 28: Byte-Payload
-- anschließend Null-Padding bis zur nächsten Vierbytegrenze
+- zero padding through the next four-byte boundary
 
-Gesamtlänge:
+Total length:
 
 `28 + ((uint64(data_length) + 3) & ~uint64(3))`
 
-`data_length` muss positiv sein. Die Gesamtlänge muss mit breiterer als 32-Bit-Arithmetik berechnet werden. Ist sie nicht ohne Überlauf darstellbar oder größer als die für diese Verbindung geltende maximale X11-Request-Länge, wird der Request mit `BadLength` abgewiesen. Das Padding muss vollständig aus Nullbytes bestehen; nicht-null Padding ergibt `BadValue`.
+`data_length` MUST be positive. The total length MUST be calculated using arithmetic wider than 32 bits. If it cannot be represented without overflow or exceeds the maximum X11 request length for this connection, the request is rejected with `BadLength`. Padding MUST consist entirely of zero bytes; non-zero padding results in `BadValue`.
 
-Der Buffer muss gebunden sein, `TRANSFER_DST` besitzen und den vollständigen Zielbereich abdecken. Bounds werden überlaufsicher mit `buffer_offset <= buffer_size` und `data_length <= buffer_size - buffer_offset` geprüft.
+The buffer MUST be bound, have `TRANSFER_DST` usage, and cover the complete destination range. Bounds are checked without overflow using `buffer_offset <= buffer_size` and `data_length <= buffer_size - buffer_offset`.
 
-Jeder `WriteBuffer`-Request ist ein eigenständiger Schreibvorgang. Es gibt weder Upload-ID noch einen mehrteiligen Upload-Transaktionszustand oder ein Final-Chunk-Flag.
+Each `WriteBuffer` request is an independent write operation. There is no upload ID, multi-part upload transaction state, or final-chunk flag.
 
-Clients dürfen mehrere Requests im normalen X11-Request-Stream hintereinander senden. Jeder Request erhält seine eigene Sequenznummer und seinen eigenen Reply.
+Clients may send multiple requests consecutively in the normal X11 request stream. Each request receives its own sequence number and reply.
 
-`WriteBuffer` ist ein Reply-Request. Bei Erfolg sendet der Server einen leeren Standard-X11-Reply von 32 Bytes; bei einem Fehler vor Abschluss sendet er den definierten X11-Fehler. Ein Void-Request ohne Reply wäre mit den folgenden Abschlussgarantien nicht vereinbar.
+`WriteBuffer` is a reply request. On success, the server sends an empty standard 32-byte X11 reply; on a failure before completion, it sends the defined X11 error. A void request without a reply would not satisfy the completion guarantees below.
 
 Ein erfolgreicher Reply garantiert normativ:
 
-1. Die Eingabedaten wurden vollständig übernommen; der Client darf seinen Eingabepuffer wiederverwenden.
-2. Der Transfer ist abgeschlossen und alle erforderlichen Host-Cache- sowie GPU-Visibility-Operationen sind erfolgt.
-3. Alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions desselben logischen Devices haben ihren terminalen Ausgang erreicht und das Backend greift nicht mehr auf Ressourcen zu, deren Zugriff mit dem Schreibtransfer kollidieren könnte, bevor der Schreibtransfer die Zieldaten verändert. Dies verhindert Rennen mit früher eingereihter GPU-Arbeit, auch wenn sie auf einer anderen Queue läuft.
-4. Jeder `QueueSubmit` desselben logischen Devices, den der Server nach erfolgreicher Verarbeitung dieses Requests annimmt, muss die geschriebenen Bytes sehen, wenn die Submission sie liest. Das gilt unabhängig von Queue-Family und Queue-Index und auch dann, wenn der Buffer oder Speicher nicht host-coherent ist.
-5. Diese Garantie gilt für den gesamten geschriebenen Bereich und erfordert keine expliziten Semaphore oder Barrieren des Clients zwischen diesem Upload und später angenommenen Submissions.
+1. The input data has been fully consumed; the client may reuse its input buffer.
+2. The transfer has completed and all required host-cache and GPU-visibility operations have completed.
+3. All `QueueSubmit` submissions for the same logical device that were accepted before this `WriteBuffer` request have reached a terminal outcome, and the backend no longer accesses resources in a way that could conflict with the write before the transfer modifies the destination data. This prevents races with earlier queued GPU work, including work on another queue.
+4. Every `QueueSubmit` for the same logical device accepted after this request is successfully processed MUST observe the written bytes when reading them. This applies regardless of queue family or queue index, including when the buffer or memory is not host-coherent.
+5. This guarantee applies to the entire written range and requires no explicit client semaphores or barriers between this upload and later accepted submissions.
 
 Diese Regeln definieren einen Ordnungsübergang ausschließlich innerhalb des angegebenen logischen Devices: frühere angenommene GPU-Arbeit → abgeschlossener `WriteBuffer`-Transfer → später angenommene GPU-Arbeit. Es gibt keine implizite Synchronisation mit anderen logischen Devices, auch wenn diese derselben physischen GPU zugeordnet sind. Logische Devices gehören jeweils der Client-Verbindung, die sie erstellt hat.
 
-Der Server darf den X11-Request-Dispatcher nicht synchron blockieren, während er auf frühere GPU-Arbeit wartet, wenn dadurch ein späterer `SignalSemaphore`-Request derselben Verbindung nicht mehr verarbeitet werden könnte. Ein solcher späterer Host-Signal-Request darf ausgeführt werden, um frühere Submissions freizugeben. Spätere `QueueSubmit`-Requests derselben Verbindung dürfen dagegen erst angenommen werden, nachdem `WriteBuffer` erfolgreich abgeschlossen wurde; sie müssen bis dahin zurückgestellt werden. So bleibt die Upload-Grenze wirksam, ohne eine Submission durch einen Host-Signal-Request zu deadlocken. Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht; zurückgestellte Requests werden nach Feststellung des Fehlers gemäß ihren normalen Regeln weiterverarbeitet. Während ein `WriteBuffer` auf frühere Submissions wartet, muss der Server außerdem die Signal-Entries zurückgestellter `QueueSubmit`-Requests auf einen möglichen Abhängigkeitszyklus prüfen. Wenn eine zurückgestellte Submission ein Binary-Semaphore signalisiert, auf das eine frühere nicht-terminale Submission wartet, oder einen Timeline-Wert signalisiert, der den von einer früheren nicht-terminalen Submission erwarteten Wert erreicht oder überschreitet, und kein bereits angenommener Signalvorgang diesen Wait erfüllen kann, muss der Server den ausstehenden `WriteBuffer` mit `DEPENDENCY_FAILED` beenden, statt auf den zurückgestellten GPU-Signalvorgang zu warten. Für diese Prüfung zählen Signal-Entries aus zurückgestellten Submissions nicht als angenommene oder verfügbare Signale. Solange ein `QueueSubmit` zurückgestellt ist, darf er weder Semaphore-/Fence-Zustände oder Pending-Reservierungen verändern noch interne Ressourcenreferenzen als angenommene Submission festschreiben; vollständige Validierung und atomare Zustandsübernahme erfolgen erst nach Abschluss des `WriteBuffer`. Danach werden zurückgestellte Requests in normaler Request-Reihenfolge verarbeitet. Diese konservative Regel kann einen Upload auch dann ablehnen, wenn ein noch nicht eingetroffener Host-Signal-Request denselben Wait hätte erfüllen können; sie verhindert jedoch, dass die Upload-Ordnungsgrenze einen bereits erkennbaren Zyklus unauflösbar macht.
+The server MUST NOT synchronously block the X11 request dispatcher while waiting for earlier GPU work if doing so would prevent a later `SignalSemaphore` request on the same connection from being processed. Ein solcher späterer Host-Signal-Request darf ausgeführt werden, um frühere Submissions freizugeben. Spätere `QueueSubmit`-Requests derselben Verbindung dürfen dagegen erst angenommen werden, nachdem `WriteBuffer` erfolgreich abgeschlossen wurde; sie müssen bis dahin zurückgestellt werden. So bleibt die Upload-Grenze wirksam, ohne eine Submission durch einen Host-Signal-Request zu deadlocken. Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht; zurückgestellte Requests werden nach Feststellung des Fehlers gemäß ihren normalen Regeln weiterverarbeitet. Während ein `WriteBuffer` auf frühere Submissions wartet, muss der Server außerdem die Signal-Entries zurückgestellter `QueueSubmit`-Requests auf einen möglichen Abhängigkeitszyklus prüfen. Wenn eine zurückgestellte Submission ein Binary-Semaphore signalisiert, auf das eine frühere nicht-terminale Submission wartet, oder einen Timeline-Wert signalisiert, der den von einer früheren nicht-terminalen Submission erwarteten Wert erreicht oder überschreitet, und kein bereits angenommener Signalvorgang diesen Wait erfüllen kann, muss der Server den ausstehenden `WriteBuffer` mit `DEPENDENCY_FAILED` beenden, statt auf den zurückgestellten GPU-Signalvorgang zu warten. Für diese Prüfung zählen Signal-Entries aus zurückgestellten Submissions nicht als angenommene oder verfügbare Signale. Solange ein `QueueSubmit` zurückgestellt ist, darf er weder Semaphore-/Fence-Zustände oder Pending-Reservierungen verändern noch interne Ressourcenreferenzen als angenommene Submission festschreiben; vollständige Validierung und atomare Zustandsübernahme erfolgen erst nach Abschluss des `WriteBuffer`. Danach werden zurückgestellte Requests in normaler Request-Reihenfolge verarbeitet. Diese konservative Regel kann einen Upload auch dann ablehnen, wenn ein noch nicht eingetroffener Host-Signal-Request denselben Wait hätte erfüllen können; sie verhindert jedoch, dass die Upload-Ordnungsgrenze einen bereits erkennbaren Zyklus unauflösbar macht.
 
-In v0.1 darf der Server dies konservativ durch vollständiges Warten auf vorherige Submissions und durch notwendige Transfer-/Speicherbarrieren beziehungsweise Device-Synchronisation implementieren. Eine optimierte Implementierung darf feingranularer arbeiten, muss aber dieselbe beobachtbare Ordnung und das beschriebene Fortschrittsverhalten garantieren.
+In v0.1, the server MAY implement this conservatively by waiting for all earlier submissions and using the required transfer/memory barriers or device synchronization. An optimized implementation may use finer-grained synchronization but MUST guarantee the same observable ordering and progress behavior.
 
-Ein vorheriger Submission-Fehler allein verhindert den Upload nicht, sofern das Device weiterhin verwendbar ist: Der Server wartet auf den terminalen Ausgang, führt den Transfer danach aus und garantiert die neuen Bytes für spätere Arbeit. Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden. Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.
+An earlier submission failure alone does not prevent the upload if the device remains usable: the server waits for the terminal outcome, then performs the transfer and guarantees the new bytes to later work. If the device is lost, `WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply. A failed upload likewise MUST NOT produce a successful reply; the destination contents are then not guaranteed.
 
 ## 5.8 `ReadBuffer`
 
@@ -187,14 +187,14 @@ Request:
 
 Gesamtlänge: 28 Bytes.
 
-Die Länge muss positiv sein. Der Buffer muss gebunden sein, `TRANSFER_SRC` besitzen und den angeforderten Bereich abdecken. Bounds werden überlaufsicher mit `buffer_offset <= buffer_size` und `data_length <= buffer_size - buffer_offset` geprüft.
+The length MUST be positive. The buffer MUST be bound, have `TRANSFER_SRC` usage, and cover the requested range. Bounds are checked without overflow using `buffer_offset <= buffer_size` and `data_length <= buffer_size - buffer_offset`.
 
-Der Reply enthält nach dem 32-Byte-Header genau `data_length` gelesene Bytes ab Offset 32 und anschließend Null-Padding auf vier Bytes. `reply.length = floor((uint64(data_length) + 3) / 4)`; die Rechnung erfolgt in mindestens 64-Bit-Arithmetik. Das Padding ist Teil des X11-Reply-Transports und nicht Teil der Buffer-Daten.
+After the 32-byte header, the reply contains exactly `data_length` bytes read from offset 32, followed by zero padding to a four-byte boundary. `reply.length = floor((uint64(data_length) + 3) / 4)`; the calculation uses at least 64-bit arithmetic. Padding is part of X11 reply transport, not buffer data.
 
 `ReadBuffer` definiert einen Snapshot-Ordnungsübergang innerhalb des adressierten logischen Devices. Der Server muss vor dem Snapshot alle vor diesem Request angenommenen `QueueSubmit`-Submissions abwarten, deren Arbeit den angeforderten Bereich direkt oder über eine andere gebundene Ressource schreiben kann, und sicherstellen, dass deren Backend-Zugriffe auf den Bereich beendet sind. Dasselbe gilt für alle vor diesem Request eingereihten `WriteBuffer`-Transfers: Ein erfolgreicher Transfer muss abgeschlossen sein; ein fehlgeschlagener Transfer muss terminal sein und darf den Zielbereich nicht mehr im Backend verändern können. Eine bloße logische Terminalisierung reicht nicht aus, solange Backend-Zugriffe noch möglich sind. Ein fehlgeschlagener früherer `WriteBuffer` liefert keine Sichtbarkeitsgarantie für dessen Zielbereich; `ReadBuffer` darf deshalb nicht so tun, als seien die fehlgeschlagenen Eingabedaten geschrieben worden. Erforderliche Host-Visibility- und Cache-Operationen müssen vor dem Snapshot abgeschlossen sein. Bloße Queue-Reihenfolge auf einer einzelnen Queue reicht nicht aus, wenn andere Queues beteiligt sind.
 
 Der Server muss die angeforderten Bytes in einen stabilen Daten-Snapshot übernehmen, bevor ein späterer `QueueSubmit` desselben Devices den gelesenen Bereich verändern darf. Solche späteren `QueueSubmit`-Requests dürfen bis zur Erfassung des Snapshots zurückgestellt werden; sie gelten währenddessen nicht als angenommen und dürfen keine Semaphore-/Fence-Zustände, Pending-Reservierungen oder internen Referenzen angenommener Submissions verändern. Danach werden sie in normaler Request-Reihenfolge validiert und verarbeitet. Der Request-Dispatcher darf während des Wartens nicht so blockieren, dass ein späterer Host-`SignalSemaphore`-Request derselben Verbindung eine frühere Submission nicht mehr freigeben kann. Wie bei `WriteBuffer` muss der Server erkennbare Abhängigkeitszyklen prüfen: Wenn ein zurückgestelltes Queue-Signal für eine frühere nicht-terminale Submission erforderlich wäre und kein bereits angenommener Signalvorgang den Wait erfüllen kann, muss `ReadBuffer` mit `DEPENDENCY_FAILED` fehlschlagen, statt auf den zurückgestellten Signalvorgang zu warten. Signal-Entries zurückgestellter Submissions gelten dabei nicht als angenommene oder verfügbare Signale. Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot; zurückgestellte Requests werden danach nach ihren normalen Regeln weiterverarbeitet.
 
-Ein früherer Submission-Fehler verhindert `ReadBuffer` nicht allein, solange das Device weiterhin verwendbar ist. Der Reply enthält dann die tatsächlich im Snapshot lesbaren Bytes, aber XAverius garantiert nicht, dass ein Bereich, dessen beabsichtigter Schreibzugriff fehlgeschlagen ist, die vom fehlgeschlagenen Shader oder Transfer erwarteten Daten enthält. Der Server darf aus einem fehlgeschlagenen Submission-Status keine erfolgreiche Ausführung oder Datenintegrität ableiten. Ist das logische Device verloren, muss `ReadBuffer` mit `DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden; Daten dürfen nicht aus einem Backend gelesen werden, dessen Zugriffssicherheit oder Quieszenz nicht feststeht. Interne Ressourcen und Speicher bleiben bis zum nachweislichen Ende möglicher Backend-Zugriffe referenziert oder werden gemäß den Device-Loss-Regeln quarantänisiert.
+An earlier submission failure does not by itself prevent `ReadBuffer` while the device remains usable. The reply contains the bytes actually readable in the snapshot, but XAverius does not guarantee that a range whose intended write failed contains the data expected from the failed shader or transfer. The server MUST NOT infer successful execution or data integrity from a failed submission status. If the logical device is lost, `ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply; data MUST NOT be read from a backend whose access safety or quiescence is unknown. Internal resources and memory remain referenced until possible backend accesses are proven to have ended, or are quarantined under the device-loss rules.
 
-Eine konservative Implementierung darf für v0.1 das Device vollständig synchronisieren, wenn keine feinere Abhängigkeitsverfolgung vorhanden ist. Sie muss trotzdem den Snapshot vor späteren schreibenden Submissions stabilisieren und die oben genannten Regeln für Submission-Fehler, Abhängigkeitszyklen und Device Loss einhalten.
+For v0.1, an implementation MAY synchronize the entire device if finer-grained dependency tracking is unavailable. It MUST still stabilize the snapshot before later write submissions and comply with the rules above for submission failures, dependency cycles, and device loss.
