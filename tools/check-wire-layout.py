@@ -776,15 +776,15 @@ def check_request_document_coverage(c: Check) -> None:
     if destroy_section:
         generic = destroy_section.group(1)
         c.require(
-            "ausschließlich für Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline" in generic,
+            "defined only for buffers, shader modules, descriptor set layouts, pipeline layouts, and pipelines" in generic,
             "DestroyResource: eligible generic resource types changed or are incomplete",
         )
         c.require(
-            "Physical Devices, logische Devices, Command Pools, Descriptor Pools, Command Buffers, Descriptor Sets, Memory, Fences oder Semaphores" in generic,
+            "not valid for physical devices, logical devices, command pools, descriptor pools, command buffers, descriptor sets, memory, fences, or semaphores" in generic,
             "DestroyResource: excluded resource types must remain explicit",
         )
         c.require(
-            "`DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence` oder `DestroySemaphore`" in generic,
+            "handled through `DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, `FreeMemory`, `DestroyFence`, or `DestroySemaphore`" in generic,
             "DestroyResource: specialized destruction paths must be named",
         )
 
