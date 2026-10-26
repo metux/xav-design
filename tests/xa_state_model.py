@@ -745,10 +745,20 @@ def finish_submission(
             state.wait_states[index] = WaitState.READY
         else:
             unchanged = binary_payload_unchanged and ("wait", index) in binary_payload_unchanged
-            state.binary_signal_states[index] = (
-                previous if unchanged else BinarySignalState.UNTRUSTED
-            )
-            state.wait_states[index] = WaitState.READY if unchanged else WaitState.UNTRUSTED
+            shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
+            if unchanged:
+                # The callback only proves this wait left the payload alone;
+                # it does not authorize restoring an older snapshot over a
+                # signal callback that completed while this wait was pending.
+                current = shared.signal_state if shared is not None else previous
+                state.binary_signal_states[index] = current
+                state.wait_states[index] = (
+                    WaitState.UNTRUSTED if current is BinarySignalState.UNTRUSTED
+                    else WaitState.READY
+                )
+            else:
+                state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+                state.wait_states[index] = WaitState.UNTRUSTED
         if index < len(state.shared_semaphores):
             shared = state.shared_semaphores[index]
             if shared.wait_reservation == ("submit", token):
