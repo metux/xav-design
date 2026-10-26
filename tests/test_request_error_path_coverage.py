@@ -471,7 +471,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         reset_start = recording.index("`ResetCommandBuffer` ist ein Void-Request")
         reset = recording[reset_start:recording.index("`TRANSIENT` und `RESET_COMMAND_BUFFER` sind unabhängige Bits", reset_start)]
         reset_order = (
-            "feste Gesamtlänge von 16 Bytes",
+            "mit fester Gesamtlänge von 16 Bytes",
             "Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`",
             "falscher live Ressourcentyp",
             "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device",
