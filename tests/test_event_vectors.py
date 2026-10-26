@@ -466,15 +466,15 @@ class GoldenXGEEventTests(unittest.TestCase):
         # whether a token refers to an actually accepted submission is a
         # server-state invariant and must remain explicit in the normative spec.
         self.assertIn(
-            "Bei \x60origin = ORIGIN_QUEUE_SUBMIT\x60 MUSS \x60submission_token\x60 daher ungleich null sein",
+            "For \x60origin = ORIGIN_QUEUE_SUBMIT\x60, \x60submission_token\x60 MUST therefore be non-zero",
             events,
         )
         self.assertIn(
-            "ein nicht-null Token darf niemals eine abgewiesene \x60QueueSubmit\x60-Anforderung bezeichnen",
+            "a non-zero token MUST never identify a rejected \x60QueueSubmit\x60 request",
             events,
         )
         self.assertIn(
-            "ein abgewiesener \x60QueueSubmit\x60 darf nie als Token-Ziel eines \x60ASYNC_ERROR\x60 erscheinen",
+            "A rejected \x60QueueSubmit\x60 request MUST never be identified by an \x60ASYNC_ERROR\x60 token",
             conformance,
         )
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event.", queue)
