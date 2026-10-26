@@ -1866,7 +1866,7 @@ def check_xge_abi(c: Check) -> None:
         (r"atomically replaces the existing mask", "atomic mask replacement"),
         (r"On any error, the previous selection remains unchanged", "failed request preserves prior mask"),
         (r"`ASYNC_ERROR`.*`DEVICE_LOST`.*unmaskable", "unmaskable events"),
-        (r"erfolgreich\s+" + chr(96) + r"?GEQueryVersion" + chr(96) + r"?", "XGE version negotiation prerequisite"),
+        (r"successfully execute\s+" + chr(96) + r"?GEQueryVersion" + chr(96) + r"?", "XGE version negotiation prerequisite"),
         (r"Without negotiated XGE support.*BadMatch", "pre-negotiation rejection"),
     ]:
         c.require(re.search(pattern, select_body + "\n" + events, re.I | re.S) is not None,
