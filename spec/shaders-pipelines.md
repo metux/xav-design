@@ -1,4 +1,4 @@
-# 6. Shader, Descriptor-Layouts und Pipelines
+# 6. Shaders, Descriptor Layouts, and Pipelines
 
 ## 6.1 Shader Modules
 
