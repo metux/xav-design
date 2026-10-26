@@ -265,7 +265,7 @@ def check_events(c: Check) -> None:
               "the token remains unused" in submissions and
               "semaphore counters, signal availability, pending slots, and Timeline reservations remain unchanged" in submissions,
               "QueueSubmit: all state changes and token reservation must share the acceptance commit")
-    c.require("A FINAL chunk transitions `RECORDING` → `EXECUTABLE` only after successful validation" in read("spec/command-recording.md") and
+    c.require("A FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk" in read("spec/command-recording.md") and
               "the buffer remains `RECORDING`, and all previously accepted entries and their references remain unchanged" in read("spec/command-recording.md"),
               "CommandBufferData: failed FINAL must preserve recording state and prior references")
     c.require("A failed FINAL chunk of `CommandBufferData` leaves the buffer `RECORDING`" in conformance and
