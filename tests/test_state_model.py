@@ -274,6 +274,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
             wait_states=[WaitState.READY, WaitState.READY],
             signal_slots=[None, None],
+            signal_counters=[0, 0],
         )
         for name, value in changes.items():
             setattr(state, name, value)
@@ -314,7 +315,13 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
     def test_late_invalid_signal_rejects_all_reservations(self) -> None:
         state = self.state(signal_slots=[None, 9])
-        self.assert_atomic_rejection(state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)), "INVALID_SYNCHRONIZATION_STATE")
+        self.assert_atomic_rejection(state, SubmitRequest(signal_indices=(0, 1), signal_values=(5, 8)), "BadValue")
+
+    def test_timeline_signal_not_above_current_counter_is_bad_value(self) -> None:
+        state = self.state(signal_counters=[6, 0])
+        self.assert_atomic_rejection(
+            state, SubmitRequest(signal_indices=(0,), signal_values=(6,)), "BadValue"
+        )
 
     def test_device_loss_precedes_command_buffer_state_after_xid_checks(self) -> None:
         state = self.state(device_lost=True, command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)])
