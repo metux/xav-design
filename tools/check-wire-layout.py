@@ -524,14 +524,14 @@ def check_other_numeric_registries(c: Check) -> None:
     command_recording = read("spec/command-recording.md")
     decisions = read("DECISIONS.md")
     c.require(
-        "nicht als unveränderlicher Snapshot" in command_recording
-        and "aktualisiert atomar die abgeleiteten Buffer-Referenzen" in command_recording
-        and "bei der späteren Submission die dann aktuellen Descriptor-Inhalte" in descriptor_updates,
+        "descriptor-slot contents are not copied into the command buffer as an immutable snapshot" in command_recording
+        and "atomically updates the derived buffer references" in command_recording
+        and "uses the set's current descriptor contents at later submission time" in descriptor_updates,
         "descriptor updates: command buffers must observe current set contents and refresh indirect references",
     )
     c.require(
-        "aktualisiert die daraus abgeleiteten internen Buffer-Referenzen" in lifetime
-        and "nicht mehr referenzierten alten Ressource" in lifetime
+        "On successful update, descriptor-slot contents and their derived internal Buffer references are replaced atomically" in lifetime
+        and "old resource that is no longer referenced" in lifetime
         and "not invalidated solely by the update" in decisions,
         "descriptor update lifetime: stale references must be removed without invalidating executable command buffers",
     )
@@ -853,8 +853,8 @@ def check_request_document_coverage(c: Check) -> None:
         "resource lifetime: DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
     )
     c.require(
-        "`FreeDescriptorSets` weist die Freigabe atomar mit `INVALID_SYNCHRONIZATION_STATE` ab, wenn ein ausgewähltes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird" in conformance
-        and "`DestroyResource` auf Pipeline oder Pipeline Layout weist Recording-Referenzen und angenommene Pending-Use atomar ab" in conformance,
+        "`FreeDescriptorSets` atomically rejects the operation with `INVALID_SYNCHRONIZATION_STATE` if a selected Set is pending or referenced by a `RECORDING` command buffer" in conformance
+        and "`DestroyResource` on a Pipeline or Pipeline Layout atomically rejects recording references and accepted pending use" in conformance,
         "conformance: descriptor-set and pipeline recorded-reference lifetime rules must be explicit",
     )
     c.require(
