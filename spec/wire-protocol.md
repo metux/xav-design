@@ -30,9 +30,9 @@ This profile boundary does not change central subopcode assignments and does not
 
 ## Lengths, Padding, and BIG-REQUESTS
 
-- X11-Request-Längen werden in Einheiten von vier Bytes angegeben.
-- Variable Bytefelder werden auf vier Bytes aufgerundet und mit Nullbytes aufgefüllt.
-- Padding muss null sein.
+- X11 request lengths are expressed in four-byte units.
+- Variable byte fields are rounded up to a four-byte boundary and padded with zero bytes.
+- Padding bytes MUST be zero.
 - An inconsistent request layout or a payload size that does not match the declared layout results in `BadLength`.
 - Invalid values or reserved bits normally result in `BadValue`.
 - BIG-REQUESTS is not supported in v0.1. Its extended-length field is at offset 4, where it conflicts with the XAverius common header. Clients MUST NOT send XAverius requests in BIG-REQUESTS format. The server MUST reject a XAverius request whose X11 header `length` field is zero with `BadLength` before interpreting bytes at offset 4 as the XAverius subopcode, flags, or reserved field.
@@ -44,17 +44,17 @@ A server MUST NOT allocate variable payloads based on unchecked counts. This rul
 
 ## Replies
 
-Replies verwenden den Standard-X11-Reply-Header von 32 Bytes. `reply.length` gibt die Anzahl der Vierbyteeinheiten nach diesem Header an.
+Replies use the standard 32-byte X11 reply header. `reply.length` gives the number of four-byte units following this header.
 
-Wenn ein Reply einen variablen Payload enthält, beginnt dieser grundsätzlich bei Offset 32.
+If a reply contains a variable payload, it begins at offset 32 unless the reply definition explicitly specifies otherwise.
 
-Nicht verwendete Felder müssen entsprechend der jeweiligen Reply-Definition null sein.
+Unused fields MUST be zero as specified by the corresponding reply definition.
 
 ## Errors
 
 XAverius-specific errors use the standard 32-byte X11 error-packet layout. XAverius defines no additional error-payload bytes.
 
-Der absolute Fehlercode ist:
+The absolute error code is:
 
 `first_error + XAverius_error_offset`
 
