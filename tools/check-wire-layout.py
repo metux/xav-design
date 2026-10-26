@@ -509,7 +509,7 @@ def check_other_numeric_registries(c: Check) -> None:
     )
     lifetime = read("spec/resource-lifetime.md")
     c.require(
-        "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in descriptor_errors
+        "`ResetCommandBuffer` with an incorrect request length results in `BadLength`" in descriptor_errors
         and "an unavailable or lost logical Device returns `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in descriptor_errors
         and "After successful XID and ownership validation, an unavailable device results in `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
         and re.search(r"`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", descriptor_conformance) is not None,
@@ -530,7 +530,7 @@ def check_other_numeric_registries(c: Check) -> None:
         "descriptor updates: command buffers must observe current set contents and refresh indirect references",
     )
     c.require(
-        "On successful update, descriptor-slot contents and their derived internal Buffer references are replaced atomically" in lifetime
+        "A successful `UpdateDescriptorSets` therefore atomically replaces the affected slot contents and updates the derived internal Buffer references" in lifetime
         and "old resource that is no longer referenced" in lifetime
         and "not invalidated solely by the update" in decisions,
         "descriptor update lifetime: stale references must be removed without invalidating executable command buffers",
@@ -709,7 +709,7 @@ def check_request_document_coverage(c: Check) -> None:
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
     c.require("`CommandBufferData` error precedence: malformed request/entry structure" in conformance and
               "an invalid flag combination combined with an invalid target XID returns `BadValue`" in conformance and
-              "ist die definierte Ausnahme von Phase 5" in command_recording,
+              "`ABORT` is the defined exception to phase 5" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
         "an entry whose declared length exceeds the request boundary" in errors
@@ -720,7 +720,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "A failed FINAL chunk leaves the buffer in `RECORDING`" in read("spec/command-recording.md")
         and "A failed CREATE request leaves neither a command buffer nor a pool-child entry" in read("spec/command-recording.md")
-        and "CommandBufferData errors are validated before state changes" in conformance,
+        and "Every rejection leaves previously accepted entries and references unchanged; the current chunk is never partially accepted" in read("spec/command-recording.md"),
         "command-buffer recovery: failed CREATE/FINAL and reset atomicity must be covered",
     )
     shader_upload = read("spec/shaders-pipelines.md")
@@ -729,7 +729,7 @@ def check_request_document_coverage(c: Check) -> None:
         "A later chunk or ABORT for a discarded assembly" in shader_upload
         and "They do not emit `ASYNC_ERROR`" in shader_upload
         and "Fehler bei `ShaderModuleData` erzeugen kein `ASYNC_ERROR`" in errors
-        and "`ShaderModuleData`-Upload und bei `CommandBufferData`-Recording-Chunks sind immer synchron" in event_doc,
+        and "Errors during `ShaderModuleData` upload and `CommandBufferData` recording chunks are always synchronous" in event_doc,
         "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
     )
     c.require(
