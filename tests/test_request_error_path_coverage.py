@@ -198,17 +198,17 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # These ordering markers prevent an apparently harmless wording edit
         # from reversing the phases or allowing partial reservation.
         for phrase in (
-            "falsche Gesamtlänge", "submission_token = 0",
-            "Device, optionale Fence", "nicht verfügbares/verlorenes Device",
-            "in Wire-Reihenfolge", "vollständig nicht-mutierend",
-            "der Token bleibt unbenutzt", "keine Submission-Objekte",
+            "incorrect total length", "submission_token = 0",
+            "device, optional fence", "an unavailable or lost device",
+            "in wire order", "fully non-mutating",
+            "the token remains unused", "no submission objects",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, queue)
         for phrase in (
-            "semaphore counters, binary signal availability",
-            "atomically with submission acceptance",
-            "synchron abgewiesene Requests erzeugen kein Submission-Event",
+            "semaphore counters, signal availability",
+            "The `EXECUTABLE`-to-`PENDING` transitions and synchronization reservations therefore form one shared commit",
+            "Every synchronously rejected request is atomic and generates no submission event",
         ):
             with self.subTest(atomicity=phrase):
                 self.assertIn(phrase, queue + section)
@@ -237,10 +237,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # Descriptor contents are live set state, not a snapshot captured at bind time.
         for phrase in (
-            "Descriptor-Slot-Inhalte werden nicht als unveränderlicher Snapshot",
-            "aktualisiert atomar die abgeleiteten Buffer-Referenzen",
-            "verwendet bei Submission die aktuellen Inhalte",
-            "wird allein durch ein erfolgreiches Descriptor-Update nicht invalidiert",
+            "descriptor-slot contents are not copied into the command buffer as an immutable snapshot",
+            "atomically updates the derived buffer references",
+            uses the set's current descriptor contents at later submission time,
+            "does not invalidate such a command buffer solely because descriptor contents changed",
         ):
             with self.subTest(recording_rule=phrase):
                 self.assertIn(phrase, recording)
@@ -260,8 +260,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # and require the same semantics in the conformance/error contracts.
         for phrase in (
             "von einem `RECORDING`-Command-Buffer referenziert",
-            "referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID`",
-            "internen Referenzanpassungen atomar mit der öffentlichen Invalidierung",
+            "referencing non-pending `EXECUTABLE` command buffers become `INVALID`",
+            "updates the derived internal Buffer references",
         ):
             with self.subTest(lifetime_rule=phrase):
                 self.assertIn(phrase, lifetime)
@@ -295,13 +295,13 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "WaitSemaphores",
             "WaitForFence",
             "DEVICE_DESTROYED",
-            "Wait-Bedingungen, deren Ergebnis vor Verarbeitung",
-            "Interne Vulkan-Objekte werden erst freigegeben",
+            "Wait conditions whose successful result was established before `DestroyDevice` was processed",
+            "Internal Vulkan objects are released only when Vulkan lifetime rules",
         ):
             with self.subTest(device_rule=phrase):
                 self.assertIn(phrase, devices)
         for phrase in (
-            "Der zuerst festgestellte terminale Ausgang gewinnt",
+            "The first terminal outcome detected wins",
             "Device Loss",
             "DestroyDevice",
             "ohne Reply",
@@ -312,18 +312,18 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Accepted work has one real terminal outcome; event suppression and disconnect
         # must not release backend resources early or manufacture completion.
         for phrase in (
-            "genau einen terminalen Ausgang",
-            "Der Server darf keine erfolgreiche Completion vortäuschen",
-            "das Backend nicht mehr auf die Ressourcen zugreift",
+            "exactly one terminal outcome",
+            "The server MUST NOT fake successful completion",
+            "backend accesses have ended",
         ):
             with self.subTest(queue_rule=phrase):
                 self.assertIn(phrase, queue)
         for phrase in (
-            "alle zugehörigen öffentlichen XIDs werden `INVALID`",
-            "bleiben `DESTROY_PENDING`",
-            "Lifecycle-Regeln die Zustellung von Presentation-Events unterdrücken",
-            "ohne Completion zu erfinden",
-            "Backend-Ressourcen vorzeitig freizugeben",
+            "all public XIDs of its resources become invalid immediately",
+            "remain `DESTROY_PENDING`",
+            "lifecycle rules suppress delivery of presentation events",
+            "does not invent completion",
+            "premature release of internal backend objects",
         ):
             with self.subTest(lifetime_rule=phrase):
                 self.assertIn(phrase, lifetime + conformance)
@@ -345,11 +345,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [recording.index(phrase) for phrase in cb_phases]
         self.assertEqual(positions, sorted(positions))
         submit_phases = (
-            "falsche Gesamtlänge",
+            "incorrect total length",
             "submission_token = 0",
             "erforderliche XIDs werden in Wire-Reihenfolge",
             "Ressourcentyp, Client-/Device-Ownership",
-            "nicht verfügbares/verlorenes Device",
+            "an unavailable or lost device",
             "veränderlichen Voraussetzungen in Wire-Reihenfolge",
         )
         positions = [queue.index(phrase) for phrase in submit_phases]
@@ -383,8 +383,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(command_buffer_atomicity=phrase):
                 self.assertIn(phrase, conformance + recording)
         for phrase in (
-            "vollständig nicht-mutierend",
-            "keine Submission-Objekte",
+            "fully non-mutating",
+            "no submission objects",
             "Semaphore-Counter, Signalverfügbarkeit, Pending-Slots",
         ):
             with self.subTest(submit_atomicity=phrase):
