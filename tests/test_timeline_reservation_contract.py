@@ -88,7 +88,7 @@ class TimelineReservationRegressionTests(unittest.TestCase):
             SubmitRequest(token=42, command_buffer_indices=(0,),
                           signal_indices=(0, 1), signal_values=(8, 14)),
         )
-        self.assertEqual(result, "BadValue")
+        self.assertEqual(result, "INVALID_SYNCHRONIZATION_STATE")
         self.assertEqual(state, before)
 
 
