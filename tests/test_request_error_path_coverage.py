@@ -295,13 +295,13 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "WaitSemaphores",
             "WaitForFence",
             "DEVICE_DESTROYED",
-            "bereits erfüllte Wait-Bedingungen",
+            "Wait-Bedingungen, deren Ergebnis vor Verarbeitung",
             "Interne Vulkan-Objekte werden erst freigegeben",
         ):
             with self.subTest(device_rule=phrase):
                 self.assertIn(phrase, devices)
         for phrase in (
-            "der zuerst festgestellte terminale Ausgang gewinnt",
+            "Der zuerst festgestellte terminale Ausgang gewinnt",
             "Device Loss",
             "DestroyDevice",
             "ohne Reply",
@@ -321,8 +321,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "alle zugehörigen öffentlichen XIDs werden `INVALID`",
             "bleiben `DESTROY_PENDING`",
-            "Event-Zustellung nicht",
-            "keine Completion zu erfinden",
+            "Event-Zustellung nicht durch",
+            "ohne Completion zu erfinden",
             "Backend-Ressourcen vorzeitig freizugeben",
         ):
             with self.subTest(lifetime_rule=phrase):
