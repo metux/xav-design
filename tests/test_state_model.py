@@ -913,10 +913,33 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(wait_indices=(0,), wait_values=(1,)), "BadValue"
         )
 
+    def test_binary_wait_value_precedes_unsupported_stage_and_wait_state(self) -> None:
+        state = self.state(
+            queue_supported_stage_mask=0x1,
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            wait_states=[WaitState.UNTRUSTED, WaitState.READY],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(wait_indices=(0,), wait_values=(1,), wait_stage_masks=(0x2,)),
+            "BadValue",
+        )
+
     def test_binary_semaphore_nonzero_signal_value_is_bad_value(self) -> None:
         state = self.state(semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY])
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(0,), signal_values=(1,)), "BadValue"
+        )
+
+    def test_binary_signal_value_precedes_untrusted_signal_state(self) -> None:
+        state = self.state(
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            binary_signal_states=[BinarySignalState.UNTRUSTED],
+        )
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0,), signal_values=(1,)),
+            "BadValue",
         )
 
     def test_binary_semaphore_signal_slot_must_be_available(self) -> None:
