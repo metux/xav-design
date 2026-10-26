@@ -1876,7 +1876,7 @@ def check_xge_abi(c: Check) -> None:
               "conformance checklist: must cover SelectEvents/XGE ABI")
 
     # Semantic negative cases that cannot be inferred from field offsets alone.
-    c.require("`origin = ORIGIN_QUEUE_SUBMIT` requires a non-zero token" in conformance and
+    c.require("For `origin = ORIGIN_QUEUE_SUBMIT`, `submission_token` MUST be nonzero" in conformance and
               "`ASYNC_ERROR`" in events and
               re.search(r"For `origin = ORIGIN_QUEUE_SUBMIT`, `submission_token` MUST therefore be non-zero", events) is not None and
               re.search(r"a non-zero token MUST never identify a rejected `QueueSubmit` request", events) is not None,
@@ -1886,9 +1886,9 @@ def check_xge_abi(c: Check) -> None:
               re.search(r"reserved = 0", doc_sections.get("ASYNC_ERROR", "")) is not None,
               "XGE ASYNC_ERROR: invalid origin and reserved-field negative cases must be covered")
     c.require("MUST have `resource_xid = 0`" in conformance and
-              "resource_xid MUST be zero" in read("spec/events.md") and
+              "`resource_xid` MUST be zero" in read("spec/events.md") and
               "`resource_xid = 0` is serialized" in read("spec/resource-lifetime.md") and
-              "reused resource XIDs MUST NOT be emitted as `resource_xid`" in read("spec/resource-lifetime.md").lower(),
+              re.search(r"resource XID that has since been destroyed or reused MUST NOT be emitted as `resource_xid`", read("spec/resource-lifetime.md")) is not None,
               "XGE ASYNC_ERROR: destroyed/reused resource XIDs must be scrubbed instead of retargeted")
     c.require("unknown mask bits" in conformance and
               "incorrect zero values" in conformance and
@@ -2300,8 +2300,8 @@ def check_presentation_profile(c: Check) -> None:
               "AcquireNextImage: failure reply must use image_index = 0")
     c.require("A failed or timed-out acquire signals neither object and changes no image state." in presentation,
               "AcquireNextImage: failure/timeout must not signal semaphore or fence")
-    c.require("acquired-but-idle Image allein blockiert nicht" in lifetime and
-              "acquired-but-idle images alone do not block destruction" in conformance,
+    c.require("an acquired-but-idle image alone does not block destruction" in lifetime and
+              "An acquired-but-idle image alone does not" in conformance,
               "DestroySwapchain: lifetime matrix and conformance must agree that idle acquired images alone do not block destruction")
     copy_command = command_recording.split(
         "### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`", 1
@@ -2351,8 +2351,8 @@ def check_presentation_profile(c: Check) -> None:
               "Request order alone creates no GPU memory dependency" in copy_command and
               "Request order alone is not a GPU dependency" in read("spec/conformance.md"),
               "presentation copy command: submit/present ordering must be explicit and request order must not imply GPU synchronization")
-    c.require("`RECORDING`-Command-Buffer ihn referenziert oder angenommene Arbeit ihn direkt/indirekt verwendet" in lifetime and
-              "ein `RECORDING`-Command-Buffer den Buffer direkt oder indirekt (einschließlich über ein referenziertes Descriptor Set) referenziert" in lifetime and
+    c.require("If a resource referenced by a `RECORDING` command buffer is destroyed" in lifetime and
+              "If a resource referenced by an `EXECUTABLE` command buffer is destroyed" in lifetime and
               "Destroying a Buffer referenced by a `RECORDING` command buffer is atomically rejected" in read("spec/conformance.md"),
               "Buffer lifetime: recording references must block destruction and executable references must be invalidated")
     c.require("Values 7–65535 are unassigned" in read("registries/event-types.md"),
