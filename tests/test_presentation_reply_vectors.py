@@ -112,6 +112,8 @@ def validate_presentation_reply(
             min_images, max_images = u32(wire, 24, order), u32(wire, 28, order)
             if min_images == 0 or (max_images != 0 and max_images < min_images):
                 raise ValueError("successful capabilities reply has invalid image-count bounds")
+            if families == 0:
+                raise ValueError("successful capabilities reply has zero queue families")
             start = 64 + 8 * formats + 4 * modes
             family_indices = []
             family_support = []
@@ -317,6 +319,20 @@ class PresentationReplyWireTests(unittest.TestCase):
                     struct.pack_into(endian + fmt, wire, offset, value)
                     with self.assertRaisesRegex(ValueError, message):
                         validate_presentation_reply(kind, bytes(wire), order)
+
+    def test_successful_capabilities_rejects_zero_queue_families(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                wire = bytearray(encode_capabilities(order))
+                # Drop the two queue-family records and update both the
+                # declared length and count, keeping the packet well-framed.
+                del wire[-16:]
+                endian = "<" if order == "little" else ">"
+                struct.pack_into(endian + "I", wire, 4, 11)
+                struct.pack_into(endian + "I", wire, 12, 0)
+                struct.pack_into(endian + "I", wire, 60, 0)
+                with self.assertRaisesRegex(ValueError, "successful capabilities reply has zero queue families"):
+                    validate_presentation_reply("capabilities", bytes(wire), order)
 
     def test_capability_failure_rejects_nonzero_payload(self) -> None:
         for order in ("little", "big"):
