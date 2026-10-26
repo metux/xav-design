@@ -1,8 +1,8 @@
-# X11-Framing
+# X11 Framing
 
-## Request-Header
+## Request Header
 
-Jeder XAverius-Request beginnt mit dem Standard-X11-Request-Header von vier Bytes. Direkt danach folgt der XAverius-Common-Header.
+Every XAverius request begins with the standard four-byte X11 request header, immediately followed by the XAverius common header.
 
 ```c
 /* X11 header: offset 0 */
@@ -16,31 +16,31 @@ CARD8  flags;         /* Request-specific flags */
 CARD16 reserved;      /* MUST be zero in v0.1 */
 ```
 
-Der Common-Header ist vier Bytes groß; der gesamte feste XAverius-Request-Header ist damit acht Bytes groß. Der Request-Payload beginnt grundsätzlich bei Offset 8, sofern ein Request nichts anderes festlegt.
+The common header is four bytes, making the complete fixed XAverius request header eight bytes. Unless a request explicitly specifies otherwise, its payload begins at offset 8.
 
-Die X11-Verbindungsbyteordnung gilt für sämtliche mehrbyteigen Wire-Felder.
+The X11 connection byte order applies to every multi-byte wire field.
 
-Der X-Server weist die Extension-Major-Opcode dynamisch aus dem X11-Erweiterungsbereich 128–255 zu. Clients MUST XAverius mit der standardmäßigen X11-`QueryExtension`-Anfrage entdecken und den zurückgegebenen Major-Opcode verwenden; ein fest codierter XAverius-Major-Opcode ist unzulässig. Derselbe Wert steht im X11-Request-Header `reqType` und im XGE-Feld `extension`. Er ist keine XAverius-Registry-Konstante. Für XAverius v0.1 ist das X11-Request-Header-Feld `data` immer null; die Request-Identität steht ausschließlich im `subopcode`-Feld bei Offset 4. Der `subopcode` ist zentral registriert; Wert `0` ist reserviert. Bereits vergebene Subopcodes sind stabil und dürfen bei späteren Erweiterungen nicht neu vergeben oder verschoben werden. Nicht definierte Requests besitzen keinen impliziten Wert. In einem standardmäßigen X11-Error-Packet wird dieser Wert zero-extended in `minorCode` eingetragen. `majorCode` enthält den Extension-Major-Opcode. Clients dürfen `data` nicht als Subopcode interpretieren.
+The X server dynamically assigns the extension major opcode from the X11 extension range 128–255. Clients MUST discover XAverius using the standard X11 `QueryExtension` request and use the returned major opcode; hard-coding the XAverius major opcode is forbidden. The same value appears in the X11 request header's `reqType` field and the XGE `extension` field. It is not a XAverius registry constant. In XAverius v0.1, the X11 request header's `data` field is always zero; request identity is carried exclusively by the `subopcode` field at offset 4. Subopcodes are centrally registered; value `0` is reserved. Assigned subopcodes are stable and MUST NOT be reassigned or shifted by later extensions. Undefined requests have no implicit value. In a standard X11 error packet, the subopcode is zero-extended into `minorCode`; `majorCode` contains the extension major opcode. Clients MUST NOT interpret `data` as a subopcode.
 
-## Profilgebundene Requests
+## Profile-Gated Requests
 
-Die Subopcodes 1–40 bilden das Compute-Baseline-Profil. Die Subopcodes 41–47 sind ausschließlich im presentation-capable Profil definiert. Ein Server, der dieses Profil nicht implementiert, MUSS einen Request mit Subopcode 41–47 vor dem request-spezifischen Payload-Parsing mit dem Core-X11-Fehler `BadRequest` zurückweisen. Er darf daraus weder XID-Auflösungen noch Zustandsänderungen oder normale Replies ableiten. Damit kann ein Client die Profilunterstützung durch einen gültig gerahmten `GetSurfaceCapabilities`-Request prüfen; `BadRequest` bedeutet, dass die Präsentations-Requests auf diesem Server nicht verfügbar sind. Ein Server, der das Profil unterstützt, verarbeitet die Requests gemäß ihrer Definition und ihren normalen Fehler-/Reply-Regeln.
+Subopcodes 1–40 form the compute-baseline profile. Subopcodes 41–47 are defined only by the presentation-capable profile. A server that does not implement that profile MUST reject a request with subopcode 41–47 using the core X11 error `BadRequest` before parsing its request-specific payload. It MUST NOT perform XID resolution, change state, or generate a normal reply for that request. A client can therefore probe profile support with a correctly framed `GetSurfaceCapabilities` request; `BadRequest` means presentation requests are unavailable on that server. A server that supports the profile processes these requests according to their definitions and ordinary error/reply rules.
 
-Diese Profilgrenze ändert die zentralen Subopcode-Zuweisungen nicht und aktiviert keine Präsentationsunterstützung implizit. Compute-only Server müssen weiterhin Command-Entry-ID 5 sowie Event-Type-IDs 7 und 8 und die zugehörigen Queue-Maskenbits als nicht unterstützt behandeln.
+This profile boundary does not change central subopcode assignments and does not implicitly enable presentation support. Compute-only servers MUST continue to treat command-entry ID 5, event-type IDs 7 and 8, and the associated queue-mask bits as unsupported.
 
-## Längen, Padding und BIG-REQUESTS
+## Lengths, Padding, and BIG-REQUESTS
 
 - X11-Request-Längen werden in Einheiten von vier Bytes angegeben.
 - Variable Bytefelder werden auf vier Bytes aufgerundet und mit Nullbytes aufgefüllt.
 - Padding muss null sein.
-- Ein inkonsistentes Request-Layout oder ein nicht passender Payload-Umfang ergibt `BadLength`.
-- Ungültige Werte oder reservierte Bits ergeben normalerweise `BadValue`.
-- BIG-REQUESTS wird in v0.1 nicht unterstützt. Sein Extended-Length-Feld liegt bei Offset 4 und kollidiert dort mit dem XAverius-Common-Header. Clients MUST NOT senden XAverius-Requests im BIG-REQUESTS-Format. Der Server MUST eine XAverius-Anfrage mit dem X11-Headerfeld `length = 0` als `BadLength` zurückweisen, bevor er Bytes ab Offset 4 als XAverius-Subopcode, Flags oder reserviertes Feld interpretiert.
-- Ohne BIG-REQUESTS beträgt die maximale gewöhnliche Request-Länge 262140 Bytes einschließlich des gesamten Requests, also einschließlich X11- und XAverius-Header. Größere Nutzdaten müssen in mehreren Requests übertragen werden, soweit der jeweilige Request dies erlaubt.
-- Für jeden Request mit variabler Länge MUSS der Server die erwartete Gesamtlänge mit geprüfter Arithmetik berechnen. Ein arithmetischer Überlauf, eine erwartete Länge über 262140 Bytes, ein X11-Längenfeld von null oder eine Abweichung zwischen deklarierter Länge, Counts und tatsächlichem Paketende MUSS zu `BadLength` führen. Die vollständige Längen-/Count-Prüfung MUSS vor Payload-Allokation, XID-Auflösung und Zustandsänderungen abgeschlossen sein.
-- Größenberechnungen müssen vor der Verarbeitung auf Überläufe geprüft werden.
+- An inconsistent request layout or a payload size that does not match the declared layout results in `BadLength`.
+- Invalid values or reserved bits normally result in `BadValue`.
+- BIG-REQUESTS is not supported in v0.1. Its extended-length field is at offset 4, where it conflicts with the XAverius common header. Clients MUST NOT send XAverius requests in BIG-REQUESTS format. The server MUST reject a XAverius request whose X11 header `length` field is zero with `BadLength` before interpreting bytes at offset 4 as the XAverius subopcode, flags, or reserved field.
+- Without BIG-REQUESTS, the maximum ordinary request length is 262140 bytes, including the complete request and both the X11 and XAverius headers. Larger payloads MUST be transferred in multiple requests where the request definition permits chunking.
+- For every variable-length request, the server MUST calculate the expected total length using checked arithmetic. Arithmetic overflow, an expected length greater than 262140 bytes, an X11 length field of zero, or a mismatch among the declared length, counts, and actual packet end MUST result in `BadLength`. All length and count validation MUST finish before payload allocation, XID resolution, or state changes.
+- Size calculations MUST be checked for overflow before processing.
 
-Ein Server darf variable Payloads nicht auf Grundlage ungeprüfter Counts allokieren. Diese Grenze gilt auch dann, wenn das request-spezifische Kapitel die Maximalgröße nicht wiederholt. Chunk-basierte Requests müssen stattdessen die jeweilige Chunk-Länge begrenzen; die maximale Länge gilt pro Request, nicht für die gesamte logische Shader- oder Command-Buffer-Aufzeichnung.
+A server MUST NOT allocate variable payloads based on unchecked counts. This rule applies even when a request-specific chapter does not repeat the maximum size. Chunked requests MUST limit each individual chunk; the maximum length applies per request, not to the entire logical shader or command-buffer recording.
 
 ## Replies
 
@@ -50,25 +50,25 @@ Wenn ein Reply einen variablen Payload enthält, beginnt dieser grundsätzlich b
 
 Nicht verwendete Felder müssen entsprechend der jeweiligen Reply-Definition null sein.
 
-## Fehler
+## Errors
 
-XAverius-spezifische Fehler verwenden den standardisierten 32-Byte-X11-Error-Packet-Aufbau. XAverius definiert keine zusätzlichen Fehler-Payload-Bytes.
+XAverius-specific errors use the standard 32-byte X11 error-packet layout. XAverius defines no additional error-payload bytes.
 
 Der absolute Fehlercode ist:
 
 `first_error + XAverius_error_offset`
 
-Der Fehler muss mit der ursprünglichen Request-Sequenznummer korreliert werden. Das Error-Packet setzt `majorCode` auf den XAverius-Extension-Major-Opcode und `minorCode` auf den zero-extended XAverius-`subopcode` des fehlerhaften Requests.
+The error MUST be correlated with the original request sequence number. The error packet sets `majorCode` to the XAverius extension major opcode and `minorCode` to the zero-extended XAverius `subopcode` of the failing request.
 
-## XGE-Events
+## XGE Events
 
-XAverius-Events verwenden X Generic Events (XGE). Der Standard-XGE-Header ist 32 Bytes lang. Event-spezifische Felder beginnen bei Offset 32. Im XGE-Header enthält `extension` den dynamisch zugewiesenen XAverius-Major-Opcode und `evtype` die statische CARD16-Event-Type-ID aus der Event-Registry. Der Core-Eventcode ist `GenericEvent = 35`; XAverius besitzt kein eigenes serverseitig zugewiesenes XGE-Event-Base.
+XAverius events use X Generic Events (XGE). The standard XGE header is 32 bytes long; event-specific fields begin at offset 32. In the XGE header, `extension` contains the dynamically assigned XAverius major opcode, and `evtype` contains the static CARD16 event-type ID from the event registry. The core event code is `GenericEvent = 35`; XAverius has no separately assigned server-side XGE event base.
 
-Das XGE-Feld `length` zählt Vierbyteeinheiten nach dem ersten 32-Byte-Header. Vor dem Versand eines längeren Events muss der Server wissen, dass der empfangende Client XGE unterstützt. XAverius verlangt daher erfolgreiche XGE-1.0-Aushandlung pro Verbindung vor dem Erzeugen eines logischen Devices oder vor `SelectEvents`; die request-spezifischen Regeln stehen in [Events](events.md).
+The XGE `length` field counts four-byte units after the initial 32-byte header. Before sending a longer event, the server must know that the receiving client supports XGE. XAverius therefore requires successful XGE 1.0 negotiation on each connection before creating a logical device or issuing `SelectEvents`; request-specific rules are defined in [Events](events.md).
 
-## Primitive Typen
+## Primitive Types
 
-| Wire-Typ | Bedeutung |
+| Wire Type | Meaning |
 |---|---|
 | `CARD8` | Unsigned 8-bit |
 | `CARD16` | Unsigned 16-bit |
@@ -79,4 +79,4 @@ Das XGE-Feld `length` zählt Vierbyteeinheiten nach dem ersten 32-Byte-Header. V
 | `XID` | 32-bit X11 Resource ID |
 | `ATOM` | X11 Atom-ID |
 
-Nullterminierung wird nur verwendet, wenn eine Felddefinition dies ausdrücklich verlangt.
+Null termination is used only when a field definition explicitly requires it.
