@@ -220,7 +220,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             fields = line.split("|")
             if len(fields) >= 4 and fields[1].strip().startswith("`") and fields[2].strip().isdigit():
                 requests.append((fields[1].strip().strip("`"), fields[2].strip()))
-        self.assertEqual(len(requests), 47, "the audit must cover the full assigned request inventory")        for request, subopcode in requests:
+        self.assertEqual(len(requests), 47, "the audit must cover the full assigned request inventory")
+        for request, subopcode in requests:
             with self.subTest(request=request, subopcode=subopcode):
                 self.assertIn(f"`{request}` | {subopcode} |", registry)
                 self.assertIn(f"`{request}`", self.errors)
