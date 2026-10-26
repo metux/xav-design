@@ -415,10 +415,17 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 return "BadValue"
             if slot is not None:
                 return "INVALID_SYNCHRONIZATION_STATE"
-        elif value <= counter or (slot is not None and value <= slot):
-            # Timeline signal values must exceed both the visible counter and
-            # every still-pending GPU signal reservation.
-            return "BadValue"
+        else:
+            pending_values = [
+                pending_value
+                for _token, pending_index, pending_value in state.pending_timeline_signals
+                if pending_index == index
+            ]
+            if value <= counter or any(value <= pending for pending in pending_values):
+                # The reservation list is authoritative: the summary slot can
+                # change when callbacks for concurrent submissions arrive out
+                # of order, but every non-terminal reservation remains binding.
+                return "BadValue"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
     for pos, i in enumerate(request.wait_indices):
@@ -482,7 +489,19 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
         if effective_success:
             state.signal_counters[index] = max(state.signal_counters[index], value)
         state.pending_timeline_signals.remove((submission_token, index, value))
-        if state.signal_slots[index] == value:
+        kind = (state.semaphore_kinds[index]
+                if index < len(state.semaphore_kinds) else SemaphoreKind.TIMELINE)
+        if kind is SemaphoreKind.TIMELINE:
+            # Keep the compatibility slot equal to the highest still-pending
+            # reservation, even when a higher-valued operation fails first.
+            remaining = [
+                pending_value
+                for _pending_token, pending_index, pending_value
+                in state.pending_timeline_signals
+                if pending_index == index
+            ]
+            state.signal_slots[index] = max(remaining) if remaining else None
+        elif state.signal_slots[index] == value:
             state.signal_slots[index] = None
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
