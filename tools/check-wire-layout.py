@@ -2103,6 +2103,7 @@ def check_presentation_profile(c: Check) -> None:
               "aggregate present_supported does not match queue-family records" in presentation_reply_tests and
               "successful capabilities reply has zero current extent" in presentation_reply_tests and
               "successful capabilities reply has invalid extent bounds" in presentation_reply_tests and
+              "successful capabilities reply has invalid image-count bounds" in presentation_reply_tests and
               "successful CreateSwapchain has zero image count" in presentation_reply_tests and
               "CreateSwapchain image count does not match request" in presentation_reply_tests and
               "expected_image_count=2" in presentation_reply_tests,
