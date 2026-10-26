@@ -837,10 +837,10 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
     c.require(
-        "Device Loss allein verhindert `DestroyCommandPool` nicht" in read("spec/command-recording.md")
-        and "Device Loss allein verhindert `DestroyDescriptorPool` nicht" in read("spec/shaders-pipelines.md")
-        and "Device Loss allein ist kein Ablehnungsgrund" in errors
-        and "Device Loss allein blockiert `DestroyCommandPool` und `DestroyDescriptorPool` nicht" in conformance,
+        "Device loss alone does not prevent `DestroyCommandPool`" in read("spec/command-recording.md")
+        and "Device loss alone does not prevent `DestroyDescriptorPool`" in read("spec/shaders-pipelines.md")
+        and "Device loss alone does not invalidate public XIDs" in errors
+        and "Device loss alone does not block `DestroyCommandPool` or `DestroyDescriptorPool`" in conformance,
         "device loss: logical command/descriptor pool destruction must remain available subject to lifetime guards",
     )
 
@@ -884,21 +884,21 @@ def check_request_document_coverage(c: Check) -> None:
         "device loss: public XIDs must remain available for permitted status queries and explicit cleanup",
     )
     c.require(
-        "Einzelne ressourcenspezifische Destroy-/Free-Requests sind nach Device Loss nicht pauschal verboten" in lifetime
-        and "`FreeMemory` bleibt gesperrt, solange intern noch ein Buffer gebunden ist" in lifetime
-        and "Einzelne Destroy-/Free-Requests werden nach Device Loss nicht pauschal mit `DEVICE_LOST` abgewiesen" in read("spec/conformance.md"),
+        "Individual resource-specific Destroy/Free requests are not categorically forbidden after Device loss" in lifetime
+        and "`FreeMemory` remains blocked while an internally live Buffer is still bound" in lifetime
+        and "Individual Destroy/Free requests are not categorically rejected with `DEVICE_LOST` after Device loss" in read("spec/conformance.md"),
         "device loss: resource-specific cleanup must preserve ordinary lifetime guards and memory safety",
     )
     c.require(
-        "offene `WaitForFence`-Registrierung" in lifetime
-        and "offene `WaitSemaphores`-Registrierung" in lifetime
-        and "terminal festgestellte Waits blockieren nicht nur wegen eines noch ausstehenden Reply" in lifetime,
+        "an open `WaitForFence` registration references that exact internal fence identity" in lifetime
+        and "an open `WaitSemaphores` registration for that exact internal semaphore identity" in lifetime
+        and "a wait already determined to be terminal does not block destruction merely because its reply is still pending" in lifetime,
         "lifetime: fence/semaphore destroy matrix must include open waits and terminal release",
     )
     c.require(
-        "offene `WaitForFence`-Registrierung" in errors
-        and "offene `WaitSemaphores`-Registrierung" in errors
-        and "ein noch nicht versendeter Reply ist kein Hindernis" in errors,
+        "an open `WaitForFence` registration references that exact internal Fence identity" in errors
+        and "an open `WaitSemaphores` registration for that exact internal Semaphore identity" in errors
+        and "even if its reply has not yet been sent" in errors,
         "error mapping: summary must agree with specialized fence/semaphore destroy rules",
     )
     c.require(
