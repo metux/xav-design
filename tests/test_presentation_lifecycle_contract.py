@@ -166,7 +166,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
             "- Presentation event race vectors MUST exercise", 1
         )[1].split("\n- ", 1)[0]
         self.assertIn("Masking or suppressed delivery never skips internal cleanup", self.conformance)
-        self.assertIn("An image is reacquirable only after internal release", race_contract)
+        self.assertIn("An image is reacquirable only after internal release", self.conformance)
         self.assertIn("event is visible only under its delivery conditions", self.conformance)
         self.assertIn("exactly one image-release-or-invalidation transition", race_contract)
 
