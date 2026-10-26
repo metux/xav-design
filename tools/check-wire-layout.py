@@ -175,7 +175,7 @@ def check_events(c: Check) -> None:
     sync = read("spec/synchronization.md")
     c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
-    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the stored fence state", sync, re.S) is not None and
+    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the (?:server-)?stored fence state", sync, re.S) is not None and
               re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S) is not None,
               "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
     c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S) is not None and
@@ -574,7 +574,7 @@ def check_other_numeric_registries(c: Check) -> None:
               "v0.1 shader-stage registry must assign only COMPUTE at bit 0")
 
     devices = read("spec/devices.md")
-    property_parts = devices.split("Normative XAverius-Property-Type-IDs:", 1)
+    property_parts = devices.split("Normative XAverius property type IDs:", 1)
     c.require(len(property_parts) == 2, "devices.md: missing normative physical-property type table")
     property_table = property_parts[1].split("\n## ", 1)[0] if len(property_parts) == 2 else ""
     property_rows = [
