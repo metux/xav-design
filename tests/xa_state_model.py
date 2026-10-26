@@ -594,8 +594,53 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
                 if pending_index == index
             ]
             state.signal_slots[index] = max(remaining) if remaining else None
-        elif state.signal_slots[index] == value:
-            state.signal_slots[index] = None
+    for reservation in list(state.pending_binary_signals):
+        signal_token, index = reservation
+        if signal_token != token:
+            continue
+        state.pending_binary_signals.remove(reservation)
+        if index >= len(state.binary_signal_states):
+            state.binary_signal_states.extend(
+                [BinarySignalState.UNSIGNALED]
+                * (index + 1 - len(state.binary_signal_states))
+            )
+        consumed = reservation in state.consumed_pending_binary_signals
+        state.consumed_pending_binary_signals.discard(reservation)
+        current = state.binary_signal_states[index]
+        if not effective_success:
+            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+        elif current is BinarySignalState.UNTRUSTED:
+            pass
+        elif consumed:
+            state.binary_signal_states[index] = BinarySignalState.UNSIGNALED
+        else:
+            state.binary_signal_states[index] = BinarySignalState.SIGNALED
+        state.signal_slots[index] = None
+    for reservation in list(state.pending_binary_waits):
+        wait_token, index = reservation
+        if wait_token != token:
+            continue
+        state.pending_binary_waits.remove(reservation)
+        if index >= len(state.binary_signal_states):
+            state.binary_signal_states.extend(
+                [BinarySignalState.UNSIGNALED]
+                * (index + 1 - len(state.binary_signal_states))
+            )
+        if effective_success:
+            signal_state = state.binary_signal_states[index]
+            if signal_state is BinarySignalState.SIGNAL_PENDING:
+                signal_token = next(
+                    (pending_token for pending_token, pending_index
+                     in state.pending_binary_signals if pending_index == index),
+                    None,
+                )
+                if signal_token is not None:
+                    state.consumed_pending_binary_signals.add((signal_token, index))
+            state.binary_signal_states[index] = BinarySignalState.UNSIGNALED
+            state.wait_states[index] = WaitState.READY
+        else:
+            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+            state.wait_states[index] = WaitState.UNTRUSTED
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
