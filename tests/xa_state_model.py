@@ -324,8 +324,10 @@ class SubmissionModel:
     queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
-    # Command buffers are owned by individual pending submissions.
+    # Command buffers and an optional fence are owned by individual pending submissions.
     pending_command_buffers: list[tuple[int, int]] = field(default_factory=list)
+    pending_fence_submissions: list[int] = field(default_factory=list)
+    fence_status: str = "UNSIGNALED"
     framing_valid: bool = True
     scalar_valid: bool = True
     xids_valid: bool = True
@@ -446,7 +448,11 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         if (state.semaphore_kinds[index] if index < len(state.semaphore_kinds)
                 else SemaphoreKind.TIMELINE) is SemaphoreKind.TIMELINE:
             state.pending_timeline_signals.append((request.token, index, value))
-    state.fence_attached = request.attach_fence
+    if request.attach_fence:
+        state.fence_attached = True
+        state.fence_state_valid = False
+        state.fence_status = "PENDING"
+        state.pending_fence_submissions.append(request.token)
     state.pending_submissions.append(request.token)
     return "SUCCESS"
 
@@ -511,6 +517,10 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
+    if token in state.pending_fence_submissions:
+        state.pending_fence_submissions.remove(token)
+        state.fence_attached = False
+        state.fence_status = "SIGNALED" if effective_success else "FAILED"
     for submission_token, index in list(state.pending_command_buffers):
         if submission_token != token:
             continue
@@ -520,4 +530,15 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
             else CommandBufferLifecycle.INVALID
         )
         state.pending_command_buffers.remove((submission_token, index))
+    return "SUCCESS"
+
+
+def reset_fence(state: SubmissionModel) -> str:
+    """Model ResetFence state eligibility and atomic state transition."""
+    if state.device_lost:
+        return "DEVICE_LOST"
+    if state.fence_status not in {"SIGNALED", "FAILED"} or state.fence_attached:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    state.fence_status = "UNSIGNALED"
+    state.fence_state_valid = True
     return "SUCCESS"
