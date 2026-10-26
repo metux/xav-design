@@ -90,10 +90,10 @@ Jede Ablehnung vor diesem Commit-Punkt ist vollständig nicht-mutierend: der Tok
 Die `EXECUTABLE`-zu-`PENDING`-Übergänge und die Synchronisationsreservierungen sind somit ein gemeinsamer Commit, nicht voneinander getrennte schrittweise Änderungen. Nach diesem Commit ist die Submission angenommen; spätere Backend-Fehler werden ausschließlich über den terminalen Submission-Ausgang und die definierten Synchronisationszustände verarbeitet.
 ## Terminal Submission State and Device Loss
 
-Jede angenommene Submission hat genau einen terminalen Ausgang:
+Every accepted submission has exactly one terminal outcome:
 
-- `SUBMISSION_COMPLETE`: Alle Commands der Submission wurden erfolgreich abgeschlossen.
-- `SUBMISSION_FAILED`: Die Submission wurde nicht erfolgreich abgeschlossen; das Event enthält den `submission_token` und einen Fehlerstatus.
+- `SUBMISSION_COMPLETE`: all commands in the submission completed successfully.
+- `SUBMISSION_FAILED`: the submission did not complete successfully; the event contains the `submission_token` and an error status.
 
 Jede angenommene Submission erhält intern genau einen terminalen Ausgang. Ist das passende Completion- oder Failure-Event für die Queue ausgewählt und die Client-Verbindung noch aktiv, liefert der Server genau das dazugehörige Event aus, sofern die Event-Zustellung nicht durch eine bereits verarbeitete `DestroyDevice`-Anforderung gemäß [Resource lifetime and ownership](resource-lifetime.md) unterdrückt ist. Ohne passende Event-Auswahl oder bei solcher Lifecycle-Unterdrückung wird kein solches Event an den Client zugestellt; der terminale interne Zustand bleibt davon unberührt. Ein `ASYNC_ERROR` kann zusätzliche Diagnoseinformationen liefern, ersetzt den terminalen Ausgang nicht und darf keinen zweiten terminalen Ausgang erzeugen. Eine abgelehnte `QueueSubmit`-Anforderung wurde nicht angenommen und erhält keinen terminalen Ausgang.
 
