@@ -120,11 +120,11 @@ Alle Feature- und Extension-Records müssen vor der Erstellung geprüft werden. 
 
 ### `SelectEvents`
 
-- Falsche Request-Länge: `BadLength`.
-- Erfolgreicher `GEQueryVersion`-Austausch mindestens mit XGE 1.0 fehlt: `BadMatch`.
-- Unbekannter Scope, nicht-null Flags/reservierte Felder, ungültige Maskenbits oder nicht-null Felder außerhalb des ausgewählten Scopes: `BadValue`.
-- Unbekannte/nicht-live Device-XID oder ungültiger Queue-Family-/Queue-Index: `BadValue`; falscher live Ressourcentyp oder fremde Client-Ownership: `BadMatch`.
-- Ein Fehler muss die bisherige Event-Auswahl unverändert lassen; eine erfolgreiche Anfrage ersetzt atomar nur die Auswahl für den angegebenen Scope.
+- An incorrect request length results in `BadLength`.
+- If the client has not successfully negotiated at least XGE 1.0 with `GEQueryVersion`, the request results in `BadMatch`.
+- An unknown scope, nonzero flags/reserved fields, invalid mask bits, or nonzero fields outside the selected scope results in `BadValue`.
+- An unknown or non-live Device XID, or an invalid queue-family/queue index, results in `BadValue`; a live resource of the wrong type or foreign client ownership results in `BadMatch`.
+- An error leaves the previous event selection unchanged; a successful request atomically replaces only the selection for the specified scope.
 
 ### `CreateDescriptorSetLayout`
 
