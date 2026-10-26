@@ -276,7 +276,7 @@ def check_events(c: Check) -> None:
     c.require("synchronous error before acceptance | no state changes" in errors,
               "QueueSubmit: error map must state non-mutating synchronous rejection")
     c.require("Error precedence (the first applicable phase wins)" in submissions and
-              "required XIDs are resolved in wire order: Device, optional Fence, then Command Buffer XIDs in array order" in submissions and
+              "required XIDs are resolved in wire order: device, optional fence, command-buffer XIDs in array order" in submissions and
               "takes precedence over mutable submission state" in submissions and
               "Type-dependent values such as binary wait/signal values are checked only after type resolution" in submissions and
               "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
