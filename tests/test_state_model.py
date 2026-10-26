@@ -150,10 +150,6 @@ class QueuePresentStateModelTests(unittest.TestCase):
         self.assertEqual(state.image_state, ImageState.INVALID)
 
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
-
-
 class ShaderModuleDataModelTests(unittest.TestCase):
     def test_single_create_final_and_chunk_concatenation(self) -> None:
         single = ShaderAssemblyState()
@@ -172,12 +168,31 @@ class ShaderModuleDataModelTests(unittest.TestCase):
         self.assertEqual((state.assembly_active, state.assembly, state.module_live), (False, b"", False))
         self.assertEqual(shader_module_data(state, ShaderChunk(data=b"tail", final=True)), "INVALID_SYNCHRONIZATION_STATE")
 
-    def test_abort_frees_assembly_and_is_allowed_after_device_loss(self) -> None:
+    def test_device_loss_terminates_assembly_and_abort_cannot_revive_it(self) -> None:
         state = ShaderAssemblyState(device_lost=True)
         # Device-loss rejects further chunks and clears the partial assembly.
         state.assembly_active, state.assembly = True, b"partial"
-        self.assertEqual(shader_module_data(state, ShaderChunk(abort=True)), "SUCCESS")
+        self.assertEqual(shader_module_data(state, ShaderChunk(abort=True)), "DEVICE_LOST")
         self.assertEqual((state.assembly_active, state.assembly), (False, b""))
+
+    def test_abort_without_matching_assembly_is_rejected(self) -> None:
+        state = ShaderAssemblyState()
+        before = copy.deepcopy(state)
+        self.assertEqual(shader_module_data(state, ShaderChunk(abort=True)), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+
+    def test_second_create_cannot_reuse_assembly_xid(self) -> None:
+        state = ShaderAssemblyState()
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"part", create=True)), "SUCCESS")
+        before = copy.deepcopy(state)
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"other", create=True)), "BadIDChoice")
+        self.assertEqual(state, before)
+
+    def test_empty_data_chunk_is_bad_value_before_xid_lookup(self) -> None:
+        state = ShaderAssemblyState(xid_valid=False)
+        before = copy.deepcopy(state)
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"")), "BadValue")
+        self.assertEqual(state, before)
 
     def test_final_allocation_failure_does_not_publish_module(self) -> None:
         state = ShaderAssemblyState()
@@ -195,6 +210,31 @@ class CommandBufferDataModelTests(unittest.TestCase):
         self.assertEqual(command_buffer_data(state, CommandBufferChunk(entries=(b"b",), entries_valid=False)), "BadValue")
         self.assertEqual(state, before)
         self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"c",), entries_valid=False)), "BadValue")
+        self.assertEqual(state, before)
+
+    def test_entry_validation_precedes_target_xid_resolution(self) -> None:
+        state = CommandBufferModel(device_lost=True)
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="CREATE", target_xid_available=False, entries_valid=False)),
+            "BadValue",
+        )
+        self.assertEqual(state, before)
+
+    def test_malformed_entry_precedes_target_xid_resolution(self) -> None:
+        state = CommandBufferModel()
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="CREATE", target_xid_available=False, entries_well_formed=False)),
+            "BadLength",
+        )
+
+    def test_abort_checks_parent_pool_even_after_device_loss(self) -> None:
+        state = CommandBufferModel(
+            device_lost=True, lifecycle=CommandBufferLifecycle.RECORDING,
+            entries=[b"x"], pool_matches_buffer=False,
+        )
+        before = copy.deepcopy(state)
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="ABORT")), "BadMatch")
         self.assertEqual(state, before)
 
     def test_single_create_final_is_executable(self) -> None:
@@ -244,6 +284,24 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(queue_submit(state, request), expected)
         self.assertEqual(state, before, "rejected submission partially mutated state")
 
+    def test_reused_token_precedes_xid_type_and_device_errors(self) -> None:
+        state = self.state(
+            accepted_tokens={7}, xids_valid=False, types_and_ownership_valid=False,
+            device_lost=True,
+        )
+        self.assert_atomic_rejection(state, SubmitRequest(token=7), "BadValue")
+
+    def test_queue_xid_precedes_device_loss(self) -> None:
+        state = self.state(device_lost=True, queue_xid_valid=False)
+        self.assert_atomic_rejection(state, SubmitRequest(), "BadValue")
+
+    def test_fence_state_precedes_command_buffer_state(self) -> None:
+        state = self.state(
+            fence_state_valid=False,
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)],
+        )
+        self.assert_atomic_rejection(state, SubmitRequest(attach_fence=True), "INVALID_SYNCHRONIZATION_STATE")
+
     def test_late_invalid_signal_rejects_all_reservations(self) -> None:
         state = self.state(signal_slots=[None, 9])
         self.assert_atomic_rejection(state, SubmitRequest(signal_values=(5, 8)), "INVALID_SYNCHRONIZATION_STATE")
@@ -283,3 +341,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(queue_submit(state, request), "INVALID_SYNCHRONIZATION_STATE")
         state.command_buffers[0].lifecycle = CommandBufferLifecycle.EXECUTABLE
         self.assertEqual(queue_submit(state, request), "SUCCESS")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
