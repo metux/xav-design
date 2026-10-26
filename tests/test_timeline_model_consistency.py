@@ -85,6 +85,47 @@ class TimelineModelConsistencyTests(unittest.TestCase):
         self.assertEqual(submit, submit_before)
         self.assert_counters_match(host, submit)
 
+    def test_out_of_order_gpu_success_keeps_counter_monotonic(self) -> None:
+        host = Timeline(counter=2)
+        submit = submission_state()
+        for token, value in ((101, 9), (102, 12)):
+            self.assertEqual(host.reserve_gpu_signal(token, value), "SUCCESS")
+            reserve(submit, token, value)
+
+        self.assertEqual(host.signal_host(6), "SUCCESS")
+        self.assertEqual(signal_timeline_host(submit, 0, 6), "SUCCESS")
+        self.assertEqual(host.finish_gpu_signal(102, success=True), "SUCCESS")
+        self.assertEqual(finish_submission(submit, 102, success=True), "SUCCESS")
+        self.assert_counters_match(host, submit)
+        self.assertEqual(host.counter, 12)
+
+        self.assertEqual(host.finish_gpu_signal(101, success=True), "SUCCESS")
+        self.assertEqual(finish_submission(submit, 101, success=True), "SUCCESS")
+        self.assert_counters_match(host, submit)
+        self.assertEqual(host.counter, 12)
+        self.assertEqual(submit.signal_slots, [None])
+
+    def test_failed_high_signal_releases_only_its_reservation(self) -> None:
+        host = Timeline(counter=2)
+        submit = submission_state()
+        for token, value in ((101, 9), (102, 12)):
+            self.assertEqual(host.reserve_gpu_signal(token, value), "SUCCESS")
+            reserve(submit, token, value)
+
+        self.assertEqual(host.signal_host(6), "SUCCESS")
+        self.assertEqual(signal_timeline_host(submit, 0, 6), "SUCCESS")
+        self.assertEqual(host.finish_gpu_signal(102, success=False), "SUCCESS")
+        self.assertEqual(finish_submission(submit, 102, success=False), "SUCCESS")
+        self.assert_counters_match(host, submit)
+        self.assertEqual(host.counter, 6)
+        self.assertEqual(submit.signal_slots, [9])
+
+        self.assertEqual(host.finish_gpu_signal(101, success=True), "SUCCESS")
+        self.assertEqual(finish_submission(submit, 101, success=True), "SUCCESS")
+        self.assert_counters_match(host, submit)
+        self.assertEqual(host.counter, 9)
+        self.assertEqual(submit.signal_slots, [None])
+
     def test_device_loss_blocks_late_success_from_advancing_counter(self) -> None:
         host = Timeline(counter=2)
         submit = submission_state()
