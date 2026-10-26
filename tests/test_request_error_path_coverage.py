@@ -619,3 +619,50 @@ if __name__ == "__main__":
             with self.subTest(transfer_contract=phrase):
                 self.assertIn(phrase, errors)
                 self.assertIn(phrase, conformance)
+
+    def test_pipeline_creation_and_resource_destroy_lifetimes_match_error_precedence(self):
+        pipelines = (ROOT / "spec/shaders-pipelines.md").read_text(encoding="utf-8")
+        lifetime = self.lifetime
+        errors = self.errors
+        conformance = self.conformance
+
+        layout = pipelines[pipelines.index("## 6.7 `CreatePipelineLayout`"):pipelines.index("## 6.8 `CreateComputePipeline`")]
+        pipeline = pipelines[pipelines.index("## 6.8 `CreateComputePipeline`"): ]
+        for request_section, ordered_phases in (
+            (layout, (
+                "(1) exakte, count-konsistente Wire-Länge",
+                "(2) reservierte Felder, nicht unterstützte Stage-Bits",
+                "(3) Ziel-XID",
+                "(4) Device- und Set-Layout-XIDs in Wire-Reihenfolge",
+                "(5) Ressourcentyp, Ownership und Cross-Device-Zuordnung",
+                "(6) Device-Zustand",
+                "(7) geräteabhängige Limits",
+            )),
+            (pipeline, (
+                "(1) exakte Wire-Länge",
+                "(2) positiven Entry-Point-Count",
+                "(3) Ziel-Pipeline-XID",
+                "(4) Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge",
+                "(5) Ressourcentyp, Ownership und Cross-Device-Zuordnung",
+                "(6) Device-Zustand",
+                "(7) Backend-Pipeline-Erstellung",
+            )),
+        ):
+            positions = [request_section.index(phrase) for phrase in ordered_phases]
+            self.assertEqual(positions, sorted(positions))
+            self.assertIn("atomar", request_section)
+
+        # Destruction invalidates public XIDs atomically, while retained internal
+        # references survive until no backend access can remain.
+        for phrase in (
+            "Zerstörung mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen",
+            "referenzierende nicht-pending `EXECUTABLE`-Command-Buffer",
+            "vor erfolgreichem Abschluss der Zerstörung in `INVALID`",
+            "keine Backend-Zugriffe mehr möglich ist",
+        ):
+            with self.subTest(lifetime_rule=phrase):
+                self.assertIn(phrase, lifetime)
+        for phrase in ("CreatePipelineLayout", "CreateComputePipeline", "DestroyResource"):
+            with self.subTest(request=phrase):
+                self.assertIn("`" + phrase + "`", errors)
+                self.assertIn("`" + phrase + "`", conformance)
