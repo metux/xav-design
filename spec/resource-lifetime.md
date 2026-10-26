@@ -104,7 +104,7 @@ Das gilt auch für indirekte Abhängigkeiten, die über Descriptor Set → Buffe
 
 `DestroyResource` ist ein generischer Void-Request mit fester Gesamtlänge von 12 Bytes:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `resource_xid` |
 
