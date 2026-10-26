@@ -556,3 +556,66 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_buffer_memory_precedence_and_transfer_atomicity_stay_aligned(self):
+        memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        lifetime = self.lifetime
+        errors = self.errors
+        conformance = self.conformance
+
+        create_buffer = memory[memory.index("## 5.1 `CreateBuffer`"):memory.index("## 5.2")]
+        allocate = memory[memory.index("## 5.4 `AllocateMemory`"):memory.index("## 5.5")]
+        bind = memory[memory.index("## 5.6 `BindBufferMemory`"):memory.index("## 5.7")]
+        write = memory[memory.index("## 5.7 `WriteBuffer`"):memory.index("## 5.8")]
+        read = memory[memory.index("## 5.8 `ReadBuffer`"): ]
+
+        # Creation and allocation must not publish partially initialized XIDs.
+        for request_section, phrases in (
+            (create_buffer, ("size", "usage_flags = 0", "Buffer-Erstellung alloziert und bindet noch keinen Speicher")),
+            (allocate, ("memory_type_index", "Request ist atomar", "memory_xid bleibt unangelegt")),
+        ):
+            for phrase in phrases:
+                with self.subTest(create_or_allocate=phrase):
+                    self.assertIn(phrase, request_section)
+        self.assertIn("CreateBuffer", conformance)
+        self.assertIn("AllocateMemory", conformance)
+
+        # Binding has a normative phase order and must be all-or-nothing.
+        bind_order = (
+            "(1) exakte Wire-Länge",
+            "(2) Auflösung von Device-, Buffer- und Memory-XID in Wire-Reihenfolge",
+            "(3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zuordnung",
+            "(4) Device-Zustand",
+            "(5) bindungsabhängige Prüfungen",
+        )
+        positions = [bind.index(phrase) for phrase in bind_order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("bei Ablehnung bleibt der Buffer ungebunden", bind)
+        self.assertIn("`BindBufferMemory`", errors)
+        self.assertIn("`BindBufferMemory`", conformance)
+
+        # A destroyed public Buffer can still keep its allocation alive through
+        # descriptor/internal references; FreeMemory must not invalidate it.
+        self.assertIn("interne Bindungsreferenz auf die Memory-Allokation", lifetime)
+        self.assertIn("auch dann mit `BadMatch` abgewiesen", lifetime)
+        self.assertIn("Bei Ablehnung bleibt die Memory-XID live", conformance)
+
+        # Read/write are ordering boundaries, not merely synchronous byte copies.
+        for phrase in (
+            "alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions",
+            "keinen erfolgreichen Reply",
+            "keine implizite Synchronisation mit anderen logischen Devices",
+        ):
+            with self.subTest(write_boundary=phrase):
+                self.assertIn(phrase, write)
+        for phrase in (
+            "vor dem Snapshot alle vor diesem Request angenommenen `QueueSubmit`-Submissions",
+            "stabilen Daten-Snapshot",
+            "keinen erfolgreichen Daten-Reply",
+        ):
+            with self.subTest(read_boundary=phrase):
+                self.assertIn(phrase, read)
+        for phrase in ("ReadBuffer", "WriteBuffer", "DEPENDENCY_FAILED", "DEVICE_LOST"):
+            with self.subTest(transfer_contract=phrase):
+                self.assertIn(phrase, errors)
+                self.assertIn(phrase, conformance)
