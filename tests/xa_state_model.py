@@ -405,8 +405,15 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     for index, value in zip(request.signal_indices, request.signal_values):
         slot = state.signal_slots[index]
         counter = state.signal_counters[index]
-        if value <= counter or (slot is not None and value <= slot):
-            # Invalid timeline values are BadValue, not a mutable-state error.
+        kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.TIMELINE
+        if kind is SemaphoreKind.BINARY:
+            if value != 0:
+                return "BadValue"
+            if slot is not None:
+                return "INVALID_SYNCHRONIZATION_STATE"
+        elif value <= counter or (slot is not None and value <= slot):
+            # Timeline signal values must exceed both the visible counter and
+            # every still-pending GPU signal reservation.
             return "BadValue"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
