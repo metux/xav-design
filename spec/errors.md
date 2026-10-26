@@ -8,45 +8,45 @@ For an accepted `QueueSubmit`, an execution failure is reported through the subm
 
 XAverius errors use the standard 32-byte X11 error packet and add no XAverius-specific payload bytes. The packet carries the extension major opcode and the sequence number of the request that caused the error. The resource field identifies the affected resource when meaningful; otherwise it is zero. For v0.1, the X11 request-header `data` byte MUST be zero; XAverius `subopcode` is carried at offset 4, and the error packet's `minorCode` is the zero-extended `subopcode`. The error packet's `majorCode` is the extension major opcode.
 
-## Allgemeine Fehlerklassen
+## General Error Classes
 
 | Situation | Ergebnis |
 |---|---|
-| Request-Länge oder Count inkonsistent | `BadLength` |
-| Ungültiger Feldwert, reservierte Bits oder Flags | `BadValue` |
-| Ungültige oder bereits belegte Create-XID | `BadIDChoice` |
+| Inconsistent request length or count | `BadLength` |
+| Invalid field value, reserved bits, or flags | `BadValue` |
+| Invalid or already occupied create XID | `BadIDChoice` |
 | Falscher Ressourcentyp oder Cross-Device-Kombination | normalerweise `BadMatch` |
-| XID bezeichnet keine live XAverius-Ressource oder ist in diesem Ressourcen-Kontext unbekannt | `BadValue` |
-| Atom-XID ist ungültig | `BadAtom` |
+| XID does not identify a live XAverius resource or is unknown in this resource context | `BadValue` |
+| Invalid Atom XID | `BadAtom` |
 | Live-XID hat einen anderen Ressourcentyp als erwartet | `BadMatch` |
-| Live-Ressource gehört einem anderen Client, obwohl kein Sharing-Pfad definiert ist | `BadMatch` |
-| Device nicht verfügbar | `DEVICE_UNAVAILABLE` |
+| Live resource belongs to another client and no sharing path is defined | `BadMatch` |
+| Device unavailable | `DEVICE_UNAVAILABLE` |
 | Device verloren | `DEVICE_LOST` |
-| Logisches Device regulär zerstört, während ein Host-Wait offen ist (`WaitSemaphores`) | `DEVICE_DESTROYED` als X11-Fehler; `WaitForFence` verwendet stattdessen den normalen Reply-Status `DEVICE_DESTROYED = 4` |
-| Ungültiger Synchronisationszustand | `INVALID_SYNCHRONIZATION_STATE` |
+| Logical device normally destroyed while a host wait is open (`WaitSemaphores`) | `DEVICE_DESTROYED` as an X11 error; `WaitForFence` instead uses the normal reply status `DEVICE_DESTROYED = 4` |
+| Invalid synchronization state | `INVALID_SYNCHRONIZATION_STATE` |
 | Synchroner Transferfehler | `TRANSFER_FAILED` |
 | Synchroner Allokationsfehler | `ALLOCATION_FAILED` |
-| Ungültige Abhängigkeit verhindert Annahme | `DEPENDENCY_FAILED` |
+| Invalid dependency prevents acceptance | `DEPENDENCY_FAILED` |
 | Unerwarteter Serverfehler | `INTERNAL_SERVER_ERROR` |
 
-## Verbindliche XID-Fehlerregel
+## Normative XID Error Rule
 
-Für alle XAverius-Requests gilt dieselbe Grundzuordnung, sofern ein Request keine ausdrücklich engere Regel definiert:
+The following baseline mapping applies to all XAverius requests unless a request defines an explicitly narrower rule:
 
-- Eine erforderliche XAverius-XID, die keine live Ressource im XAverius-Ressourcenraum bezeichnet, ergibt `BadValue`. Das umfasst unbekannte, bereits zerstörte und nicht mehr öffentliche XIDs. XAverius-Ressourcen verwenden eigene Extension-Ressourcentypen; es gibt daher keinen passenden Core-Fehler wie `BadWindow` oder `BadPixmap`.
+- A required XAverius XID that does not identify a live resource in the XAverius resource space results in `BadValue`. This includes unknown, destroyed, and no-longer-public XIDs. XAverius resources use extension-specific resource types, so there is no corresponding core error such as `BadWindow` or `BadPixmap`.
 - Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`.
-- Eine live Ressource, die einem anderen Client gehört und für die kein expliziter Sharing-Pfad definiert ist, ergibt `BadMatch`. Dasselbe gilt für Cross-Device-Verwendung.
-- Ein ungültiger `ATOM`-Wert ergibt `BadAtom`, nicht `BadValue`.
-- Eine Create-XID, die ungültig ist oder bereits belegt ist, ergibt `BadIDChoice`; dies ist von einer ungültigen Eingabe-XID zu unterscheiden.
-- Für serverseitig vergebene Physical-Device-XIDs gilt ebenfalls `BadValue`, wenn die XID unbekannt oder nicht mehr gültig ist; ein falscher live Ressourcentyp ergibt `BadMatch`.
+- A live resource owned by another client, with no explicit sharing path defined, results in `BadMatch`. The same applies to cross-device use.
+- An invalid `ATOM` value results in `BadAtom`, not `BadValue`.
+- An invalid or already-occupied create XID results in `BadIDChoice`; this differs from an invalid input XID.
+- For server-assigned physical-device XIDs, an unknown or no-longer-valid XID also results in `BadValue`; a live resource of the wrong type results in `BadMatch`.
 
-Diese Zuordnung gilt auch dann, wenn der Request mehrere XIDs enthält: Der Server prüft die Wire-Struktur zuerst, danach Feldwerte und anschließend XIDs in der im jeweiligen Request-Kapitel festgelegten Feldreihenfolge. Die erste fehlerhafte XID bestimmt den gemeldeten Ressourcenfehler. Der Request bleibt atomar.
+This mapping also applies when a request contains multiple XIDs: the server validates wire structure first, then field values, then XIDs in the field order specified by the request chapter. The first invalid XID determines the reported resource error. The request remains atomic.
 
-### Create-XID und chunk-basierte Erzeugung
+### Create XIDs and Chunk-Based Creation
 
-Die Ziel-XID eines Create-Requests ist keine Eingabe-XID, die als vorhandene Ressource aufgelöst wird. Eine ungültige oder bereits belegte Ziel-XID ergibt deshalb `BadIDChoice`; sie darf nicht als gewöhnliche unbekannte Eingabe-XID mit `BadValue` behandelt werden. Bei atomaren Batch-Erzeugungen wird der gesamte Request abgewiesen, wenn eine Ziel-XID ungültig, bereits belegt oder innerhalb desselben Requests doppelt angegeben ist; es bleibt keine Teilmenge live.
+The target XID of a create request is not an input XID to be resolved as an existing resource. An invalid or occupied target XID therefore results in `BadIDChoice`; it MUST NOT be treated as an ordinary unknown input XID producing `BadValue`. For atomic batch creation, the entire request is rejected if any target XID is invalid, already occupied, or duplicated within the same request; no subset remains live.
 
-Diese Regel gilt insbesondere für die Ziel-XIDs von `CreatePipelineLayout`, `CreateComputePipeline` und die in `AllocateDescriptorSets` angeforderten Descriptor Sets. Für `ShaderModuleData` und `CommandBufferData` gilt sie, wenn das `CREATE`-Flag gesetzt ist. Bei `ShaderModuleData` reserviert ein erfolgreicher CREATE-Chunk die Ziel-XID für das Upload-Assembly; ein zweites CREATE oder eine bereits live belegte Ziel-XID ergibt `BadIDChoice`.
+This rule applies in particular to target XIDs for `CreatePipelineLayout`, `CreateComputePipeline`, and descriptor sets requested by `AllocateDescriptorSets`. It also applies to `ShaderModuleData` and `CommandBufferData` when the `CREATE` flag is set. For `ShaderModuleData`, a successful CREATE chunk reserves the target XID for the upload assembly; a second CREATE or an already-live target XID results in `BadIDChoice`.
 
 Bei `ShaderModuleData` ohne `CREATE` muss ein passendes Upload-Assembly existieren. Ist die XID eine live Ressource eines anderen Typs, gilt `BadMatch`; andernfalls ergibt ein fehlendes Assembly `INVALID_SYNCHRONIZATION_STATE`, auch wenn noch kein öffentliches Shader-Module-Objekt existiert. Bei `CommandBufferData` ohne `CREATE` muss die Ziel-XID einen live Command Buffer bezeichnen: unbekannte/nicht-live XIDs ergeben `BadValue`, ein falscher live Ressourcentyp `BadMatch`, und ein Command Buffer außerhalb von `RECORDING` ergibt `INVALID_SYNCHRONIZATION_STATE`. Alle Prüfungen erfolgen vor einer Zustandsänderung.
 
@@ -321,7 +321,7 @@ For a new `AcquireNextImage` evaluation, after the preceding validation stages, 
 
 For `QueuePresent`, status replies (`OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`) and synchronous X11 errors are pre-acceptance outcomes: the rejected request itself consumes no semaphore, reserves no token, and makes no image-state change. The image remains in its pre-request state; a separate lifecycle transition such as Device loss may already have invalidated it. Token reuse is a `BadValue` only if that token belongs to a previously accepted presentation; a token used only by a rejected attempt remains available. A zero token is always `BadValue`.
 
-## Synchron versus asynchron
+## Synchronous versus Asynchronous Errors
 
 Ein Fehler vor Annahme wird durch einen X11-Fehler oder den ausdrücklich definierten normalen Fehler-Reply signalisiert. Der Request darf keinen Teilzustand hinterlassen.
 
