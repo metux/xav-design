@@ -25,14 +25,9 @@ class NegativeContractRegressionTests(unittest.TestCase):
         cls.presentation = read("spec/presentation.md")
 
     def test_common_validation_stage_order_is_normative(self) -> None:
-        for text, label in (
-            (self.errors, "error mapping"),
-            (self.conformance, "conformance matrix"),
-        ):
-            with self.subTest(document=label):
-                self.assertIn("Wire-Struktur zuerst", text)
-                self.assertIn("Feldwerte", text)
-                self.assertIn("Feldreihenfolge", text)
+        for phrase in ("Wire-Struktur zuerst", "Feldwerte", "Feldreihenfolge"):
+            with self.subTest(document="error mapping", contract=phrase):
+                self.assertIn(phrase, self.errors)
         self.assertIn("framing before scalar syntax", self.conformance)
         self.assertIn("scalar syntax before XID resolution", self.conformance)
         self.assertIn("XID/type/ownership checks before lifecycle", self.conformance)
