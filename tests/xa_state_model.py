@@ -232,6 +232,7 @@ class ShaderAssemblyState:
     assembly_active: bool = False
     assembly: bytes = b""
     module_code: bytes | None = None
+    max_assembled_size: int | None = None
 
 
 @dataclass(frozen=True)
@@ -245,6 +246,7 @@ class ShaderChunk:
     chunk_valid: bool = True
     allocation_ok: bool = True
     flags_valid: bool = True
+    module_valid: bool = True
 
 
 def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
@@ -282,9 +284,14 @@ def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
             return "BadIDChoice"
         if not request.chunk_valid:
             return "BadValue"
+        if (state.max_assembled_size is not None
+                and len(request.data) > state.max_assembled_size):
+            return "BadValue"
         if not request.allocation_ok:
             return "ALLOCATION_FAILED"
         if request.final:
+            if len(request.data) % 4 or not request.module_valid:
+                return "BadValue"
             state.module_live = True
             state.module_code = bytes(request.data)
             return "SUCCESS"
@@ -300,7 +307,14 @@ def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
         state.assembly_active, state.assembly = False, b""
         return "ALLOCATION_FAILED"
     combined = state.assembly + request.data
+    if (state.max_assembled_size is not None
+            and len(combined) > state.max_assembled_size):
+        state.assembly_active, state.assembly = False, b""
+        return "BadValue"
     if request.final:
+        if len(combined) % 4 or not request.module_valid:
+            state.assembly_active, state.assembly = False, b""
+            return "BadValue"
         state.module_live = True
         state.module_code = combined
         state.assembly_active, state.assembly = False, b""
@@ -342,6 +356,9 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     # Request/entry structure has precedence over flags and command values.
     if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
+    # Semantic entry values are phase 2 and therefore precede all XID lookup.
+    if request.operation != "ABORT" and not request.entries_valid:
+        return "BadValue"
     if request.operation in {"CREATE", "CREATE_FINAL"}:
         if not request.target_xid_available:
             return "BadIDChoice"
@@ -353,8 +370,6 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
             or not state.pool_type_and_ownership_valid
             or not state.pool_matches_buffer):
         return "BadMatch"
-    if request.operation != "ABORT" and not request.entries_valid:
-        return "BadValue"
     if request.operation == "ABORT":
         # ABORT is allowed after device loss, but only for the exact parent
         # pool and a live buffer still in RECORDING.

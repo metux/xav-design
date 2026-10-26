@@ -169,13 +169,39 @@ class QueuePresentStateModelTests(unittest.TestCase):
 class ShaderModuleDataModelTests(unittest.TestCase):
     def test_single_create_final_and_chunk_concatenation(self) -> None:
         single = ShaderAssemblyState()
-        self.assertEqual(shader_module_data(single, ShaderChunk(data=b"abc", create=True, final=True)), "SUCCESS")
-        self.assertEqual(single.module_code, b"abc")
+        self.assertEqual(shader_module_data(single, ShaderChunk(data=b"abcd", create=True, final=True)), "SUCCESS")
+        self.assertEqual(single.module_code, b"abcd")
         multi = ShaderAssemblyState()
         self.assertEqual(shader_module_data(multi, ShaderChunk(data=b"ab", create=True)), "SUCCESS")
         self.assertEqual(shader_module_data(multi, ShaderChunk(data=b"cd", final=True)), "SUCCESS")
         self.assertEqual(multi.module_code, b"abcd")
         self.assertFalse(multi.assembly_active)
+
+    def test_final_shader_validation_and_assembled_size_fail_atomically(self) -> None:
+        single = ShaderAssemblyState()
+        self.assertEqual(
+            shader_module_data(single, ShaderChunk(data=b"abc", create=True, final=True)),
+            "BadValue",
+        )
+        self.assertFalse(single.module_live)
+        self.assertIsNone(single.module_code)
+
+        invalid = ShaderAssemblyState()
+        self.assertEqual(
+            shader_module_data(invalid, ShaderChunk(data=b"abcd", create=True, final=True, module_valid=False)),
+            "BadValue",
+        )
+        self.assertFalse(invalid.module_live)
+        self.assertIsNone(invalid.module_code)
+
+        bounded = ShaderAssemblyState(max_assembled_size=4)
+        self.assertEqual(shader_module_data(bounded, ShaderChunk(data=b"ab", create=True)), "SUCCESS")
+        before = copy.deepcopy(bounded)
+        self.assertEqual(shader_module_data(bounded, ShaderChunk(data=b"cde", final=True)), "BadValue")
+        self.assertFalse(bounded.assembly_active)
+        self.assertEqual(bounded.assembly, b"")
+        self.assertFalse(bounded.module_live)
+        self.assertNotEqual(bounded, before)
 
     def test_bad_chunk_discards_entire_shader_assembly(self) -> None:
         state = ShaderAssemblyState()
@@ -228,12 +254,12 @@ class CommandBufferDataModelTests(unittest.TestCase):
         self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"c",), entries_valid=False)), "BadValue")
         self.assertEqual(state, before)
 
-    def test_target_xid_precedes_semantic_entry_validation(self) -> None:
+    def test_semantic_entry_validation_precedes_target_xid_resolution(self) -> None:
         state = CommandBufferModel(device_lost=True)
         before = copy.deepcopy(state)
         self.assertEqual(
             command_buffer_data(state, CommandBufferChunk(operation="CREATE", target_xid_available=False, entries_valid=False)),
-            "BadIDChoice",
+            "BadValue",
         )
         self.assertEqual(state, before)
 
