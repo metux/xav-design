@@ -1032,5 +1032,45 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state, before)
 
 
+    def test_device_loss_unchanged_signal_report_cannot_override_unknown_present_outcome(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=204, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=205, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 205, 0, consumed=None), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        # Even a backend's stale assertion that the signal payload was
+        # unchanged must not restore a trusted state after the Present callback
+        # explicitly reported an unknown payload outcome.
+        submit.device_lost = True
+        self.assertEqual(
+            finish_submission(
+                submit, 204, success=False,
+                binary_payload_unchanged={("signal", 0)},
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(submit.binary_signal_states[0], BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
