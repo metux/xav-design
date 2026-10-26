@@ -499,7 +499,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(finish_submission(state, 120, success=False), "SUCCESS")
         self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
         for token, op in (
-            (121, SubmitRequest(token=121, wait_indices=(0,))),
+            (121, SubmitRequest(token=121, command_buffer_indices=(1,), wait_indices=(0,))),
             (122, SubmitRequest(token=122, command_buffer_indices=(1,),
                                 signal_indices=(0,), signal_values=(0,))),
         ):
@@ -531,7 +531,8 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
         self.assertEqual(state.wait_states, [WaitState.READY])
         self.assertEqual(
-            queue_submit(state, SubmitRequest(token=151, signal_indices=(0,), signal_values=(0,))),
+            queue_submit(state, SubmitRequest(token=151, command_buffer_indices=(1,),
+                                              signal_indices=(0,), signal_values=(0,))),
             "SUCCESS",
         )
 
@@ -587,6 +588,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(finish_present_wait(state, 130, 0, consumed=False), "SUCCESS")
         self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
         self.assertEqual(state.wait_states, [WaitState.READY])
+        state.image_state = ImageState.ACQUIRED  # independent image-release callback
         self.assertEqual(
             queue_present(state, PresentRequest(token=132, wait_indices=(0,))).result,
             "SUCCESS",
@@ -601,6 +603,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertTrue(queue_present(state, PresentRequest(token=140, wait_indices=(0,))).accepted)
         self.assertEqual(finish_present_wait(state, 140, 0, consumed=None), "SUCCESS")
         self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        state.image_state = ImageState.ACQUIRED  # let semaphore validation be reached
         self.assertEqual(
             queue_present(state, PresentRequest(token=141, wait_indices=(0,))).result,
             "DEPENDENCY_FAILED",
