@@ -152,7 +152,7 @@ class QueuePresentStateModelTests(unittest.TestCase):
         self.assertEqual((result.result, result.accepted), ("SUCCESS", True))
         self.assertEqual(state.image_state, ImageState.PRESENT_PENDING)
         self.assertIn(9, state.accepted_tokens)
-        self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
+        self.assertEqual(state.wait_states, [WaitState.READY, WaitState.READY, WaitState.RESERVED, WaitState.RESERVED])
         self.assertEqual(len(state.accepted_tokens - before.accepted_tokens), 1)
 
     def test_independent_lifecycle_change_is_not_rolled_back(self) -> None:
@@ -1059,16 +1059,20 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
     def test_invalid_command_buffer_does_not_reserve_token_waits_fence_or_signals(self) -> None:
         state = self.state(
             command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)],
-            wait_states=[WaitState.READY, WaitState.READY],
+            wait_states=[WaitState.READY, WaitState.READY, WaitState.READY],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
         )
         self.assert_atomic_rejection(
-            state, SubmitRequest(command_buffer_indices=(0,), wait_indices=(0,), signal_indices=(0, 1), signal_values=(3, 4), attach_fence=True),
+            state, SubmitRequest(command_buffer_indices=(0,), wait_indices=(2,), signal_indices=(0, 1), signal_values=(3, 4), attach_fence=True),
             "INVALID_SYNCHRONIZATION_STATE",
         )
 
     def test_success_commits_all_submission_state_together(self) -> None:
-        state = self.state()
-        result = queue_submit(state, SubmitRequest(token=42, command_buffer_indices=(0,), wait_indices=(0, 1), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
+        state = self.state(
+            wait_states=[WaitState.READY, WaitState.READY, WaitState.READY, WaitState.READY],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE, SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+        )
+        result = queue_submit(state, SubmitRequest(token=42, command_buffer_indices=(0,), wait_indices=(2, 3), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
         self.assertEqual(result, "SUCCESS")
         self.assertEqual(state.command_buffers[0].lifecycle, CommandBufferLifecycle.PENDING)
         self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
