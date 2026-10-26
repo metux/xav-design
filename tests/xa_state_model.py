@@ -454,16 +454,18 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
         return "BadValue"
-    if not state.device_xid_valid or not state.xids_valid or not state.queue_xid_valid:
+    if not state.device_xid_valid or not state.xids_valid:
         return "BadValue"
-    # Resolve every referenced resource before type/ownership and device state.
+    # Resolve referenced resource XIDs in wire order before queue/type checks.
     if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
         return "BadValue"
     if any(i < 0 or i >= len(state.wait_states) for i in request.wait_indices):
         return "BadValue"
     if any(i < 0 or i >= len(state.signal_slots) for i in request.signal_indices):
         return "BadValue"
-    if not state.types_and_ownership_valid:
+    # Queue family/index support and live type/ownership are match failures,
+    # not unknown-XID failures; both precede Device Loss.
+    if not state.queue_xid_valid or not state.types_and_ownership_valid:
         return "BadMatch"
     if state.device_lost:
         return "DEVICE_LOST"
