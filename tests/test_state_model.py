@@ -10,6 +10,16 @@ from xa_state_model import (
     PresentState,
     WaitState,
     queue_present,
+    CommandBufferLifecycle,
+    CommandBufferChunk,
+    CommandBufferModel,
+    ShaderAssemblyState,
+    ShaderChunk,
+    SubmissionModel,
+    SubmitRequest,
+    command_buffer_data,
+    queue_submit,
+    shader_module_data,
 )
 
 
@@ -142,3 +152,125 @@ class QueuePresentStateModelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class ShaderModuleDataModelTests(unittest.TestCase):
+    def test_single_create_final_and_chunk_concatenation(self) -> None:
+        single = ShaderAssemblyState()
+        self.assertEqual(shader_module_data(single, ShaderChunk(data=b"abc", create=True, final=True)), "SUCCESS")
+        self.assertEqual(single.module_code, b"abc")
+        multi = ShaderAssemblyState()
+        self.assertEqual(shader_module_data(multi, ShaderChunk(data=b"ab", create=True)), "SUCCESS")
+        self.assertEqual(shader_module_data(multi, ShaderChunk(data=b"cd", final=True)), "SUCCESS")
+        self.assertEqual(multi.module_code, b"abcd")
+        self.assertFalse(multi.assembly_active)
+
+    def test_bad_chunk_discards_entire_shader_assembly(self) -> None:
+        state = ShaderAssemblyState()
+        shader_module_data(state, ShaderChunk(data=b"prefix", create=True))
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"bad", chunk_valid=False)), "BadValue")
+        self.assertEqual((state.assembly_active, state.assembly, state.module_live), (False, b"", False))
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"tail", final=True)), "INVALID_SYNCHRONIZATION_STATE")
+
+    def test_abort_frees_assembly_and_is_allowed_after_device_loss(self) -> None:
+        state = ShaderAssemblyState(device_lost=True)
+        # Device-loss rejects further chunks and clears the partial assembly.
+        state.assembly_active, state.assembly = True, b"partial"
+        self.assertEqual(shader_module_data(state, ShaderChunk(abort=True)), "SUCCESS")
+        self.assertEqual((state.assembly_active, state.assembly), (False, b""))
+
+    def test_final_allocation_failure_does_not_publish_module(self) -> None:
+        state = ShaderAssemblyState()
+        shader_module_data(state, ShaderChunk(data=b"part", create=True))
+        self.assertEqual(shader_module_data(state, ShaderChunk(data=b"tail", final=True, allocation_ok=False)), "ALLOCATION_FAILED")
+        self.assertFalse(state.module_live)
+        self.assertFalse(state.assembly_active)
+
+
+class CommandBufferDataModelTests(unittest.TestCase):
+    def test_failed_append_preserves_prior_chunks_and_final_state(self) -> None:
+        state = CommandBufferModel()
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="CREATE", entries=(b"a",))), "SUCCESS")
+        before = copy.deepcopy(state)
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(entries=(b"b",), entries_valid=False)), "BadValue")
+        self.assertEqual(state, before)
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"c",), entries_valid=False)), "BadValue")
+        self.assertEqual(state, before)
+
+    def test_abort_resets_recording_buffer_and_discards_entries(self) -> None:
+        state = CommandBufferModel()
+        command_buffer_data(state, CommandBufferChunk(operation="CREATE", entries=(b"a", b"b")))
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="ABORT")), "SUCCESS")
+        self.assertEqual((state.lifecycle, state.entries), (CommandBufferLifecycle.INITIAL, []))
+
+    def test_abort_allowed_after_device_loss_but_not_pending(self) -> None:
+        state = CommandBufferModel(device_lost=True, lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"x"])
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="ABORT")), "SUCCESS")
+        state.lifecycle = CommandBufferLifecycle.PENDING
+        before = copy.deepcopy(state)
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="ABORT")), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+
+    def test_final_commits_executable_only_after_valid_chunk(self) -> None:
+        state = CommandBufferModel()
+        command_buffer_data(state, CommandBufferChunk(operation="CREATE", entries=(b"first",)))
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"last",))), "SUCCESS")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+        self.assertEqual(state.entries, [b"first", b"last"])
+
+
+class QueueSubmitAtomicityTests(unittest.TestCase):
+    def state(self, **changes) -> SubmissionModel:
+        state = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY, WaitState.READY],
+            signal_slots=[None, None],
+        )
+        for name, value in changes.items():
+            setattr(state, name, value)
+        return state
+
+    def assert_atomic_rejection(self, state: SubmissionModel, request: SubmitRequest, expected: str) -> None:
+        before = copy.deepcopy(state)
+        self.assertEqual(queue_submit(state, request), expected)
+        self.assertEqual(state, before, "rejected submission partially mutated state")
+
+    def test_late_invalid_signal_rejects_all_reservations(self) -> None:
+        state = self.state(signal_slots=[None, 9])
+        self.assert_atomic_rejection(state, SubmitRequest(signal_values=(5, 8)), "INVALID_SYNCHRONIZATION_STATE")
+
+    def test_device_loss_precedes_command_buffer_state_after_xid_checks(self) -> None:
+        state = self.state(device_lost=True, command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)])
+        self.assert_atomic_rejection(state, SubmitRequest(), "DEVICE_LOST")
+
+    def test_unknown_xid_precedes_device_loss(self) -> None:
+        state = self.state(device_lost=True, xids_valid=False)
+        self.assert_atomic_rejection(state, SubmitRequest(), "BadValue")
+
+    def test_invalid_command_buffer_does_not_reserve_token_waits_fence_or_signals(self) -> None:
+        state = self.state(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)],
+            wait_states=[WaitState.READY, WaitState.READY],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,), signal_values=(3, 4), attach_fence=True),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
+    def test_success_commits_all_submission_state_together(self) -> None:
+        state = self.state()
+        result = queue_submit(state, SubmitRequest(token=42, wait_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
+        self.assertEqual(result, "SUCCESS")
+        self.assertEqual(state.command_buffers[0].lifecycle, CommandBufferLifecycle.PENDING)
+        self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
+        self.assertEqual(state.signal_slots, [2, 7])
+        self.assertEqual(state.accepted_tokens, {42})
+        self.assertEqual(state.pending_submissions, [42])
+        self.assertTrue(state.fence_attached)
+
+    def test_rejected_token_can_be_retried_after_fixing_state(self) -> None:
+        state = self.state(command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)])
+        request = SubmitRequest(token=9)
+        self.assertEqual(queue_submit(state, request), "INVALID_SYNCHRONIZATION_STATE")
+        state.command_buffers[0].lifecycle = CommandBufferLifecycle.EXECUTABLE
+        self.assertEqual(queue_submit(state, request), "SUCCESS")
