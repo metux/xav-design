@@ -398,6 +398,44 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     return "SUCCESS"
 
 
+def reset_command_buffer(
+    state: CommandBufferModel, *, device_xid_valid: bool = True,
+    device_available: bool = True, reset_flag: bool = True,
+) -> str:
+    """Model ResetCommandBuffer with spec-ordered checks and atomic reset."""
+    if not device_xid_valid or not state.buffer_live:
+        return "BadValue"
+    if (not state.correct_type_and_ownership
+            or not state.pool_type_and_ownership_valid
+            or not state.pool_matches_buffer):
+        return "BadMatch"
+    if not device_available:
+        return "DEVICE_UNAVAILABLE"
+    if state.device_lost:
+        return "DEVICE_LOST"
+    if not state.pool_live or not state.pool_xid_valid:
+        return "BadValue"
+    if not reset_flag or state.lifecycle is CommandBufferLifecycle.PENDING:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    # Commit only after every validation phase: entries/references are discarded
+    # together with the lifecycle transition.
+    state.entries.clear()
+    state.lifecycle = CommandBufferLifecycle.INITIAL
+    return "SUCCESS"
+
+
+def destroy_command_pool(command_buffers: list[CommandBufferModel]) -> str:
+    """Atomically invalidate a pool and its children unless one is pending."""
+    if any(buffer.lifecycle is CommandBufferLifecycle.PENDING
+           for buffer in command_buffers if buffer.buffer_live):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for buffer in command_buffers:
+        if buffer.buffer_live:
+            buffer.buffer_live = False
+            buffer.pool_live = False
+    return "SUCCESS"
+
+
 @dataclass
 class SubmissionModel:
     device_lost: bool = False

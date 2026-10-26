@@ -22,6 +22,8 @@ from xa_state_model import (
     SubmissionModel,
     SubmitRequest,
     command_buffer_data,
+    reset_command_buffer,
+    destroy_command_pool,
     queue_submit,
     shader_module_data,
     finish_submission,
@@ -1564,6 +1566,64 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
+    def test_reset_returns_every_nonpending_lifecycle_to_initial(self) -> None:
+        for lifecycle in (
+            CommandBufferLifecycle.INITIAL,
+            CommandBufferLifecycle.RECORDING,
+            CommandBufferLifecycle.EXECUTABLE,
+            CommandBufferLifecycle.INVALID,
+        ):
+            with self.subTest(lifecycle=lifecycle):
+                state = CommandBufferModel(lifecycle=lifecycle, entries=[b"recorded"])
+                self.assertEqual(reset_command_buffer(state), "SUCCESS")
+                self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+                self.assertEqual(state.entries, [])
+
+    def test_reset_rejects_missing_pool_flag_or_pending_atomically(self) -> None:
+        for changes in (
+            {"lifecycle": CommandBufferLifecycle.EXECUTABLE},
+            {"lifecycle": CommandBufferLifecycle.PENDING},
+        ):
+            with self.subTest(changes=changes):
+                state = CommandBufferModel(**changes, entries=[b"keep"])
+                before = copy.deepcopy(state)
+                self.assertEqual(
+                    reset_command_buffer(state, reset_flag=False if changes["lifecycle"] is not CommandBufferLifecycle.PENDING else True),
+                    "INVALID_SYNCHRONIZATION_STATE",
+                )
+                self.assertEqual(state, before)
+
+    def test_reset_checks_device_state_before_pool_flag_and_lifecycle(self) -> None:
+        state = CommandBufferModel(device_lost=True, lifecycle=CommandBufferLifecycle.PENDING, entries=[b"keep"])
+        before = copy.deepcopy(state)
+        self.assertEqual(reset_command_buffer(state, reset_flag=False), "DEVICE_LOST")
+        self.assertEqual(state, before)
+        state.device_lost = False
+        self.assertEqual(reset_command_buffer(state, device_available=False), "DEVICE_UNAVAILABLE")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.PENDING)
+        self.assertEqual(state.entries, [b"keep"])
+
+    def test_pool_destroy_is_atomic_when_any_live_child_is_pending(self) -> None:
+        children = [
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"a"]),
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.PENDING, entries=[b"b"]),
+        ]
+        before = copy.deepcopy(children)
+        self.assertEqual(destroy_command_pool(children), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(children, before)
+
+    def test_pool_destroy_invalidates_all_live_children_together(self) -> None:
+        children = [
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"a"]),
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.INVALID, entries=[b"b"]),
+        ]
+        self.assertEqual(destroy_command_pool(children), "SUCCESS")
+        self.assertTrue(all(not child.buffer_live and not child.pool_live for child in children))
+        # Logical invalidation does not pretend backend references are already freed.
+        self.assertEqual([child.entries for child in children], [[b"a"], [b"b"]])
 
 
 class CommandBufferLifecycleTransitionTests(unittest.TestCase):
