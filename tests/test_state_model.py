@@ -1564,3 +1564,70 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class CommandBufferLifecycleTransitionTests(unittest.TestCase):
+    def test_recording_buffer_cannot_be_submitted_or_mutated_partially(self) -> None:
+        buffer = CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"accepted"])
+        state = SubmissionModel(command_buffers=[buffer])
+        before = copy.deepcopy(state)
+        self.assertEqual(queue_submit(state, SubmitRequest(token=301)), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+
+        self.assertEqual(
+            command_buffer_data(buffer, CommandBufferChunk(operation="APPEND", entries=(b"later",))),
+            "SUCCESS",
+        )
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.RECORDING)
+        self.assertEqual(buffer.entries, [b"accepted", b"later"])
+
+    def test_executable_buffer_becomes_pending_then_executable_on_success(self) -> None:
+        buffer = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"entry"])
+        state = SubmissionModel(command_buffers=[buffer])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=302)), "SUCCESS")
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.PENDING)
+
+        before = copy.deepcopy(buffer)
+        self.assertEqual(
+            command_buffer_data(buffer, CommandBufferChunk(operation="APPEND", entries=(b"illegal",))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(buffer, before)
+
+        self.assertEqual(finish_submission(state, 302, success=True), "SUCCESS")
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+        self.assertEqual(buffer.entries, [b"entry"])
+
+    def test_failed_submission_invalidates_buffer_and_prevents_resubmission(self) -> None:
+        buffer = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"entry"])
+        state = SubmissionModel(command_buffers=[buffer])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=303)), "SUCCESS")
+        self.assertEqual(finish_submission(state, 303, success=False), "SUCCESS")
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.INVALID)
+
+        before = copy.deepcopy(state)
+        self.assertEqual(queue_submit(state, SubmitRequest(token=304)), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+        self.assertEqual(
+            command_buffer_data(buffer, CommandBufferChunk(operation="FINAL", entries=(b"more",))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.INVALID)
+
+    def test_device_loss_racing_success_callback_does_not_restore_executable(self) -> None:
+        buffer = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+        state = SubmissionModel(command_buffers=[buffer])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=305)), "SUCCESS")
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.PENDING)
+        state.device_lost = True
+        self.assertEqual(finish_submission(state, 305, success=True), "SUCCESS")
+        self.assertEqual(buffer.lifecycle, CommandBufferLifecycle.INVALID)
+
+    def test_terminal_callback_is_rejected_without_changing_invalid_buffer(self) -> None:
+        buffer = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+        state = SubmissionModel(command_buffers=[buffer])
+        self.assertEqual(queue_submit(state, SubmitRequest(token=306)), "SUCCESS")
+        self.assertEqual(finish_submission(state, 306, success=False), "SUCCESS")
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 306, success=True), "BadValue")
+        self.assertEqual(state, before)
