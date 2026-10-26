@@ -43,7 +43,7 @@ The golden fixtures are protocol ABI tests, not tests against a running X server
   reply statuses in both byte orders and validates raw reply framing, exact
   fixed/variable sizes, capability record-count formulas, failure-payload
   zeroing, queue-family support flags, ordered family indices and aggregate support consistency, nonzero current extents on successful
-  capability replies, zero-image successful swapchain replies and failure counts, acquire failure indices and reserved
+  capability replies, zero-image successful swapchain replies, request-matched successful image counts and failure counts, acquire failure indices and reserved
   words. Malformed-wire cases mutate serialized replies
   to ensure invalid lengths, status values, flags, and failure payloads are
   rejected rather than merely testing the reference encoder.
