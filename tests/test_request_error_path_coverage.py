@@ -461,5 +461,60 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("Device loss (without destruction) serializes first, `CreateSwapchain` returns `DEVICE_LOST`", presentation)
 
 
+    def test_reset_and_host_wait_validation_phases_agree_across_chapters(self):
+        recording = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # ResetCommandBuffer: structural and identity failures precede device/state checks.
+        reset = recording[recording.index("`ResetCommandBuffer` ist ein Void-Request"):recording.index("Ein Command Pool ist Elternobjekt") ]
+        reset_order = (
+            "Request-Länge",
+            "Unbekannte/nicht-live Device- oder Buffer-XIDs",
+            "falscher live Ressourcentyp",
+            "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device",
+            "Erst danach prüft der Server das `RESET_COMMAND_BUFFER`-Flag",
+        )
+        positions = [reset.index(phrase) for phrase in reset_order]
+        self.assertEqual(positions, sorted(positions))
+        for phrase in (
+            "Nach erfolgreicher XID-/Ownership-Prüfung ergeben ein nicht verfügbares oder verlorenes logisches Device",
+            "Jede Ablehnung lässt Zustand, Entries und Ressourcenreferenzen unverändert",
+        ):
+            with self.subTest(reset_contract=phrase):
+                self.assertIn(phrase, errors)
+        self.assertIn("`ResetCommandBuffer` prüft Request-Länge, XIDs, Typ, Ownership und Cross-Device-Zuordnung", conformance)
+
+        # WaitSemaphores rejects malformed requests before registration; pending waits
+        # have terminal outcomes distinct from initial request validation.
+        wait = synchronization[synchronization.index("## `WaitSemaphores`"):synchronization.index("## `WaitForFence`") ]
+        wait_order = (
+            "(1) Länge und checked-arithmetic",
+            "(2) `semaphore_count != 0`",
+            "(3) Device-XID und danach Semaphore-XIDs in Array-Reihenfolge",
+            "(4) Ressourcentyp, Client-/Device-Ownership",
+            "(5) Device-Zustand prüfen",
+            "(6) prüfen, dass alle Semaphoren Timeline-Semaphoren sind",
+        )
+        positions = [wait.index(phrase) for phrase in wait_order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("jede synchrone Ablehnung hinterlässt keine Wait-Registrierung", wait)
+        self.assertIn("Für einen bereits registrierten offenen Wait ist Device Loss dagegen ein terminales Wait-Ergebnis", wait)
+        self.assertIn("Device Loss während `WaitSemaphores` wird als `DEVICE_LOST`-X11-Fehler gemeldet", errors)
+
+        fence_wait = synchronization[synchronization.index("## `WaitForFence`"):synchronization.index("## `ResetFence`") ]
+        for phrase in (
+            "Request: 24 Bytes exakt",
+            "Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`",
+            "Bei Device Loss wird `DEVICE_LOST` zurückgegeben",
+            "`DEVICE_DESTROYED` zurückgegeben",
+        ):
+            with self.subTest(fence_wait_contract=phrase):
+                self.assertIn(phrase, fence_wait)
+        self.assertIn("`WaitForFence` wird `DEVICE_LOST` als normaler Reply-Status zurückgegeben", errors)
+        self.assertIn("`WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status", errors)
+
+
 if __name__ == "__main__":
     unittest.main()
