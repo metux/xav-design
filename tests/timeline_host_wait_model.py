@@ -1,7 +1,9 @@
-"""Regression model for Host WaitSemaphores racing GPU timeline signals.
+"""Reference model for Host WaitSemaphores vs GPU timeline signals.
 
-Wait registrations are level-triggered predicates over the canonical timeline
-counter. They do not reserve signal values and terminal completion is one-shot.
+Waits are level-triggered predicates over the canonical timeline counter. They
+reserve no signal values. Completion, timeout, device loss and device
+destruction are serialized terminal transitions; a satisfied predicate wins
+over a timeout observed during the final state check.
 """
 from __future__ import annotations
 
@@ -14,10 +16,15 @@ class Timeline:
     pending_gpu_signals: dict[int, int] = field(default_factory=dict)
     pending_host_waits: dict[int, int] = field(default_factory=dict)
     terminal_waits: dict[int, str] = field(default_factory=dict)
+    lifecycle: str = "ACTIVE"
 
     def begin_host_wait(self, token: int, value: int) -> str:
         if token == 0 or token in self.pending_host_waits or token in self.terminal_waits:
             return "BadValue"
+        if self.lifecycle == "DEVICE_LOST":
+            return "DEVICE_LOST"
+        if self.lifecycle == "DEVICE_DESTROYED":
+            return "DEVICE_DESTROYED"
         if value <= self.counter:
             self.terminal_waits[token] = "SUCCESS"
             return "SUCCESS"
@@ -25,6 +32,10 @@ class Timeline:
         return "PENDING"
 
     def signal_host(self, value: int) -> str:
+        if self.lifecycle == "DEVICE_LOST":
+            return "DEVICE_LOST"
+        if self.lifecycle == "DEVICE_DESTROYED":
+            return "DEVICE_DESTROYED"
         if value <= self.counter:
             return "INVALID_SYNCHRONIZATION_STATE"
         if any(value >= reserved for reserved in self.pending_gpu_signals.values()):
@@ -34,6 +45,10 @@ class Timeline:
         return "SUCCESS"
 
     def reserve_gpu_signal(self, token: int, value: int) -> str:
+        if self.lifecycle == "DEVICE_LOST":
+            return "DEVICE_LOST"
+        if self.lifecycle == "DEVICE_DESTROYED":
+            return "DEVICE_DESTROYED"
         if token == 0 or token in self.pending_gpu_signals:
             return "BadValue"
         if value <= self.counter or any(
@@ -47,6 +62,10 @@ class Timeline:
         if token not in self.pending_gpu_signals:
             return "BadValue"
         value = self.pending_gpu_signals.pop(token)
+        # A late backend callback after device loss/destruction must not
+        # manufacture successful timeline progress or resurrect host waits.
+        if self.lifecycle != "ACTIVE":
+            return "SUCCESS"
         if success:
             self.counter = max(self.counter, value)
             self._resolve_waits()
@@ -55,9 +74,44 @@ class Timeline:
     def finish_host_wait(self, token: int, status: str) -> str:
         if token not in self.pending_host_waits:
             return "BadValue"
+        value = self.pending_host_waits[token]
+        # The normative final check gives an already-satisfied predicate
+        # precedence over a timeout observed concurrently.
+        if self.counter >= value:
+            status = "SUCCESS"
+        elif status == "SUCCESS":
+            return "INVALID_SYNCHRONIZATION_STATE"
+        elif status not in {"TIMEOUT", "DEVICE_LOST", "DEVICE_DESTROYED"}:
+            return "BadValue"
         del self.pending_host_waits[token]
         self.terminal_waits[token] = status
         return "SUCCESS"
+
+    def mark_device_lost(self) -> str:
+        if self.lifecycle == "DEVICE_LOST":
+            return "SUCCESS"
+        if self.lifecycle == "DEVICE_DESTROYED":
+            return "SUCCESS"
+        self.lifecycle = "DEVICE_LOST"
+        self._terminate_open_waits("DEVICE_LOST")
+        return "SUCCESS"
+
+    def destroy_device(self) -> str:
+        if self.lifecycle == "DEVICE_LOST":
+            return "SUCCESS"
+        if self.lifecycle == "DEVICE_DESTROYED":
+            return "SUCCESS"
+        self.lifecycle = "DEVICE_DESTROYED"
+        self._terminate_open_waits("DEVICE_DESTROYED")
+        return "SUCCESS"
+
+    def _terminate_open_waits(self, status: str) -> None:
+        for token, value in list(self.pending_host_waits.items()):
+            # Once the predicate was observed satisfied, preserve SUCCESS.
+            del self.pending_host_waits[token]
+            self.terminal_waits[token] = (
+                "SUCCESS" if self.counter >= value else status
+            )
 
     def _resolve_waits(self) -> None:
         for token, value in list(self.pending_host_waits.items()):
