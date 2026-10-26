@@ -137,13 +137,50 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     wait_error = _first_bad_wait(request, state)
     if wait_error:
         return PresentResult(wait_error, False)
+    for index in request.wait_indices:
+        signal_state = (
+            state.binary_signal_states[index]
+            if index < len(state.binary_signal_states)
+            else BinarySignalState.UNSIGNALED
+        )
+        if signal_state is BinarySignalState.UNTRUSTED:
+            return PresentResult("DEPENDENCY_FAILED", False)
+        if any(pending_index == index for _token, pending_index in state.pending_present_waits):
+            return PresentResult("INVALID_SYNCHRONIZATION_STATE", False)
 
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
+        state.pending_present_waits.append((request.token, index))
     state.image_state = ImageState.PRESENT_PENDING
     return PresentResult("SUCCESS", True)
+
+
+def finish_present_wait(
+    state: PresentState, token: int, semaphore_index: int, *,
+    consumed: bool | None,
+) -> str:
+    """Finalize one QueuePresent binary wait; None means payload outcome unknown."""
+    reservation = (token, semaphore_index)
+    if reservation not in state.pending_present_waits:
+        return "BadValue"
+    if semaphore_index >= len(state.binary_signal_states):
+        state.binary_signal_states.extend(
+            [BinarySignalState.UNSIGNALED]
+            * (semaphore_index + 1 - len(state.binary_signal_states))
+        )
+    if consumed is None:
+        state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
+        state.wait_states[semaphore_index] = WaitState.UNTRUSTED
+    elif consumed:
+        state.binary_signal_states[semaphore_index] = BinarySignalState.UNSIGNALED
+        state.wait_states[semaphore_index] = WaitState.READY
+    else:
+        # A known non-consumed payload retains its confirmed signal state.
+        state.wait_states[semaphore_index] = WaitState.READY
+    state.pending_present_waits.remove(reservation)
+    return "SUCCESS"
 
 
 class CommandBufferLifecycle(str, Enum):
@@ -420,9 +457,19 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             if wait_state in {WaitState.UNTRUSTED, WaitState.INCOMPATIBLE}:
                 return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
                         else "INVALID_SYNCHRONIZATION_STATE")
-        elif wait_state is not WaitState.READY:
-            return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
-                    else "INVALID_SYNCHRONIZATION_STATE")
+        else:
+            binary_state = (
+                state.binary_signal_states[index]
+                if index < len(state.binary_signal_states)
+                else BinarySignalState.UNSIGNALED
+            )
+            if binary_state is BinarySignalState.UNTRUSTED:
+                return "DEPENDENCY_FAILED"
+            if wait_state is not WaitState.READY:
+                return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
+                        else "INVALID_SYNCHRONIZATION_STATE")
+            if any(pending_index == index for _token, pending_index in state.pending_binary_waits):
+                return "INVALID_SYNCHRONIZATION_STATE"
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
     # Validate all signal reservations before mutating any one of them.
@@ -433,7 +480,18 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         if kind is SemaphoreKind.BINARY:
             if value != 0:
                 return "BadValue"
-            if slot is not None:
+            binary_state = (
+                state.binary_signal_states[index]
+                if index < len(state.binary_signal_states)
+                else BinarySignalState.UNSIGNALED
+            )
+            if binary_state is BinarySignalState.UNTRUSTED:
+                return "DEPENDENCY_FAILED"
+            if binary_state is not BinarySignalState.UNSIGNALED:
+                return "INVALID_SYNCHRONIZATION_STATE"
+            if slot is not None or any(
+                pending_index == index for _token, pending_index in state.pending_binary_signals
+            ):
                 return "INVALID_SYNCHRONIZATION_STATE"
         else:
             pending_values = [
@@ -455,14 +513,23 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             state.pending_timeline_waits.append((request.token, i, value))
         else:
             state.wait_states[i] = WaitState.RESERVED
+            state.pending_binary_waits.append((request.token, i))
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
         state.pending_command_buffers.append((request.token, i))
     for index, value in zip(request.signal_indices, request.signal_values):
+        kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.TIMELINE
         state.signal_slots[index] = value
-        if (state.semaphore_kinds[index] if index < len(state.semaphore_kinds)
-                else SemaphoreKind.TIMELINE) is SemaphoreKind.TIMELINE:
+        if kind is SemaphoreKind.TIMELINE:
             state.pending_timeline_signals.append((request.token, index, value))
+        else:
+            if index >= len(state.binary_signal_states):
+                state.binary_signal_states.extend(
+                    [BinarySignalState.UNSIGNALED]
+                    * (index + 1 - len(state.binary_signal_states))
+                )
+            state.binary_signal_states[index] = BinarySignalState.SIGNAL_PENDING
+            state.pending_binary_signals.append((request.token, index))
     if request.attach_fence:
         state.fence_attached = True
         state.fence_state_valid = False
