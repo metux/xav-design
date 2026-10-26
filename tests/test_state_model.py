@@ -212,12 +212,12 @@ class CommandBufferDataModelTests(unittest.TestCase):
         self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="FINAL", entries=(b"c",), entries_valid=False)), "BadValue")
         self.assertEqual(state, before)
 
-    def test_entry_validation_precedes_target_xid_resolution(self) -> None:
+    def test_target_xid_precedes_semantic_entry_validation(self) -> None:
         state = CommandBufferModel(device_lost=True)
         before = copy.deepcopy(state)
         self.assertEqual(
             command_buffer_data(state, CommandBufferChunk(operation="CREATE", target_xid_available=False, entries_valid=False)),
-            "BadValue",
+            "BadIDChoice",
         )
         self.assertEqual(state, before)
 
@@ -318,6 +318,14 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
     def test_type_ownership_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, types_and_ownership_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
+
+    def test_same_semaphore_in_wait_and_signal_arrays_is_bad_value(self) -> None:
+        state = self.state()
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(wait_indices=(0,), signal_indices=(0,), signal_values=(1,)),
+            "BadValue",
+        )
 
     def test_signal_count_mismatch_is_bad_length(self) -> None:
         state = self.state(scalar_valid=False, xids_valid=False)
