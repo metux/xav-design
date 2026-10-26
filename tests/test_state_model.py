@@ -1075,7 +1075,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         result = queue_submit(state, SubmitRequest(token=42, command_buffer_indices=(0,), wait_indices=(2, 3), signal_indices=(0, 1), signal_values=(2, 7), attach_fence=True))
         self.assertEqual(result, "SUCCESS")
         self.assertEqual(state.command_buffers[0].lifecycle, CommandBufferLifecycle.PENDING)
-        self.assertEqual(state.wait_states, [WaitState.RESERVED, WaitState.RESERVED])
+        self.assertEqual(state.wait_states, [WaitState.READY, WaitState.READY, WaitState.RESERVED, WaitState.RESERVED])
         self.assertEqual(state.signal_slots, [2, 7])
         self.assertEqual(state.accepted_tokens, {42})
         self.assertEqual(state.pending_submissions, [42])
