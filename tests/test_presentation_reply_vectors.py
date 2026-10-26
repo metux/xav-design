@@ -269,6 +269,9 @@ class PresentationReplyWireTests(unittest.TestCase):
                         expected_words = 15 if kind == "capabilities" and status == 0 else reply_words
                         self.assertEqual(u32(wire, 4, order), expected_words)
                         self.assertEqual(32 + 4 * u32(wire, 4, order), len(wire))
+                        # Exercise the production validator for every documented
+                        # status, in both byte orders, not only the encoder shape.
+                        validate_presentation_reply(kind, wire, order)
 
 
     def test_malformed_reply_wire_bytes_are_rejected(self) -> None:
