@@ -715,13 +715,18 @@ def finish_submission(
             )
         previous = state.binary_wait_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         if effective_success:
+            shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
             signal_state = state.binary_signal_states[index]
+            # A callback from another API/model may have already established
+            # the canonical payload state. Never make a stale local mirror
+            # authoritative over a shared UNTRUSTED outcome.
+            if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
+                signal_state = BinarySignalState.UNTRUSTED
+                state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
             if signal_state is BinarySignalState.UNTRUSTED:
                 state.wait_states[index] = WaitState.UNTRUSTED
-                if index < len(state.shared_semaphores):
-                    shared = state.shared_semaphores[index]
-                    if shared.wait_reservation == ("submit", token):
-                        shared.wait_reservation = None
+                if shared is not None and shared.wait_reservation == ("submit", token):
+                    shared.wait_reservation = None
                 continue
             if signal_state is BinarySignalState.SIGNAL_PENDING:
                 signal_token = next(
@@ -731,6 +736,11 @@ def finish_submission(
                 )
                 if signal_token is not None:
                     state.consumed_pending_binary_signals.add((signal_token, index))
+                # A signal may be owned by a different SubmissionModel (e.g.
+                # another queue). Record consumption on the canonical object,
+                # or that owner's later terminal callback could resurrect it.
+                if shared is not None and shared.signal_reservation is not None:
+                    shared.signal_consumed = True
             state.binary_signal_states[index] = BinarySignalState.UNSIGNALED
             state.wait_states[index] = WaitState.READY
         else:
