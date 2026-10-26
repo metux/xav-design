@@ -277,10 +277,10 @@ def check_events(c: Check) -> None:
               "QueueSubmit: error map must state non-mutating synchronous rejection")
     c.require("Error precedence (the first applicable phase wins)" in submissions and
               "required XIDs are resolved in wire order: Device, optional Fence, then Command Buffer XIDs in array order" in submissions and
-              "take precedence over mutable submit state" in submissions and
+              "takes precedence over mutable submission state" in submissions and
               "Type-dependent values such as binary wait/signal values are checked only after type resolution" in submissions and
               "first the optional Fence state, then Command Buffers in array order, then wait entries in array order" in submissions and
-              "checks the optional Fence first after checking Device state in `QueueSubmit`" in conformance,
+              "first the optional fence state, then command buffers in array order, wait entries in array order, and finally signal entries in array order" in submissions,
               "QueueSubmit: deterministic syntax/XID/ownership/device/state precedence must be normative")
     c.require(re.search(r"\| `QueueSubmit`: Device unavailable/lost.*?\n\| `QueueSubmit`: a Command Buffer is not `EXECUTABLE`", errors, re.S) is not None and
               re.search(r"type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter", errors) is not None and
