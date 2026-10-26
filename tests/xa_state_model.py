@@ -343,14 +343,14 @@ class SubmitRequest:
 def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     """Atomic submission oracle: validate every member, then reserve all state."""
     if (not state.framing_valid or not request.counts_valid
-            or len(request.signal_indices) != len(request.signal_values)):
+            or len(request.signal_indices) != len(request.signal_values)
+            or (request.wait_values and len(request.wait_values) != len(request.wait_indices))
+            or (request.wait_stage_masks and len(request.wait_stage_masks) != len(request.wait_indices))):
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)
             or bool(set(request.wait_indices) & set(request.signal_indices))
-            or (request.wait_values and len(request.wait_values) != len(request.wait_indices))
-            or (request.wait_stage_masks and len(request.wait_stage_masks) != len(request.wait_indices))
             or any(mask == 0 or mask & ~0xF for mask in request.wait_stage_masks)):
 
         return "BadValue"
@@ -377,20 +377,17 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if any(state.command_buffers[i].lifecycle is not CommandBufferLifecycle.EXECUTABLE
            for i in request.command_buffer_indices):
         return "INVALID_SYNCHRONIZATION_STATE"
-    if any(state.wait_states[i] is not WaitState.READY for i in request.wait_indices):
-        return "INVALID_SYNCHRONIZATION_STATE"
-    # Values are interpreted according to the semaphore type. Binary values
-    # must be zero; timeline signal values must advance beyond both completed
-    # and pending reservations. Missing optional fixture kinds retain the
-    # legacy timeline default for signal slots and binary default for waits.
+    # Validate each wait's typed value before its stage and mutable-state
+    # checks, as required by the normative per-entry precedence.
     for pos, index in enumerate(request.wait_indices):
         kind = state.semaphore_kinds[index] if index < len(state.semaphore_kinds) else SemaphoreKind.BINARY
         value = request.wait_values[pos] if request.wait_values else 0
         if kind is SemaphoreKind.BINARY and value != 0:
             return "BadValue"
-    for pos, index in enumerate(request.wait_indices):
         mask = request.wait_stage_masks[pos] if request.wait_stage_masks else 0x1
         if mask & ~state.queue_supported_stage_mask:
+            return "INVALID_SYNCHRONIZATION_STATE"
+        if state.wait_states[index] is not WaitState.READY:
             return "INVALID_SYNCHRONIZATION_STATE"
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
