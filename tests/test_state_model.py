@@ -537,6 +537,43 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.pending_timeline_waits, [(10, 0, 9)])
         self.assertEqual(state.wait_states[0], WaitState.READY)
 
+    def test_terminal_timeline_wait_callbacks_release_only_their_own_future_waits(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.BINARY],
+            signal_counters=[2, 0],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=13, command_buffer_indices=(0,),
+                wait_indices=(0,), wait_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=14, command_buffer_indices=(1,),
+                wait_indices=(0,), wait_values=(10,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            state.pending_timeline_waits, [(13, 0, 8), (14, 0, 10)]
+        )
+
+        # The second callback may terminate first. It must remove only its
+        # own wait, and neither failure nor success may synthesize a counter
+        # value that has not actually been signaled.
+        self.assertEqual(finish_submission(state, 14, success=False), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [(13, 0, 8)])
+        self.assertEqual(state.signal_counters, [2, 0])
+        self.assertEqual(finish_submission(state, 13, success=True), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [])
+        self.assertEqual(state.signal_counters, [2, 0])
+
     def test_concurrent_timeline_waits_can_share_same_future_target(self) -> None:
         state = self.state(
             command_buffers=[
