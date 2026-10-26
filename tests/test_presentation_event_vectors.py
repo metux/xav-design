@@ -90,7 +90,7 @@ class PresentationEventWireTests(unittest.TestCase):
                 rf"^## `{name}`\s*$([\s\S]*?)(?=^## |\Z)", spec, re.M
             )
             self.assertIsNotNone(section)
-            self.assertRegex(section.group(1), r"Gesamtlänge:\s*64 Bytes; XGE `length\s*=\s*8`")
+            self.assertRegex(section.group(1), r"Total length:\s*64 bytes; XGE `length\s*=\s*8`")
 
     def test_golden_bytes_both_byte_orders(self) -> None:
         for order in ("little", "big"):
