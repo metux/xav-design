@@ -8,7 +8,7 @@ Queues werden durch Device-XID, Queue-Family-Index und Queue-Index adressiert. D
 
 Request-Layout:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | Device-XID |
 | 12 | CARD32 | Queue-Family-Index |
