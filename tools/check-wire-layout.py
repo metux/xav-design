@@ -332,10 +332,10 @@ def check_events(c: Check) -> None:
         c.require(name in reg_ids, f"event registry: missing {name}")
     header_checks = [
         (r"response_type\s*=\s*GenericEvent\s*\(35\)", "GenericEvent response_type 35"),
-        (r"\|\s*2\s*\|\s*CARD16\s*\|[^\n]*Sequenznummer", "16-bit X11 event sequence at offset 2"),
-        (r"\|\s*1\s*\|[^\n]*dynamisch zugewiesener XAverius-Major-Opcode", "dynamic extension opcode at offset 1"),
+        (r"\|\s*2\s*\|\s*CARD16\s*\|[^\n]*(?:event sequence number|Sequenznummer)", "16-bit X11 event sequence at offset 2"),
+        (r"\|\s*1\s*\|[^\n]*(?:dynamically assigned XAverius major opcode|dynamisch zugewiesener XAverius-Major-Opcode)", "dynamic extension opcode at offset 1"),
         (r"\|\s*4\s*\|[^\n]*XGE `length`", "XGE length at offset 4"),
-        (r"\|\s*10–31\s*\|[^\n]*null", "zeroed reserved common-header bytes"),
+        (r"\|\s*10–31\s*\|[^\n]*(?:zero|null)", "zeroed reserved common-header bytes"),
         (r"\|\s*8\s*\|[^\n]*`evtype`", "evtype at offset 8"),
         (r"32 \+ 4 \* length", "XGE total-length formula"),
     ]
@@ -1730,15 +1730,15 @@ def check_xge_abi(c: Check) -> None:
     header = events.split("## " + chr(96) + "ASYNC_ERROR" + chr(96), 1)[0]
     header_fields = [
         (0, "CARD8", r"response_type\s*=\s*GenericEvent\s*\(35\)"),
-        (1, "CARD8", r"extension.*dynamisch zugewiesener XAverius-Major-Opcode"),
-        (2, "CARD16", r"X11-Event-Sequenznummer"),
+        (1, "CARD8", r"extension.*(?:dynamically assigned XAverius major opcode|dynamisch zugewiesener XAverius-Major-Opcode)"),
+        (2, "CARD16", r"(?:X11 event sequence number|X11-Event-Sequenznummer)"),
         (4, "CARD32", r"XGE.*length"),
         (8, "CARD16", r"evtype.*(?:Event-Type-ID|event type ID)"),
     ]
     for offset, typ, pattern in header_fields:
         c.require(re.search(rf"^\|\s*{offset}\s*\|\s*{typ}\s*\|[^\n]*{pattern}", header, re.M | re.I) is not None,
                   f"XGE header: missing or changed {typ} field at offset {offset}")
-    c.require(re.search(r"^\|\s*10–31\s*\|\s*—\s*\|[^|]*null", header, re.M | re.I) is not None,
+    c.require(re.search(r"^\|\s*10–31\s*\|\s*—\s*\|[^|]*(?:zero|null)", header, re.M | re.I) is not None,
               "XGE header: reserved bytes 10–31 must be zero")
     c.require(re.search(r"The total length is exactly.*32.*4.*length", header, re.I) is not None,
               "XGE header: exact total-size formula missing")
