@@ -1,4 +1,6 @@
-# Compute-Referenzablauf
+# Compute Reference Flow
+
+All request validation follows a deterministic stage order: framing before scalar syntax, scalar syntax before XID resolution, and XID/type/ownership checks before lifecycle status.
 
 Ziel-Workload:
 
