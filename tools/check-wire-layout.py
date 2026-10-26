@@ -258,15 +258,15 @@ def check_events(c: Check) -> None:
               "The same semaphore MUST NOT appear in both the wait and signal arrays of one submission" in submissions,
               "QueueSubmit: duplicate semaphore entries and wait/signal aliasing must be rejected")
     c.require("Binary wait/signal values MUST be zero" in conformance and
-              "duplicate Timeline signal entries for the same semaphore" in conformance and
+              re.search(r"duplicate Timeline signal entries for the same semaphore", conformance, re.I) is not None and
               "reserves neither `submission_token` nor semaphore wait/signal slots" in conformance,
               "QueueSubmit: semaphore value checks and rejected-submit atomicity must be covered")
-    c.require("The `EXECUTABLE`-to-`PENDING` transitions and synchronization reservations are therefore one shared commit" in submissions and
+    c.require("The `EXECUTABLE`-to-`PENDING` transitions and synchronization reservations therefore form one shared commit" in submissions and
               "the token remains unused" in submissions and
               "semaphore counters, signal availability, pending slots, and Timeline reservations remain unchanged" in submissions,
               "QueueSubmit: all state changes and token reservation must share the acceptance commit")
     c.require("A FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk" in read("spec/command-recording.md") and
-              "the buffer remains `RECORDING`, and all previously accepted entries and their references remain unchanged" in read("spec/command-recording.md"),
+              re.search(r"the buffer remains `RECORDING`, all previously accepted entries and references remain unchanged", read("spec/command-recording.md")) is not None,
               "CommandBufferData: failed FINAL must preserve recording state and prior references")
     c.require("A failed FINAL chunk of `CommandBufferData` leaves the buffer `RECORDING`" in conformance and
               "On rejected `QueueSubmit`, every command buffer remains `EXECUTABLE`" in conformance and
@@ -275,7 +275,7 @@ def check_events(c: Check) -> None:
               "conformance: finalization and rejected-submit state transitions must be atomic")
     c.require("synchroner Fehler vor Annahme | keinerlei Zustandsänderung" in errors,
               "QueueSubmit: error map must state non-mutating synchronous rejection")
-    c.require("Fehlerpräzedenz (erste zutreffende Phase gewinnt)" in submissions and
+    c.require("Error precedence (the first applicable phase wins)" in submissions and
               "required XIDs are resolved in wire order: Device, optional Fence, then Command Buffer XIDs in array order" in submissions and
               "take precedence over mutable submit state" in submissions and
               "Type-dependent values such as binary wait/signal values are checked only after type resolution" in submissions and
