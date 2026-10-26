@@ -674,7 +674,11 @@ def finish_submission(
         if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
             current = BinarySignalState.UNTRUSTED
             state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
-        if not effective_success:
+        if current is BinarySignalState.UNTRUSTED:
+            # An unknown cross-API payload outcome is stronger than a stale
+            # local "unchanged" report from the Submit callback.
+            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+        elif not effective_success:
             # A cross-API wait callback may already have proved that this
             # pending signal was consumed. Device Loss invalidates an
             # unobserved completion, but must not erase that known consumption.
