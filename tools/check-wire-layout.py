@@ -512,7 +512,7 @@ def check_other_numeric_registries(c: Check) -> None:
         "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in descriptor_errors
         and "an unavailable or lost logical Device returns `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in descriptor_errors
         and "After successful XID and ownership validation, an unavailable device results in `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
-        and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in descriptor_conformance,
+        and re.search(r"`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", descriptor_conformance) is not None,
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
     c.require(
@@ -676,7 +676,7 @@ def check_request_document_coverage(c: Check) -> None:
         and "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
         and "Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
         and "Bei Ablehnung bleibt die Pool-XID unangelegt" in errors
-        and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/command-recording.md"),
+        and "Creation is atomic: on any failure, the pool XID remains unallocated" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
     )
     command_recording = read("spec/command-recording.md")
