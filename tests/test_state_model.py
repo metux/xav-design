@@ -233,7 +233,7 @@ class CommandBufferDataModelTests(unittest.TestCase):
     def test_malformed_entry_precedes_target_xid_resolution(self) -> None:
         state = CommandBufferModel()
         self.assertEqual(
-            command_buffer_data(state, CommandBufferChunk(operation="CREATE", target_xid_available=False, entries_well_formed=False)),
+            command_buffer_data(state, CommandBufferChunk(operation="CREATE", scalar_valid=False, target_xid_available=False, entries_well_formed=False)),
             "BadLength",
         )
 
