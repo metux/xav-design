@@ -296,8 +296,8 @@ def check_events(c: Check) -> None:
     )
     c.require(
         "Device Loss hat Vorrang vor diesen bindungsabhängigen Zustands-/Backend-Prüfungen" in read("spec/memory-buffers.md")
-        and "Device-Zustandsprüfung hat Vorrang vor diesen request-spezifischen Kompatibilitäts- und Pending-Zustandsprüfungen" in read("spec/shaders-pipelines.md")
-        and "Pending-Set-Konflikt" in conformance,
+        and "The Device-state check takes precedence over these request-specific compatibility and pending-state checks" in read("spec/shaders-pipelines.md")
+        and "pending-set conflict" in conformance,
         "BindBufferMemory/UpdateDescriptorSets: device-loss precedence must follow valid XID/type/ownership checks and precede mutable/backend checks")
     for name, (event_id, total, length) in expected.items():
         c.require(reg_ids.get(name) == event_id, f"event registry: {name} must have stable ID {event_id}")
