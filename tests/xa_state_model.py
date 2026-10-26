@@ -317,6 +317,8 @@ class SubmissionModel:
     signal_slots: list[int | None] = field(default_factory=list)
     signal_counters: list[int] = field(default_factory=list)
     semaphore_kinds: list[SemaphoreKind] = field(default_factory=list)
+    # Accepted timeline waits may target future values and coexist.
+    pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
@@ -387,8 +389,16 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         mask = request.wait_stage_masks[pos] if request.wait_stage_masks else 0x1
         if mask & ~state.queue_supported_stage_mask:
             return "INVALID_SYNCHRONIZATION_STATE"
-        if state.wait_states[index] is not WaitState.READY:
-            return "INVALID_SYNCHRONIZATION_STATE"
+        wait_state = state.wait_states[index]
+        if kind is SemaphoreKind.TIMELINE:
+            # Timeline waits are level-triggered and may wait-before-signal.
+            # Multiple accepted waits may share the same timeline semaphore.
+            if wait_state in {WaitState.UNTRUSTED, WaitState.INCOMPATIBLE}:
+                return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
+                        else "INVALID_SYNCHRONIZATION_STATE")
+        elif wait_state is not WaitState.READY:
+            return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
+                    else "INVALID_SYNCHRONIZATION_STATE")
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
     # Validate all signal reservations before mutating any one of them.
@@ -400,8 +410,13 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             return "BadValue"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
-    for i in request.wait_indices:
-        state.wait_states[i] = WaitState.RESERVED
+    for pos, i in enumerate(request.wait_indices):
+        kind = state.semaphore_kinds[i] if i < len(state.semaphore_kinds) else SemaphoreKind.BINARY
+        if kind is SemaphoreKind.TIMELINE:
+            value = request.wait_values[pos] if request.wait_values else 0
+            state.pending_timeline_waits.append((request.token, i, value))
+        else:
+            state.wait_states[i] = WaitState.RESERVED
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
     for index, value in zip(request.signal_indices, request.signal_values):
