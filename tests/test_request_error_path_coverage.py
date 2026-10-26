@@ -227,5 +227,60 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(f"`{request}`", self.errors)
                 self.assertIn(f"`{request}`", self.conformance)
 
+
+    def test_descriptor_updates_and_destruction_share_one_lifetime_contract(self):
+        recording = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        descriptors = (ROOT / "spec/shaders-pipelines.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec/resource-lifetime.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # Descriptor contents are live set state, not a snapshot captured at bind time.
+        for phrase in (
+            "Descriptor-Slot-Inhalte werden nicht als unveränderlicher Snapshot",
+            "aktualisiert atomar die abgeleiteten Buffer-Referenzen",
+            "verwendet bei Submission die aktuellen Inhalte",
+            "wird allein durch ein erfolgreiches Descriptor-Update nicht invalidiert",
+        ):
+            with self.subTest(recording_rule=phrase):
+                self.assertIn(phrase, recording)
+
+        # A multi-write update and set/pool destruction must not expose partial state.
+        for phrase in (
+            "Mehrere Writes desselben Descriptor-Slots",
+            "Die Operation ist atomar",
+            "Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben",
+            "Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert",
+            "werden der Pool und alle enthaltenen Descriptor Sets öffentlich invalidiert",
+        ):
+            with self.subTest(descriptor_rule=phrase):
+                self.assertIn(phrase, descriptors)
+
+        # Lifetime rules distinguish RECORDING blockers from EXECUTABLE invalidation
+        # and require the same semantics in the conformance/error contracts.
+        for phrase in (
+            "von einem `RECORDING`-Command-Buffer referenziert",
+            "referenzierende nicht-pending `EXECUTABLE`-Command-Buffer `INVALID`",
+            "internen Referenzanpassungen atomar mit der öffentlichen Invalidierung",
+        ):
+            with self.subTest(lifetime_rule=phrase):
+                self.assertIn(phrase, lifetime)
+        for phrase in (
+            "no partial free",
+            "preserve every old slot and indirect resource reference",
+            "nicht allein wegen der durch das Update entfernten indirekten Referenz invalidiert",
+            "bleibt das Set nicht submitbar",
+        ):
+            with self.subTest(conformance_rule=phrase):
+                self.assertIn(phrase, conformance)
+        for phrase in (
+            "UpdateDescriptorSets",
+            "DestroyDescriptorPool",
+            "FreeDescriptorSets",
+            "INVALID_SYNCHRONIZATION_STATE",
+        ):
+            with self.subTest(error_contract=phrase):
+                self.assertIn(phrase, errors)
+
 if __name__ == "__main__":
     unittest.main()
