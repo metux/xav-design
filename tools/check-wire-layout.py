@@ -682,30 +682,30 @@ def check_request_document_coverage(c: Check) -> None:
     command_recording = read("spec/command-recording.md")
     c.require(
         all(token in command_recording for token in (
-            "| 0 | 0 | 0 | Entries an einen bereits aufzeichnenden Buffer anhängen |",
-            "| 0 | 1 | 0 | Letzte Entries anhängen und Recording beenden |",
-            "| 1 | 0 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |",
-            "| 1 | 1 | 0 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |",
-            "| 0 | 0 | 1 | Recording abbrechen; keine Entries erlaubt |",
+            "| 0 | 0 | 0 | Append entries to a buffer that is already recording |",
+            "| 0 | 1 | 0 | Append final entries and end recording |",
+            "| 1 | 0 | 0 | Create a command buffer, begin recording, and record the first chunk |",
+            "| 1 | 1 | 0 | Create a command buffer, record the complete stream, and finish recording |",
+            "| 0 | 0 | 1 | Abort recording; no entries are allowed |",
         )),
         "CommandBufferData: the five permitted CREATE/FINAL/ABORT combinations must remain explicit",
     )
     c.require(
-        "muss auch bei" in command_recording and "ABORT" in command_recording
-        and "exakt der Eltern-Pool" in errors,
+        "`command_pool_xid` MUST match the buffer's pool even for ABORT" in command_recording
+        and "The specified pool MUST match the Buffer's parent pool even for `ABORT`" in errors,
         "CommandBufferData: ABORT must validate exact command-pool ownership",
     )
     c.require(
-        "zuerst die Ziel-XID und danach die Pool-XID" in errors
-        and "ungültige oder bereits belegte Ziel-XID" in errors
-        and "unbekannte/nicht-live Buffer-XIDs" in errors,
+        "validates the target XID before the pool XID" in errors
+        and "an invalid or already allocated target XID results in `BadIDChoice`" in errors
+        and "an unknown or non-live Buffer XID results in `BadValue`" in errors,
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
-    c.require("### Fehlerpräzedenz für `CommandBufferData`" in command_recording and
-              "Feldfehler schlagen Ziel-/Pool-XID-Fehler" in command_recording and
-              "Device Loss" in command_recording and
+    c.require("### Error Precedence for `CommandBufferData`" in command_recording and
+              "field errors take precedence over target/pool XID errors" in command_recording and
+              "DEVICE_UNAVAILABLE`/`DEVICE_LOST` takes precedence over a buffer-state error" in command_recording and
               "ABORT" in command_recording and
-              "hat damit Vorrang vor einem nicht passenden Buffer-Zustand" in errors,
+              "takes precedence over an incompatible Buffer state" in errors,
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
     c.require("CommandBufferData`-Fehlerpräzedenz: fehlerhafte Request-/Entry-Struktur" in conformance and
               "ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt `BadValue`" in conformance and
