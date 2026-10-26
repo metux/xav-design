@@ -517,5 +517,42 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("`WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status", errors)
 
 
+    def test_host_signal_and_reset_fence_precedence_remain_aligned(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## `WaitSemaphores`") ]
+        signal_order = (
+            "(1) Gesamtlänge exakt 24 Bytes",
+            "(2) Device-XID, danach Semaphore-XID auflösen",
+            "(3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zugehörigkeit",
+            "(4) Device-Zustand",
+            "(5) Timeline-Typ und Signalwert-/Reservierungskonsistenz",
+        )
+        positions = [signal.index(phrase) for phrase in signal_order]
+        self.assertEqual(positions, sorted(positions))
+        for phrase in (
+            "`SignalSemaphore` prüft exakt 24 Bytes mit Präzedenz",
+            "insbesondere gewinnt `DEVICE_LOST` nach gültiger Ressourcenzuordnung gegen einen Binary-Semaphore-Typfehler",
+            "Eine synchrone Ablehnung verändert weder Counter noch Signalreservierungen",
+        ):
+            with self.subTest(signal_contract=phrase):
+                self.assertIn(phrase, conformance)
+
+        reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Fence-Zerstörung") ]
+        reset_order = (
+            "Eine andere Gesamtlänge ergibt `BadLength`",
+            "Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`",
+            "Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben",
+            "Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden",
+            "Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`",
+        )
+        positions = [reset_fence.index(phrase) for phrase in reset_order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("`ResetFence`: Device verloren | `DEVICE_LOST`", errors)
+        self.assertIn("`ResetFence` prüft exakt 16 Bytes und Device-/Fence-XIDs vor dem Zustandscheck", conformance)
+
+
 if __name__ == "__main__":
     unittest.main()
