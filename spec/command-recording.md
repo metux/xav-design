@@ -80,7 +80,7 @@ Wire-Layout:
 
 Flags im Common-Header:
 
-| Bit | Name | Bedeutung |
+| Bit | Name | Meaning |
 |---:|---|---|
 | 0 | `CREATE` | Create a command buffer and begin recording |
 | 1 | `FINAL` | Append the final chunk and end recording |
