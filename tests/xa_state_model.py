@@ -369,6 +369,8 @@ class SubmissionModel:
     # Binary operations are tracked independently from timeline counters/slots.
     pending_binary_signals: list[tuple[int, int]] = field(default_factory=list)
     consumed_pending_binary_signals: set[tuple[int, int]] = field(default_factory=set)
+    binary_signal_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
+    binary_wait_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     # (submission token, semaphore index, reserved timeline signal value).
@@ -513,6 +515,12 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             state.pending_timeline_waits.append((request.token, i, value))
         else:
             state.wait_states[i] = WaitState.RESERVED
+            if i >= len(state.binary_signal_states):
+                state.binary_signal_states.extend(
+                    [BinarySignalState.UNSIGNALED]
+                    * (i + 1 - len(state.binary_signal_states))
+                )
+            state.binary_wait_previous_states[(request.token, i)] = state.binary_signal_states[i]
             state.pending_binary_waits.append((request.token, i))
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
@@ -528,6 +536,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                     [BinarySignalState.UNSIGNALED]
                     * (index + 1 - len(state.binary_signal_states))
                 )
+            state.binary_signal_previous_states[(request.token, index)] = state.binary_signal_states[index]
             state.binary_signal_states[index] = BinarySignalState.SIGNAL_PENDING
             state.pending_binary_signals.append((request.token, index))
     if request.attach_fence:
@@ -567,7 +576,10 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
     return "SUCCESS"
 
 
-def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
+def finish_submission(
+    state: SubmissionModel, token: int, success: bool, *,
+    binary_payload_unchanged: set[tuple[str, int]] | None = None,
+) -> str:
     """Finalize a submission once; Device Loss makes late success callbacks fail."""
     if token not in state.pending_submissions:
         # Terminal callbacks are idempotently rejected without touching state.
@@ -606,9 +618,13 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
             )
         consumed = reservation in state.consumed_pending_binary_signals
         state.consumed_pending_binary_signals.discard(reservation)
+        previous = state.binary_signal_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         current = state.binary_signal_states[index]
         if not effective_success:
-            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+            state.binary_signal_states[index] = (
+                previous if binary_payload_unchanged and ("signal", index) in binary_payload_unchanged
+                else BinarySignalState.UNTRUSTED
+            )
         elif current is BinarySignalState.UNTRUSTED:
             pass
         elif consumed:
@@ -626,6 +642,7 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
                 [BinarySignalState.UNSIGNALED]
                 * (index + 1 - len(state.binary_signal_states))
             )
+        previous = state.binary_wait_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         if effective_success:
             signal_state = state.binary_signal_states[index]
             if signal_state is BinarySignalState.SIGNAL_PENDING:
@@ -639,8 +656,11 @@ def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
             state.binary_signal_states[index] = BinarySignalState.UNSIGNALED
             state.wait_states[index] = WaitState.READY
         else:
-            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
-            state.wait_states[index] = WaitState.UNTRUSTED
+            unchanged = binary_payload_unchanged and ("wait", index) in binary_payload_unchanged
+            state.binary_signal_states[index] = (
+                previous if unchanged else BinarySignalState.UNTRUSTED
+            )
+            state.wait_states[index] = WaitState.READY if unchanged else WaitState.UNTRUSTED
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
