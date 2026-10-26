@@ -64,7 +64,7 @@ There is no separate `FAILED` command-buffer state in v0.1. A failed submission 
 
 A `PENDING` command buffer MUST NOT be modified, reset, freed, or submitted again. Multiple concurrent pending submissions of the same command buffer are not supported in v0.1.
 
-Der Server verfolgt die direkten und indirekten Ressourcenreferenzen jedes aufgezeichneten Command Buffers. Das Binden eines Descriptor Sets zeichnet eine Referenz auf das Set-Objekt auf; die Descriptor-Slot-Inhalte werden nicht als unveränderlicher Snapshot in den Command Buffer kopiert. Ein erfolgreiches `UpdateDescriptorSets` aktualisiert atomar die abgeleiteten Buffer-Referenzen aller nicht-pending Command Buffer, die das betroffene Set referenzieren. Ein nicht-pending `EXECUTABLE`-Command-Buffer verwendet bei Submission die aktuellen Inhalte des gebundenen Sets und wird allein durch ein erfolgreiches Descriptor-Update nicht invalidiert. Wird eine referenzierte Ressource während `RECORDING` zerstört, muss der Destroy-Request abgewiesen werden. Wird sie zerstört, während der Command Buffer `EXECUTABLE` ist und nicht pending verwendet wird, wechselt der Command Buffer vor erfolgreichem Abschluss der Zerstörung in `INVALID`. Ein solcher Command Buffer muss neu aufgezeichnet werden, bevor er erneut eingereicht werden darf. Eine angenommene Submission behält ihre internen Ressourcenreferenzen bis zum terminalen Abschluss.
+The server tracks direct and indirect resource references for every recorded command buffer. Binding a descriptor set records a reference to the set object; descriptor-slot contents are not copied into the command buffer as an immutable snapshot. A successful `UpdateDescriptorSets` atomically updates the derived buffer references of every non-pending command buffer that references the affected set. A non-pending `EXECUTABLE` command buffer uses the set's current contents at submission time and is not invalidated solely by a successful descriptor update. If a referenced resource is destroyed while the command buffer is `RECORDING`, the destroy request MUST be rejected. If the resource is destroyed while the command buffer is `EXECUTABLE` and not pending, the command buffer transitions to `INVALID` before the destroy request succeeds. Such a command buffer MUST be recorded again before resubmission. An accepted submission retains its internal resource references until it reaches a terminal state.
 
 ## 7.3 `CommandBufferData`
 
@@ -82,20 +82,20 @@ Flags im Common-Header:
 
 | Bit | Name | Bedeutung |
 |---:|---|---|
-| 0 | `CREATE` | Command Buffer neu anlegen und Recording beginnen |
-| 1 | `FINAL` | Letzten Chunk anhängen und Recording beenden |
-| 2 | `ABORT` | Laufendes Recording verwerfen und Buffer auf `INITIAL` zurücksetzen |
+| 0 | `CREATE` | Create a command buffer and begin recording |
+| 1 | `FINAL` | Append the final chunk and end recording |
+| 2 | `ABORT` | Discard active recording and reset the buffer to `INITIAL` |
 | 3–7 | Reserved | MUST be zero |
 
 Allowed combinations:
 
 | CREATE | FINAL | ABORT | Bedeutung |
 |---:|---:|---:|---|
-| 0 | 0 | 0 | Entries an einen bereits aufzeichnenden Buffer anhängen |
-| 0 | 1 | 0 | Letzte Entries anhängen und Recording beenden |
+| 0 | 0 | 0 | Append entries to a buffer that is already recording |
+| 0 | 1 | 0 | Append final entries and end recording |
 | 1 | 0 | 0 | Command Buffer erstellen, Recording beginnen, ersten Chunk aufzeichnen |
-| 1 | 1 | 0 | Command Buffer erstellen, kompletten Stream aufzeichnen und beenden |
-| 0 | 0 | 1 | Recording abbrechen; keine Entries erlaubt |
+| 1 | 1 | 0 | Create a command buffer, record the complete stream, and finish recording |
+| 0 | 0 | 1 | Abort recording; no entries are allowed |
 
 All other combinations are invalid. An ABORT request MUST contain no payload beyond the fixed header. `command_pool_xid` MUST match the buffer's pool even for ABORT.
 
@@ -135,7 +135,7 @@ Command IDs are numerically defined in the [Command Entry Registry](../registrie
 
 ### `CMD_BIND_PIPELINE`
 
-Gesamtlänge: 8 Bytes.
+Total length: 8 bytes.
 
 - Relativer Offset 0: `CARD16 command_id`
 - Offset 2: `CARD16 entry_length = 2`
@@ -151,13 +151,13 @@ Gesamtlänge: 8 Bytes.
 - Offset 14: `CARD16 reserved = 0`
 - Offset 16: Descriptor-Set-XID-Array
 
-Gesamtlänge: `16 + 4 * descriptor_set_count`.
+Total length: `16 + 4 * descriptor_set_count`.
 
-Entry-Länge: `4 + descriptor_set_count` Wörter.
+Entry length: `4 + descriptor_set_count` words.
 
 ### `CMD_DISPATCH`
 
-Gesamtlänge: 16 Bytes.
+Total length: 16 bytes.
 
 - Relativer Offset 0: `CARD16 command_id`
 - Offset 2: `CARD16 entry_length = 4`
@@ -177,7 +177,7 @@ Dispatch values MUST be within the limits supported by the device.
 - Offset 16: `CARD32 data_length`
 - Offset 20: Datenbytes, danach Null-Padding bis zur Vierbytegrenze
 
-Entry-Länge: `5 + ceil(data_length / 4)` Wörter.
+Entry length: `5 + ceil(data_length / 4)` words.
 
 For v0.1, `stage_flags` MUST equal exactly the `COMPUTE` bit defined in the [Shader Stage Registry](../registries/shader-stages.md). `offset` and `data_length` MUST be multiples of four. `data_length` MUST be positive.
 
@@ -216,8 +216,8 @@ The presentation-only command-entry ID is 5. Every new numeric ID must be alloca
 
 The server validates command-buffer state, entry lengths, resource types, device ownership, reserved fields, pipeline and layout compatibility, descriptor bindings, push-constant ranges, and dispatch limits.
 
-Ein ungültiger `CommandBufferData`-Request darf keine seiner Entries teilweise anhängen. Die vollständigen Entries des aktuellen Requests werden erst nach erfolgreicher Validierung aller Entries atomar an den Recording-Stream angehängt. Scheitert ein Chunk, bleibt der Command Buffer im Zustand `RECORDING`; zuvor erfolgreich angehängte Chunks bleiben erhalten, der fehlgeschlagene Chunk wird vollständig verworfen. Der Client kann einen korrigierten Chunk senden oder das Recording mit `ABORT` verwerfen. `ABORT` setzt einen nicht-pending Command Buffer auf `INITIAL` und verwirft alle bis dahin aufgezeichneten Entries und Ressourcenreferenzen. Dieses `ABORT` ist ausschließlich die Recovery-Operation für ein laufendes, chunk-basiertes `CommandBufferData`-Recording und benötigt deshalb nicht das Pool-Flag `RESET_COMMAND_BUFFER`; es ersetzt nicht den expliziten `ResetCommandBuffer`-Request für bereits abgeschlossene oder anderweitig ungültige Buffer. Ein fehlgeschlagener CREATE-Request hinterlässt weder einen Command Buffer noch einen Pool-Kind-Eintrag. Ein fehlgeschlagener FINAL-Chunk lässt den Buffer im Zustand `RECORDING`, sodass der Client korrigierte letzte Entries senden oder abbrechen kann. ABORT ist nicht zulässig, wenn der Buffer nicht `RECORDING` oder bereits pending ist.
+An invalid `CommandBufferData` request MUST NOT append any entries partially. Complete entries from the current request are appended atomically to the recording stream only after all entries have been validated successfully. If a chunk fails, the command buffer remains `RECORDING`; previously accepted chunks remain, and the failed chunk is discarded in full. The client may send a corrected chunk or discard the recording with `ABORT`. `ABORT` resets a non-pending command buffer to `INITIAL` and discards all entries and resource references recorded so far. This `ABORT` is exclusively the recovery operation for an active chunked `CommandBufferData` recording and therefore does not require the pool's `RESET_COMMAND_BUFFER` flag; it does not replace the explicit `ResetCommandBuffer` request for completed or otherwise invalid buffers. A failed CREATE request leaves neither a command buffer nor a pool-child entry. A failed FINAL chunk leaves the buffer in `RECORDING`, allowing the client to send corrected final entries or abort. ABORT is invalid if the buffer is not `RECORDING` or is already pending.
 
-Ein FINAL-Chunk führt den Übergang `RECORDING` → `EXECUTABLE` erst nach erfolgreicher Validierung des gesamten Chunks und aller für die Finalisierung erforderlichen Stream-/Referenzbedingungen aus. Schlägt eine Prüfung fehl, wird der ganze aktuelle Chunk verworfen; der Buffer bleibt `RECORDING`, alle vorher akzeptierten Entries und ihre Referenzen bleiben unverändert und es wird keine teilweise finalisierte ausführbare Aufzeichnung veröffentlicht. Der Client kann einen korrigierten FINAL-Chunk senden oder mit ABORT aufräumen. Auch ein erfolgreicher FINAL-Chunk darf Ressourcenreferenzen erst gemeinsam mit den akzeptierten Entries übernehmen; ein Fehler hinterlässt keine Referenz aus dem abgewiesenen Chunk. Der spätere Übergang `EXECUTABLE` → `PENDING` erfolgt ausschließlich am atomaren Annahmepunkt von `QueueSubmit` gemäß [Queue submission](queue-submission.md#validation-und-atomare-annahme).
+A FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk and all stream/reference conditions required for finalization have been validated successfully. If any check fails, the current chunk is discarded in full; the buffer remains `RECORDING`, all previously accepted entries and references remain unchanged, and no partially finalized executable recording is published. The client may send a corrected FINAL chunk or use ABORT for cleanup. A successful FINAL chunk also adopts resource references only together with the accepted entries; a failure leaves no reference from the rejected chunk. The later `EXECUTABLE` to `PENDING` transition occurs only at the atomic acceptance point of `QueueSubmit`, as defined in [Queue submission](queue-submission.md#validation-and-atomic-acceptance).
 
-Chunk-Fehler sind synchron dem jeweiligen `CommandBufferData`-Request zugeordnet und erzeugen kein `ASYNC_ERROR`: Die Request-Verarbeitung hat noch keine Submission angenommen. Nach erfolgreicher XID-/Ownership-Prüfung schlagen CREATE-, Append- und FINAL-Requests bei nicht verfügbarem/verlorenem Device mit `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST` fehl, ohne den Buffer oder seine bisherigen Entries zu verändern. `ABORT` bleibt als rein logische Recovery-/Cleanup-Operation auch nach Device Loss zulässig, sofern Buffer und Pool noch live sind, korrekt zusammengehören und der Buffer `RECORDING` ist; sie startet keine Vulkan-Arbeit. Device Loss darf bereits laufende bzw. unvollständige Recordings nicht durch einen späteren Chunk wiederbeleben. Beim Client-Disconnect werden offene Recordings zusammen mit den öffentlichen Ressourcen-XIDs der Verbindung invalidiert; ihre aufgezeichneten Referenzen werden nach den normalen Backend-Lebensdauerregeln bereinigt.
+Chunk errors are synchronous errors associated with the corresponding `CommandBufferData` request and do not generate `ASYNC_ERROR`: request processing has not accepted a submission. After successful XID and ownership validation, CREATE, append, and FINAL requests fail with `DEVICE_UNAVAILABLE` or `DEVICE_LOST` if the device is unavailable or lost, without changing the buffer or its previously accepted entries. `ABORT` remains permitted after device loss as a purely logical recovery/cleanup operation, provided the buffer and pool are still live, correctly associated, and the buffer is `RECORDING`; it starts no Vulkan work. A later chunk MUST NOT revive a recording interrupted by device loss. On client disconnect, open recordings are invalidated along with the connection's public resource XIDs; their recorded references are cleaned up according to the normal backend lifetime rules.
