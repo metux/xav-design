@@ -302,9 +302,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, devices)
         for phrase in (
             "The first terminal outcome detected wins",
-            "Device Loss",
+            "Device loss",
             "DestroyDevice",
-            "ohne Reply",
+            "without a reply",
         ):
             with self.subTest(wait_rule=phrase):
                 self.assertIn(phrase, synchronization + conformance)
@@ -313,8 +313,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # must not release backend resources early or manufacture completion.
         for phrase in (
             "exactly one terminal outcome",
-            "The server MUST NOT fake successful completion",
-            "backend accesses have ended",
+            "Each accepted submission receives exactly one internal terminal outcome",
+            "the server delivers exactly that event unless delivery is suppressed by a previously processed `DestroyDevice` request",
         ):
             with self.subTest(queue_rule=phrase):
                 self.assertIn(phrase, queue)
@@ -322,7 +322,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "all public XIDs of its resources become invalid immediately",
             "remain `DESTROY_PENDING`",
             "lifecycle rules suppress delivery of presentation events",
-            "does not invent completion",
+            "disconnect neither requires successful completion nor indefinite waiting for GPU progress",
             "premature release of internal backend objects",
         ):
             with self.subTest(lifetime_rule=phrase):
