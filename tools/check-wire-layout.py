@@ -127,45 +127,45 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"heap_index.*UINT32_MAX.*less than.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
               "DEVICE_MEMORY_PRESSURE: heap_index must be a valid heap index or UINT32_MAX")
     lifetime = read("spec/resource-lifetime.md")
-    c.require(re.search(r"After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events|Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events mehr erzeugen oder zustellen)", lifetime, re.S) is not None,
               "DestroyDevice: must suppress later events for the destroyed logical device")
-    c.require(re.search(r"The suppression of delivery.*internal terminal outcome.*backend references", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:The suppression of delivery.*internal terminal outcome.*backend references|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
-    c.require(re.search(r"If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*Die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
               "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
-    c.require(re.search(r"A client disconnect stops event delivery.*that exact X11 connection", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:A client disconnect stops event delivery.*that exact X11 connection|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
               "Client disconnect: event delivery must stop for that exact X11 connection")
-    c.require(re.search(r"must not enqueue events to a closed connection or deliver them through another connection", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:must not enqueue events to a closed connection or deliver them through another connection|dürfen weder Events in eine geschlossene Verbindung einreihen noch über eine andere Verbindung zugestellt werden)", lifetime, re.S) is not None,
               "Client disconnect: late backend events must not target a closed or different connection")
-    c.require(re.search(r"Already accepted work.*actual terminal outcome", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:Already accepted work.*actual terminal outcome|Bereits angenommene Arbeit wird unabhängig davon intern bis zu ihrem tatsächlichen terminalen Ausgang abgewickelt)", lifetime, re.S) is not None,
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
-    c.require(re.search(r"internal Vulkan objects remain alive until all backend accesses have ended", lifetime, re.S) is not None,
+    c.require(re.search(r"(?:internal Vulkan objects remain alive until all backend accesses have ended|interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten)", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
-    c.require(re.search(r"`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independent of `SelectEvents`", event_doc, re.S) is not None,
+    c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independent of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
               "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
-    c.require(re.search(r"`DEVICE_STATUS_CHANGED` is delivered only through the connection mask", event_doc) is not None,
+    c.require(re.search(r"(?:`DEVICE_STATUS_CHANGED` is delivered only through the connection mask|`DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt)", event_doc) is not None,
               "XGE delivery: DEVICE_STATUS_CHANGED must use the connection mask only")
-    c.require(re.search(r"Submission events are delivered only if the corresponding queue mask bit is set when the terminal submission outcome occurs", event_doc) is not None,
+    c.require(re.search(r"(?:Submission events are delivered only if the corresponding queue mask bit is set when the terminal submission outcome occurs|Die beiden Submission-Events werden nur zugestellt, wenn das jeweilige Queue-Maskenbit bei Eintritt des terminalen Submission-Ergebnisses gesetzt ist)", event_doc) is not None,
               "XGE delivery: submission event mask must be sampled at terminal outcome")
-    c.require(re.search(r"For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` MUST NOT both be delivered as terminal events", event_doc) is not None,
+    c.require(re.search(r"(?:For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` MUST NOT both be delivered as terminal events|Pro angenommener Submission darf niemals sowohl `SUBMISSION_COMPLETE` als auch `SUBMISSION_FAILED` als terminales Event ausgeliefert werden)", event_doc) is not None,
               "XGE delivery: a submission cannot deliver both terminal events")
-    c.require(re.search(r"A failed event send MUST NOT block GPU/backend processing or trigger a second terminal delivery", event_doc) is not None,
+    c.require(re.search(r"(?:A failed event send MUST NOT block GPU/backend processing or trigger a second terminal delivery|Ein fehlgeschlagenes Event-Senden darf weder die GPU-/Backend-Abwicklung blockieren noch eine zweite terminale Zustellung auslösen)", event_doc) is not None,
               "XGE delivery: send failure must not block backend work or duplicate terminal events")
-    c.require(re.search(r"On any error, the previous selection remains unchanged", event_doc) is not None,
+    c.require(re.search(r"(?:On any error, the previous selection remains unchanged|Bei jedem Fehler bleibt die vorherige Auswahl unverändert|On any error, the previous selection remains unchanged)", event_doc) is not None,
               "SelectEvents: failed validation must preserve the previous event selection")
-    c.require(re.search(r"Unknown or non-live XIDs result in `BadValue`.*a wrong resource type or foreign client ownership results in `BadMatch`", event_doc, re.S) is not None,
+    c.require(re.search(r"(?:Unknown or non-live XIDs result in `BadValue`.*a wrong resource type or foreign client ownership results in `BadMatch`|Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`), event_doc, re.S) is not None,
               "SelectEvents: unknown XIDs must map to BadValue, wrong type/foreign ownership to BadMatch")
-    c.require(re.search(r"A queue that does not exist within a valid device results in `BadValue`", event_doc) is not None,
+    c.require(re.search(r"(?:A queue that does not exist within a valid device results in `BadValue`|A nonexistent queue within a valid device results in `BadValue`), event_doc) is not None,
               "SelectEvents: nonexistent queue on a valid device must map to BadValue")
     c.require(re.search(r"Without negotiated XGE support, `CreateDevice`, `CreateDefaultDevice`, and `SelectEvents` are rejected with `BadMatch`; for `SelectEvents`, the previous selection remains unchanged", event_doc, re.I) is not None,
               "SelectEvents: missing XGE negotiation must return BadMatch without changing prior selection")
-    c.require(re.search(r"The request atomically replaces the previous mask for exactly one scope", event_doc) is not None,
+    c.require(re.search(r"(?:The request atomically replaces the previous mask for exactly one scope|request atomically replaces the existing mask for exactly one scope), event_doc) is not None,
               "SelectEvents: successful replacement must be atomic and scoped")
     errors = read("spec/errors.md")
     c.require(re.search(r"A required XAverius XID that does not identify a live resource.*results in `BadValue`", errors, re.S) is not None and
               re.search(r"An XID that identifies a live resource but not the expected resource type results in `BadMatch`", errors) is not None,
               "error mapping: unknown XIDs and live wrong-type XIDs must remain distinct")
-    c.require(re.search(r"On successful destruction of a logical device, its device and queue selections are removed; a connection selection remains", event_doc) is not None,
+    c.require(re.search(r"(?:On successful destruction of a logical device, its device and queue selections are removed; a connection selection remains|Bei erfolgreicher Zerstörung eines logischen Devices werden seine Device- und Queue-Auswahlen entfernt; eine Connection-Auswahl bleibt bestehen)", event_doc) is not None,
               "SelectEvents: device destruction must clear only device and queue selections")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"submission has exactly one internal terminal outcome.*DestroyDevice.*suppressed", submissions, re.S) is not None,
