@@ -334,6 +334,9 @@ class CommandBufferModel:
     pool_matches_buffer: bool = True
     correct_type_and_ownership: bool = True
     entries: list[bytes] = field(default_factory=list)
+    # Descriptor-derived Buffer references are separate from recorded Set refs.
+    descriptor_sets: list[DescriptorSetLifetime] = field(default_factory=list)
+    indirect_buffer_refs: set[str] = field(default_factory=set)
 
 
 @dataclass(frozen=True)
@@ -890,6 +893,9 @@ class DescriptorSetLifetime:
     pending_use: bool = False
     recording_refs: int = 0
     executable_refs: list[CommandBufferModel] = field(default_factory=list)
+    # Slot -> internal Buffer identity; XIDs are deliberately not modeled as identity.
+    slots: dict[int, str] = field(default_factory=dict)
+    pending_buffer_refs: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -934,4 +940,50 @@ def destroy_descriptor_pool(pool: DescriptorPoolLifetime) -> str:
         descriptor_set.live = False
     pool.live = False
     pool.xid_valid = False
+    return "SUCCESS"
+
+
+@dataclass(frozen=True)
+class DescriptorWrite:
+    set_index: int
+    slot: int
+    buffer_identity: str | None
+
+
+def update_descriptor_sets(
+    sets: list[DescriptorSetLifetime],
+    writes: tuple[DescriptorWrite, ...],
+    command_buffers: list[CommandBufferModel],
+    *,
+    writes_valid: bool = True,
+) -> str:
+    """Atomically apply descriptor writes and refresh non-pending derived refs.
+
+    None clears a slot. Validation covers the complete update batch before any
+    slot or CommandBuffer reference is changed.
+    """
+    if not writes_valid:
+        return "BadValue"
+    if any(w.set_index < 0 or w.set_index >= len(sets)
+           or not sets[w.set_index].live or w.slot < 0 for w in writes):
+        return "BadValue"
+    # Prepare candidate slot maps first; duplicate writes are applied in wire order.
+    candidate = [dict(descriptor_set.slots) for descriptor_set in sets]
+    for w in writes:
+        if w.buffer_identity is None:
+            candidate[w.set_index].pop(w.slot, None)
+        else:
+            candidate[w.set_index][w.slot] = w.buffer_identity
+    # Commit slots and derived references together. Pending CBs retain their
+    # accepted-work references; only non-pending CB snapshots are refreshed.
+    for descriptor_set, slots in zip(sets, candidate):
+        descriptor_set.slots = slots
+    for cb in command_buffers:
+        if cb.lifecycle is CommandBufferLifecycle.PENDING:
+            continue
+        refs: set[str] = set()
+        for descriptor_set in cb.descriptor_sets:
+            if descriptor_set.live:
+                refs.update(descriptor_set.slots.values())
+        cb.indirect_buffer_refs = refs
     return "SUCCESS"

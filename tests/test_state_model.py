@@ -1793,3 +1793,107 @@ class DescriptorSetLifetimeAtomicityTests(unittest.TestCase):
         before = copy.deepcopy(pool)
         self.assertEqual(destroy_descriptor_pool(pool), "BadMatch")
         self.assertEqual(pool, before)
+
+
+class UpdateDescriptorSetsIndirectReferenceTests(unittest.TestCase):
+    def test_update_replaces_derived_buffer_refs_for_executable_cb(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A", 1: "buffer-B"})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A", "buffer-B"},
+            entries=[b"recorded bind"],
+        )
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set],
+                (DescriptorWrite(0, 0, "buffer-C"), DescriptorWrite(0, 1, None)),
+                [cb],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(descriptor_set.slots, {0: "buffer-C"})
+        self.assertEqual(cb.indirect_buffer_refs, {"buffer-C"})
+        self.assertEqual(cb.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+        self.assertEqual(cb.entries, [b"recorded bind"])
+
+    def test_update_batch_validation_failure_preserves_slots_and_all_cb_refs(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A"})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A"},
+        )
+        before = copy.deepcopy((descriptor_set, cb))
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set],
+                (DescriptorWrite(0, 0, "buffer-B"), DescriptorWrite(7, 0, "buffer-C")),
+                [cb],
+            ),
+            "BadValue",
+        )
+        self.assertEqual((descriptor_set, cb), before)
+
+    def test_update_refreshes_only_nonpending_cb_refs(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A"})
+        executable = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A"},
+        )
+        pending = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.PENDING,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A"},
+        )
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 0, "buffer-B"),),
+                [executable, pending],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(executable.indirect_buffer_refs, {"buffer-B"})
+        # Accepted work keeps its old internal reference until terminal completion.
+        self.assertEqual(pending.indirect_buffer_refs, {"buffer-A"})
+        self.assertEqual(descriptor_set.slots, {0: "buffer-B"})
+
+    def test_update_shared_set_refreshes_every_nonpending_cb_indirect_ref(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+        first = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.RECORDING,
+            descriptor_sets=[descriptor_set], indirect_buffer_refs={"buffer-old"},
+        )
+        second = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set], indirect_buffer_refs={"buffer-old"},
+        )
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 0, "buffer-new"),),
+                [first, second],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(first.indirect_buffer_refs, {"buffer-new"})
+        self.assertEqual(second.indirect_buffer_refs, {"buffer-new"})
+        self.assertEqual((first.lifecycle, second.lifecycle), (
+            CommandBufferLifecycle.RECORDING, CommandBufferLifecycle.EXECUTABLE,
+        ))
+
+    def test_clearing_descriptor_slot_releases_indirect_reference_only(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A", 1: "buffer-B"})
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A", "buffer-B"},
+        )
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set], (DescriptorWrite(0, 0, None),), [cb],
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(cb.indirect_buffer_refs, {"buffer-B"})
+        self.assertEqual(descriptor_set.slots, {1: "buffer-B"})
