@@ -210,7 +210,7 @@ def check_events(c: Check) -> None:
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
     c.require("Synchronous validation MUST follow this order" in sync and
               "normative precedence: incorrect length `BadLength`" in errors and
-              "in mixed-error cases the earlier phase wins" in read("spec/conformance.md") and
+              re.search(r"In mixed-error cases, the earlier phase wins", read("spec/conformance.md")) is not None and
               "counters and reservations unchanged" in errors,
               "SignalSemaphore: validation precedence and atomic rejection must be explicit")
     c.require("total length: `28 + 12 * semaphore_count` bytes" in sync and
