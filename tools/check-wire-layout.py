@@ -2100,6 +2100,7 @@ def check_presentation_profile(c: Check) -> None:
               "CreateSwapchain/GetSurfaceCapabilities: capability validation and failure reply fields must be explicit")
     presentation_reply_tests = read("tests/test_presentation_reply_vectors.py")
     c.require("family_indices != list(range(families))" in presentation_reply_tests and
+              "successful capabilities reply has zero queue families" in presentation_reply_tests and
               "aggregate present_supported does not match queue-family records" in presentation_reply_tests and
               "successful capabilities reply has zero current extent" in presentation_reply_tests and
               "successful capabilities reply has invalid extent bounds" in presentation_reply_tests and
