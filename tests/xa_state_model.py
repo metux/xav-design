@@ -622,8 +622,9 @@ def finish_submission(
         current = state.binary_signal_states[index]
         if not effective_success:
             state.binary_signal_states[index] = (
-                previous if binary_payload_unchanged and ("signal", index) in binary_payload_unchanged
-                else BinarySignalState.UNTRUSTED
+                BinarySignalState.UNTRUSTED
+                if consumed or not (binary_payload_unchanged and ("signal", index) in binary_payload_unchanged)
+                else previous
             )
         elif current is BinarySignalState.UNTRUSTED:
             pass
@@ -645,6 +646,9 @@ def finish_submission(
         previous = state.binary_wait_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         if effective_success:
             signal_state = state.binary_signal_states[index]
+            if signal_state is BinarySignalState.UNTRUSTED:
+                state.wait_states[index] = WaitState.UNTRUSTED
+                continue
             if signal_state is BinarySignalState.SIGNAL_PENDING:
                 signal_token = next(
                     (pending_token for pending_token, pending_index
