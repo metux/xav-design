@@ -27,7 +27,7 @@ Total length: 60 bytes; XGE `length = 7`.
 | 52 | XID | affected resource XID, zero if none |
 | 56 | CARD32 | `reserved = 0` |
 
-Origin-Werte:
+Origin values:
 
 - 0: `ORIGIN_UNSPECIFIED`
 - 1: `ORIGIN_QUEUE_SUBMIT`
