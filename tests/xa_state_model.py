@@ -987,3 +987,92 @@ def update_descriptor_sets(
                 refs.update(descriptor_set.slots.values())
         cb.indirect_buffer_refs = refs
     return "SUCCESS"
+
+
+
+@dataclass
+class BufferMemoryLifetime:
+    """Public Buffer XID and deferred internal lifetime, keyed by identity."""
+    identity: str = "buffer-A"
+    memory_identity: str = "memory-A"
+    xid_valid: bool = True
+    live: bool = True
+    internal_state: str = "ACTIVE"  # ACTIVE, DESTROY_PENDING, RELEASED
+    recording_refs: list[CommandBufferModel] = field(default_factory=list)
+    executable_refs: list[CommandBufferModel] = field(default_factory=list)
+    accepted_uses: int = 0
+    descriptor_slot_refs: int = 0
+    backend_accesses: int = 0
+
+
+@dataclass
+class MemoryAllocationLifetime:
+    """Memory XID remains live until FreeMemory passes all lifetime checks."""
+    identity: str = "memory-A"
+    xid_valid: bool = True
+    live: bool = True
+    accepted_uses: int = 0
+
+
+def _finish_buffer_release(buffer: BufferMemoryLifetime) -> None:
+    if (not buffer.xid_valid and buffer.accepted_uses == 0
+            and buffer.descriptor_slot_refs == 0 and buffer.backend_accesses == 0):
+        buffer.internal_state = "RELEASED"
+    elif not buffer.xid_valid:
+        buffer.internal_state = "DESTROY_PENDING"
+
+
+def destroy_buffer_lifetime(buffer: BufferMemoryLifetime) -> str:
+    """DestroyResource(Buffer): preflight blockers, then invalidate XID atomically."""
+    if not buffer.xid_valid or not buffer.live:
+        return "BadValue"
+    if any(cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.RECORDING
+           for cb in buffer.recording_refs):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    if buffer.accepted_uses:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for cb in buffer.executable_refs:
+        if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
+            cb.lifecycle = CommandBufferLifecycle.INVALID
+    buffer.xid_valid = False
+    buffer.live = False
+    _finish_buffer_release(buffer)
+    return "SUCCESS"
+
+
+def free_memory_lifetime(
+    memory: MemoryAllocationLifetime,
+    buffers: list[BufferMemoryLifetime],
+) -> str:
+    """FreeMemory rejects any still-internally-bound Buffer before pending work."""
+    if not memory.xid_valid or not memory.live:
+        return "BadValue"
+    if any(buffer.memory_identity == memory.identity
+           and buffer.internal_state != "RELEASED" for buffer in buffers):
+        return "BadMatch"
+    if memory.accepted_uses or any(
+        buffer.memory_identity == memory.identity and
+        (buffer.accepted_uses or buffer.backend_accesses)
+        for buffer in buffers
+    ):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    memory.xid_valid = False
+    memory.live = False
+    return "SUCCESS"
+
+
+def drop_buffer_internal_ref(
+    buffer: BufferMemoryLifetime, *, descriptor_slots: int = 0,
+    accepted_uses: int = 0, backend_accesses: int = 0,
+) -> str:
+    """Drop known internal references and release only after backend quiescence."""
+    if (descriptor_slots < 0 or accepted_uses < 0 or backend_accesses < 0
+            or descriptor_slots > buffer.descriptor_slot_refs
+            or accepted_uses > buffer.accepted_uses
+            or backend_accesses > buffer.backend_accesses):
+        return "BadValue"
+    buffer.descriptor_slot_refs -= descriptor_slots
+    buffer.accepted_uses -= accepted_uses
+    buffer.backend_accesses -= backend_accesses
+    _finish_buffer_release(buffer)
+    return "SUCCESS"

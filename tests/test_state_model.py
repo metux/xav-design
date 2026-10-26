@@ -37,6 +37,11 @@ from xa_state_model import (
     free_descriptor_sets,
     destroy_descriptor_pool,
     update_descriptor_sets,
+    BufferMemoryLifetime,
+    MemoryAllocationLifetime,
+    destroy_buffer_lifetime,
+    free_memory_lifetime,
+    drop_buffer_internal_ref,
 )
 
 
@@ -1903,3 +1908,70 @@ class UpdateDescriptorSetsIndirectReferenceTests(unittest.TestCase):
         )
         self.assertEqual(cb.indirect_buffer_refs, {"buffer-B"})
         self.assertEqual(descriptor_set.slots, {1: "buffer-B"})
+
+
+
+class BufferAndMemoryDeferredLifetimeTests(unittest.TestCase):
+    def test_buffer_destroy_is_atomic_while_recording_or_accepted_work_uses_it(self) -> None:
+        for changes in (
+            {"recording_refs": [CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)]},
+            {"accepted_uses": 1},
+        ):
+            with self.subTest(changes=changes):
+                buffer = BufferMemoryLifetime(**changes)
+                cb_refs = copy.deepcopy(buffer.recording_refs)
+                before = copy.deepcopy(buffer)
+                self.assertEqual(destroy_buffer_lifetime(buffer), "INVALID_SYNCHRONIZATION_STATE")
+                self.assertEqual(buffer, before)
+                self.assertEqual(buffer.recording_refs, cb_refs)
+
+    def test_destroy_invalidates_xid_but_descriptor_slot_keeps_internal_buffer_and_memory_bound(self) -> None:
+        cb = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, indirect_buffer_refs={"buffer-A"})
+        buffer = BufferMemoryLifetime(
+            executable_refs=[cb], descriptor_slot_refs=1,
+        )
+        memory = MemoryAllocationLifetime()
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        self.assertFalse(buffer.xid_valid)
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(cb.lifecycle, CommandBufferLifecycle.INVALID)
+        before = copy.deepcopy(memory)
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "BadMatch")
+        self.assertEqual(memory, before)
+        self.assertTrue(memory.xid_valid)
+
+    def test_descriptor_slot_removal_releases_destroyed_buffer_only_after_backend_quiescence(self) -> None:
+        buffer = BufferMemoryLifetime(
+            descriptor_slot_refs=1, backend_accesses=1,
+        )
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(drop_buffer_internal_ref(buffer, descriptor_slots=1), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "RELEASED")
+        memory = MemoryAllocationLifetime()
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "SUCCESS")
+        self.assertFalse(memory.xid_valid)
+
+    def test_free_memory_rejects_accepted_gpu_use_even_if_no_buffer_is_bound(self) -> None:
+        memory = MemoryAllocationLifetime(accepted_uses=1)
+        before = copy.deepcopy(memory)
+        self.assertEqual(free_memory_lifetime(memory, []), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(memory, before)
+
+    def test_free_memory_rejects_backend_access_after_public_buffer_destroy(self) -> None:
+        buffer = BufferMemoryLifetime(backend_accesses=1)
+        memory = MemoryAllocationLifetime()
+        self.assertEqual(destroy_buffer_lifetime(buffer), "SUCCESS")
+        before = copy.deepcopy((memory, buffer))
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "BadMatch")
+        self.assertEqual((memory, buffer), before)
+        self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "SUCCESS")
+
+    def test_rejected_internal_ref_drop_does_not_change_counts(self) -> None:
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1, accepted_uses=1)
+        before = copy.deepcopy(buffer)
+        self.assertEqual(drop_buffer_internal_ref(buffer, descriptor_slots=2), "BadValue")
+        self.assertEqual(buffer, before)
