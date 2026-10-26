@@ -45,17 +45,17 @@ After successful creation of a Compute Pipeline, the Shader Module may be destro
 
 ## 6.2 Descriptor Set Layout
 
-`CreateDescriptorSetLayout` ist ein Void-Request mit folgendem Wire-Layout. Die Gesamtlänge beträgt `24 + 16 * binding_count` Bytes.
+`CreateDescriptorSetLayout` is a void request with the following wire layout. The total length is `24 + 16 * binding_count` bytes.
 
 | Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `descriptor_set_layout_xid` |
-| 16 | CARD32 | `flags`; in v0.1 MUSS null sein |
+| 16 | CARD32 | `flags`; MUST be zero in v0.1 |
 | 20 | CARD32 | `binding_count` |
 | 24 | BINDING[] | `binding_count` Binding-Records |
 
-Jeder Binding-Record ist 16 Bytes groß:
+Each binding record is 16 bytes:
 
 | Relative Offset | Type | Field |
 |---:|---|---|
@@ -64,7 +64,7 @@ Jeder Binding-Record ist 16 Bytes groß:
 | 8 | CARD32 | `descriptor_count` |
 | 12 | CARD32 | `stage_flags` |
 
-Der Request muss exakt die durch `binding_count` bestimmte Länge haben. Die Gesamtlänge muss innerhalb der normalen X11-Requestgrößenbegrenzung liegen. `binding_count = 0` ist zulässig und erzeugt ein leeres Layout. Für jeden Record muss `descriptor_count` größer als null sein. Binding-Nummern müssen innerhalb des Layouts eindeutig sein; doppelte Binding-Nummern machen den gesamten Request ungültig.
+The request MUST have exactly the length determined by `binding_count`. The total length MUST remain within the normal X11 request-size limit. `binding_count = 0` is permitted and creates an empty layout. For each record, `descriptor_count` MUST be greater than zero. Binding numbers MUST be unique within the layout; duplicate binding numbers invalidate the entire request.
 
 `descriptor_type` und `stage_flags` verwenden ausschließlich die normativen [Descriptor-Type-Registry](../registries/descriptor-types.md) und [Shader-Stage-Registry](../registries/shader-stages.md). Jeder verwendete Wert muss in v0.1 unterstützt sein. Die Stage-Maske darf keine unbekannten oder nicht unterstützten Bits enthalten und muss mindestens eine unterstützte Stage enthalten. Nicht unterstützte Descriptor-Typen werden abgewiesen; die numerischen Werte werden nicht lokal in diesem Kapitel vergeben.
 
