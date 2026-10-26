@@ -1401,6 +1401,104 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.wait_reservation)
 
 
+    def test_mixed_timeline_signal_validation_rejects_atomically(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE),
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[2, 9],
+            signal_slots=[None, None],
+        )
+        # The first signal is valid, but the second does not exceed its
+        # current counter. Validation must not reserve the first semaphore.
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(0, 1), signal_values=(7, 9)),
+            "BadValue",
+        )
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None, None])
+
+    def test_failed_and_late_timeline_callbacks_preserve_other_reservations(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(4)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[2, 4],
+            signal_slots=[None, None],
+        )
+        # Token 431 reserves both semaphores; token 432 reserves a higher
+        # value on semaphore 0. Terminal callbacks must be scoped by token.
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=431, command_buffer_indices=(0,),
+                signal_indices=(0, 1), signal_values=(7, 12),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=432, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(11,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 432, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [2, 4])
+        self.assertEqual(state.pending_timeline_signals, [(431, 0, 7), (431, 1, 12)])
+        self.assertEqual(state.signal_slots, [7, 12])
+
+        # Semaphore 0 can complete while semaphore 1's signal is still
+        # pending. A subsequent Device Loss invalidates only unpublished
+        # completion work; the late callback drains its own remaining entry.
+        self.assertEqual(finish_submission(state, 431, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [7, 12])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None, None])
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 431, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+    def test_device_loss_drains_only_callback_owned_timeline_reservations(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[1, 3],
+            signal_slots=[None, None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=433, command_buffer_indices=(0,),
+                signal_indices=(0, 1), signal_values=(8, 15),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=434, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(10,),
+            )),
+            "SUCCESS",
+        )
+        state.device_lost = True
+        # A late success must not publish either value or release another
+        # token's reservation.
+        self.assertEqual(finish_submission(state, 434, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [1, 3])
+        self.assertEqual(state.pending_timeline_signals, [(433, 0, 8), (433, 1, 15)])
+        self.assertEqual(state.signal_slots, [8, 15])
+
+        self.assertEqual(finish_submission(state, 433, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [1, 3])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None, None])
+
     def test_timeline_signal_callbacks_preserve_foreign_pending_reservations(self) -> None:
         state = self.state(
             command_buffers=[
