@@ -68,7 +68,13 @@ def u32(wire: bytes, offset: int, order: str) -> int:
     return int.from_bytes(wire[offset:offset + 4], order)
 
 
-def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
+def validate_presentation_reply(
+    kind: str,
+    wire: bytes,
+    order: str,
+    *,
+    expected_image_count: int | None = None,
+) -> None:
     if order not in ("little", "big"):
         raise ValueError("unknown byte order")
     if kind not in ("capabilities", "create_swapchain", "acquire", "queue_present"):
@@ -124,6 +130,10 @@ def validate_presentation_reply(kind: str, wire: bytes, order: str) -> None:
             raise ValueError("invalid presentation status")
         if kind == "create_swapchain" and status == 0 and u32(wire, 36, order) == 0:
             raise ValueError("successful CreateSwapchain has zero image count")
+        if (kind == "create_swapchain" and status == 0 and
+                expected_image_count is not None and
+                u32(wire, 36, order) != expected_image_count):
+            raise ValueError("CreateSwapchain image count does not match request")
         if kind == "create_swapchain" and status and u32(wire, 36, order):
             raise ValueError("failed CreateSwapchain has nonzero image count")
         if kind == "acquire":
@@ -169,6 +179,20 @@ class PresentationReplyWireTests(unittest.TestCase):
                 self.assertEqual(u32(success, 36, order), 3)
                 self.assertEqual(u32(failure, 32, order), 4)
                 self.assertEqual(u32(failure, 36, order), 0)
+
+    def test_create_swapchain_success_count_matches_request(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                wire = encode_create_swapchain_reply(order, 0, 3)
+                validate_presentation_reply(
+                    "create_swapchain", wire, order, expected_image_count=3
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "CreateSwapchain image count does not match request"
+                ):
+                    validate_presentation_reply(
+                        "create_swapchain", wire, order, expected_image_count=2
+                    )
 
     def test_acquire_failure_has_zero_image_index_and_reserved_word(self) -> None:
         for order in ("little", "big"):
