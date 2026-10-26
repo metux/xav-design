@@ -2,7 +2,7 @@
 
 Alle folgenden Events verwenden XGE. Die sieben Compute-Baseline-Events verwenden IDs aus der [zentralen Event-Registry](../registries/event-types.md). Die presentation-only Events IMAGE_RELEASED (7) und PRESENTATION_COMPLETE (8) sowie deren Statuswerte stehen in der separaten [Presentation-Event-Registry](../registries/presentation-events.md) und dürfen nur vom presentation-capable Profil verwendet werden. Der gemeinsame 32-Byte-Header entspricht dem X Generic Event-Format:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 0 | CARD8 | `response_type = GenericEvent (35)` |
 | 1 | CARD8 | `extension`: dynamisch zugewiesener XAverius-Major-Opcode |
@@ -18,7 +18,7 @@ Event-spezifische Felder beginnen bei Offset 32. Die Gesamtlänge ist exakt `32 
 
 Gesamtlänge: 60 Bytes; XGE `length = 7`.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device-XID, null falls nicht gerätebezogen |
 | 36 | CARD32 | `error_code`, zentraler XAverius-Fehleroffset |
@@ -132,7 +132,7 @@ Failure-Class-Werte:
 
 Gesamtlänge: 64 Bytes; XGE `length = 8`.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device-XID |
 | 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
@@ -148,7 +148,7 @@ Dieses Event bezeichnet den internen Übergang, bei dem die Präsentationsbacken
 
 Gesamtlänge: 64 Bytes; XGE `length = 8`.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 32 | XID | Device-XID |
 | 36 | CARD32 | `queue_family_index` der akzeptierten Präsentationsoperation |
@@ -172,7 +172,7 @@ Die Compute-Baseline-Event-Type-IDs sind in der [zentralen Event-Registry](../re
 
 `SelectEvents` ist ein Void-Request mit fester Gesamtlänge von 32 Bytes. Das Common-Header-Feld `flags` bei Offset 5 muss 0 sein; das reservierte Common-Header-Feld bei Offset 6 muss ebenfalls 0 sein. Der Request ersetzt atomar die bisherige Maske für genau einen Scope dieser X11-Verbindung; er fügt keine Bits hinzu und entfernt keine anderen Scopes.
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | CARD32 | `scope` |
 | 12 | XID | `device_xid` |
