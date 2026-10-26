@@ -319,6 +319,8 @@ class SubmissionModel:
     semaphore_kinds: list[SemaphoreKind] = field(default_factory=list)
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
+    # (submission token, semaphore index, reserved timeline signal value).
+    pending_timeline_signals: list[tuple[int, int, int]] = field(default_factory=list)
     queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
@@ -428,6 +430,62 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
     for index, value in zip(request.signal_indices, request.signal_values):
         state.signal_slots[index] = value
+        if (state.semaphore_kinds[index] if index < len(state.semaphore_kinds)
+                else SemaphoreKind.TIMELINE) is SemaphoreKind.TIMELINE:
+            state.pending_timeline_signals.append((request.token, index, value))
     state.fence_attached = request.attach_fence
     state.pending_submissions.append(request.token)
+    return "SUCCESS"
+
+
+def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: int) -> str:
+    """Model SignalSemaphore's counter/reservation validation and atomic update."""
+    if state.device_lost:
+        return "DEVICE_LOST"
+    if semaphore_index < 0 or semaphore_index >= len(state.signal_counters):
+        return "BadValue"
+    kind = (state.semaphore_kinds[semaphore_index]
+            if semaphore_index < len(state.semaphore_kinds)
+            else SemaphoreKind.TIMELINE)
+    if kind is not SemaphoreKind.TIMELINE:
+        return "BadMatch"
+    if value <= state.signal_counters[semaphore_index]:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    pending_values = [
+        pending_value
+        for _token, index, pending_value in state.pending_timeline_signals
+        if index == semaphore_index
+    ]
+    # A host signal may advance a wait to an intermediate value, but must not
+    # jump over any still-pending GPU signal reservation.
+    if any(value >= pending_value for pending_value in pending_values):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    state.signal_counters[semaphore_index] = value
+    return "SUCCESS"
+
+
+def finish_submission(state: SubmissionModel, token: int, success: bool) -> str:
+    """Finalize a submission once; failed work never advances timeline counters."""
+    if token not in state.pending_submissions:
+        return "BadValue"
+    state.pending_submissions.remove(token)
+    for submission_token, index, value in list(state.pending_timeline_signals):
+        if submission_token != token:
+            continue
+        if success:
+            state.signal_counters[index] = max(state.signal_counters[index], value)
+        state.pending_timeline_signals.remove((submission_token, index, value))
+        if state.signal_slots[index] == value:
+            state.signal_slots[index] = None
+    state.pending_timeline_waits = [
+        wait for wait in state.pending_timeline_waits if wait[0] != token
+    ]
+    for command_buffer in state.command_buffers:
+        if command_buffer.lifecycle is CommandBufferLifecycle.PENDING:
+            # This compact oracle does not model per-submission CB ownership;
+            # callers should use one pending CB per submission in these tests.
+            command_buffer.lifecycle = (
+                CommandBufferLifecycle.EXECUTABLE if success
+                else CommandBufferLifecycle.INVALID
+            )
     return "SUCCESS"
