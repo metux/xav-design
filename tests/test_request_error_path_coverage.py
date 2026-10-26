@@ -282,5 +282,51 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(error_contract=phrase):
                 self.assertIn(phrase, errors)
 
+
+    def test_device_teardown_waits_and_submission_terminalization_are_consistent(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec/resource-lifetime.md").read_text(encoding="utf-8")
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+
+        # DestroyDevice terminates unresolved host waits, but does not fabricate GPU completion.
+        for phrase in (
+            "WaitSemaphores",
+            "WaitForFence",
+            "DEVICE_DESTROYED",
+            "bereits erfüllte Wait-Bedingungen",
+            "Interne Vulkan-Objekte werden erst freigegeben",
+        ):
+            with self.subTest(device_rule=phrase):
+                self.assertIn(phrase, devices)
+        for phrase in (
+            "der zuerst festgestellte terminale Ausgang gewinnt",
+            "Device Loss",
+            "DestroyDevice",
+            "ohne Reply",
+        ):
+            with self.subTest(wait_rule=phrase):
+                self.assertIn(phrase, synchronization + conformance)
+
+        # Accepted work has one real terminal outcome; event suppression and disconnect
+        # must not release backend resources early or manufacture completion.
+        for phrase in (
+            "genau einen terminalen Ausgang",
+            "Der Server darf keine erfolgreiche Completion vortäuschen",
+            "das Backend nicht mehr auf die Ressourcen zugreift",
+        ):
+            with self.subTest(queue_rule=phrase):
+                self.assertIn(phrase, queue)
+        for phrase in (
+            "alle zugehörigen öffentlichen XIDs werden `INVALID`",
+            "bleiben `DESTROY_PENDING`",
+            "Event-Zustellung nicht",
+            "keine Completion zu erfinden",
+            "Backend-Ressourcen vorzeitig freizugeben",
+        ):
+            with self.subTest(lifetime_rule=phrase):
+                self.assertIn(phrase, lifetime + conformance)
+
 if __name__ == "__main__":
     unittest.main()
