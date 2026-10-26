@@ -47,20 +47,28 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
         self.assertEqual(timeline.signal_host(8), "SUCCESS")
         self.assertEqual(timeline.terminal_waits, {20: "SUCCESS"})
 
+    def test_timeout_final_check_prefers_already_satisfied_wait(self) -> None:
+        timeline = Timeline(counter=2)
+        self.assertEqual(timeline.begin_host_wait(25, 8), "PENDING")
+        self.assertEqual(timeline.reserve_gpu_signal(425, 8), "SUCCESS")
+        self.assertEqual(timeline.finish_gpu_signal(425, success=True), "SUCCESS")
+
+        # Even if the timeout path runs after the signal advanced the counter,
+        # the normative final state check returns success.
+        self.assertEqual(timeline.finish_host_wait(25, "TIMEOUT"), "BadValue")
+        self.assertEqual(timeline.terminal_waits, {25: "SUCCESS"})
+
     def test_timeout_terminal_result_cannot_be_overwritten_by_late_gpu_signal(self) -> None:
         timeline = Timeline(counter=2)
         self.assertEqual(timeline.begin_host_wait(30, 8), "PENDING")
         self.assertEqual(timeline.reserve_gpu_signal(43, 8), "SUCCESS")
         self.assertEqual(timeline.finish_host_wait(30, "TIMEOUT"), "SUCCESS")
-        before = copy.deepcopy(timeline)
-
         self.assertEqual(timeline.finish_gpu_signal(43, success=True), "SUCCESS")
         self.assertEqual(timeline.terminal_waits, {30: "TIMEOUT"})
         self.assertEqual(timeline.pending_host_waits, {})
         self.assertEqual(timeline.counter, 8)
         self.assertEqual(timeline.finish_host_wait(30, "SUCCESS"), "BadValue")
         self.assertEqual(timeline.terminal_waits, {30: "TIMEOUT"})
-        self.assertNotEqual(timeline, before)  # GPU signal legitimately advanced the counter.
 
     def test_already_satisfied_host_wait_completes_immediately_and_is_one_shot(self) -> None:
         timeline = Timeline(counter=8)
@@ -77,6 +85,27 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
 
         self.assertEqual(timeline.signal_host(8), "INVALID_SYNCHRONIZATION_STATE")
         self.assertEqual(timeline, before)
+
+    def test_device_loss_terminates_open_wait_but_late_gpu_callback_cannot_rewrite_it(self) -> None:
+        timeline = Timeline(counter=2)
+        self.assertEqual(timeline.begin_host_wait(70, 8), "PENDING")
+        self.assertEqual(timeline.reserve_gpu_signal(47, 8), "SUCCESS")
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.pending_host_waits, {})
+        self.assertEqual(timeline.terminal_waits, {70: "DEVICE_LOST"})
+        self.assertEqual(timeline.finish_gpu_signal(47, success=True), "SUCCESS")
+        self.assertEqual(timeline.counter, 2)
+        self.assertEqual(timeline.terminal_waits, {70: "DEVICE_LOST"})
+        self.assertEqual(timeline.signal_host(9), "DEVICE_LOST")
+
+    def test_destroy_device_terminates_wait_and_late_loss_does_not_override_it(self) -> None:
+        timeline = Timeline(counter=2)
+        self.assertEqual(timeline.begin_host_wait(80, 8), "PENDING")
+        self.assertEqual(timeline.destroy_device(), "SUCCESS")
+        self.assertEqual(timeline.terminal_waits, {80: "DEVICE_DESTROYED"})
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.terminal_waits, {80: "DEVICE_DESTROYED"})
+        self.assertEqual(timeline.begin_host_wait(81, 9), "DEVICE_DESTROYED")
 
 
 if __name__ == "__main__":
