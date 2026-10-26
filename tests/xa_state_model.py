@@ -180,17 +180,19 @@ def finish_present_wait(
     reservation = (token, semaphore_index)
     if reservation not in state.pending_present_waits:
         return "BadValue"
+    shared = (
+        state.shared_semaphores[semaphore_index]
+        if semaphore_index < len(state.shared_semaphores) else None
+    )
+    # Check the canonical reservation before even extending local mirrors:
+    # stale callbacks must be mutation-free on every rejection path.
+    if shared is not None and shared.wait_reservation != ("present", token):
+        return "BadValue"
     if semaphore_index >= len(state.binary_signal_states):
         state.binary_signal_states.extend(
             [BinarySignalState.UNSIGNALED]
             * (semaphore_index + 1 - len(state.binary_signal_states))
         )
-    shared = (
-        state.shared_semaphores[semaphore_index]
-        if semaphore_index < len(state.shared_semaphores) else None
-    )
-    if shared is not None and shared.wait_reservation != ("present", token):
-        return "BadValue"
     if consumed is None:
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
         state.wait_states[semaphore_index] = WaitState.UNTRUSTED
