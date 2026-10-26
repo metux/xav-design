@@ -881,3 +881,57 @@ def reset_fence(state: SubmissionModel) -> str:
     state.fence_status = "UNSIGNALED"
     state.fence_state_valid = True
     return "SUCCESS"
+
+
+@dataclass
+class DescriptorSetLifetime:
+    """Public lifetime and references for one descriptor set."""
+    live: bool = True
+    pending_use: bool = False
+    recording_refs: int = 0
+    executable_refs: list[CommandBufferModel] = field(default_factory=list)
+
+
+@dataclass
+class DescriptorPoolLifetime:
+    """Pool and child-set state for atomic DestroyDescriptorPool."""
+    live: bool = True
+    xid_valid: bool = True
+    correct_type_and_ownership: bool = True
+    sets: list[DescriptorSetLifetime] = field(default_factory=list)
+
+
+def free_descriptor_sets(sets: list[DescriptorSetLifetime]) -> str:
+    """Validate all selected sets first, then invalidate them as one commit."""
+    if any(not descriptor_set.live for descriptor_set in sets):
+        return "BadValue"
+    if any(descriptor_set.pending_use or descriptor_set.recording_refs
+           for descriptor_set in sets):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for descriptor_set in sets:
+        for cb in descriptor_set.executable_refs:
+            if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
+                cb.lifecycle = CommandBufferLifecycle.INVALID
+        descriptor_set.live = False
+    return "SUCCESS"
+
+
+def destroy_descriptor_pool(pool: DescriptorPoolLifetime) -> str:
+    """Apply pool-wide preflight checks, then invalidate pool, sets and CB refs."""
+    if not pool.xid_valid or not pool.live:
+        return "BadValue"
+    if not pool.correct_type_and_ownership:
+        return "BadMatch"
+    if any(descriptor_set.pending_use or descriptor_set.recording_refs
+           for descriptor_set in pool.sets if descriptor_set.live):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    for descriptor_set in pool.sets:
+        if not descriptor_set.live:
+            continue
+        for cb in descriptor_set.executable_refs:
+            if cb.buffer_live and cb.lifecycle is CommandBufferLifecycle.EXECUTABLE:
+                cb.lifecycle = CommandBufferLifecycle.INVALID
+        descriptor_set.live = False
+    pool.live = False
+    pool.xid_valid = False
+    return "SUCCESS"

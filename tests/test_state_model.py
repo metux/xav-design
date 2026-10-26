@@ -1728,3 +1728,68 @@ class CommandBufferLifecycleTransitionTests(unittest.TestCase):
         before = copy.deepcopy(state)
         self.assertEqual(finish_submission(state, 306, success=True), "BadValue")
         self.assertEqual(state, before)
+
+
+class DescriptorSetLifetimeAtomicityTests(unittest.TestCase):
+    def test_free_descriptor_sets_rejects_pending_set_atomically(self) -> None:
+        cb = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"keep"])
+        first = DescriptorSetLifetime(executable_refs=[cb])
+        pending = DescriptorSetLifetime(pending_use=True)
+        before = copy.deepcopy((first, pending, cb))
+        self.assertEqual(free_descriptor_sets([first, pending]), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((first, pending, cb), before)
+
+    def test_free_descriptor_sets_rejects_recording_reference_atomically(self) -> None:
+        cb = CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"recorded"])
+        selected = DescriptorSetLifetime(recording_refs=1, executable_refs=[cb])
+        before = copy.deepcopy((selected, cb))
+        self.assertEqual(free_descriptor_sets([selected]), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((selected, cb), before)
+
+    def test_free_descriptor_sets_invalidates_only_selected_sets_and_executable_refs(self) -> None:
+        cb1 = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"a"])
+        cb2 = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"b"])
+        selected = DescriptorSetLifetime(executable_refs=[cb1])
+        unselected = DescriptorSetLifetime(executable_refs=[cb2])
+        self.assertEqual(free_descriptor_sets([selected]), "SUCCESS")
+        self.assertFalse(selected.live)
+        self.assertTrue(unselected.live)
+        self.assertEqual(cb1.lifecycle, CommandBufferLifecycle.INVALID)
+        self.assertEqual(cb2.lifecycle, CommandBufferLifecycle.EXECUTABLE)
+
+    def test_destroy_descriptor_pool_rejects_any_child_blocker_without_mutation(self) -> None:
+        executable = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"a"])
+        recording = CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING, entries=[b"b"])
+        pool = DescriptorPoolLifetime(sets=[
+            DescriptorSetLifetime(executable_refs=[executable]),
+            DescriptorSetLifetime(recording_refs=1, executable_refs=[recording]),
+        ])
+        before = copy.deepcopy((pool, executable, recording))
+        self.assertEqual(destroy_descriptor_pool(pool), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((pool, executable, recording), before)
+
+    def test_destroy_descriptor_pool_invalidates_pool_all_live_sets_and_executable_refs(self) -> None:
+        cb1 = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"a"])
+        cb2 = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"b"])
+        already_freed = DescriptorSetLifetime(live=False)
+        first = DescriptorSetLifetime(executable_refs=[cb1])
+        second = DescriptorSetLifetime(executable_refs=[cb2])
+        pool = DescriptorPoolLifetime(sets=[first, second, already_freed])
+        self.assertEqual(destroy_descriptor_pool(pool), "SUCCESS")
+        self.assertFalse(pool.live)
+        self.assertFalse(pool.xid_valid)
+        self.assertFalse(first.live)
+        self.assertFalse(second.live)
+        self.assertEqual((cb1.lifecycle, cb2.lifecycle), (
+            CommandBufferLifecycle.INVALID, CommandBufferLifecycle.INVALID,
+        ))
+        self.assertFalse(already_freed.live)
+
+    def test_destroy_descriptor_pool_type_error_precedes_lifecycle_checks(self) -> None:
+        pool = DescriptorPoolLifetime(
+            correct_type_and_ownership=False,
+            sets=[DescriptorSetLifetime(pending_use=True)],
+        )
+        before = copy.deepcopy(pool)
+        self.assertEqual(destroy_descriptor_pool(pool), "BadMatch")
+        self.assertEqual(pool, before)
