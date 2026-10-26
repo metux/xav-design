@@ -2,21 +2,21 @@
 
 ## Client resources
 
-Client-erzeugte XAverius-Ressourcen verwenden gültige, vom Client allokierbare XIDs.
+Client-created XAverius resources use valid XIDs allocatable by the client.
 
-Ein ungültiger oder bereits belegter Create-XID ergibt `BadIDChoice`, sofern der jeweilige Request keine speziellere X11-Regel vorschreibt.
+An invalid or already-occupied create XID results in `BadIDChoice`, unless the request defines a more specific X11 rule.
 
-Der Server muss für jede Ressource eine interne Identität verwalten, die nicht allein aus der öffentlichen XID besteht. Dadurch darf eine spätere Wiederverwendung derselben XID niemals laufende Arbeit auf eine neue Ressource umleiten.
+The server MUST maintain an internal identity for each resource that is distinct from its public XID. Reuse of the same XID MUST never redirect in-flight work to a new resource.
 
-Eine erfolgreich zerstörte öffentliche Ressource ist für neue Requests nicht mehr adressierbar.
+A successfully destroyed public resource is no longer addressable by new requests.
 
-# Ressourcenlebenszyklus und Zerstörung
+# Resource Lifetime and Destruction
 
-## Zustandsmodell
+## State Model
 
 Jedes Objekt besitzt mindestens zwei getrennte Lebensdaueransichten:
 
-**Öffentlicher Zustand**
+**Public State**
 
 - `LIVE`
 - `INVALID`
@@ -27,25 +27,25 @@ Jedes Objekt besitzt mindestens zwei getrennte Lebensdaueransichten:
 - `DESTROY_PENDING`
 - `RELEASED`
 
-Die Implementierung sollte zusätzlich die interne Ressourcenidentität, Client- und Device-Ownership, abhängige Objekte sowie ausstehende Submission-Referenzen verfolgen.
+The implementation SHOULD also track internal resource identity, client and device ownership, dependent objects, and outstanding submission references.
 
-Die öffentliche XID wird bei erfolgreicher Zerstörung sofort ungültig. Die tatsächliche Vulkan-Zerstörung darf verzögert erfolgen.
+The public XID becomes invalid immediately when destruction succeeds. Actual Vulkan object destruction may be deferred.
 
-## Normative Zustandsübergänge
+## Normative State Transitions
 
-Die folgenden Übergänge sind normativ:
+The following transitions are normative:
 
-- Erfolgreiches Erstellen: öffentliche Sicht `LIVE`, interner Zustand `ACTIVE`.
-- Abgewiesener Destroy-Request: keinerlei Änderung an öffentlichem Zustand, internem Zustand, abhängigen Command-Buffer-Zuständen oder Ownership.
-- Erfolgreiche normale Zerstörung: öffentliche Sicht wird im selben Request `INVALID`. Sind keine internen Referenzen und keine Backend-Zugriffe mehr vorhanden, darf das Objekt direkt nach `RELEASED` wechseln; andernfalls wechselt es nach `DESTROY_PENDING`.
-- `DESTROY_PENDING` → `RELEASED`: erst wenn alle internen Referenzen freigegeben sind, kein Backend-Zugriff mehr möglich ist und die Backend-Zerstörung abgeschlossen ist.
+- Successful creation: public view is `LIVE`; internal state is `ACTIVE`.
+- Rejected destroy request: no change to public state, internal state, dependent command-buffer states, or ownership.
+- Successful ordinary destruction: the public view becomes `INVALID` in the same request. If no internal references or backend accesses remain, the object may transition directly to `RELEASED`; otherwise it transitions to `DESTROY_PENDING`.
+- `DESTROY_PENDING` → `RELEASED`: only after all internal references are released, no backend access remains possible, and backend destruction has completed.
 - Device-Kaskadeninvalidierung bei erfolgreichem `DestroyDevice` oder Client-Disconnect: alle zugehörigen öffentlichen XIDs werden `INVALID`; Objekte mit verbleibenden internen Referenzen oder Backend-Zugriffen bleiben `DESTROY_PENDING`, die übrigen dürfen `RELEASED` werden. Device Loss allein invalidiert keine öffentlichen XIDs: das verlorene logische Device und seine Ressourcen bleiben bis zur expliziten Zerstörung adressierbar, soweit die jeweiligen Request-Verträge Statusabfragen oder logische Bereinigung zulassen. So bleiben insbesondere `GetFenceStatus` und `DestroyDevice` nach Device Loss nutzbar. Für angenommene Präsentationen müssen interne Terminalzustände und sichere Backend-Bereinigung auch dann abgeschlossen werden, wenn Lifecycle-Regeln die Zustellung von Presentation-Events unterdrücken. Ein noch offener `AcquireNextImage`-Request wird bei `DestroyDevice` mit `DEVICE_DESTROYED` terminalisiert, sofern sein Ergebnis nicht bereits zuvor terminal serialisiert wurde; beim Disconnect wird die Registrierung ohne Reply entfernt.
 
-Ein Objekt im Zustand `DESTROY_PENDING` kann nicht über seine alte XID adressiert oder erneut zerstört werden. Eine wiederverwendete XID bezeichnet eine neue interne Ressourcenidentität und darf keine Referenzen auf das alte Objekt übernehmen. `RELEASED` ist terminal.
+An object in `DESTROY_PENDING` cannot be addressed or destroyed again using its old XID. A reused XID identifies a new internal resource identity and MUST NOT inherit references to the old object. `RELEASED` is terminal.
 
-Interne Referenzen werden getrennt gezählt beziehungsweise nachverfolgt für aufgezeichnete Command Buffer, angenommene Submissions, Buffer-Handles in Descriptor-Slots, Eltern-Kind-Ownership und noch laufende Serveroperationen. Das Entfernen einer öffentlichen XID entfernt nicht automatisch die Referenzen einer bereits angenommenen Submission. Bei erfolgreichem normalen Destroy müssen alle erforderlichen Command-Buffer-Invalidierungen und internen Referenzanpassungen atomar mit der öffentlichen Invalidierung erfolgen.
+Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, parent-child ownership, and active server operations. Removing a public XID does not automatically remove references held by an accepted submission. On successful ordinary destruction, all required command-buffer invalidations and internal reference updates MUST occur atomically with public invalidation.
 
-## Ownership-Hierarchie
+## Ownership Hierarchy
 
 Explizite Eltern-Kind-Beziehungen:
 
@@ -66,7 +66,7 @@ Andere Beziehungen sind Abhängigkeiten, keine automatischen Ownership-Beziehung
 
 Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim Erstellen eines anderen Objekts verwendet wurde, dauerhaft existieren muss. Maßgeblich sind die tatsächlichen Vulkan-Lebensdauerregeln.
 
-## Zerstörungsmatrix
+## Destruction Matrix
 
 | Ressource | Öffentliche Zerstörung | Regel bei ausstehender Verwendung |
 |---|---|---|
@@ -89,7 +89,7 @@ Die Implementierung darf nicht annehmen, dass jedes Objekt, dessen Handle beim E
 
 Die Regeln sind XAverius-API-Entscheidungen und keine Behauptung, dass Vulkan für alle Ressourcentypen identische Lebensdauerbeschränkungen definiert.
 
-## Aufgezeichnete Referenzen und Command-Buffer-Invalidierung
+## Recorded References and Command Buffer Invalidation
 
 Der Server verfolgt für jeden Command Buffer die Ressourcen, auf die seine aufgezeichneten Commands direkt oder indirekt verweisen. Dazu gehören insbesondere Pipelines, Pipeline Layouts, Descriptor Sets, Buffer und die über Descriptor Sets referenzierten Buffer. Diese Abhängigkeiten bleiben bestehen, solange der Command Buffer aufgezeichnet oder ausführbar ist. Eine Submission übernimmt eigene interne Referenzen, die bis zum terminalen Submission-Ausgang und bis zum Ende aller Backend-Zugriffe bestehen bleiben. Ein XID-Invalidieren darf nie einen Backend-Handle auf ein anderes Objekt umleiten.
 
@@ -128,7 +128,7 @@ Jede Ablehnung ist atomar und lässt die öffentliche XID, interne Lebensdauerzu
 
 `FreeMemory` invalidiert die Memory-XID nur bei Erfolg. Gebundene Buffer führen zu `BadMatch`; angenommene GPU-Arbeit, die auf die Allokation zugreift, führt zu `INVALID_SYNCHRONIZATION_STATE`. XAverius v0.1 kennt kein Unbind/Rebind, daher müssen alle gebundenen Buffer zuerst zerstört werden.
 
-## Device-Zerstörung und Client-Disconnect
+## Device Destruction and Client Disconnect
 
 Bei erfolgreichem `DestroyDevice` oder Client-Disconnect werden die öffentlichen XIDs des logischen Devices und seiner Ressourcen ungültig; danach sind sie für neue Requests nicht mehr adressierbar. Die Kaskadeninvalidierung darf nicht an normalen Pending-Use-Ablehnungen scheitern. Sie ändert aber nicht rückwirkend bereits angenommene Arbeit: Bei normalem Teardown muss diese Arbeit ihren tatsächlichen terminalen Ausgang erreichen, und interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten.
 
@@ -144,7 +144,7 @@ Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen 
 
 Die interne Bereinigung muss sicher und unabhängig von der öffentlichen XID-Verfügbarkeit erfolgen. Der Server darf nicht unbegrenzt auf einem hängenden oder verlorenen Device warten. Wenn das Device verloren ist, gelten die folgenden Device-Loss-Regeln; der Server darf erfolgreiche GPU-Completion nicht vortäuschen.
 
-## Device Loss und terminale Bereinigung
+## Device Loss and Terminal Cleanup
 
 Wird ein logisches Device als verloren erkannt, gilt für alle darauf angenommenen, noch nicht terminalen Submissions:
 
@@ -161,19 +161,19 @@ Nach erkanntem Device Loss schlagen Requests, die weitere Vulkan-Arbeit erforder
 
 Kann der Server bei Device-Zerstörung oder Device Loss nicht bestätigen, dass das Backend keine Zugriffe auf interne Ressourcen mehr ausführt, gilt das Device als verloren und wird isoliert: alle noch nicht terminalen Submissions schlagen intern mit `DEVICE_LOST` fehl; öffentliche XIDs bleiben invalidiert. Wird der Device Loss festgestellt, solange das logische Device noch öffentlich live ist und die Lifecycle-Unterdrückung noch nicht greift, wird `DEVICE_LOST` mit `reason_code = DRIVER_FAILURE` gemeldet, wenn der Auslöser ein Backend-/Treiberfehler ist, andernfalls mit dem passenden bestehenden Reason-Code. Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event für die bereits zerstörte `device_xid` erzeugt oder zugestellt; die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert. Diese Regel folgt der allgemeinen Lifecycle-Grenze und verhindert, dass die Pflicht zur Meldung von Device Loss die explizite Event-Unterdrückung nach `DestroyDevice` aushebelt. Interne Ressourcen und zugehörige Speicher werden in Quarantäne gehalten und weder freigegeben noch für neue Ressourcen wiederverwendet, bis das Backend nachweislich quieszent ist. Kann dieser Zustand nicht mehr sicher hergestellt werden, bleiben sie bis zum Ende des Serverprozesses quarantänisiert. Der Server darf weder auf unbestimmte Zeit auf GPU-Completion warten noch durch vorzeitiges Freigeben einen Use-after-free riskieren.
 
-## Descriptor Pools und Sets
+## Descriptor Pools and Sets
 
 `DestroyDescriptorPool` ist atomar. Der Request wird abgewiesen, wenn ein enthaltenes Set pending verwendet wird oder von einem `RECORDING`-Command-Buffer referenziert wird. Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert. Andernfalls werden der Pool und alle enthaltenen Sets öffentlich invalidiert; nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`.
 
 `FreeDescriptorSets` folgt denselben Regeln für die ausgewählten Sets: pending Verwendung oder Referenz durch einen `RECORDING`-Command-Buffer führt zur atomaren Ablehnung. Bei Erfolg werden die ausgewählten Sets invalidiert und nicht-pending `EXECUTABLE`-Command-Buffer, die sie referenzieren, `INVALID`. Die logische Freigabe bleibt auch nach Device Loss zulässig, sofern die Pending-/Recording-Regeln erfüllt sind; interne Backend-Referenzen bleiben bis zur sicheren Quieszenz erhalten. Ein Set darf nicht gleichzeitig über einen expliziten Free-Request und die Pool-Kaskade freigegeben werden; eine bereits invalidierte Set-XID ist für weitere Free-Requests ungültig.
 
-## Pipelines und Synchronisationsobjekte
+## Pipelines and Synchronization Objects
 
 `DestroyResource` auf eine Pipeline oder ein Pipeline Layout wird abgewiesen, solange eine angenommene Submission die jeweilige Ressource verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`.
 
 `DestroyFence` wird abgewiesen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert. `DestroySemaphore` wird abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende serverseitige Host-Operation die Semaphore verwendet. Ein Host-Wait ist nicht mehr offen, sobald sein terminales Ergebnis serverseitig serialisiert festgestellt wurde; ein noch nicht versendeter Reply blockiert die Zerstörung dann nicht. Diese Ablehnungen sind atomar und verwenden `INVALID_SYNCHRONIZATION_STATE`. Wenn nach Device Loss `DestroyDevice` verarbeitet wird, darf dessen Device-weite Kaskadeninvalidierung diese normalen Ablehnungen umgehen. Device Loss allein führt keine öffentliche Kaskadeninvalidierung aus; interne Referenzen bleiben bis zum Ende möglicher Backend-Zugriffe bestehen.
 
-## Command Buffer und Descriptor Sets
+## Command Buffers and Descriptor Sets
 
 Ein pending Command Buffer darf in v0.1 nicht verändert, zurückgesetzt, freigegeben oder erneut eingereicht werden.
 
@@ -181,13 +181,13 @@ Ein Descriptor Set darf nicht aktualisiert oder freigegeben werden, solange eine
 
 Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 
-## Buffer und Memory
+## Buffers and Memory
 
 `DestroyResource` auf einen Buffer wird abgewiesen, solange ein `RECORDING`-Command-Buffer den Buffer direkt oder indirekt (einschließlich über ein referenziertes Descriptor Set) referenziert oder eine angenommene Submission ihn direkt oder über einen Descriptor Set verwendet. Bei erfolgreicher Zerstörung werden alle nicht-pending `EXECUTABLE`-Command-Buffer, die den Buffer direkt oder indirekt referenzieren, vor Abschluss des Destroy-Requests gemäß der allgemeinen Regel `INVALID`. Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen, gelten aber als nicht submitbar, bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden. Neue Submissions mit solchen ungültigen Descriptor-Inhalten werden atomar abgewiesen.
 
 `FreeMemory` wird abgewiesen, solange irgendein Buffer an die Allokation gebunden ist oder angenommene Arbeit auf die Allokation zugreift. XAverius v0.1 bietet kein Unbind/Rebind. Der Client muss daher alle gebundenen Buffer zuerst erfolgreich zerstören und erst danach den Memory-Block freigeben. Ein gebundener Buffer führt zu `BadMatch`; ausstehende GPU-Arbeit führt zu `INVALID_SYNCHRONIZATION_STATE`. Ein abgewiesener `FreeMemory`-Request invalidiert die Memory-XID nicht. Wenn ein zerstörter Buffer noch von Descriptor-Slots referenziert wird, bleibt sein internes Objekt bis zum Überschreiben dieser Slots oder zur Freigabe der Descriptor Sets erhalten; die Buffer-XID bleibt dabei ungültig. Seine interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen. Dasselbe gilt, solange ein Backend-Zugriff oder eine andere interne Referenz den Buffer noch am Leben hält. `FreeMemory` muss deshalb auch dann mit `BadMatch` abgewiesen werden, wenn die öffentliche Buffer-XID bereits invalidiert wurde, der interne Buffer aber noch an diese Allokation gebunden ist.
 
-## Fehler bei ungültigen Lebenszyklusoperationen
+## Errors for Invalid Lifetime Operations
 
 - Unbekannte oder zerstörte XAverius-XID: `BadValue`
 - Falscher Typ oder inkompatible Ressource: normalerweise `BadMatch`
