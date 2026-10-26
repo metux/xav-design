@@ -23,7 +23,7 @@ Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDE
 
 Fester Record-Anteil: 32 Bytes.
 
-| Relativer Offset | Typ | Feld |
+| Relative Offset | Type | Field |
 |---:|---|---|
 | 0 | XID | `physical_device_xid` |
 | 4 | CARD32 | `device_type` |
@@ -52,7 +52,7 @@ Request:
 
 Reply:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | CARD32 | `status` |
 | 12 | CARD32 | `property_type` |
@@ -93,7 +93,7 @@ Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes.
 
 Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes. Es gibt kein zusätzliches Count-Feld; `reply.length = 3 * queue_family_count`, wobei `queue_family_count` aus der Payload-Länge geteilt durch 12 folgt. Bei null Queue-Families ist `reply.length = 0`.
 
-| Relativer Offset | Typ | Feld |
+| Relative Offset | Type | Field |
 |---:|---|---|
 | 0 | CARD32 | `queue_flags` |
 | 4 | CARD32 | `queue_count` |
@@ -109,7 +109,7 @@ Vor der Erzeugung muss diese Verbindung XGE 1.0 oder neuer erfolgreich über `GE
 
 Request:
 
-| Offset | Typ | Feld |
+| Offset | Type | Field |
 |---:|---|---|
 | 8 | XID | `device_xid` |
 | 12 | XID | `physical_device_xid` |
