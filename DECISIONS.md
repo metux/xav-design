@@ -36,13 +36,11 @@ This file tracks the status and rationale of design decisions. The historical dr
 - `BIG-REQUESTS` is not supported in v0.1 because its extended-length field conflicts with the XAverius common header at offset 4. The ordinary X11 request-size limit applies; larger payloads must use request-specific chunking where defined.
 - For XAverius v0.1, the X11 request-header `data` byte is always zero; the subopcode is at offset 4 and is copied zero-extended to the standard X11 error packet's `minorCode`.
 
-## Provisional rules requiring review
+## Remaining review and validation
 
-- The server-side X11 window presentation architecture is documented in [presentation](spec/presentation.md). Surface/swapchain wire layouts, format/capability registries, acquire/present synchronization, completion semantics, and resize/loss handling remain to be designed before request subopcodes are assigned.
-
-- Shader-module upload assembly using one opcode and request flags; exact layout and semantics need review.
-- Complete request-specific error mappings and exact applicability/layout of generic `DestroyResource`.
-- Further optimization of the now-settled conservative `WriteBuffer` ordering contract, provided the normative observable ordering remains unchanged.
+- The presentation-capable profile is now specified across [presentation](spec/presentation.md), the central request registry, error mapping, events, and conformance vectors. Request subopcodes 41–47 are assigned append-only. This does not make presentation part of the initial compute-only v0.1 profile and does not establish runtime support. The remaining presentation work is backend/runtime validation and live X11/XGE interoperability.
+- Request-specific error precedence, resource lifetime, and cross-chapter conformance have received repeated systematic audits. Treat the normative request chapters and central error map as the contract; when changing a rule, update the request registry/audit matrix, conformance cases, and static drift checks together. Remaining review is targeted drift detection rather than an assumption that every mapping is still open.
+- The conservative `WriteBuffer` ordering guarantee is settled. Any future optimization must preserve the observable device-wide ordering boundary within one logical device.
 
 ## Newly settled wire decisions — 2026-10-21
 
@@ -54,4 +52,4 @@ This file tracks the status and rationale of design decisions. The historical dr
 
 ## Open decisions
 
-See [open issues](spec/open-issues.md). Topics include opcode/type registries, event-selection layouts, property registry, command-stream failure recovery, Vulkan stage masks, and backend teardown failure handling.
+See [open issues](spec/open-issues.md) for the authoritative unresolved v0.1 validation work and explicitly deferred future-version topics. Request subopcodes, event selection, physical-device properties, feature/extension sets, command-stream recovery, and wait-stage mapping have normative definitions; they should not be treated as unassigned merely because this historical decision log once listed them as open. Live X11/XGE interoperability and backend/runtime conformance remain unverified until exercised against an implementation.
