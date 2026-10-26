@@ -21,6 +21,8 @@ from xa_state_model import (
     command_buffer_data,
     queue_submit,
     shader_module_data,
+    finish_submission,
+    reset_fence,
 )
 
 
@@ -493,6 +495,61 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.accepted_tokens, {42})
         self.assertEqual(state.pending_submissions, [42])
         self.assertTrue(state.fence_attached)
+
+    def test_fence_cannot_be_attached_twice_and_requires_reset_after_completion(self) -> None:
+        state = self.state()
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=70, attach_fence=True)),
+            "SUCCESS",
+        )
+        self.assertEqual(state.fence_status, "PENDING")
+        self.assertTrue(state.fence_attached)
+        self.assertFalse(state.fence_state_valid)
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=71, attach_fence=True)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+
+        self.assertEqual(finish_submission(state, 70, success=True), "SUCCESS")
+        self.assertEqual(state.fence_status, "SIGNALED")
+        self.assertFalse(state.fence_attached)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=72, attach_fence=True)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(reset_fence(state), "SUCCESS")
+        self.assertEqual(state.fence_status, "UNSIGNALED")
+        self.assertTrue(state.fence_state_valid)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=73, attach_fence=True)),
+            "SUCCESS",
+        )
+
+    def test_failed_submission_sets_fence_failed_and_reset_recovers_it(self) -> None:
+        state = self.state()
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=80, attach_fence=True)),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 80, success=False), "SUCCESS")
+        self.assertEqual(state.fence_status, "FAILED")
+        self.assertFalse(state.fence_attached)
+        self.assertEqual(reset_fence(state), "SUCCESS")
+        self.assertEqual(state.fence_status, "UNSIGNALED")
+
+    def test_reset_fence_rejects_nonterminal_and_device_lost_states_atomically(self) -> None:
+        state = self.state(fence_status="PENDING", fence_attached=True,
+                           fence_state_valid=False)
+        before = copy.deepcopy(state)
+        self.assertEqual(reset_fence(state), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+        lost = self.state(device_lost=True, fence_status="SIGNALED",
+                          fence_state_valid=False)
+        before_lost = copy.deepcopy(lost)
+        self.assertEqual(reset_fence(lost), "DEVICE_LOST")
+        self.assertEqual(lost, before_lost)
 
     def test_rejected_token_can_be_retried_after_fixing_state(self) -> None:
         state = self.state(command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.RECORDING)])
