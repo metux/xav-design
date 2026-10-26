@@ -702,6 +702,10 @@ def finish_submission(
             signal_state = state.binary_signal_states[index]
             if signal_state is BinarySignalState.UNTRUSTED:
                 state.wait_states[index] = WaitState.UNTRUSTED
+                if index < len(state.shared_semaphores):
+                    shared = state.shared_semaphores[index]
+                    if shared.wait_reservation == ("submit", token):
+                        shared.wait_reservation = None
                 continue
             if signal_state is BinarySignalState.SIGNAL_PENDING:
                 signal_token = next(
