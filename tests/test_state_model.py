@@ -1165,5 +1165,89 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.wait_reservation)
 
 
+    def test_timeline_signal_callbacks_preserve_foreign_pending_reservations(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[2],
+            signal_slots=[None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=401, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(7,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=402, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(11,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(state.pending_timeline_signals, [(401, 0, 7), (402, 0, 11)])
+        self.assertEqual(state.signal_slots, [11])
+
+        # Higher value completes first. Its callback must release only its own
+        # reservation and leave the lower-valued pending signal binding.
+        self.assertEqual(finish_submission(state, 402, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [11])
+        self.assertEqual(state.pending_timeline_signals, [(401, 0, 7)])
+        self.assertEqual(state.signal_slots, [7])
+
+        # A duplicate terminal callback for 402 cannot clear 401's reservation
+        # or rewrite the completed counter.
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 402, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+        # The lower callback may arrive later, but the timeline counter must
+        # remain monotonic and the reservation slot must finally clear.
+        self.assertEqual(finish_submission(state, 401, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [11])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+
+    def test_failed_timeline_signal_releases_only_its_own_reservation(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3],
+            signal_slots=[None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=411, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=412, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(13,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 412, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(state.pending_timeline_signals, [(411, 0, 8)])
+        self.assertEqual(state.signal_slots, [8])
+
+        # Failure of the higher reservation does not poison or release the
+        # unrelated lower reservation; it can still complete successfully.
+        self.assertEqual(finish_submission(state, 411, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [8])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
