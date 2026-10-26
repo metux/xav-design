@@ -6,11 +6,13 @@ import unittest
 
 from xa_state_model import (
     ImageState,
+    BinarySignalState,
     PresentRequest,
     PresentState,
     WaitState,
     SemaphoreKind,
     queue_present,
+    finish_present_wait,
     CommandBufferLifecycle,
     CommandBufferChunk,
     CommandBufferModel,
@@ -27,6 +29,15 @@ from xa_state_model import (
 
 
 class QueuePresentStateModelTests(unittest.TestCase):
+    def present_state(self, **changes) -> PresentState:
+        state = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+        )
+        for name, value in changes.items():
+            setattr(state, name, value)
+        return state
+
     def state(self, **changes) -> PresentState:
         state = PresentState(
             valid_wait_xids=(True, True),
@@ -391,6 +402,144 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(1,), signal_values=(11,)),
             "BadValue",
+        )
+
+    def test_binary_signal_and_wait_cycle_requires_actual_consumption(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(4)
+            ],
+            wait_states=[WaitState.READY],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=101, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNAL_PENDING])
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=102, command_buffer_indices=(1,),
+                                              signal_indices=(0,), signal_values=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+        self.assertEqual(finish_submission(state, 101, success=True), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=103, command_buffer_indices=(1,),
+                                              signal_indices=(0,), signal_values=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=104, command_buffer_indices=(1,),
+                                              wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=105, command_buffer_indices=(2,),
+                                              wait_indices=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+        self.assertEqual(finish_submission(state, 104, success=True), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=106, command_buffer_indices=(2,),
+                                              signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+
+    def test_binary_wait_before_signal_consumes_signal_even_if_callbacks_reverse(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            wait_states=[WaitState.READY],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=110, command_buffer_indices=(0,),
+                                              wait_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=111, command_buffer_indices=(1,),
+                                              signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 110, success=True), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(state.consumed_pending_binary_signals, {(111, 0)})
+        self.assertEqual(finish_submission(state, 111, success=True), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(state.consumed_pending_binary_signals, set())
+
+    def test_failed_binary_operation_makes_uncertain_payload_untrusted(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(3)
+            ],
+            wait_states=[WaitState.READY],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=120, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(finish_submission(state, 120, success=False), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        for token, op in (
+            (121, SubmitRequest(token=121, wait_indices=(0,))),
+            (122, SubmitRequest(token=122, command_buffer_indices=(1,),
+                                signal_indices=(0,), signal_values=(0,))),
+        ):
+            before = copy.deepcopy(state)
+            self.assertEqual(queue_submit(state, op), "DEPENDENCY_FAILED")
+            self.assertEqual(state, before)
+
+    def test_present_wait_reservation_is_released_only_when_wait_is_terminal(self) -> None:
+        state = self.present_state(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+        )
+        result = queue_present(state, PresentRequest(token=130, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted), ("SUCCESS", True))
+        before = copy.deepcopy(state)
+        duplicate = queue_present(state, PresentRequest(token=131, wait_indices=(0,)))
+        self.assertEqual((duplicate.result, duplicate.accepted),
+                         ("INVALID_SYNCHRONIZATION_STATE", False))
+        self.assertEqual(state, before)
+        self.assertEqual(finish_present_wait(state, 130, 0, consumed=False), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        self.assertEqual(
+            queue_present(state, PresentRequest(token=132, wait_indices=(0,))).result,
+            "SUCCESS",
+        )
+
+    def test_present_wait_unknown_payload_marks_semaphore_untrusted(self) -> None:
+        state = self.present_state(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+        )
+        self.assertTrue(queue_present(state, PresentRequest(token=140, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(state, 140, 0, consumed=None), "SUCCESS")
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        self.assertEqual(
+            queue_present(state, PresentRequest(token=141, wait_indices=(0,))).result,
+            "DEPENDENCY_FAILED",
         )
 
     def test_binary_semaphore_nonzero_wait_value_is_bad_value(self) -> None:
