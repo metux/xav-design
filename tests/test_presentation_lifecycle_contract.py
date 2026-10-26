@@ -53,7 +53,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`", self.presentation)
         self.assertIn("Registration-only references are released exactly once", self.races)
         self.assertIn("signals neither object", self.presentation)
-        self.assertIn("before polling or registering a wait", self.presentation)
+        self.assertIn("before polling for an image or registering a wait", self.presentation)
         self.assertIn("INVALID_SYNCHRONIZATION_STATE` before `NOT_READY`/`TIMEOUT`", self.races)
 
     def test_surface_and_swapchain_lifetimes_are_atomic(self) -> None:
