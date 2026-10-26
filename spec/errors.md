@@ -137,12 +137,12 @@ Alle Feature- und Extension-Records müssen vor der Erstellung geprüft werden. 
 
 ### `CreateCommandPool`
 
-- Falsche Request-Länge: `BadLength`
-- Unbekannte Pool-Flags oder nicht-null reservierte Bits: `BadValue`; ungültige/belegte Pool-XID: `BadIDChoice`
-- Unbekannte/nicht-live Device-XID: `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership: `BadMatch`
-- Queue-Family-Index außerhalb des Device-Profils oder Queue Family ohne Command-Buffer-Unterstützung: `BadValue`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler: `ALLOCATION_FAILED`
-- Bei Ablehnung bleibt die Pool-XID unangelegt.
+- An incorrect request length results in `BadLength`.
+- Unknown pool flags or nonzero reserved bits result in `BadValue`; an invalid or already allocated pool XID results in `BadIDChoice`.
+- An unknown or non-live Device XID results in `BadValue`; a live resource of the wrong type or foreign Device ownership results in `BadMatch`.
+- A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`.
+- An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; backend allocation failure results in `ALLOCATION_FAILED`.
+- On rejection, the pool XID remains unallocated.
 
 ### `CommandPool` and `CommandBufferData`
 
