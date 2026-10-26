@@ -1,6 +1,6 @@
 # Device Discovery and Logical Devices
 
-## Device-Auswahl
+## Device Selection
 
 Two paths are available:
 
@@ -36,7 +36,7 @@ Fixed record portion: 32 bytes.
 | 30 | CARD16 | `reserved = 0` |
 | 32 | BYTE[] | UTF-8 device name, without NUL termination, padded to 4 bytes |
 
-Die Record-Länge beträgt:
+The record length is:
 
 `32 + ((device_name_length + 3) & ~3)`
 
@@ -48,7 +48,7 @@ Request:
 
 - Offset 8: Physical-Device-XID
 - Offset 12: `ATOM property_atom`
-- Gesamtlänge: 16 Bytes
+- Total length: 16 bytes
 
 Reply:
 
@@ -57,7 +57,7 @@ Reply:
 | 8 | CARD32 | `status` |
 | 12 | CARD32 | `property_type` |
 | 16 | CARD32 | `value_length` in Bytes |
-| 20–31 | BYTE[12] | reserviert, null |
+| 20–31 | BYTE[12] | Reserved; MUST be zero |
 | 32 | BYTE[] | Wert, auf 4 Bytes gepaddet |
 
 Statuswerte:
@@ -117,7 +117,7 @@ Request:
 | 18 | CARD16 | `feature_request_count` |
 | 20 | CARD16 | `device_extension_count` |
 | 22 | CARD16 | `reserved = 0` |
-| 24 | variable | Queue-Family-, Feature- und Extension-Requests |
+| 24 | variable | Queue-family, feature, and extension requests |
 
 `QUEUEFAMILYREQUEST`:
 
@@ -143,7 +143,7 @@ Size: 8 bytes. In v0.1, `enabled` MUST equal 1. Features not listed are not requ
 - `CARD16 reserved = 0`
 - ASCII-Extension-Name ohne NUL, auf vier Bytes gepaddet
 
-Größe: `4 + ((name_length + 3) & ~3)`.
+Size: `4 + ((name_length + 3) & ~3)`.
 
 Duplicate extensions are invalid. Feature IDs and extensions are defined by central registries. The registry distinguishes known feature IDs from unknown IDs; a known feature may or may not be supported by a given physical device. Extension names MUST be non-empty ASCII strings without NUL termination and MUST follow the Vulkan extension-name format: `VK_`, a non-empty author portion, an underscore, and a non-empty extension name. Both portions may contain only ASCII letters, digits, and underscores; extension-name case is preserved and checked exactly. The wire length is limited to 255 bytes; this check occurs before registry lookup.
 
@@ -175,7 +175,7 @@ Request:
 - Offset 14: `CARD16 reserved = 0`
 - Offset 16: `FLOAT32 priorities[queue_count]`
 
-Gesamtlänge: `16 + 4 * queue_count`.
+Total length: `16 + 4 * queue_count`.
 
 The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a suitable physical device and a compute-capable queue family. No optional features or extensions are enabled implicitly.
 
