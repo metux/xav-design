@@ -252,20 +252,15 @@ class CommandBufferChunk:
 
 def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) -> str:
     """Validate a whole chunk before changing recording state or entries."""
-    if not request.framing_valid:
+    if not request.framing_valid or not request.entries_well_formed:
         return "BadLength"
+    if request.operation == "ABORT" and request.entries:
+        return "BadLength"
+    # Request/entry structure has precedence over flags and command values.
     if not request.scalar_valid or request.operation not in {"CREATE", "CREATE_FINAL", "APPEND", "FINAL", "ABORT"}:
         return "BadValue"
-    if request.operation == "ABORT":
-        if request.entries:
-            return "BadLength"
-    else:
-        # Parse/validate every entry before any resource lookup. No prefix of a
-        # malformed chunk may be appended, and field errors beat XID errors.
-        if not request.entries_well_formed:
-            return "BadLength"
-        if not request.entries_valid:
-            return "BadValue"
+    if request.operation != "ABORT" and not request.entries_valid:
+        return "BadValue"
     if request.operation in {"CREATE", "CREATE_FINAL"}:
         if not request.target_xid_available:
             return "BadIDChoice"
