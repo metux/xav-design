@@ -58,7 +58,7 @@ Reply:
 | 12 | CARD32 | `property_type` |
 | 16 | CARD32 | `value_length` in Bytes |
 | 20–31 | BYTE[12] | Reserved; MUST be zero |
-| 32 | BYTE[] | Wert, auf 4 Bytes gepaddet |
+| 32 | BYTE[] | value, padded to 4 bytes |
 
 Statuswerte:
 
@@ -141,7 +141,7 @@ Size: 8 bytes. In v0.1, `enabled` MUST equal 1. Features not listed are not requ
 
 - `CARD16 name_length`
 - `CARD16 reserved = 0`
-- ASCII-Extension-Name ohne NUL, auf vier Bytes gepaddet
+- ASCII extension name without NUL, padded to four bytes
 
 Size: `4 + ((name_length + 3) & ~3)`.
 
