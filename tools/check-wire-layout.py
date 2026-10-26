@@ -206,6 +206,14 @@ def check_events(c: Check) -> None:
               "synchronization: timeline counter must not advance at submission acceptance")
     c.require(re.search(r"größer als alle bereits reservierten pending Signalwerte", sync) is not None,
               "synchronization: pending timeline signal values must be reserved monotonically")
+    c.require(
+        "nicht größer als der beobachtbare Counter ist, ergibt `BadValue`" in submissions
+        and "mit einer bestehenden pending GPU-Signalreservierung kollidiert" in conformance
+        and "`INVALID_SYNCHRONIZATION_STATE`" in conformance
+        and "kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe" in errors
+        and "`BadValue`" in errors,
+        "QueueSubmit: distinguish invalid timeline counter values from pending reservation conflicts",
+    )
     c.require(re.search(r"kleiner als jeder bereits reservierte, noch nicht terminale GPU-Signalwert", sync) is not None,
               "synchronization: host timeline signals must not jump over pending GPU signal reservations")
     c.require("Die synchrone Validierung folgt verbindlich dieser Reihenfolge" in sync and
