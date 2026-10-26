@@ -66,17 +66,17 @@ Each binding record is 16 bytes:
 
 The request MUST have exactly the length determined by `binding_count`. The total length MUST remain within the normal X11 request-size limit. `binding_count = 0` is permitted and creates an empty layout. For each record, `descriptor_count` MUST be greater than zero. Binding numbers MUST be unique within the layout; duplicate binding numbers invalidate the entire request.
 
-`descriptor_type` und `stage_flags` verwenden ausschließlich die normativen [Descriptor-Type-Registry](../registries/descriptor-types.md) und [Shader-Stage-Registry](../registries/shader-stages.md). Jeder verwendete Wert muss in v0.1 unterstützt sein. Die Stage-Maske darf keine unbekannten oder nicht unterstützten Bits enthalten und muss mindestens eine unterstützte Stage enthalten. Nicht unterstützte Descriptor-Typen werden abgewiesen; die numerischen Werte werden nicht lokal in diesem Kapitel vergeben.
+`descriptor_type` and `stage_flags` use only the normative [Descriptor Type Registry](../registries/descriptor-types.md) and [Shader Stage Registry](../registries/shader-stages.md). Every value used MUST be supported in v0.1. The stage mask MUST contain no unknown or unsupported bits and MUST include at least one supported stage. Unsupported descriptor types are rejected; numeric values are not assigned locally in this chapter.
 
-`flags` muss null sein. Nicht-null Flags werden mit `BadValue` abgewiesen; v0.1 akzeptiert keine implizit ignorierten Layout-Flags. Der Server prüft zusätzlich Device-Ownership, unbenutzte Create-XID, Descriptor- und Stage-Unterstützung sowie Geräte-Limits. Die Erstellung ist atomar: Bei einem Fehler wird kein Descriptor Set Layout öffentlich angelegt. Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`.
+`flags` MUST be zero. Non-zero flags are rejected with `BadValue`; v0.1 does not accept layout flags that are silently ignored. The server also checks device ownership, that the create XID is unused, descriptor and stage support, and device limits. Creation is atomic: on failure, no public descriptor set layout is created. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; a backend allocation failure results in `ALLOCATION_FAILED`.
 
-Im initialen Compute-Test werden Bindings 0, 1 und 2 jeweils als `STORAGE_BUFFER`, Anzahl 1 und `COMPUTE` angelegt.
+In the initial compute test, bindings 0, 1, and 2 are each created as `STORAGE_BUFFER` with descriptor count 1 and stage `COMPUTE`.
 
-Nach erfolgreicher Pipeline-Layout-Erstellung darf das Descriptor Set Layout öffentlich zerstört werden, sofern die tatsächlichen Vulkan-Lebensdauerregeln dies erlauben. Interne Referenzen werden entsprechend den Vulkan-Regeln erhalten.
+After successful pipeline-layout creation, the descriptor set layout may be publicly destroyed if the applicable Vulkan lifetime rules permit it. Internal references are retained according to Vulkan rules.
 
 ## 6.3 Descriptor Pool
 
-`CreateDescriptorPool` hat die Gesamtlänge:
+`CreateDescriptorPool` has the following total length:
 
 `24 + 8 * pool_size_count`
 
