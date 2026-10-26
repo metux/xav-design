@@ -270,6 +270,13 @@ class PresentationReplyWireTests(unittest.TestCase):
             for kind, offset, fmt, value, message in cases:
                 with self.subTest(order=order, kind=kind, offset=offset):
                     wire = bytearray(valid[kind])
+                    # Status-dependent payload checks need a failure reply as
+                    # their baseline; mutating a SUCCESS payload alone cannot
+                    # exercise a failed-operation invariant.
+                    if kind == "create_swapchain" and message == "failed CreateSwapchain has nonzero image count":
+                        struct.pack_into(endian + "I", wire, 32, 4)
+                    if kind == "acquire" and message == "failed AcquireNextImage has nonzero image index":
+                        struct.pack_into(endian + "I", wire, 32, 3)
                     struct.pack_into(endian + fmt, wire, offset, value)
                     with self.assertRaisesRegex(ValueError, message):
                         validate_presentation_reply(kind, bytes(wire), order)
