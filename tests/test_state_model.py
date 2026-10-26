@@ -624,6 +624,69 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertFalse(shared.signal_consumed)
 
+    def test_device_loss_callback_preserves_present_consumption_of_pending_submit_signal(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=190, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=191, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 191, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+
+        # The Device-Loss notification wins over a late backend success.
+        submit.device_lost = True
+        self.assertEqual(finish_submission(submit, 190, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertFalse(shared.signal_consumed)
+
+    def test_device_loss_releases_submit_wait_reservation_for_shared_present_state(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=192, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        submit.device_lost = True
+        self.assertEqual(finish_submission(submit, 192, success=True), "SUCCESS")
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNTRUSTED],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(present)
+        result = queue_present(present, PresentRequest(token=193, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted), ("DEPENDENCY_FAILED", False))
+        self.assertEqual(present, before)
+        self.assertIsNone(shared.wait_reservation)
+
     def test_queue_submit_wait_conflicts_with_pending_queue_present_wait(self) -> None:
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         present = PresentState(
