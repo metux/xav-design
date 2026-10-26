@@ -41,6 +41,7 @@ class SharedBinarySemaphore:
     signal_state: BinarySignalState = BinarySignalState.UNSIGNALED
     wait_reservation: tuple[str, int] | None = None
     signal_reservation: tuple[str, int] | None = None
+    signal_consumed: bool = False
 
 
 @dataclass
@@ -200,6 +201,8 @@ def finish_present_wait(
         state.wait_states[semaphore_index] = WaitState.READY
         if shared is not None:
             shared.signal_state = BinarySignalState.UNSIGNALED
+            if shared.signal_reservation is not None:
+                shared.signal_consumed = True
     else:
         # A known non-consumed payload retains its confirmed signal state.
         state.wait_states[semaphore_index] = WaitState.READY
@@ -578,6 +581,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             if index < len(state.shared_semaphores):
                 state.shared_semaphores[index].signal_state = BinarySignalState.SIGNAL_PENDING
                 state.shared_semaphores[index].signal_reservation = ("submit", request.token)
+                state.shared_semaphores[index].signal_consumed = False
     if request.attach_fence:
         state.fence_attached = True
         state.fence_state_valid = False
@@ -655,7 +659,12 @@ def finish_submission(
                 [BinarySignalState.UNSIGNALED]
                 * (index + 1 - len(state.binary_signal_states))
             )
-        consumed = reservation in state.consumed_pending_binary_signals
+        shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
+        consumed = (
+            reservation in state.consumed_pending_binary_signals
+            or (shared is not None and shared.signal_reservation == ("submit", token)
+                and shared.signal_consumed)
+        )
         state.consumed_pending_binary_signals.discard(reservation)
         previous = state.binary_signal_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         current = state.binary_signal_states[index]
@@ -676,6 +685,7 @@ def finish_submission(
             shared = state.shared_semaphores[index]
             if shared.signal_reservation == ("submit", token):
                 shared.signal_reservation = None
+                shared.signal_consumed = False
                 shared.signal_state = state.binary_signal_states[index]
     for reservation in list(state.pending_binary_waits):
         wait_token, index = reservation
