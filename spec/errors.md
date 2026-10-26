@@ -186,9 +186,9 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige typunabhängige Feldwerte, doppelte rohe Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
 | `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
 | `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
-| `QueueSubmit`: Device nicht verfügbar/verloren, nach erfolgreicher XID-/Typ-/Ownership-/Queue-Prüfung und vor veränderlichen Submit-Zustandsprüfungen | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
-| `QueueSubmit`: typabhängiger Binary-Wert ist nicht null oder Timeline-Signalwert ist nicht größer als der beobachtbare Counter, nachdem XID, Typ und Device-Zustand geprüft wurden | `BadValue` |
-| `QueueSubmit`: Timeline-Signalwert ist größer als der beobachtbare Counter, kollidiert aber mit einer bereits reservierten pending GPU-Signalstufe | `INVALID_SYNCHRONIZATION_STATE` |
+| `QueueSubmit`: Device unavailable/lost after successful XID/type/ownership/queue validation and before mutable submission-state checks | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `QueueSubmit`: type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter, after XID, type, and Device-state checks | `BadValue` |
+| `QueueSubmit`: Timeline signal value exceeds the observable counter but conflicts with an already reserved pending GPU signal value | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: Command Buffer nicht `EXECUTABLE`, Fence nicht submitbar, Semaphore-Zustand unzulässig oder syntaktisch gültige Wait-Stage-Maske enthält eine Stage, die von der adressierten Queue-Family nicht unterstützt wird | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `DEPENDENCY_FAILED` |
 | `QueueSubmit`: synchroner Fehler vor Annahme | keinerlei Zustandsänderung; Token bleibt unbenutzt, Command Buffer bleiben `EXECUTABLE`, Fence-/Semaphore-Zustände und interne Referenzen bleiben unverändert; kein Submission-Event und kein `ASYNC_ERROR` |
