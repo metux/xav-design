@@ -1267,3 +1267,90 @@ class AsyncCallbackRegistry:
             )
             self.emitted_events.append((token, device.xid, resource_xid))
         return "SUCCESS"
+
+
+@dataclass
+class AsyncSubmissionIdentity:
+    """Submission callback target captured at QueueSubmit acceptance."""
+    token: int
+    connection_identity: str
+    device_identity: str
+    device_xid: int
+    queue_key: tuple[int, int]
+    terminal: str | None = None
+
+
+@dataclass
+class AsyncSubmissionEventRegistry:
+    """Serialized event-decision oracle for terminal callbacks."""
+    live_connections: set[str] = field(default_factory=set)
+    live_devices: dict[str, AsyncDeviceIdentity] = field(default_factory=dict)
+    queue_masks: dict[tuple[str, tuple[int, int]], int] = field(default_factory=dict)
+    submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
+
+    def register_device(self, connection: str, device: AsyncDeviceIdentity) -> None:
+        self.live_devices[device.identity] = device
+        self.queue_masks[(connection, (device.xid, 0))] = 0
+
+    def accept_submission(self, submission: AsyncSubmissionIdentity) -> str:
+        key = (submission.connection_identity, submission.token)
+        if submission.token == 0 or key in self.submissions:
+            return "BadValue"
+        if submission.connection_identity not in self.live_connections:
+            return "BadValue"
+        device = self.live_devices.get(submission.device_identity)
+        if device is None or not device.live or device.xid != submission.device_xid:
+            return "BadValue"
+        self.submissions[key] = submission
+        return "SUCCESS"
+
+    def select_queue_events(
+        self, connection: str, device_identity: str, queue: tuple[int, int], mask: int,
+    ) -> str:
+        device = self.live_devices.get(device_identity)
+        if connection not in self.live_connections or device is None or not device.live:
+            return "BadValue"
+        self.queue_masks[(connection, (device.xid, queue[0] * 65536 + queue[1]))] = mask
+        return "SUCCESS"
+
+    def destroy_device(self, device_identity: str) -> str:
+        device = self.live_devices.get(device_identity)
+        if device is None or not device.live:
+            return "BadValue"
+        device.live = False
+        del self.live_devices[device_identity]
+        for key in [key for key in self.queue_masks if key[1][0] == device.xid]:
+            del self.queue_masks[key]
+        return "SUCCESS"
+
+    def disconnect(self, connection: str) -> None:
+        self.live_connections.discard(connection)
+        for key in [key for key in self.queue_masks if key[0] == connection]:
+            del self.queue_masks[key]
+
+    def terminal_callback(self, connection: str, token: int, result: str) -> str:
+        submission = self.submissions.get((connection, token))
+        if submission is None or submission.terminal is not None:
+            return "BadValue"
+        if result not in ("COMPLETE", "FAILED"):
+            return "BadValue"
+        # Terminal state is committed exactly once regardless of event delivery.
+        submission.terminal = result
+        device = self.live_devices.get(submission.device_identity)
+        if (connection not in self.live_connections or device is None
+                or not device.live or device.xid != submission.device_xid):
+            return "SUCCESS"
+        queue_code = submission.queue_key[0] * 65536 + submission.queue_key[1]
+        mask = self.queue_masks.get((connection, (submission.device_xid, queue_code)), 0)
+        bit = 1 if result == "COMPLETE" else 2
+        if mask & bit:
+            self.emitted_events.append((result, connection, submission.device_xid, token))
+        return "SUCCESS"
+
+    def async_error(self, connection: str, device_identity: str, token: int) -> str:
+        """ASYNC_ERROR is unmasked but still bound to its original connection/device."""
+        device = self.live_devices.get(device_identity)
+        if connection in self.live_connections and device is not None and device.live:
+            self.emitted_events.append(("ASYNC_ERROR", connection, device.xid, token))
+        return "SUCCESS"
