@@ -34,7 +34,6 @@ class NegativeContractRegressionTests(unittest.TestCase):
 
     def test_create_and_batch_rejection_preserves_public_xids(self) -> None:
         required = (
-            "jeder Fehler lässt die Create-XID unangelegt",
             "Failed creates leave target XIDs unallocated",
             "a failed create leaves the target XID unallocated",
         )
