@@ -123,5 +123,53 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("internal terminal transition, image-state update, and release of backend references occur exactly once", self.presentation)
 
 
+    def test_terminal_event_does_not_imply_image_release_or_reacquisition(self) -> None:
+        event_contract = self.presentation.split(
+            "## 6. Completion is three different things", 1
+        )[1].split("\n## ", 1)[0]
+        race_contract = self.races.split(
+            "- Presentation event race vectors MUST exercise", 1
+        )[1].split("\n- ", 1)[0]
+        self.assertIn("Image release / reacquisition eligibility", event_contract)
+        self.assertIn("Presentation completion", event_contract)
+        self.assertIn("These milestones may occur at different times", event_contract)
+        self.assertIn("An image is reacquirable only after internal release", race_contract)
+        self.assertIn("both milestone orders", race_contract)
+
+    def test_event_masks_are_sampled_independently_at_each_milestone(self) -> None:
+        race_contract = self.races.split(
+            "- Presentation event race vectors MUST exercise", 1
+        )[1].split("\n- ", 1)[0]
+        self.assertIn("image release before presentation completion", race_contract)
+        self.assertIn("presentation completion before image release", race_contract)
+        self.assertIn("samples the mask at its own milestone", race_contract)
+        self.assertIn("no later mask change retroactively adds or removes", race_contract)
+        self.assertIn("regardless of event masking or delivery suppression", race_contract)
+
+    def test_invalidated_images_never_emit_release_event(self) -> None:
+        event_contract = self.presentation.split(
+            "## 6. Completion is three different things", 1
+        )[1].split("\n## ", 1)[0]
+        lifecycle_contract = self.presentation.split(
+            "A window resize or zero extent marks the Swapchain", 1
+        )[1].split("\n## ", 1)[0]
+        race_contract = self.races.split(
+            "**Accepted presentation versus resize/Surface loss/Device loss:**", 1
+        )[1].split("\n-", 1)[0]
+        self.assertIn("if not, it invalidates that image and the Swapchain instead", event_contract)
+        self.assertIn("no `IMAGE_RELEASED` is emitted", lifecycle_contract)
+        self.assertIn("otherwise the image is invalidated and no release event is emitted", race_contract)
+        self.assertIn("terminal failure that invalidates the image MUST NOT emit `IMAGE_RELEASED`", self.races)
+
+    def test_reacquisition_requires_internal_release_not_event_delivery(self) -> None:
+        race_contract = self.races.split(
+            "- Presentation event race vectors MUST exercise", 1
+        )[1].split("\n- ", 1)[0]
+        self.assertIn("Masking or suppressed delivery never skips internal cleanup", race_contract)
+        self.assertIn("An image is reacquirable only after internal release", race_contract)
+        self.assertIn("event is visible only under its delivery conditions", race_contract)
+        self.assertIn("exactly one image-release-or-invalidation transition", race_contract)
+
+
 if __name__ == "__main__":
     unittest.main()
