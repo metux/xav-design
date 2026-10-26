@@ -340,13 +340,13 @@ class SubmitRequest:
 
 def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     """Atomic submission oracle: validate every member, then reserve all state."""
-    if not state.framing_valid or not request.counts_valid:
+    if (not state.framing_valid or not request.counts_valid
+            or len(request.signal_indices) != len(request.signal_values)):
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
-            or len(set(request.signal_indices)) != len(request.signal_indices)
-            or len(request.signal_indices) != len(request.signal_values)):
+            or len(set(request.signal_indices)) != len(request.signal_indices)):
         return "BadValue"
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
