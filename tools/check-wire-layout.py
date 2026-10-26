@@ -885,7 +885,7 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         re.search(r"Individual resource-specific Destroy/Free requests are not categorically forbidden after Device loss", lifetime, re.I) is not None
-        and re.search(r"`FreeMemory` remains blocked while an internally live Buffer is still bound", lifetime, re.I) is not None
+        and re.search(r"`FreeMemory` remains blocked while an internally live Buffer is (?:still )?bound", lifetime, re.I) is not None
         and "Individual Destroy/Free requests are not categorically rejected with `DEVICE_LOST` after Device loss" in read("spec/conformance.md"),
         "device loss: resource-specific cleanup must preserve ordinary lifetime guards and memory safety",
     )
