@@ -163,14 +163,6 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
 
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
-    if accepted_sets:
-        state.accepted_descriptor_set_refs[request.token] = list(accepted_sets)
-        for descriptor_set in accepted_sets:
-            descriptor_set.pending_submission_refs += 1
-    if accepted_buffers:
-        state.accepted_buffer_refs[request.token] = list(accepted_buffers)
-        for buffer in accepted_buffers:
-            buffer.accepted_uses += 1
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
         state.pending_present_waits.append((request.token, index))
@@ -645,12 +637,40 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 # change when callbacks for concurrent submissions arrive out
                 # of order, but every non-terminal reservation remains binding.
                 return "BadValue"
+    # Snapshot indirect resources before acceptance. Every accepted token owns
+    # an independent reference set, even when submissions share resources.
+    selected_cbs = [state.command_buffers[i] for i in request.command_buffer_indices]
+    accepted_sets: list[DescriptorSetLifetime] = []
+    for cb in selected_cbs:
+        for descriptor_set in cb.descriptor_sets:
+            if descriptor_set not in accepted_sets:
+                accepted_sets.append(descriptor_set)
+    if any(not descriptor_set.live for descriptor_set in accepted_sets):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    referenced_ids: set[str] = set()
+    for descriptor_set in accepted_sets:
+        referenced_ids.update(descriptor_set.slots.values())
+    for cb in selected_cbs:
+        referenced_ids.update(cb.indirect_buffer_refs)
+    registry = {buffer.identity: buffer for buffer in state.buffer_registry}
+    if state.buffer_registry and any(identity not in registry for identity in referenced_ids):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    accepted_buffers = [registry[identity] for identity in sorted(referenced_ids)
+                        if identity in registry]
     # A generic dependency failure is the fallback only after all concrete
     # wait and signal entry errors have been ruled out.
     if not state.dependencies_valid:
         return "DEPENDENCY_FAILED"
     # Acceptance commit point.
     state.accepted_tokens.add(request.token)
+    if accepted_sets:
+        state.accepted_descriptor_set_refs[request.token] = list(accepted_sets)
+        for descriptor_set in accepted_sets:
+            descriptor_set.pending_submission_refs += 1
+    if accepted_buffers:
+        state.accepted_buffer_refs[request.token] = list(accepted_buffers)
+        for buffer in accepted_buffers:
+            buffer.accepted_uses += 1
     for pos, i in enumerate(request.wait_indices):
         kind = state.semaphore_kinds[i] if i < len(state.semaphore_kinds) else SemaphoreKind.BINARY
         if kind is SemaphoreKind.TIMELINE:
@@ -871,6 +891,12 @@ def finish_submission(
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
     ]
+    # Each terminal callback drops only the refs owned by its own token.
+    for descriptor_set in state.accepted_descriptor_set_refs.pop(token, []):
+        descriptor_set.pending_submission_refs -= 1
+    for buffer in state.accepted_buffer_refs.pop(token, []):
+        buffer.accepted_uses -= 1
+        _finish_buffer_release(buffer)
     if token in state.pending_fence_submissions:
         state.pending_fence_submissions.remove(token)
         state.fence_attached = False
@@ -908,6 +934,7 @@ class DescriptorSetLifetime:
     # Slot -> internal Buffer identity; XIDs are deliberately not modeled as identity.
     slots: dict[int, str] = field(default_factory=dict)
     pending_buffer_refs: set[str] = field(default_factory=set)
+    pending_submission_refs: int = 0
 
 
 @dataclass
