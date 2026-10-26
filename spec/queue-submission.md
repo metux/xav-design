@@ -48,7 +48,7 @@ The server copies the token unchanged into the corresponding `SUBMISSION_COMPLET
 
 ### Wait Stage Mask
 
-`wait_stage_mask` ist eine XAverius-eigene `CARD32`-Bitmaske; die Bits sind **nicht** die numerischen Vulkan-`VkPipelineStageFlags`-Werte. Die v0.1-Zuordnung ist festgelegt:
+`wait_stage_mask` is an XAverius-specific `CARD32` bitmask; its bits are **not** the numeric Vulkan `VkPipelineStageFlags` values. The v0.1 mapping is fixed:
 
 | XAverius Bit | Mask | Vulkan Stage |
 |---|---:|---|
@@ -61,9 +61,9 @@ Bits 4–31 are reserved and MUST be zero. The mask MUST set at least one bit. A
 
 The set stages MUST be supported by the addressed queue family under the Vulkan synchronization rules:
 
-- `DRAW_INDIRECT`: Queue-Family mit `GRAPHICS` oder `COMPUTE`.
-- `COMPUTE_SHADER`: Queue-Family mit `COMPUTE`.
-- `TRANSFER`: Queue-Family mit `GRAPHICS`, `COMPUTE` oder `TRANSFER`.
+- `DRAW_INDIRECT`: queue family with `GRAPHICS` or `COMPUTE`.
+- `COMPUTE_SHADER`: queue family with `COMPUTE`.
+- `TRANSFER`: queue family with `GRAPHICS`, `COMPUTE`, or `TRANSFER`.
 - `ALL_COMMANDS`: permitted on every queue family created for the logical device.
 
 A mask with unknown/reserved bits or no set bits is syntactically invalid and results in `BadValue`. A syntactically valid mask whose stage is unsupported by the addressed queue family results in `INVALID_SYNCHRONIZATION_STATE`. This check occurs before acceptance; failure leaves submission, fence, and semaphore states unchanged.
