@@ -510,15 +510,15 @@ def check_other_numeric_registries(c: Check) -> None:
     lifetime = read("spec/resource-lifetime.md")
     c.require(
         "`ResetCommandBuffer` mit falscher Request-Länge ergibt `BadLength`" in descriptor_errors
-        and "ein nicht verfügbares oder verlorenes logisches Device `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`" in descriptor_errors
-        and "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
+        and "an unavailable or lost logical Device returns `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in descriptor_errors
+        and "After successful XID and ownership validation, an unavailable device results in `DEVICE_UNAVAILABLE`" in read("spec/command-recording.md")
         and "DEVICE_UNAVAILABLE` / `DEVICE_LOST" in descriptor_conformance,
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
     c.require(
-        "Queue-Family-Index außerhalb des Device-Profils oder Queue Family ohne Command-Buffer-Unterstützung: `BadValue`" in descriptor_errors
-        and "Queue-Family-Index außerhalb des Device-Profils oder ohne Command-Buffer-Unterstützung `BadValue`" in descriptor_errors
-        and "Der Queue-Family-Index muss zu einer Queue-Family des logischen Devices gehören, die Command Buffers unterstützt" in read("spec/command-recording.md"),
+        "A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`" in descriptor_errors
+        and "A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`" in descriptor_errors
+        and "The queue-family index MUST identify a queue family of the logical device that supports command buffers" in read("spec/command-recording.md"),
         "error mapping: CreateCommandPool must consistently reject invalid or command-buffer-incompatible queue families with BadValue",
     )
     command_recording = read("spec/command-recording.md")
