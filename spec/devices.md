@@ -1,27 +1,27 @@
-# Device-Discovery und logische Devices
+# Device Discovery and Logical Devices
 
 ## Device-Auswahl
 
-Es gibt zwei Pfade:
+Two paths are available:
 
-1. `CreateDefaultDevice`: Der Server wählt ein geeignetes Physical Device und erstellt ein logisches Device.
-2. Explizite Auswahl: `EnumeratePhysicalDevices`, Eigenschaftsabfragen und `GetPhysicalDeviceQueueFamilyProperties`, danach `CreateDevice`.
+1. `CreateDefaultDevice`: The server selects a suitable physical device and creates a logical device.
+2. Explicit selection: call `EnumeratePhysicalDevices`, query properties and `GetPhysicalDeviceQueueFamilyProperties`, then call `CreateDevice`.
 
-Queues werden nicht über Queue-XIDs adressiert. Eine Queue wird über das Tupel
+Queues are not addressed using queue XIDs. A queue is identified by the tuple
 
 `(device_xid, queue_family_index, queue_index)`
 
 identifiziert.
 
-Der Queue-Family-Index entspricht der Reihenfolge der zurückgegebenen Queue-Family-Liste. Der Queue-Index adressiert eine tatsächlich für diese Familie angeforderte Queue.
+The queue-family index corresponds to the position in the returned queue-family list. The queue index identifies a queue actually requested from that family.
 
 ## `EnumeratePhysicalDevices`
 
-Der Request enthält keinen request-spezifischen Payload und ist insgesamt 8 Bytes lang. Der Request-Typ ist `Reply`.
+The request has no request-specific payload and is 8 bytes in total. The request type is `Reply`.
 
-Der Reply enthält nach dem 32-Byte-X11-Header direkt null oder mehr `PHYSICALDEVICEINFO`-Records. Es gibt kein zusätzliches Device-Count-Feld. Da jeder Record einschließlich des gepaddeten Namens vierbyte-ausgerichtet ist, gilt `reply.length = Summe aller Record-Längen / 4`; bei null Records ist `reply.length = 0`.
+After the 32-byte X11 header, the reply contains zero or more `PHYSICALDEVICEINFO` records directly. There is no separate device-count field. Each record, including its padded name, is four-byte aligned, so `reply.length = sum of all record lengths / 4`; if there are no records, `reply.length = 0`.
 
-Fester Record-Anteil: 32 Bytes.
+Fixed record portion: 32 bytes.
 
 | Relative Offset | Type | Field |
 |---:|---|---|
@@ -34,13 +34,13 @@ Fester Record-Anteil: 32 Bytes.
 | 24 | CARD32 | `compute_queue_family_count` |
 | 28 | CARD16 | `device_name_length` |
 | 30 | CARD16 | `reserved = 0` |
-| 32 | BYTE[] | UTF-8-Gerätename, ohne NUL, auf 4 Bytes gepaddet |
+| 32 | BYTE[] | UTF-8 device name, without NUL termination, padded to 4 bytes |
 
 Die Record-Länge beträgt:
 
 `32 + ((device_name_length + 3) & ~3)`
 
-Padding muss null sein. `compute_queue_family_count` zählt nur Queue Families mit Compute-Unterstützung.
+Padding MUST be zero. `compute_queue_family_count` counts only queue families that support compute.
 
 ## `GetPhysicalDeviceProperty`
 
@@ -66,13 +66,13 @@ Statuswerte:
 - `NOT_SUPPORTED = 1`
 - `NOT_AVAILABLE = 2`
 
-Bei einem Status ungleich `SUCCESS` müssen `property_type` und `value_length` null sein und der Reply enthält keinen Wert-Payload. Bei Erfolg gilt `reply.length = ceil(value_length / 4)`; bei einem Status ungleich `SUCCESS` ist `reply.length = 0`.
+For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero and the reply contains no value payload. On success, `reply.length = ceil(value_length / 4)`; for any non-success status, `reply.length = 0`.
 
-`property_atom` ist eine gewöhnliche serverseitig vergebene X11-Atom-ID; XAverius vergibt keine numerischen Atom-IDs. Der Client muss den kanonischen Namen mit den normalen X11-Atom-Mechanismen auflösen. Eine Atom-ID, die der X-Server nicht kennt, ergibt `BadAtom`. Eine gültige Atom-ID, deren Name nicht in der XAverius-Property-Registry registriert ist, liefert `NOT_SUPPORTED`. Eine registrierte Property, deren Wert für das abgefragte Physical Device nicht verfügbar ist, liefert `NOT_AVAILABLE`. Diese beiden Statusfälle haben dieselbe leere Reply-Kodierung wie oben beschrieben.
+`property_atom` is an ordinary server-assigned X11 Atom ID; XAverius does not assign numeric Atom IDs. The client MUST resolve the canonical name using the standard X11 Atom mechanisms. An Atom ID unknown to the X server results in `BadAtom`. A valid Atom ID whose name is not registered in the XAverius property registry returns `NOT_SUPPORTED`. A registered property whose value is unavailable for the queried physical device returns `NOT_AVAILABLE`. Both status cases use the empty reply encoding described above.
 
-Die kanonischen v0.1-Namen, Typen, exakten Wertlängen und Verfügbarkeitsregeln sind in der [Physical-Device-Property- und Atom-Namens-Registry](../registries/physical-device-properties.md) verbindlich festgelegt. Die v0.1-Einträge sind `XAverius.deviceUUID`, `XAverius.driverUUID`, `XAverius.compute.maxWorkGroupInvocations` und `XAverius.compute.maxWorkGroupSize`. UUIDs sind 16 rohe Bytes und keine Textstrings; `maxWorkGroupSize` ist ein Array aus genau drei `CARD32`-Werten in X-, Y-, Z-Reihenfolge.
+The canonical v0.1 names, types, exact value lengths, and availability rules are defined by the [Physical Device Property and Atom Name Registry](../registries/physical-device-properties.md). The v0.1 entries are `XAverius.deviceUUID`, `XAverius.driverUUID`, `XAverius.compute.maxWorkGroupInvocations`, and `XAverius.compute.maxWorkGroupSize`. UUIDs are 16 raw bytes, not text strings; `maxWorkGroupSize` is an array of exactly three `CARD32` values in X, Y, Z order.
 
-Normative XAverius-Property-Type-IDs:
+Normative XAverius property type IDs:
 
 | ID | Typ |
 |---:|---|
@@ -85,13 +85,13 @@ Normative XAverius-Property-Type-IDs:
 | 6 | `CARD32_ARRAY` |
 | 7 | `CARD64_ARRAY` |
 
-Die vollständige Property-Registry und ihre Typen sind in der [Physical-Device-Property- und Atom-Namens-Registry](../registries/physical-device-properties.md) definiert.
+The complete property registry and its types are defined in the [Physical Device Property and Atom Name Registry](../registries/physical-device-properties.md).
 
 ## `GetPhysicalDeviceQueueFamilyProperties`
 
-Request: Physical-Device-XID bei Offset 8, Gesamtlänge 12 Bytes.
+Request: physical-device XID at offset 8; total length 12 bytes.
 
-Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes. Es gibt kein zusätzliches Count-Feld; `reply.length = 3 * queue_family_count`, wobei `queue_family_count` aus der Payload-Länge geteilt durch 12 folgt. Bei null Queue-Families ist `reply.length = 0`.
+Reply: standard reply header followed by 12-byte `QUEUEFAMILYINFO` records. There is no separate count field; `reply.length = 3 * queue_family_count`, where `queue_family_count` is the payload length divided by 12. If there are no queue families, `reply.length = 0`.
 
 | Relative Offset | Type | Field |
 |---:|---|---|
@@ -99,13 +99,13 @@ Reply: Standard-Reply-Header plus `QUEUEFAMILYINFO`-Records mit je 12 Bytes. Es 
 | 4 | CARD32 | `queue_count` |
 | 8 | CARD32 | `reserved = 0` |
 
-Die Records folgen der Vulkan-Reihenfolge. Die Payload-Länge muss durch 12 teilbar sein.
+Records follow Vulkan order. The payload length MUST be divisible by 12.
 
-Die Bits von `queue_flags` sind in der [Queue-Flag-Registry](../registries/queue-flags.md) normativ definiert. Server müssen native Vulkan-Flags in diese XAverius-Wire-Bits übersetzen; Bits 5–31 sind reserviert.
+The `queue_flags` bits are normatively defined in the [Queue Flag Registry](../registries/queue-flags.md). Servers MUST translate native Vulkan flags into these XAverius wire bits; bits 5–31 are reserved.
 
 ## `CreateDevice`
 
-Vor der Erzeugung muss diese Verbindung XGE 1.0 oder neuer erfolgreich über `GEQueryVersion` ausgehandelt haben, damit der Server spaeter auftretende lange XAverius-Events sicher zustellen kann. Andernfalls wird `BadMatch` gemeldet und die Ziel-XID bleibt unangelegt.
+Before creation, this connection MUST have successfully negotiated XGE 1.0 or later through `GEQueryVersion`, so that the server can safely deliver later extended XAverius events. Otherwise, `BadMatch` is reported and the target XID remains unallocated.
 
 Request:
 
@@ -126,16 +126,16 @@ Request:
 - `CARD16 reserved = 0`
 - `FLOAT32 queue_priorities[queue_count]`
 
-Größe: `8 + 4 * queue_count`.
+Size: `8 + 4 * queue_count`.
 
-Die Anzahl muss positiv und unterstützt sein. `queue_family_request_count` muss mindestens 1 sein. Prioritäten müssen endlich und im Intervall [0,1] liegen. Doppelte Queue-Family-Einträge sind unzulässig.
+The count MUST be positive and supported. `queue_family_request_count` MUST be at least 1. Priorities MUST be finite and within [0,1]. Duplicate queue-family entries are invalid.
 
 `DEVICEFEATUREREQUEST`:
 
 - `CARD32 feature_id`
 - `CARD32 enabled`
 
-Größe: 8 Bytes. In v0.1 muss `enabled = 1` sein. Nicht angegebene Features werden nicht angefordert. Doppelte Feature-IDs sind ungültig.
+Size: 8 bytes. In v0.1, `enabled` MUST equal 1. Features not listed are not requested. Duplicate feature IDs are invalid.
 
 `DEVICEEXTENSIONREQUEST`:
 
@@ -145,28 +145,28 @@ Größe: 8 Bytes. In v0.1 muss `enabled = 1` sein. Nicht angegebene Features wer
 
 Größe: `4 + ((name_length + 3) & ~3)`.
 
-Doppelte Extensions sind unzulässig. Feature-IDs und Extensions werden über zentrale Registries definiert. Die Registry unterscheidet bekannte Feature-IDs von unbekannten IDs; ein bekanntes Feature kann je Physical Device unterstützt oder nicht unterstützt sein. Extension-Namen müssen nichtleere ASCII-Namen ohne NUL sein und dem Vulkan-Extension-Namensformat entsprechen: `VK_` gefolgt von einem nichtleeren Autor-Teil, einem Unterstrich und einem nichtleeren Extension-Namen. Beide Teile dürfen nur ASCII-Buchstaben, Ziffern und Unterstriche enthalten; Groß-/Kleinschreibung im Extension-Namen wird exakt beibehalten und geprüft. Die Wire-Länge ist auf 255 Bytes begrenzt; diese Prüfung erfolgt vor dem Registry-Lookup.
+Duplicate extensions are invalid. Feature IDs and extensions are defined by central registries. The registry distinguishes known feature IDs from unknown IDs; a known feature may or may not be supported by a given physical device. Extension names MUST be non-empty ASCII strings without NUL termination and MUST follow the Vulkan extension-name format: `VK_`, a non-empty author portion, an underscore, and a non-empty extension name. Both portions may contain only ASCII letters, digits, and underscores; extension-name case is preserved and checked exactly. The wire length is limited to 255 bytes; this check occurs before registry lookup.
 
-Für die Fehlerbehandlung gilt:
+The following error mapping applies:
 
-- Eine unbekannte `feature_id`, die nicht in der XAverius-Feature-Registry definiert ist, ergibt `BadValue`.
-- Ein registriertes Feature, das das ausgewählte Physical Device nicht unterstützt, ergibt `BadMatch`.
-- Ein formal ungültiger Extension-Name ergibt `BadValue`.
-- Eine formal gültige Extension, die nicht in der XAverius-Extension-Registry bekannt ist oder vom ausgewählten Physical Device nicht unterstützt wird, ergibt `BadMatch`.
-- Doppelte Feature-IDs oder Extension-Namen ergeben `BadValue`.
-- Der Server aktiviert nur die ausdrücklich angeforderten und unterstützten Features und Extensions. Er darf nicht unterstützte Anforderungen nicht stillschweigend ignorieren.
+- An unknown `feature_id` not defined in the XAverius feature registry results in `BadValue`.
+- A registered feature unsupported by the selected physical device results in `BadMatch`.
+- A syntactically invalid extension name results in `BadValue`.
+- A syntactically valid extension that is unknown to the XAverius extension registry or unsupported by the selected physical device results in `BadMatch`.
+- Duplicate feature IDs or extension names result in `BadValue`.
+- The server enables only explicitly requested and supported features and extensions. It MUST NOT silently ignore unsupported requests.
 
-Die Prüfung erfolgt vollständig vor der Erzeugung des logischen Devices. Bei einem Fehler bleibt die `device_xid` unangelegt und es werden keine partiellen Vulkan-Objekte veröffentlicht.
+All validation occurs before creating the logical device. On failure, `device_xid` remains unallocated and no partial Vulkan objects are published.
 
-Die Gesamtlänge beträgt `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))`, wobei die Queue-Family-Records zuerst, danach alle Feature-Records und zuletzt alle Extension-Records folgen. Der Request muss exakt dieser Länge entsprechen; zusätzliche oder fehlende Bytes ergeben `BadLength`.
+The total length is `24 + Σ(8 + 4 * queue_count_i) + 8 * feature_request_count + Σ(4 + ((name_length_j + 3) & ~3))`. Queue-family records appear first, followed by all feature records, then all extension records. The request MUST have exactly this length; extra or missing bytes result in `BadLength`.
 
-`CreateDevice` ist ein Void-Request. Erfolgsfälle erzeugen keinen Reply; Fehler werden als normale X11-Fehler für diesen Request gemeldet. Die Fehlerzuordnung für unbekannte beziehungsweise nicht unterstützte Features und Extensions ist verbindlich in [Errors and error mapping](errors.md) festgelegt.
+`CreateDevice` is a void request. Success produces no reply; failures are reported as ordinary X11 errors for this request. The error mapping for unknown or unsupported features and extensions is defined in [Errors and error mapping](errors.md).
 
-Ist das ausgewählte Physical Device nicht verfügbar, wird `DEVICE_UNAVAILABLE` als X11-Fehler gemeldet. Die Erstellung ist atomar: Bei einem Fehler darf kein teilweise erstelltes logisches Device zurückbleiben.
+If the selected physical device is unavailable, `DEVICE_UNAVAILABLE` is reported as an X11 error. Creation is atomic: no partially created logical device may remain after a failure.
 
 ## `CreateDefaultDevice`
 
-Vor der Erzeugung muss diese Verbindung XGE 1.0 oder neuer erfolgreich über `GEQueryVersion` ausgehandelt haben. Andernfalls wird `BadMatch` gemeldet und die Ziel-XID bleibt unangelegt.
+Before creation, this connection MUST have successfully negotiated XGE 1.0 or later through `GEQueryVersion`. Otherwise, `BadMatch` is reported and the target XID remains unallocated.
 
 Request:
 
@@ -177,44 +177,44 @@ Request:
 
 Gesamtlänge: `16 + 4 * queue_count`.
 
-Die Queue-Anzahl muss mindestens 1 betragen. Alle Prioritäten müssen endlich und im Intervall [0,1] liegen; andernfalls wird `BadValue` gemeldet. Das reservierte Feld muss null sein. Der Server wählt ein geeignetes Physical Device und eine Compute-fähige Queue Family. Es werden keine optionalen Features oder Extensions implizit aktiviert.
+The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a suitable physical device and a compute-capable queue family. No optional features or extensions are enabled implicitly.
 
-`CreateDefaultDevice` ist ein Void-Request. Falls kein geeignetes Gerät existiert, meldet der Server den XAverius-X11-Fehler `DEVICE_UNAVAILABLE`; es gibt keinen normalen Reply.
+`CreateDefaultDevice` is a void request. If no suitable device exists, the server reports the XAverius X11 error `DEVICE_UNAVAILABLE`; no normal reply is generated.
 
 ## `DestroyDevice`
 
-`DestroyDevice` ist ein Void-Request mit fester Gesamtlänge von 12 Bytes: Device-XID bei Offset 8. Die XID muss ein logisches Device sein, das dieser Client-Verbindung gehört. Eine unbekannte/nicht-live XID ergibt `BadValue`; ein falscher live Ressourcentyp oder fremde Ownership ergibt `BadMatch`. Bei Device Loss darf die Bereinigung nach den Lebensdauerregeln fortgesetzt werden.
+`DestroyDevice` is a void request with a fixed total length of 12 bytes; the device XID is at offset 8. The XID MUST identify a logical device owned by this client connection. An unknown or non-live XID results in `BadValue`; a live resource of the wrong type or foreign ownership results in `BadMatch`. Cleanup may continue after device loss according to the lifetime rules.
 
-Bei erfolgreichem Request werden die öffentliche Device-XID und alle öffentlichen XIDs seiner Ressourcen sofort ungültig.
+On success, the public device XID and all public XIDs of its resources become invalid immediately.
 
-Alle noch offenen Host-Waits (`WaitSemaphores` und `WaitForFence`), die diesem logischen Device zugeordnet sind, werden bei Verarbeitung dieses Requests beendet: `WaitSemaphores` liefert den X11-Fehler `DEVICE_DESTROYED`, `WaitForFence` den Reply-Status `DEVICE_DESTROYED`. Dies gilt auch für unbegrenzte Waits. Bereits erfüllte Wait-Bedingungen, deren Ergebnis vor Verarbeitung von `DestroyDevice` feststand, behalten ihr normales Ergebnis. Die Beendigung eines Waits setzt keine GPU-Completion voraus.
+All still-open host waits (`WaitSemaphores` and `WaitForFence`) associated with this logical device are terminated when this request is processed: `WaitSemaphores` returns the X11 error `DEVICE_DESTROYED`, while `WaitForFence` returns reply status `DEVICE_DESTROYED`. This also applies to infinite waits. Wait conditions whose successful result was established before `DestroyDevice` was processed retain their normal result. Terminating a wait does not require GPU completion.
 
-Interne Vulkan-Objekte werden erst freigegeben, wenn die Vulkan-Lebensdauerregeln und alle ausstehenden Abhängigkeiten dies erlauben.
+Internal Vulkan objects are released only when Vulkan lifetime rules and all outstanding dependencies permit it.
 
-Die erfolgreiche Zerstörung bedeutet weder, dass die GPU-Arbeit abgeschlossen ist, noch dass das Device auf ein anderes Physical Device umgeleitet wurde.
+Successful destruction does not mean that GPU work has completed or that the device has been redirected to another physical device.
 
 ## Physische Devices
 
-Physical-Device-XIDs werden serverseitig vergeben.
+Physical-device XIDs are assigned by the server.
 
-- Clients dürfen Physical-Device-XIDs nicht zerstören.
-- Ein bestehender XID darf niemals einem anderen Physical-Device-Objekt zugewiesen werden.
-- Bei Entfernung oder Ausfall bleibt die Identität erhalten; der Status ändert sich.
-- Die Sichtbarkeit eines Physical Devices garantiert nicht, dass ein logisches Device darauf erstellt werden darf.
-- Die konkrete Nutzungsberechtigung wird separat geprüft.
+- Clients MUST NOT destroy physical-device XIDs.
+- An existing XID MUST never be assigned to a different physical-device object.
+- The identity remains stable if the device is removed or fails; its status changes.
+- Visibility of a physical device does not guarantee that a logical device can be created on it.
+- Permission to use the device is checked separately.
 
 ## Device-Ownership
 
-Jede logische Device-Ressource gehört genau einem logischen Device.
+Every logical-device resource belongs to exactly one logical device.
 
-Cross-Device-Nutzung ergibt normalerweise `BadMatch`, auch wenn beide logischen Devices dasselbe physische GPU-Gerät verwenden.
+Cross-device use normally results in `BadMatch`, even if both logical devices use the same physical GPU.
 
-Ein Ressourcen-Request muss prüfen:
+A resource request MUST validate:
 
-1. Existenz und Typ der XID,
-2. Client-Ownership,
-3. Device-Zugehörigkeit,
-4. Ressourcenzustand,
-5. Request-spezifische Vulkan-Bedingungen.
+1. XID existence and type,
+2. client ownership,
+3. device association,
+4. resource state,
+5. request-specific Vulkan conditions.
 
-Die allgemeine XID-Fehlerzuordnung ist in [Errors and error mapping](errors.md) verbindlich festgelegt. Request-spezifische Zusatzregeln dürfen diese Grundzuordnung nur ausdrücklich erweitern, nicht stillschweigend überschreiben.
+The general XID error mapping is defined in [Errors and error mapping](errors.md). Request-specific rules may extend this mapping only explicitly; they MUST NOT silently override it.
