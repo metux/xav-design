@@ -2174,6 +2174,8 @@ def check_presentation_profile(c: Check) -> None:
         "`CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`",
         "`DestroySurface`: unknown/non-live Surface XID is `BadValue`",
         "`GetSurfaceCapabilities`: unknown/non-live Device or Surface XID is `BadValue`",
+        "A Surface is not Device-owned, so querying the same live Surface with different owned Devices is valid",
+        "nonexistent queue-family/index or image index outside the Swapchain is `BadValue`",
         "`CreateSwapchain`: invalid/already allocated target `swapchain_xid` is `BadIDChoice`",
         "`DestroySwapchain`: unknown/non-live Swapchain XID is `BadValue`",
         "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
@@ -2185,6 +2187,9 @@ def check_presentation_profile(c: Check) -> None:
     for contract in presentation_error_contracts:
         c.require(contract in errors,
                   f"presentation request error map: missing invariant: {contract}")
+    c.require("a queue not belonging to the Device is `BadMatch`" not in errors and
+              "same live Surface may be queried with two different owned Devices" in conformance,
+              "presentation error map: preserve Device-independent Surface ownership and BadValue queue-index mapping")
     c.require("owned by the requesting X11 client connection" in presentation and
               "a live Window owned by another X11 client is `BadMatch`" in errors and
               "a live Window owned by another X11 client with `BadMatch`" in conformance,
