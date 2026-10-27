@@ -680,7 +680,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         # has already been excluded above.
         for line_no, line in enumerate(request_lines, 1):
             for inline_xid in re.finditer(
-                r"\b([A-Za-z][A-Za-z0-9 -]*?\s+)?XID\s+at offset\s+(\d+)\b",
+                r"\b([A-Za-z][A-Za-z0-9 -]*?\s+)?XID(?:\s+is)?\s+at offset\s+(\d+)\b",
                 line, re.I,
             ):
                 offset = int(inline_xid.group(2))
