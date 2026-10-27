@@ -384,8 +384,9 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
             "5. Validate that the XID is a Physical-Device resource",
             "6. Require successful XGE 1.0-or-later negotiation",
             "7. Check physical-device availability",
-            "8. Check requested registry-defined features and extensions",
-            "9. Only after all prior checks succeed may backend device creation begin",
+            "8. Validate every requested queue-family index and queue count",
+            "9. Check requested registry-defined features and extensions",
+            "10. Only after all prior checks succeed may backend device creation begin",
         )
         positions = [section.find(phrase) for phrase in phases]
         self.assertTrue(all(position >= 0 for position in positions), positions)
