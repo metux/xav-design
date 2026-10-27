@@ -371,5 +371,23 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
 
 
 
+    def test_command_buffer_reset_invalidation_and_rerecording_retire_references_once(self):
+        command = read("spec/command-recording.md")
+        lifetime = read("spec/resource-lifetime.md")
+        queue = read("spec/queue-submission.md")
+        for phrase in (
+            "retires the command buffer's recorded-resource reference edges exactly once",
+            "A rejected reset, including reset of a PENDING buffer",
+            "A subsequent successful rerecording begins from INITIAL and builds a fresh reference set",
+            "If submission acceptance wins, reset is rejected while the command buffer is PENDING.",
+        ):
+            with self.subTest(contract=phrase):
+                self.assertIn(phrase, command)
+        self.assertIn("reset MUST NOT retire those same edges again", lifetime)
+        self.assertIn("Command-buffer reference retirement is separate from submission terminalization", queue)
+        checker = read("tools/check-wire-layout.py")
+        self.assertIn("def check_command_buffer_reference_retirement", checker)
+        self.assertIn("check_command_buffer_reference_retirement(c)", checker)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
