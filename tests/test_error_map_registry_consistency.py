@@ -82,6 +82,50 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             with self.subTest(error=symbol):
                 self.assertIn(f"`{symbol}`", self.errors)
 
+    def test_every_reply_request_has_wire_coverage_in_both_byte_orders(self):
+        import json
+
+        table = self.registry.split("| Request | Subopcode | Kind | Responsibility |", 1)[1].split(
+            "## Allocation policy", 1
+        )[0]
+        rows = re.findall(
+            r"^\| `([^\`]+)` \| (\d+) \| (Void(?: \+ async events)?|Reply) \| (.*?) \|$",
+            table,
+            re.M,
+        )
+        baseline_replies = {
+            name for name, value, kind, _details in rows
+            if int(value) <= 40 and kind == "Reply"
+        }
+        fixture = json.loads((ROOT / "tests/reply-vectors.json").read_text(encoding="utf-8"))
+        vectors = fixture["vectors"]
+        event_prefix = {
+            "EnumeratePhysicalDevices": "EnumeratePhysicalDevices",
+            "GetPhysicalDeviceProperty": "GetPhysicalDeviceProperty",
+            "GetPhysicalDeviceQueueFamilyProperties": "GetPhysicalDeviceQueueFamilyProperties",
+            "GetPhysicalDeviceMemoryProperties": "GetPhysicalDeviceMemoryProperties",
+            "GetBufferMemoryRequirements": "GetBufferMemoryRequirements",
+            "WriteBuffer": "WriteBuffer",
+            "ReadBuffer": "ReadBuffer",
+            "GetSemaphoreCounterValue": "GetSemaphoreCounterValue",
+            "WaitSemaphores": "WaitSemaphores",
+            "GetFenceStatus": "GetFenceStatus",
+            "WaitForFence": "WaitForFence",
+        }
+        self.assertEqual(baseline_replies, set(event_prefix))
+        for request, prefix in event_prefix.items():
+            for order in ("little", "big"):
+                self.assertTrue(
+                    any(v["event"].startswith(prefix) and v["byte_order"] == order for v in vectors),
+                    f"{request} reply has no golden wire vector for {order}-endian",
+                )
+
+        presentation_tests = (ROOT / "tests/test_presentation_reply_vectors.py").read_text(encoding="utf-8")
+        self.assertIn("test_all_documented_presentation_reply_statuses_have_valid_wire_shapes", presentation_tests)
+        for encoder in ("encode_capabilities", "encode_create_swapchain_reply", "encode_acquire_reply", "encode_queue_present_reply"):
+            self.assertIn(encoder, presentation_tests)
+        self.assertIn('("little", "big")', presentation_tests)
+
     def test_conformance_keeps_profile_dispatch_boundary_explicit(self):
         self.assertIn(
             "requests 41–47 with core X11 `BadRequest` before parsing presentation payloads or resolving their XIDs",
