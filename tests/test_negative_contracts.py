@@ -99,5 +99,106 @@ class NegativeContractRegressionTests(unittest.TestCase):
                 self.assertIn(phrase, self.conformance)
 
 
+def first_common_request_error(
+    *,
+    envelope_valid=True,
+    data=0,
+    common_reserved=0,
+    subopcode=1,
+    presentation_supported=True,
+    expected_request_bytes=16,
+    actual_request_bytes=16,
+    scalar_valid=True,
+    xid_valid=True,
+):
+    """Small decision oracle for the shared precedence phases, not a server test."""
+    if not envelope_valid:
+        return "BadLength"
+    if data != 0 or common_reserved != 0:
+        return "BadValue"
+    if 41 <= subopcode <= 47 and not presentation_supported:
+        return "BadRequest"
+    if actual_request_bytes != expected_request_bytes:
+        return "BadLength"
+    if not scalar_valid:
+        return "BadValue"
+    if not xid_valid:
+        return "BadValue"
+    return None
+
+
+class CommonRequestErrorPrecedenceTests(unittest.TestCase):
+    def test_envelope_bad_length_precedes_common_header_errors(self):
+        self.assertEqual(
+            first_common_request_error(
+                envelope_valid=False, data=1, common_reserved=1,
+                subopcode=41, presentation_supported=False,
+            ),
+            "BadLength",
+        )
+
+    def test_common_invariant_fields_precede_profile_gate_and_xid_lookup(self):
+        self.assertEqual(
+            first_common_request_error(
+                data=1, subopcode=41, presentation_supported=False,
+                xid_valid=False,
+            ),
+            "BadValue",
+        )
+        self.assertEqual(
+            first_common_request_error(
+                common_reserved=1, subopcode=41, presentation_supported=False,
+                xid_valid=False,
+            ),
+            "BadValue",
+        )
+
+    def test_profile_gate_precedes_request_specific_payload_validation(self):
+        self.assertEqual(
+            first_common_request_error(
+                subopcode=41, presentation_supported=False,
+                expected_request_bytes=32, actual_request_bytes=8,
+                scalar_valid=False, xid_valid=False,
+            ),
+            "BadRequest",
+        )
+
+    def test_supported_request_length_precedes_scalar_and_xid_errors(self):
+        self.assertEqual(
+            first_common_request_error(
+                expected_request_bytes=32, actual_request_bytes=28,
+                scalar_valid=False, xid_valid=False,
+            ),
+            "BadLength",
+        )
+
+    def test_request_scalar_errors_precede_xid_lookup(self):
+        self.assertEqual(
+            first_common_request_error(scalar_valid=False, xid_valid=False),
+            "BadValue",
+        )
+
+    def test_checker_and_spec_define_same_common_phase_order(self):
+        wire = read("spec/wire-protocol.md")
+        checker = read("tools/check-wire-layout.py")
+        errors = read("spec/errors.md")
+        for phrase in (
+            "## Common Request Validation Precedence",
+            "Validate the X11 envelope independently of XAverius fields",
+            "Validate the common XAverius header fields",
+            "These checks precede subopcode dispatch, profile gating, request-specific parsing",
+            "The `flags` byte at offset 5 is request-specific",
+            "An unsupported presentation request returns `BadRequest` before parsing",
+            "validate its exact layout, request-specific lengths/counts and checked arithmetic",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, wire)
+        self.assertIn("def check_common_request_error_precedence", checker)
+        self.assertIn("check_common_request_error_precedence(c)", checker)
+        self.assertIn("wire structure first, then field values, then XIDs in the field order", errors)
+
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
