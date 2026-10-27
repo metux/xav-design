@@ -20,6 +20,8 @@ REQUEST_REGISTRY = ROOT / "registries" / "request-subopcodes.md"
 def encode_request(vector: dict) -> bytes:
     """Encode the currently covered request layouts using the X11 byte order."""
     fields = vector["fields"]
+    if vector["byte_order"] not in ("little", "big"):
+        raise ValueError("unknown byte order")
     endian = "<" if vector["byte_order"] == "little" else ">"
     length_bytes = vector["length_bytes"]
     if length_bytes < 8 or length_bytes % 4:
@@ -88,6 +90,8 @@ def validate_request_wire(wire: bytes, byte_order: str) -> None:
         raise ValueError("request byte length must be divisible by four")
     if byte_order not in ("little", "big"):
         raise ValueError("unknown byte order")
+    if wire[0] < 128:
+        raise ValueError("extension major opcode must be in 128..255")
     declared_words = int.from_bytes(wire[2:4], byte_order)
     if declared_words == 0:
         raise ValueError("zero request length is invalid; BIG-REQUESTS is unsupported")
@@ -181,6 +185,23 @@ class GoldenWireVectorTests(unittest.TestCase):
                 wire = encode_request(vector)
                 validate_request_wire(wire, vector["byte_order"])
                 self.assertEqual(len(wire), 28 + ((vector["fields"]["data_length"] + 3) & ~3))
+
+    def test_rejects_unknown_byte_order_in_encoder_and_validator(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        import copy
+        invalid = copy.deepcopy(vector)
+        invalid["byte_order"] = "middle"
+        with self.assertRaisesRegex(ValueError, "byte order"):
+            encode_request(invalid)
+        with self.assertRaisesRegex(ValueError, "byte order"):
+            validate_request_wire(encode_request(vector), "middle")
+
+    def test_rejects_non_extension_major_opcode(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = bytearray(encode_request(vector))
+        wire[0] = 127
+        with self.assertRaisesRegex(ValueError, "extension major opcode"):
+            validate_request_wire(bytes(wire), vector["byte_order"])
 
     def test_rejects_truncated_common_header(self) -> None:
         for size in range(8):
