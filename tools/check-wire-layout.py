@@ -1412,7 +1412,7 @@ def check_common_request_error_precedence(c: Check) -> None:
     registry = read("registries/request-subopcodes.md")
     ordered_phases = (
         "1. Validate the X11 envelope independently of XAverius fields",
-        "2. Validate the common XAverius header fields",
+        "2. Validate the common-header fields that have invariant meanings",
         "3. Dispatch the subopcode and apply the profile gate",
         "4. For a supported request, validate its exact layout",
         "5. No rejected request may allocate variable payload storage",
