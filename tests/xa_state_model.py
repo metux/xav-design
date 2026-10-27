@@ -326,6 +326,7 @@ def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
 @dataclass
 class RetiredCommandBufferRecording:
     """References retained for an older recording while its backend holds drain."""
+    epoch: int = 0
     entries: list[bytes] = field(default_factory=list)
     descriptor_sets: list[DescriptorSetLifetime] = field(default_factory=list)
     indirect_buffer_refs: set[str] = field(default_factory=set)
@@ -350,6 +351,7 @@ class CommandBufferModel:
     # Holds belong to the current recording epoch; reset/abort move outstanding
     # holds together with that epoch's references into retired_recordings.
     backend_holds: int = 0
+    recording_epoch: int = 0
     retired_recordings: list[RetiredCommandBufferRecording] = field(default_factory=list)
 
 
@@ -368,19 +370,34 @@ def _discard_command_buffer_recording(state: CommandBufferModel) -> None:
     """Discard current recording without releasing refs still held by backend."""
     if state.backend_holds > 0:
         state.retired_recordings.append(RetiredCommandBufferRecording(
+            epoch=state.recording_epoch,
             entries=list(state.entries),
             descriptor_sets=list(state.descriptor_sets),
             indirect_buffer_refs=set(state.indirect_buffer_refs),
             backend_holds=state.backend_holds,
         ))
         state.backend_holds = 0
+    state.recording_epoch += 1
     state.entries.clear()
     state.descriptor_sets.clear()
     state.indirect_buffer_refs.clear()
 
 
-def retire_command_buffer_backend_hold(state: CommandBufferModel) -> str:
-    """Drop one hold, oldest retired recording first, then current recording."""
+def retire_command_buffer_backend_hold(
+    state: CommandBufferModel, *, recording_epoch: int | None = None,
+) -> str:
+    """Drop a hold for its recording epoch; omitted epoch uses legacy FIFO order."""
+    if recording_epoch is not None:
+        for recording in state.retired_recordings:
+            if recording.epoch == recording_epoch and recording.backend_holds > 0:
+                recording.backend_holds -= 1
+                _retire_command_buffer_refs_if_quiescent(state)
+                return "SUCCESS"
+        if recording_epoch == state.recording_epoch and state.backend_holds > 0:
+            state.backend_holds -= 1
+            _retire_command_buffer_refs_if_quiescent(state)
+            return "SUCCESS"
+        return "INVALID_SYNCHRONIZATION_STATE"
     for recording in state.retired_recordings:
         if recording.backend_holds > 0:
             recording.backend_holds -= 1
