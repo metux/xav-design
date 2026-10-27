@@ -22,11 +22,16 @@ def reply_header(order: str, total: int, reply_length: int) -> bytearray:
     return data
 
 
-def encode_capabilities(order: str, *, status: int = 0) -> bytes:
+def encode_capabilities(
+    order: str,
+    *,
+    status: int = 0,
+    formats: tuple[tuple[int, int], ...] = ((1, 1),),
+    modes: tuple[int, ...] = (1,),
+) -> bytes:
     if status == 0:
-        fields = (0, 1, 640, 480, 2, 4, 64, 64, 1920, 1080, 1, 1, 1, 2)
-        formats = ((1, 1),)
-        modes = (1,)
+        fields = (0, 1, 640, 480, 2, 4, 64, 64, 1920, 1080,
+                  len(formats), len(modes), 1, 2)
         families = ((0, 1), (1, 0))
     else:
         fields = (status, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -137,12 +142,27 @@ def validate_presentation_reply(
             aggregate_supported = int(any(family_support))
             if u32(wire, 12, order) != aggregate_supported:
                 raise ValueError("aggregate present_supported does not match queue-family records")
+            # The initial registry defines RGBA8/BGRA8 with SRGB_NONLINEAR,
+            # and FIFO as the only assigned presentation mode.
+            format_records = [
+                (u32(wire, off, order), u32(wire, off + 4, order))
+                for off in range(64, 64 + 8 * formats, 8)
+            ]
+            if any(fmt not in (1, 2) or color_space != 1
+                   for fmt, color_space in format_records):
+                raise ValueError("capabilities contain an unknown format/color-space registry ID")
+            if len(set(format_records)) != len(format_records):
+                raise ValueError("capabilities contain duplicate format/color-space pairs")
             # The initial registry assigns only TRANSFER_DST (bit 0).
             if u32(wire, 56, order) & ~1:
                 raise ValueError("capabilities advertise unassigned image-usage flags")
             mode_start = 64 + 8 * formats
             modes_list = [u32(wire, off, order)
                           for off in range(mode_start, mode_start + 4 * modes, 4)]
+            if any(mode != 1 for mode in modes_list):
+                raise ValueError("capabilities contain an unknown presentation-mode registry ID")
+            if len(set(modes_list)) != len(modes_list):
+                raise ValueError("capabilities contain duplicate presentation modes")
             if aggregate_supported and 1 not in modes_list:
                 raise ValueError("presentable capabilities do not advertise baseline FIFO mode")
     else:
@@ -440,6 +460,30 @@ class PresentationReplyWireTests(unittest.TestCase):
                     ValueError, "presentable capabilities do not advertise baseline FIFO mode"
                 ):
                     validate_presentation_reply("capabilities", bytes(malformed), order)
+
+    def test_capability_lists_reject_duplicate_entries_and_unknown_registry_ids(self) -> None:
+        cases = (
+            ({"formats": ((1, 1), (1, 1))},
+             "capabilities contain duplicate format/color-space pairs"),
+            ({"formats": ((1, 1), (99, 1))},
+             "capabilities contain an unknown format/color-space registry ID"),
+            ({"formats": ((1, 99),)},
+             "capabilities contain an unknown format/color-space registry ID"),
+            ({"modes": (1, 1)},
+             "capabilities contain duplicate presentation modes"),
+            ({"modes": (99,)},
+             "capabilities contain an unknown presentation-mode registry ID"),
+        )
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                validate_presentation_reply(
+                    "capabilities", encode_capabilities(order), order
+                )
+                for options, message in cases:
+                    with self.subTest(options=options):
+                        wire = encode_capabilities(order, **options)
+                        with self.assertRaisesRegex(ValueError, message):
+                            validate_presentation_reply("capabilities", wire, order)
 
     def test_capabilities_queue_family_count_matches_physical_device(self) -> None:
         for order in ("little", "big"):
