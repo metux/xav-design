@@ -86,6 +86,26 @@ class NegativeContractRegressionTests(unittest.TestCase):
             with self.subTest(lifetime_contract=phrase):
                 self.assertIn(phrase, lifetime)
 
+    def test_device_teardown_drains_internal_resource_edges_before_memory_release(self) -> None:
+        lifetime = read("spec/resource-lifetime.md")
+        memory = read("spec/memory-buffers.md")
+        for phrase in (
+            "Cross-resource teardown and backing-memory release",
+            "DescriptorSet XID does not by itself prove that its slot-held Buffer references",
+            "retire descriptor-slot and recorded-command references",
+            "MUST NOT release a bound Memory allocation before the old Buffer identity",
+            "FreeMemory must reject while that internal Buffer remains bound",
+        ):
+            with self.subTest(lifetime_contract=phrase):
+                self.assertIn(phrase, lifetime)
+        for phrase in (
+            "Successful `FreeMemory` requires that no live internal buffer identity remains bound",
+            "retire each Buffer-to-Memory binding exactly once",
+            "MUST NOT invoke public `FreeMemory` semantics on an already invalidated child XID",
+        ):
+            with self.subTest(memory_contract=phrase):
+                self.assertIn(phrase, memory)
+
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
             "Device loss beats Surface loss and accepted-token reuse",
