@@ -189,7 +189,11 @@ On success, the public device XID and all public XIDs of its resources become in
 
 All still-open host waits (`WaitSemaphores` and `WaitForFence`) associated with this logical device are terminated when this request is processed: `WaitSemaphores` returns the X11 error `DEVICE_DESTROYED`, while `WaitForFence` returns reply status `DEVICE_DESTROYED`. This also applies to infinite waits. Wait conditions whose successful result was established before `DestroyDevice` was processed retain their normal result. Terminating a wait does not require GPU completion.
 
-Internal Vulkan objects are released only when Vulkan lifetime rules and all outstanding dependencies permit it.
+The successful request has a single server-side linearization point. At that point, cascading public invalidation of the Device and all its children, removal of Device/Queue event selections, and termination of still-open host waits are committed atomically. A wait already terminally established before this point keeps its result; otherwise it terminates as `DEVICE_DESTROYED`. A reply/error already serialized before the point is not rewritten.
+
+Accepted submissions are not cancelled. Their internal terminal states and synchronization objects are finalized exactly once, including when Device loss races with destruction; no successful completion may be fabricated. A callback that races with destruction may perform internal terminalization and cleanup, but MUST NOT enqueue a new event for the destroyed Device after the linearization point. Delayed callbacks MUST use captured internal object identities rather than re-resolving numeric XIDs, so reuse of a child XID cannot redirect old work to a new resource.
+
+Internal Vulkan objects are released only when Vulkan lifetime rules and all outstanding dependencies permit it. If backend access cannot be proven to have ended, the old allocation/reference is retained or quarantined rather than freed or reused.
 
 Successful destruction does not mean that GPU work has completed or that the device has been redirected to another physical device.
 
