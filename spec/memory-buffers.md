@@ -14,6 +14,8 @@ Total length: 32 bytes.
 
 The size MUST be positive and at least one supported `usage_flags` bit MUST be set. Unknown bits or `usage_flags = 0` are rejected with `BadValue`. Creating a buffer does not allocate or bind memory.
 
+`CreateBuffer` validates in this order: (1) exact request length (`BadLength`); (2) `size`, `usage_flags`, and `reserved` (`BadValue`); (3) target `buffer_xid` as a create-XID (`BadIDChoice` if invalid or occupied); (4) `device_xid` lookup (`BadValue` for unknown/non-live XID); (5) resource type and client/device ownership (`BadMatch`); (6) logical-device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) backend buffer creation (`ALLOCATION_FAILED` on allocation failure). Failure is atomic and leaves `buffer_xid` unallocated.
+
 Usage-Bits:
 
 - Bit 0: `STORAGE_BUFFER`
@@ -102,7 +104,7 @@ Total length: 32 bytes.
 - Offset 24: `CARD32 memory_type_index`
 - Offset 28: `CARD32 reserved = 0`
 
-The allocation size MUST be positive, and the memory-type index MUST exist for the physical device associated with the logical device. `AllocateMemory` reserves exactly `allocation_size` bytes and does not bind a buffer. The server MUST NOT silently round up the requested size; required internal backend alignment must be implemented without changing the publicly visible allocation size. If allocation fails, `ALLOCATION_FAILED` is reported and `memory_xid` remains unallocated. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. The request is atomic: on any failure, `memory_xid` remains unallocated and no partial allocation remains.
+The allocation size MUST be positive, and the memory-type index MUST exist for the physical device associated with the logical device. `AllocateMemory` reserves exactly `allocation_size` bytes and does not bind a buffer. Validation order is normative: (1) exact request length (`BadLength`); (2) `allocation_size`, `memory_type_index`, and `reserved` (`BadValue`); (3) target `memory_xid` as a create-XID (`BadIDChoice` if invalid or occupied); (4) `device_xid` lookup (`BadValue` for unknown/non-live XID); (5) resource type and client/device ownership (`BadMatch`); (6) logical-device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) backend allocation (`ALLOCATION_FAILED`). The server MUST NOT silently round up the requested size; required internal backend alignment must be implemented without changing the publicly visible allocation size. If allocation fails, `ALLOCATION_FAILED` is reported and `memory_xid` remains unallocated. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. The request is atomic: on any failure, `memory_xid` remains unallocated and no partial allocation remains.
 
 ## 5.5 `FreeMemory`
 

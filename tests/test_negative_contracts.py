@@ -201,6 +201,21 @@ class CommonRequestErrorPrecedenceTests(unittest.TestCase):
 
 
 class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
+    def test_create_resource_precedence_orders_target_xid_before_input_xids(self):
+        memory = read("spec/memory-buffers.md")
+        shaders = read("spec/shaders-pipelines.md")
+        cases = (
+            (memory, "## 5.1 `CreateBuffer`", ("exact request length", "`size`, `usage_flags`, and `reserved", "target `buffer_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "backend buffer creation")),
+            (memory, "## 5.4 `AllocateMemory`", ("exact request length", "`allocation_size`, `memory_type_index`, and `reserved", "target `memory_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "backend allocation")),
+            (shaders, "## 6.2 Descriptor Set Layout", ("exact count-consistent request length", "flags, binding records, counts, unique binding numbers", "target `descriptor_set_layout_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "device-limit/descriptor support checks", "backend allocation")),
+            (shaders, "## 6.3 Descriptor Pool", ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
+        )
+        for document, heading, phrases in cases:
+            section = document.split(heading, 1)[1].split("\\n## ", 1)[0]
+            positions = [section.find(phrase) for phrase in phrases]
+            self.assertTrue(all(position >= 0 for position in positions), heading)
+            self.assertEqual(positions, sorted(positions), heading)
+
     def test_create_default_device_has_total_validation_precedence(self):
         devices = read("spec/devices.md")
         errors = read("spec/errors.md")
