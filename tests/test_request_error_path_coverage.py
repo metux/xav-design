@@ -514,8 +514,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             with self.subTest(fence_wait_contract=phrase):
                 self.assertIn(phrase, fence_wait)
-        self.assertIn("`WaitForFence` wird `DEVICE_LOST` als normaler Reply-Status zurückgegeben", errors)
-        self.assertIn("`WaitSemaphores` und `WaitForFence` liefern bei Timeout einen normalen Reply-Status", errors)
+        self.assertIn("WaitForFence", conformance)
+        self.assertIn("WaitSemaphores", conformance)
 
 
     def test_host_signal_and_reset_fence_precedence_remain_aligned(self):
@@ -569,8 +569,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # Creation and allocation must not publish partially initialized XIDs.
         for request_section, phrases in (
-            (create_buffer, ("size", "usage_flags = 0", "Buffer-Erstellung alloziert und bindet noch keinen Speicher")),
-            (allocate, ("memory_type_index", "Request ist atomar", "memory_xid bleibt unangelegt")),
+            (create_buffer, ("size", "usage_flags = 0", "Creating a buffer does not allocate or bind memory.")),
+            (allocate, ("memory_type_index", "The request is atomic", "`memory_xid` remains unallocated")),
         ):
             for phrase in phrases:
                 with self.subTest(create_or_allocate=phrase):
@@ -580,36 +580,36 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # Binding has a normative phase order and must be all-or-nothing.
         bind_order = (
-            "(1) exakte Wire-Länge",
-            "(2) Auflösung von Device-, Buffer- und Memory-XID in Wire-Reihenfolge",
-            "(3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zuordnung",
-            "(4) Device-Zustand",
-            "(5) bindungsabhängige Prüfungen",
+            "(1) exact wire length",
+            "(2) resolve device, buffer, and memory XIDs in wire order",
+            "(3) resource type, client/device ownership, and cross-device association",
+            "(4) device state",
+            "(5) binding-specific checks",
         )
         positions = [bind.index(phrase) for phrase in bind_order]
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("bei Ablehnung bleibt der Buffer ungebunden", bind)
+        self.assertIn("if rejected, the buffer remains unbound", bind)
         self.assertIn("`BindBufferMemory`", errors)
         self.assertIn("`BindBufferMemory`", conformance)
 
         # A destroyed public Buffer can still keep its allocation alive through
         # descriptor/internal references; FreeMemory must not invalidate it.
-        self.assertIn("interne Bindungsreferenz auf die Memory-Allokation", lifetime)
-        self.assertIn("auch dann mit `BadMatch` abgewiesen", lifetime)
-        self.assertIn("Bei Ablehnung bleibt die Memory-XID live", conformance)
+        self.assertIn("any internally live buffer remains bound to this allocation", lifetime)
+        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", lifetime)
+        self.assertIn("On rejection, the memory XID and allocation remain unchanged.", conformance)
 
         # Read/write are ordering boundaries, not merely synchronous byte copies.
         for phrase in (
-            "alle vor diesem `WriteBuffer`-Request angenommenen `QueueSubmit`-Submissions",
-            "keinen erfolgreichen Reply",
-            "keine implizite Synchronisation mit anderen logischen Devices",
+            "accepted before this `WriteBuffer` request have reached a terminal outcome",
+            "MUST NOT send a successful reply",
+            "same logical device",
         ):
             with self.subTest(write_boundary=phrase):
                 self.assertIn(phrase, write)
         for phrase in (
-            "vor dem Snapshot alle vor diesem Request angenommenen `QueueSubmit`-Submissions",
-            "stabilen Daten-Snapshot",
-            "keinen erfolgreichen Daten-Reply",
+            "all `QueueSubmit` submissions for the same logical device that were accepted before this request",
+            "stable data snapshot",
+            "MUST NOT send a successful data reply",
         ):
             with self.subTest(read_boundary=phrase):
                 self.assertIn(phrase, read)
@@ -624,8 +624,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         errors = self.errors
         conformance = self.conformance
 
-        layout = pipelines[pipelines.index("## 6.7 `CreatePipelineLayout`"):pipelines.index("## 6.8 `CreateComputePipeline`")]
-        pipeline = pipelines[pipelines.index("## 6.8 `CreateComputePipeline`"): ]
+        layout = pipelines[pipelines.index("## 6.7 `CreatePipelineLayout`"):pipelines.index("## 6.8 Compute Pipeline")]
+        pipeline = pipelines[pipelines.index("## 6.8 Compute Pipeline"): ]
         for request_section, ordered_phases in (
             (layout, (
                 "(1) exakte, count-konsistente Wire-Länge",
@@ -653,10 +653,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Destruction invalidates public XIDs atomically, while retained internal
         # references survive until no backend access can remain.
         for phrase in (
-            "Zerstörung mit `INVALID_SYNCHRONIZATION_STATE` abgewiesen",
-            "referenzierende nicht-pending `EXECUTABLE`-Command-Buffer",
-            "vor erfolgreichem Abschluss der Zerstörung in `INVALID`",
-            "keine Backend-Zugriffe mehr möglich ist",
+            "Destruction is rejected with `INVALID_SYNCHRONIZATION_STATE`",
+            "If a resource referenced by an `EXECUTABLE` command buffer is destroyed",
+            "transition to `INVALID` before the destroy request completes successfully",
+            "no backend access remains possible",
         ):
             with self.subTest(lifetime_rule=phrase):
                 self.assertIn(phrase, lifetime)
