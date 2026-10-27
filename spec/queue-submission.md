@@ -141,3 +141,6 @@ Diese Regeln spezifizieren notwendige Vulkan-kompatible Ordnungsgrenzen, nicht S
 9. Für die erste Implementierung ist eine konservative vollständige Device-Synchronisation akzeptabel.
 10. Nach angenommener asynchroner Arbeit werden Fehler durch Events und Synchronisationszustände gemeldet.
 
+
+
+Command-buffer reference retirement is separate from submission terminalization. The terminal transition may set a command buffer to INVALID and release its submission-owned references/reservations exactly once, but any recorded-reference edge and backend hold still needed to protect a possible in-flight access remains retained until that access is known to have ended. The reset/invalidation cleanup path MUST consult explicit edge ownership so that later reset, pool destruction, device cascade, or callback completion cannot release the same reference twice. A successful execution preserves the recorded references for the command buffer's return to EXECUTABLE; a failed execution does not make the recorded command stream reusable, and reset plus rerecording is required.
