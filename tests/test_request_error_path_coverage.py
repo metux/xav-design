@@ -607,8 +607,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(write_boundary=phrase):
                 self.assertIn(phrase, write)
         for phrase in (
-            "all `QueueSubmit` submissions for the same logical device that were accepted before this request",
-            "stable data snapshot",
+            "alle vor diesem Request angenommenen `QueueSubmit`-Submissions",
+            "stabilen Daten-Snapshot",
             "MUST NOT send a successful data reply",
         ):
             with self.subTest(read_boundary=phrase):
@@ -653,7 +653,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Destruction invalidates public XIDs atomically, while retained internal
         # references survive until no backend access can remain.
         for phrase in (
-            "Destruction is rejected with `INVALID_SYNCHRONIZATION_STATE`",
+            "destruction is rejected with `INVALID_SYNCHRONIZATION_STATE`",
             "If a resource referenced by an `EXECUTABLE` command buffer is destroyed",
             "transition to `INVALID` before the destroy request completes successfully",
             "no backend access remains possible",
