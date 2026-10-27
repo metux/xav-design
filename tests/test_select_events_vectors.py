@@ -291,7 +291,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertRegex(events, r"(?i)On any error, the previous selection remains unchanged")
         self.assertRegex(events, r"The request atomically replaces the existing mask for exactly one scope")
         self.assertRegex(errors, r"A required XAverius XID that does not identify a live resource.*results in `BadValue`")
-        self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
+        self.assertRegex(errors, r"An XID that identifies a live resource but not the expected resource type results in `BadMatch`")
 
     def test_negative_golden_vectors_cover_each_structural_error_class(self):
         # Mutate valid golden packets instead of testing only hand-built invalid packets.
