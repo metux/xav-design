@@ -705,10 +705,10 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         # and variable-length contracts such as chunked uploads.
         fixed_length = None
         for line in request_lines:
-            if re.search(r"\\b(?:at least|minimum|variable|variable-length)\\b", line, re.I):
+            if re.search(r"\b(?:at least|minimum|variable|variable-length)\b", line, re.I):
                 continue
             match = re.search(
-                r"\\b(?:fixed total length of|total length(?: is|:)?|exactly)\\s+(\\d+)\\s+bytes\\b",
+                r"\b(?:fixed total length of|total length(?: is|:)?|exactly)\s+(\d+)\s+bytes\b",
                 line, re.I,
             )
             if match:
