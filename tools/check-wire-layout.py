@@ -3117,8 +3117,9 @@ def check_create_device_precedence(c: Check) -> None:
         "5. Validate that the XID is a Physical-Device resource",
         "6. Require successful XGE 1.0-or-later negotiation",
         "7. Check physical-device availability",
-        "8. Check requested registry-defined features and extensions",
-        "9. Only after all prior checks succeed may backend device creation begin",
+        "8. Validate every requested queue-family index and queue count",
+        "9. Check requested registry-defined features and extensions",
+        "10. Only after all prior checks succeed may backend device creation begin",
     )
     positions = [section.find(phase) for phase in phases]
     c.require(
