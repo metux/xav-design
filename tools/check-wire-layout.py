@@ -2170,6 +2170,7 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "property-failure-status": invalid = kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available") and int.from_bytes(wire[8:12], order) != (1 if kind.endswith("not-supported") else 2)
                 elif rule == "buffer-requirements-size-positive": invalid = kind == "GetBufferMemoryRequirements" and int.from_bytes(wire[8:16], order) == 0
                 elif rule == "buffer-requirements-alignment-positive": invalid = kind == "GetBufferMemoryRequirements" and int.from_bytes(wire[16:24], order) == 0
+                elif rule == "buffer-requirements-memory-type-bits-nonzero": invalid = kind == "GetBufferMemoryRequirements" and int.from_bytes(wire[24:28], order) == 0
                 elif rule == "property-padding-zero":
                     value_length = int.from_bytes(wire[16:20], order)
                     invalid = kind == "GetPhysicalDeviceProperty-success" and len(wire) >= 32 + value_length and wire[32 + value_length:] != bytes(len(wire) - 32 - value_length)
