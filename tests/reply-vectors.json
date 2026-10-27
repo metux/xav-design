@@ -705,6 +705,28 @@
       "payload_hex": "",
       "total_bytes": 32,
       "wire_hex": "0100123400000000000000040000000000000000000000000000000000000000"
+    },
+    {
+      "name": "GetPhysicalDeviceQueueFamilyProperties-one-record-little",
+      "event": "GetPhysicalDeviceQueueFamilyProperties-one-record",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 3,
+      "payload_hex": "030000000200000000000000",
+      "total_bytes": 44,
+      "wire_hex": "0100341203000000000000000000000000000000000000000000000000000000030000000200000000000000"
+    },
+    {
+      "name": "GetPhysicalDeviceQueueFamilyProperties-one-record-big",
+      "event": "GetPhysicalDeviceQueueFamilyProperties-one-record",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 3,
+      "payload_hex": "000000030000000200000000",
+      "total_bytes": 44,
+      "wire_hex": "0100123400000003000000000000000000000000000000000000000000000000000000030000000200000000"
     }
   ]
 }
