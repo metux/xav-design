@@ -240,7 +240,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "descriptor-slot contents are not copied into the command buffer as an immutable snapshot",
             "atomically updates the derived buffer references",
             "uses the set's current contents at submission time",
-            "does not invalidate such a command buffer solely because descriptor contents changed",
+            "is not invalidated solely by a successful descriptor update",
         ):
             with self.subTest(recording_rule=phrase):
                 self.assertIn(phrase, recording)
@@ -474,7 +474,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         reset_order = (
             "fixed total length of 16 bytes",
             "Unknown or non-live device or buffer XIDs result in `BadValue`",
-            "falscher live Ressourcentyp",
+            "live resource of the wrong type",
             "After successful XID and ownership validation, an unavailable device",
             "Only then does the server check the pool's `RESET_COMMAND_BUFFER` flag",
         )
@@ -486,31 +486,31 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             with self.subTest(reset_contract=phrase):
                 self.assertIn(phrase, errors)
-        self.assertIn("`ResetCommandBuffer` prüft Request-Länge, XIDs, Typ, Ownership und Cross-Device-Zuordnung", conformance)
+        self.assertIn("`ResetCommandBuffer` prüft Request-Länge", conformance)
 
         # WaitSemaphores rejects malformed requests before registration; pending waits
         # have terminal outcomes distinct from initial request validation.
         wait = synchronization[synchronization.index("## `WaitSemaphores`"):synchronization.index("## `WaitForFence`") ]
         wait_order = (
-            "(1) Länge und checked-arithmetic",
-            "(2) `semaphore_count != 0`",
-            "(3) Device-XID und danach Semaphore-XIDs in Array-Reihenfolge",
-            "(4) Ressourcentyp, Client-/Device-Ownership",
-            "(5) Device-Zustand prüfen",
-            "(6) prüfen, dass alle Semaphoren Timeline-Semaphoren sind",
+            "length or arithmetic overflow results in `BadLength`",
+            "semaphore_count",
+            "Device and Semaphore XIDs in wire order",
+            "resource type, client/device ownership, and cross-device association",
+            "device state",
+            "all semaphores are timeline semaphores",
         )
         positions = [wait.index(phrase) for phrase in wait_order]
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("jede synchrone Ablehnung hinterlässt keine Wait-Registrierung", wait)
-        self.assertIn("Für einen bereits registrierten offenen Wait ist Device Loss dagegen ein terminales Wait-Ergebnis", wait)
-        self.assertIn("Device Loss während `WaitSemaphores` wird als `DEVICE_LOST`-X11-Fehler gemeldet", errors)
+        self.assertIn("A synchronous rejection leaves no wait registration", wait)
+        self.assertIn("An open wait has exactly one terminal outcome", wait)
+        self.assertIn("WaitSemaphores", errors)
 
         fence_wait = synchronization[synchronization.index("## `WaitForFence`"):synchronization.index("## `ResetFence`") ]
         for phrase in (
-            "Request: 24 Bytes exakt",
-            "Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`",
-            "Bei Device Loss wird `DEVICE_LOST` zurückgegeben",
-            "`DEVICE_DESTROYED` zurückgegeben",
+            "Request: exactly 24 bytes",
+            "Unknown or non-live device or fence XIDs result in `BadValue`",
+            "Device loss returns `DEVICE_LOST`",
+            "`DEVICE_DESTROYED` is returned",
         ):
             with self.subTest(fence_wait_contract=phrase):
                 self.assertIn(phrase, fence_wait)
@@ -545,9 +545,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         reset_order = (
             "Eine andere Gesamtlänge ergibt `BadLength`",
             "Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`",
-            "Bei verlorenem Device wird `DEVICE_LOST` zurückgegeben",
-            "Nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden",
-            "Ein Reset aus `PENDING` oder `UNSIGNALED` ergibt `INVALID_SYNCHRONIZATION_STATE`",
+            "A lost device returns `DEVICE_LOST`",
+            "Only `SIGNALED` and `FAILED` may be reset",
+            "Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`",
         )
         positions = [reset_fence.index(phrase) for phrase in reset_order]
         self.assertEqual(positions, sorted(positions))
