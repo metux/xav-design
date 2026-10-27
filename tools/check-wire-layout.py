@@ -1589,6 +1589,7 @@ def check_reply_golden_vectors(c: Check) -> None:
                 declared = int.from_bytes(wire[4:8], order) if len(wire) >= 8 else 0
                 invalid = False
                 if rule == "standard-header": invalid = len(wire) < 32 or len(wire) % 4 != 0 or wire[0] != 1 or 32 + declared * 4 != len(wire)
+                elif rule == "fixed-reply-size": invalid = kind in ("GetFenceStatus", "WaitSemaphores-timeout", "WaitForFence", "GetSemaphoreCounterValue", "GetBufferMemoryRequirements") and (len(wire) != 32 or declared != 0)
                 elif rule == "fence-status": invalid = kind == "GetFenceStatus" and wire[1] not in (0, 1, 2, 3)
                 elif rule == "wait-status": invalid = kind == "WaitSemaphores-timeout" and int.from_bytes(wire[8:12], order) not in (0, 1)
                 elif rule == "wait-status-match": invalid = kind in ("WaitSemaphores-timeout", "WaitSemaphores-success") and int.from_bytes(wire[8:12], order) != (1 if kind.endswith("timeout") else 0)
