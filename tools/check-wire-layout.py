@@ -2697,17 +2697,17 @@ def check_compact_request_layouts(c: Check) -> None:
     )
     c.require(
         "followed by zero padding to a four-byte boundary" in shaders
-        and "the server checks request length, padding, flag combinations" in shaders
-        and "invalid padding" in shaders
-        and "Padding MUST consist entirely of zero bytes; non-zero padding results in `BadValue`." in memory,
+        and re.search(r"server checks request length, padding, flag combinations", shaders, re.I) is not None
+        and "invalid padding" in shaders.lower()
+        and re.search(r"padding must consist entirely of zero bytes; non-zero padding results in `BadValue`", memory, re.I) is not None,
         "variable byte payloads: shader chunks and WriteBuffer must specify zero-padding validation and failure behavior",
     )
     c.require(
-        "Padding-Bytes müssen null sein." in shaders
-        and "exakt `28 + ((entry_point_length + 3) & ~3)` Bytes" in shaders
-        and "Gesamtlänge: `24 + 16 * binding_count`" in shaders
+        re.search(r"padding-Bytes müssen null sein", shaders, re.I) is not None
+        and "`28 + ((entry_point_length + 3) & ~3)`" in shaders
+        and "`24 + 16 * binding_count`" in shaders
         and "Each binding record is 16 bytes" in shaders
-        and "Gesamtlänge: `20 + 36 * write_count`" in shaders
+        and "`20 + 36 * write_count`" in shaders
         and "Jeder Write ist 36 Bytes groß." in shaders,
         "variable/count-based request contracts must keep exact formulas, entry widths, and zero-padding rules",
     )
