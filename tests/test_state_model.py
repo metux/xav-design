@@ -1915,6 +1915,44 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
                 self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
                 self.assertEqual(state.entries, [])
 
+    def test_reset_retires_recorded_descriptor_and_indirect_references(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+        state = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"old recording"],
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-old", "buffer-derived"},
+        )
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+        self.assertEqual(state.entries, [])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+
+    def test_abort_retires_recorded_references_and_rerecording_starts_fresh(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+        state = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.RECORDING,
+            entries=[b"old chunk"],
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-old"},
+        )
+        self.assertEqual(command_buffer_data(state, CommandBufferChunk(operation="ABORT")), "SUCCESS")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+        self.assertEqual(state.entries, [])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+
+        state.descriptor_sets.append(DescriptorSetLifetime(slots={1: "buffer-new"}))
+        state.indirect_buffer_refs.add("buffer-new")
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="CREATE", entries=(b"new recording",))),
+            "SUCCESS",
+        )
+        self.assertEqual(state.entries, [b"new recording"])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+
     def test_reset_rejects_missing_pool_flag_or_pending_atomically(self) -> None:
         for changes in (
             {"lifecycle": CommandBufferLifecycle.EXECUTABLE},
