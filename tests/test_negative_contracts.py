@@ -81,7 +81,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
             "DestroyDevice cascade linearization",
             "A wait whose success, timeout, or Device-loss result was established first keeps that result",
             "MUST NOT mutate the new resource",
-            "must be retained or quarantined until backend access is known to be impossible",
+            "remain retained or quarantined until backend access is known to be impossible",
         ):
             with self.subTest(lifetime_contract=phrase):
                 self.assertIn(phrase, lifetime)
