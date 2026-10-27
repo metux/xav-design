@@ -47,6 +47,21 @@ class NegativeContractRegressionTests(unittest.TestCase):
         self.assertIn("UpdateDescriptorSets", self.conformance)
         self.assertIn("All rejected requests remain atomic and change no binding, descriptor slots, or internal references", self.conformance)
 
+    def test_destroy_and_free_cleanup_remain_valid_after_device_loss(self) -> None:
+        errors = read("spec/errors.md")
+        memory = read("spec/memory-buffers.md")
+        destroy = errors.split("### `DestroyResource`", 1)[1].split("\n### ", 1)[0]
+        free = memory.split("## 5.5 `FreeMemory`", 1)[1].split("\n## ", 1)[0]
+        destroy_phases = ("Falsche Request-Länge", "Ungültige oder nicht mehr live XID", "Ressourcentyp, der nicht für den generischen Request zugelassen ist", "Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln", "Device Loss allein ist kein zusätzlicher Ablehnungsgrund")
+        free_phases = ("exact 16-byte request length", "resolve `device_xid`, then `memory_xid`", "validate live resource types, client ownership, and device association", "internally live Buffer remains bound", "accepted GPU access that has not reached a terminal outcome", "Device loss alone is not a blanket rejection")
+        for name, section, phrases in (("DestroyResource", destroy, destroy_phases), ("FreeMemory", free, free_phases)):
+            with self.subTest(request=name):
+                positions = [section.find(phrase) for phrase in phrases]
+                self.assertTrue(all(position >= 0 for position in positions), positions)
+                self.assertEqual(positions, sorted(positions))
+        self.assertIn("safe quiescence", destroy)
+        self.assertIn("quarantining the internal allocation", free)
+
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
             "Device loss beats Surface loss and accepted-token reuse",
