@@ -324,6 +324,15 @@ def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
 
 
 @dataclass
+class RetiredCommandBufferRecording:
+    """References retained for an older recording while its backend holds drain."""
+    entries: list[bytes] = field(default_factory=list)
+    descriptor_sets: list[DescriptorSetLifetime] = field(default_factory=list)
+    indirect_buffer_refs: set[str] = field(default_factory=set)
+    backend_holds: int = 0
+
+
+@dataclass
 class CommandBufferModel:
     lifecycle: CommandBufferLifecycle = CommandBufferLifecycle.INITIAL
     device_lost: bool = False
@@ -338,7 +347,10 @@ class CommandBufferModel:
     descriptor_sets: list[DescriptorSetLifetime] = field(default_factory=list)
     indirect_buffer_refs: set[str] = field(default_factory=set)
     # Backend work can outlive logical XID invalidation and terminal callbacks.
+    # Holds belong to the current recording epoch; reset/abort move outstanding
+    # holds together with that epoch's references into retired_recordings.
     backend_holds: int = 0
+    retired_recordings: list[RetiredCommandBufferRecording] = field(default_factory=list)
 
 
 def _retire_command_buffer_refs_if_quiescent(state: CommandBufferModel) -> None:
@@ -346,10 +358,34 @@ def _retire_command_buffer_refs_if_quiescent(state: CommandBufferModel) -> None:
         state.entries.clear()
         state.descriptor_sets.clear()
         state.indirect_buffer_refs.clear()
+    state.retired_recordings[:] = [
+        recording for recording in state.retired_recordings
+        if recording.backend_holds > 0
+    ]
+
+
+def _discard_command_buffer_recording(state: CommandBufferModel) -> None:
+    """Discard current recording without releasing refs still held by backend."""
+    if state.backend_holds > 0:
+        state.retired_recordings.append(RetiredCommandBufferRecording(
+            entries=list(state.entries),
+            descriptor_sets=list(state.descriptor_sets),
+            indirect_buffer_refs=set(state.indirect_buffer_refs),
+            backend_holds=state.backend_holds,
+        ))
+        state.backend_holds = 0
+    state.entries.clear()
+    state.descriptor_sets.clear()
+    state.indirect_buffer_refs.clear()
 
 
 def retire_command_buffer_backend_hold(state: CommandBufferModel) -> str:
-    """Drop one backend hold; retire recorded refs only after final quiescence."""
+    """Drop one hold, oldest retired recording first, then current recording."""
+    for recording in state.retired_recordings:
+        if recording.backend_holds > 0:
+            recording.backend_holds -= 1
+            _retire_command_buffer_refs_if_quiescent(state)
+            return "SUCCESS"
     if state.backend_holds <= 0:
         return "INVALID_SYNCHRONIZATION_STATE"
     state.backend_holds -= 1
@@ -396,9 +432,7 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         # pool and a live buffer still in RECORDING.
         if state.lifecycle is not CommandBufferLifecycle.RECORDING:
             return "INVALID_SYNCHRONIZATION_STATE"
-        state.entries.clear()
-        state.descriptor_sets.clear()
-        state.indirect_buffer_refs.clear()
+        _discard_command_buffer_recording(state)
         state.lifecycle = CommandBufferLifecycle.INITIAL
         return "SUCCESS"
     if state.device_lost:
@@ -446,9 +480,7 @@ def reset_command_buffer(
         return "INVALID_SYNCHRONIZATION_STATE"
     # Commit only after every validation phase: entries/references are discarded
     # together with the lifecycle transition.
-    state.entries.clear()
-    state.descriptor_sets.clear()
-    state.indirect_buffer_refs.clear()
+    _discard_command_buffer_recording(state)
     state.lifecycle = CommandBufferLifecycle.INITIAL
     return "SUCCESS"
 
