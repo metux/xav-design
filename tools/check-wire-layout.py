@@ -133,7 +133,7 @@ def check_events(c: Check) -> None:
         "DestroyDevice cascade linearization" in lifetime
         and "as one indivisible public-state transition" in lifetime
         and "callbacks may finish internal state and release references exactly once" in lifetime
-        and "after the destroy linearization point, they MUST NOT enqueue or deliver a new event" in lifetime,
+        and "after the destroy linearization point they MUST NOT enqueue or deliver a new event" in lifetime,
         "DestroyDevice: cascade, open-wait outcomes, and callback terminalization must share a linearization point",
     )
     c.require(
