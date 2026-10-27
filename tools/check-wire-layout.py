@@ -1492,6 +1492,10 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
 
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
     contracts = (
+        ("DestroyResource", errors.split("### `DestroyResource`", 1)[1].split("\n### ", 1)[0] if "### `DestroyResource`" in errors else "",
+         ("Falsche Request-Länge", "Ungültige oder nicht mehr live XID", "Ressourcentyp, der nicht für den generischen Request zugelassen ist", "Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln", "Device Loss allein ist kein zusätzlicher Ablehnungsgrund", "Interne Objekte und Backend-Referenzen werden bis zur sicheren Quieszenz erhalten oder quarantänisiert")),
+        ("FreeMemory", request_section(memory, "FreeMemory"),
+         ("exact 16-byte request length", "resolve `device_xid`, then `memory_xid`", "validate live resource types, client ownership, and device association", "internally live Buffer remains bound", "accepted GPU access that has not reached a terminal outcome", "Device loss alone is not a blanket rejection", "retaining/quarantining the internal allocation")),
         ("CreateBuffer", request_section(memory, "CreateBuffer"),
          ("exact request length", "`size`, `usage_flags`, and `reserved", "target `buffer_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "backend buffer creation")),
         ("AllocateMemory", request_section(memory, "AllocateMemory"),
