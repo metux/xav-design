@@ -196,9 +196,14 @@ class GoldenReplyVectorTests(unittest.TestCase):
                 self.assertEqual(wire[1], expected)
                 self.assertEqual(wire[8:32], bytes(24))
             elif vector["event"].startswith("WaitForFence"):
-                expected = 4 if "-device-destroyed-" in vector["name"] else (0 if vector["name"] == f"WaitForFence-{order}" else (
-                    1 if "-timeout-" in vector["name"] else 2 if "-execution-failed-" in vector["name"] else 3
-                ))
+                expected = {
+                    "WaitForFence": 0,
+                    "WaitForFence-success": 0,
+                    "WaitForFence-timeout": 1,
+                    "WaitForFence-execution-failed": 2,
+                    "WaitForFence-device-lost": 3,
+                    "WaitForFence-device-destroyed": 4,
+                }[vector["event"]]
                 self.assertEqual(int.from_bytes(wire[8:12], order), expected)
                 self.assertEqual(wire[12:32], bytes(20))
             elif vector["event"] == "GetSemaphoreCounterValue":
