@@ -601,6 +601,78 @@ def check_other_numeric_registries(c: Check) -> None:
               "device-extension registry must explicitly preserve the empty v0.1 set")
 
 
+def check_request_field_offsets_and_widths(c: Check) -> None:
+    """Check explicit request-field offsets and widths in every normative request section."""
+    registry_text = read("registries/request-subopcodes.md")
+    registry_rows = re.findall(
+        r"^\|\s*\x60([^\x60]+)\x60\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
+        registry_text, re.M,
+    )
+    sizes = {
+        "CARD8": 1, "CARD16": 2, "CARD32": 4, "CARD64": 8,
+        "XID": 4, "ATOM": 4, "FLOAT32": 4,
+    }
+    checked = 0
+    for name, _opcode, _kind, responsibility in registry_rows:
+        link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
+        if not link:
+            continue
+        chapter = read("spec/" + link.group(1))
+        section = request_normative_section(chapter, name)
+        if not section:
+            continue
+        records: list[tuple[int, int, str, str, int]] = []
+        in_absolute_table = False
+        for line_no, line in enumerate(section.splitlines(), 1):
+            if re.search(r"^\|\s*Relative Offset\s*\|", line, re.I):
+                in_absolute_table = False
+                continue
+            if re.search(r"^\|\s*Offset\s*\|\s*Type\s*\|\s*Field\s*\|", line, re.I):
+                in_absolute_table = True
+                continue
+            if line.lstrip().startswith("|") and in_absolute_table:
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|", line)
+                if row and row.group(2) in sizes and int(row.group(1)) >= 8:
+                    records.append((int(row.group(1)), sizes[row.group(2)], row.group(2), row.group(3).strip(), line_no))
+                elif not re.match(r"^\|\s*-+", line):
+                    in_absolute_table = False
+                continue
+            bullet = re.match(r"^\s*[-*]\s*Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
+            if bullet:
+                offset, tail = int(bullet.group(1)), bullet.group(2).strip()
+                tm = re.search(r"\b(CARD8|CARD16|CARD32|CARD64|XID|ATOM|FLOAT32)\b", tail)
+                typ = tm.group(1) if tm else None
+                if typ is None and re.search(r"\bXID\b|(?:Device|Buffer|Memory|Fence|Semaphore|Surface|Swapchain|Window|Pool|Pipeline|Layout|Module|Set)-XID", tail, re.I):
+                    typ = "XID"
+                if typ in sizes and offset >= 8:
+                    records.append((offset, sizes[typ], typ, tail, line_no))
+        # Avoid duplicate prose/table mentions while preserving distinct fields.
+        unique = {}
+        for offset, width, typ, field, line_no in records:
+            key = (offset, width, typ, field)
+            unique.setdefault(key, line_no)
+        ordered = sorted((off, width, typ, field, ln) for (off, width, typ, field), ln in unique.items())
+        if not ordered:
+            c.require(False, f"{name}: no explicit typed request-field offsets found")
+            continue
+        checked += 1
+        previous_end = 8
+        previous_field = ""
+        for offset, width, typ, field, line_no in ordered:
+            c.require(offset >= previous_end,
+                      f"{name}: request field {field!r} at offset {offset} overlaps {previous_field!r} ending at {previous_end} (spec line {line_no})")
+            previous_end = max(previous_end, offset + width)
+            previous_field = field
+        # Each explicit field must be aligned to its wire scalar width, except
+        # CARD8, which is byte-addressable. X11 request payloads remain word-framed.
+        for offset, width, typ, field, line_no in ordered:
+            if width > 1:
+                c.require(offset % min(width, 4) == 0,
+                          f"{name}: {typ} field {field!r} at offset {offset} is misaligned (spec line {line_no})")
+    c.require(checked >= 40,
+              f"request field audit: expected typed offsets in at least 40 registered request sections, found {checked}")
+
+
 def check_request_document_coverage(c: Check) -> None:
     """Keep every registered request represented in error and conformance guidance."""
     registry = parse_request_registry(read("registries/request-subopcodes.md"))
@@ -2426,6 +2498,7 @@ def main() -> int:
     check_reason_code_registry(c)
     check_error_registry(c)
     check_other_numeric_registries(c)
+    check_request_field_offsets_and_widths(c)
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
     check_request_limit_contract(c)
