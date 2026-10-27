@@ -2757,6 +2757,29 @@ def check_compact_request_layouts(c: Check) -> None:
         "variable/count-based request contracts must keep exact formulas, entry widths, and zero-padding rules",
     )
     c.require(
+        "| 20 | CARD32 | `binding_count` |" in shaders
+        and "| 24 | BINDING[] | `binding_count` Binding-Records |" in shaders
+        and "The request MUST have exactly the length determined by `binding_count`" in shaders
+        and "| 20 | CARD16 | `pool_size_count` |" in shaders
+        and "`24 + 8 * pool_size_count`" in shaders,
+        "descriptor variable arrays: each count field must match its record array and canonical length formula",
+    )
+    c.require(
+        "| 24 | CARD16 | `entry_point_length` |" in shaders
+        and "Padding-Bytes müssen null sein" in shaders
+        and "Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen" in shaders,
+        "CreateComputePipeline: byte count, four-byte padding, and total length must agree",
+    )
+    c.require(
+        "| 24 | CARD16 | Command-Buffer-Count |" in queue
+        and "| 26 | CARD16 | Wait-Semaphore-Count |" in queue
+        and "| 28 | CARD16 | Signal-Semaphore-Count |" in queue
+        and "| 30 | CARD16 | `reserved = 0` |" in queue
+        and "`40 + 4*C + 16*W + 12*S`" in queue
+        and re.search(r"(?s)Command-Buffer-Count.*?C.*?Wait-Semaphore-Count.*?W.*?Signal-Semaphore-Count.*?S", queue) is not None,
+        "QueueSubmit: each 16-bit count must map to its own array term and the complete variable length formula",
+    )
+    c.require(
         "`SelectEvents` is a void request with a fixed total length of 32 bytes" in events
         and "common-header `flags` field at offset 5" in events
         and "reserved common-header field at offset 6" in events,
