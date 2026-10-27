@@ -92,7 +92,7 @@ Reply:
 | 24 | CARD32 | `memory_type_bits` |
 | 28 | CARD32 | `reserved = 0` |
 
-The reply payload length is zero. Size and alignment MUST be positive. `memory_type_bits` is a bitmask: bit N permits `memory_type_index = N`; bits beyond `memory_type_count` MUST be zero. A successful buffer query MUST return at least one supported memory-type bit. These values refer to the physical device associated with the specified logical device and remain stable for its lifetime.
+The reply payload length is zero. Size and alignment MUST be positive. `memory_type_bits` is a bitmask: bit N permits `memory_type_index = N`; bits beyond `memory_type_count` MUST be zero. A successful buffer query MUST return at least one supported memory-type bit, so `memory_type_bits` MUST NOT be zero. These values refer to the physical device associated with the specified logical device and remain stable for its lifetime.
 
 ## 5.4 `AllocateMemory`
 
