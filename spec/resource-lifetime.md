@@ -31,6 +31,14 @@ The implementation SHOULD also track internal resource identity, client and devi
 
 The public XID becomes invalid immediately when destruction succeeds. Actual Vulkan object destruction may be deferred.
 
+### `DestroyDevice` cascade linearization
+
+A successful `DestroyDevice` has one server-side linearization point. At that point, as one indivisible public-state transition, the server MUST mark the Device and every public resource owned by that exact internal Device identity invalid, remove its Device/Queue event selections, and terminalize every still-open host wait that has not already reached a terminal result. A wait whose success, timeout, or Device-loss result was established first keeps that result; otherwise the processed destroy yields `DEVICE_DESTROYED`. A wait reply or error already serialized before this point remains unchanged.
+
+Accepted submissions are not cancelled by public invalidation. Each still-nonterminal accepted submission MUST still acquire exactly one internal terminal outcome; a Device-loss outcome MUST NOT be replaced with success. Completion callbacks racing with the cascade MUST serialize against the same lifecycle state: callbacks may finish internal state and release references exactly once, but after the destroy linearization point they MUST NOT enqueue or deliver a new event for the destroyed Device. Events already queued in the X11 output stream before that point remain valid.
+
+Every callback and deferred cleanup operation MUST be keyed by the immutable internal Device/resource/submission identity, never by a numeric XID lookup performed at callback time. If an XID is reused after cascading invalidation, a late callback MUST NOT mutate the new resource, satisfy a new wait, release its allocation, or deliver an event naming it. Internal references and backend allocations for the old identity remain retained or quarantined until backend access is known to be impossible; public invalidation and event suppression MUST NOT be treated as proof of quiescence.
+
 ## Normative State Transitions
 
 The following transitions are normative:
