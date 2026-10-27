@@ -129,6 +129,19 @@ def check_events(c: Check) -> None:
     lifetime = read("spec/resource-lifetime.md")
     c.require(re.search(r"(?:After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events|Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events mehr erzeugen oder zustellen)", lifetime, re.S) is not None,
               "DestroyDevice: must suppress later events for the destroyed logical device")
+    c.require(
+        "DestroyDevice cascade linearization" in lifetime
+        and "as one indivisible public-state transition" in lifetime
+        and "callbacks may finish internal state and release references exactly once" in lifetime
+        and "after the destroy linearization point they MUST NOT enqueue or deliver a new event" in lifetime,
+        "DestroyDevice: cascade, open-wait outcomes, and callback terminalization must share a linearization point",
+    )
+    c.require(
+        "MUST use the immutable internal Device/resource/submission identity" in lifetime
+        and "MUST NOT mutate the new resource" in lifetime
+        and "retained or quarantined until backend access is known to be impossible" in lifetime,
+        "DestroyDevice: late callbacks and cleanup must not be redirected by XID reuse or free active backend storage",
+    )
     c.require(re.search(r"(?:Suppressing delivery does not change the internal terminal outcome of accepted submissions or the requirement to retain backend references until possible accesses have ended|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
     c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
