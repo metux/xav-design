@@ -694,10 +694,21 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             unique.setdefault(key, line_no)
         ordered = sorted((off, width, typ, field, ln) for (off, width, typ, field), ln in unique.items())
         if not ordered:
-            # Some compact fixed-size contracts define only the complete length
-            # and the XID's semantic role, without an explicit typed offset table.
-            # Do not invent offsets for those requests; audit every field the
-            # normative text actually locates.
+            # A request with no machine-readable field offsets is accepted only
+            # when its compact layout is covered by a dedicated exact-contract
+            # assertion below. This prevents silent gaps in the per-request audit.
+            compact_layout_assertions = {
+                "EnumeratePhysicalDevices", "GetPhysicalDeviceMemoryProperties",
+                "GetBufferMemoryRequirements", "FreeMemory", "BindBufferMemory",
+                "GetSemaphoreCounterValue", "GetFenceStatus", "ResetFence",
+                "DestroyFence", "DestroySemaphore",
+                "CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
+                "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent",
+            }
+            c.require(
+                name in compact_layout_assertions,
+                f"{name}: no typed request-field offsets found and no explicit compact-layout assertion is registered",
+            )
             continue
         checked += 1
         # If the request section declares an exact fixed total length, every
