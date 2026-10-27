@@ -657,7 +657,7 @@
       "name": "WaitSemaphores-timeout-unexpected-payload-big",
       "kind": "WaitSemaphores-timeout",
       "byte_order": "big",
-      "wire_hex": "010034120000000101000000000000000000000000000000000000000000000000000000",
+      "wire_hex": "010034120000000100000001000000000000000000000000000000000000000000000000",
       "violates": "fixed-reply-size"
     },
     {
