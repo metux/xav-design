@@ -101,7 +101,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
             pos += record_length
         if pos != len(wire) and "device-record-length" not in errors:
             errors.append("device-record-length")
-    elif kind == "GetPhysicalDeviceQueueFamilyProperties-two-records":
+    elif kind.startswith("GetPhysicalDeviceQueueFamilyProperties-"):
         if (len(wire) - 32) % 12: errors.append("queue-record-length")
         valid_end = len(wire) - ((len(wire) - 32) % 12)
         for offset in range(32, valid_end, 12):
