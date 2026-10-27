@@ -657,27 +657,27 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         # Reserved fields and alignment bytes are protocol invariants, not
         # implementation-defined slack. Check each request's own contract in
         # addition to the shared common-header rule in wire-protocol.md.
-        request_text = "\\n".join(request_lines)
-        if re.search(r"\\breserved\\b", request_text, re.I):
+        request_text = "\n".join(request_lines)
+        if re.search(r"\breserved\b", request_text, re.I):
             c.require(bool(re.search(
-                r"reserved.{0,100}(?:MUST|must|shall|SHALL|=)\\s*(?:be\\s+)?(?:zero|0)\\b|"
-                r"(?:MUST|must|shall|SHALL)\\s+be\\s+zero.{0,100}reserved",
+                r"reserved.{0,100}(?:MUST|must|shall|SHALL|=)\s*(?:be\s+)?(?:zero|0)\b|"
+                r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,100}reserved",
                 request_text, re.I | re.S,
             )), f"{name}: request-local reserved field/bit must explicitly require zero")
             c.require(not bool(re.search(
-                r"reserved.{0,100}(?:may|can|is allowed to)\\s+be\\s+non.?zero|"
+                r"reserved.{0,100}(?:may|can|is allowed to)\s+be\s+non.?zero|"
                 r"non.?zero.{0,100}reserved.{0,80}(?:accepted|ignored)",
                 request_text, re.I | re.S,
             )), f"{name}: request-local reserved field contradicts the zero requirement")
-        if re.search(r"\\bpadding\\b|\\bpadded\\b", request_text, re.I):
+        if re.search(r"\bpadding\b|\bpadded\b", request_text, re.I):
             c.require(bool(re.search(
-                r"(?:padding|padded).{0,120}(?:MUST|must|shall|SHALL)\\s+be\\s+zero|"
-                r"(?:MUST|must|shall|SHALL)\\s+be\\s+zero.{0,120}(?:padding|padded)|"
+                r"(?:padding|padded).{0,120}(?:MUST|must|shall|SHALL)\s+be\s+zero|"
+                r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,120}(?:padding|padded)|"
                 r"padding (?:bytes|octets) MUST be zero|zero padding",
                 request_text, re.I | re.S,
             )), f"{name}: request-local padding must explicitly require zero bytes")
             c.require(not bool(re.search(
-                r"(?:padding|padded).{0,100}(?:may|can|is allowed to)\\s+be\\s+non.?zero|"
+                r"(?:padding|padded).{0,100}(?:may|can|is allowed to)\s+be\s+non.?zero|"
                 r"non.?zero.{0,100}padding.{0,80}(?:accepted|ignored)",
                 request_text, re.I | re.S,
             )), f"{name}: request-local padding contradicts the zero-padding rule")
