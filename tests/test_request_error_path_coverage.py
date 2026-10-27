@@ -368,9 +368,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, conformance)
         for phrase in (
             "`QueueSubmit` mit Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
-            "a live resource of the wrong type or foreign ownership results in `BadMatch`",
-            "Device Loss `DEVICE_LOST` before a non-`EXECUTABLE` command buffer",
-            "A wait-stage mask with reserved bits results in `BadValue`",
+            "falsche Live-Typen oder fremde Ownership ergeben `BadMatch`",
+            "Nach gültiger XID-/Typ-/Ownership-/Queue-Prüfung ergibt Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
+            "Eine Wait-Stage-Maske mit reservierten Bits ergibt `BadValue` vor XID-/Zustandsprüfung",
         ):
             with self.subTest(submit_vector=phrase):
                 self.assertIn(phrase, conformance)
@@ -386,7 +386,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "fully non-mutating",
             "no submission objects",
-            "semaphore counters, signal availability, and pending slots",
+            "no synchronization state changes",
         ):
             with self.subTest(submit_atomicity=phrase):
                 self.assertIn(phrase, queue + errors)
@@ -534,14 +534,14 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [signal.index(phrase) for phrase in signal_order]
         self.assertEqual(positions, sorted(positions))
         for phrase in (
-            "`SignalSemaphore` has an exact length of 24 bytes and validates in this order",
+            "Synchronous validation MUST follow this order: (1) exact total length of 24 bytes (`BadLength`)",
             "check device state (`DEVICE_UNAVAILABLE` or `DEVICE_LOST`)",
             "All checks before signaling form one atomic request operation; synchronous rejection changes neither counters nor reservations",
         ):
             with self.subTest(signal_contract=phrase):
-                self.assertIn(phrase, conformance)
+                self.assertIn(phrase, synchronization)
 
-        reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Fence-Zerstörung") ]
+        reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Destroying Fences") ]
         reset_order = (
             "Eine andere Gesamtlänge ergibt `BadLength`",
             "Unbekannte/nicht-live Device- oder Fence-XIDs ergeben `BadValue`",
