@@ -673,7 +673,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             c.require(bool(re.search(
                 r"(?:padding|padded).{0,120}(?:MUST|must|shall|SHALL)\s+be\s+zero|"
                 r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,120}(?:padding|padded)|"
-                r"padding (?:bytes|octets) MUST be zero|padding.{0,120}(?:consist entirely of|contain only|all)\\s+zero|zero padding",
+                r"padding (?:bytes|octets) MUST be zero|padding.{0,120}(?:consist entirely of|contain only|all)\s+zero|zero padding",
                 request_text, re.I | re.S,
             )), f"{name}: request-local padding must explicitly require zero bytes")
             c.require(not bool(re.search(
