@@ -367,7 +367,7 @@
     },
     {
       "name": "WaitForFence-timeout-little",
-      "event": "WaitForFence",
+      "event": "WaitForFence-timeout",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -378,7 +378,7 @@
     },
     {
       "name": "WaitForFence-execution-failed-little",
-      "event": "WaitForFence",
+      "event": "WaitForFence-execution-failed",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -389,7 +389,7 @@
     },
     {
       "name": "WaitForFence-device-lost-little",
-      "event": "WaitForFence",
+      "event": "WaitForFence-device-lost",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -488,7 +488,7 @@
     },
     {
       "name": "WaitForFence-timeout-big",
-      "event": "WaitForFence",
+      "event": "WaitForFence-timeout",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
@@ -499,7 +499,7 @@
     },
     {
       "name": "WaitForFence-execution-failed-big",
-      "event": "WaitForFence",
+      "event": "WaitForFence-execution-failed",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
@@ -510,7 +510,7 @@
     },
     {
       "name": "WaitForFence-device-lost-big",
-      "event": "WaitForFence",
+      "event": "WaitForFence-device-lost",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
@@ -686,7 +686,7 @@
     },
     {
       "name": "WaitForFence-device-destroyed-little",
-      "event": "WaitForFence",
+      "event": "WaitForFence-device-destroyed",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -697,7 +697,7 @@
     },
     {
       "name": "WaitForFence-device-destroyed-big",
-      "event": "WaitForFence",
+      "event": "WaitForFence-device-destroyed",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
