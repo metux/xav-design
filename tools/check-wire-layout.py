@@ -144,6 +144,13 @@ def check_events(c: Check) -> None:
     )
     c.require(re.search(r"(?:Suppressing delivery does not change the internal terminal outcome of accepted submissions or the requirement to retain backend references until possible accesses have ended|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
               "DestroyDevice: event suppression must preserve terminal submission and backend lifetime rules")
+    c.require(
+        "Cross-resource teardown and backing-memory release" in lifetime
+        and "MUST retire each edge exactly once" in lifetime
+        and "MUST NOT release a bound Memory allocation before the old Buffer identity" in lifetime
+        and "Invalidating a DescriptorSet XID does not by itself prove" in lifetime,
+        "DestroyDevice: teardown must drain descriptor, command, buffer, and memory edges in identity-safe order",
+    )
     c.require(re.search(r"(?:If loss is detected only during or after processing `DestroyDevice`, no new event.*internal error and submission states are still terminalized correctly|Wird der Verlust dagegen erst während oder nach der Verarbeitung von `DestroyDevice` festgestellt, wird kein neues Event.*die internen Fehler- und Submission-Zustände werden dennoch korrekt terminalisiert)", lifetime, re.S) is not None,
               "Device loss first detected during DestroyDevice must not emit an event for the destroyed device")
     c.require(re.search(r"(?:A client disconnect ends event delivery for that X11 connection only|Ein Client-Disconnect beendet die Event-Zustellung für genau diese X11-Verbindung)", lifetime, re.S) is not None,
