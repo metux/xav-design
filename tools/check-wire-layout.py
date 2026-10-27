@@ -673,6 +673,19 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     typ = "XID"
                 if typ in sizes and offset >= 8:
                     records.append((offset, sizes[typ], typ, tail, line_no))
+        # Some normative request summaries state XID positions inline (for
+        # example, "device XID at offset 8") rather than in a typed table or
+        # Offset bullet. Capture those explicit declarations too; reply prose
+        # has already been excluded above.
+        for line_no, line in enumerate(request_lines, 1):
+            for inline_xid in re.finditer(
+                r"\b([A-Za-z][A-Za-z0-9 -]*?\s+)?XID\s+at offset\s+(\d+)\b",
+                line, re.I,
+            ):
+                offset = int(inline_xid.group(2))
+                field = ((inline_xid.group(1) or "") + "XID").strip()
+                if offset >= 8:
+                    records.append((offset, sizes["XID"], "XID", field, line_no))
         # Avoid duplicate prose/table mentions while preserving distinct fields.
         unique = {}
         for offset, width, typ, field, line_no in records:
