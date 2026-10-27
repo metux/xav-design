@@ -239,7 +239,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "descriptor-slot contents are not copied into the command buffer as an immutable snapshot",
             "atomically updates the derived buffer references",
-            "uses the set's current descriptor contents at later submission time",
+            "uses the set's current contents at submission time",
             "does not invalidate such a command buffer solely because descriptor contents changed",
         ):
             with self.subTest(recording_rule=phrase):
@@ -319,7 +319,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(queue_rule=phrase):
                 self.assertIn(phrase, queue)
         for phrase in (
-            "all public XIDs of its resources become invalid immediately",
+            "all associated public XIDs become `INVALID`",
             "remain `DESTROY_PENDING`",
             "lifecycle rules suppress delivery of presentation events",
             "disconnect neither requires successful completion nor indefinite waiting for GPU progress",
@@ -342,7 +342,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Resource type, client ownership",
             "associated device state is checked",
         )
-        positions = [recording.index(phrase) for phrase in cb_phases]
+        recording_precedence = recording[recording.index("### Error Precedence for `CommandBufferData`"):]
+        positions = [recording_precedence.index(phrase) for phrase in cb_phases]
         self.assertEqual(positions, sorted(positions))
         submit_phases = (
             "incorrect total length",
@@ -524,11 +525,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## Destroying Semaphores") ]
         signal_order = (
-            "(1) Gesamtlänge exakt 24 Bytes",
-            "(2) Device-XID, danach Semaphore-XID auflösen",
-            "(3) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zugehörigkeit",
-            "(4) Device-Zustand",
-            "(5) Timeline-Typ und Signalwert-/Reservierungskonsistenz",
+            "(1) exact total length of 24 bytes (`BadLength`)",
+            "(2) resolve the device XID, then the semaphore XID",
+            "(3) check resource type, client/device ownership, and cross-device association",
+            "(4) check device state",
+            "(5) check timeline type and signal-value/reservation consistency",
         )
         positions = [signal.index(phrase) for phrase in signal_order]
         self.assertEqual(positions, sorted(positions))
