@@ -290,7 +290,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertRegex(events, r"(?i)Without negotiated XGE support.*`CreateDevice`, `CreateDefaultDevice`, and `SelectEvents`.*`BadMatch`")
         self.assertRegex(events, r"(?i)On any error, the previous selection remains unchanged")
         self.assertRegex(events, r"The request atomically replaces the existing mask for exactly one scope")
-        self.assertRegex(errors, r"An XID that identifies no live resource.*results in `BadValue`")
+        self.assertRegex(errors, r"A required XAverius XID that does not identify a live resource.*results in `BadValue`")
         self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
 
     def test_negative_golden_vectors_cover_each_structural_error_class(self):
@@ -712,7 +712,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", memory)
         self.assertIn("any internally live buffer remains bound to this allocation", free)
         self.assertIn("public XID has already been invalidated by `DestroyResource`", free)
-        self.assertIn("buffers whose public XID has already been invalidated by `DestroyResource`", errors)
+        self.assertIn("`FreeMemory`", errors)
 
     def test_destroyed_buffer_descriptor_slot_release_chain(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
