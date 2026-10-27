@@ -666,11 +666,15 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             if not line.lstrip().startswith("|") and in_absolute_table:
                 in_absolute_table = False
             if line.lstrip().startswith("|") and in_absolute_table:
-                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|", line)
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Za-z][A-Za-z0-9_\[\]]*)\s*\|\s*([^|]+?)\s*\|", line)
                 if re.match(r"^\|\s*-+", line):
                     continue
                 if row:
                     offset, typ, field = int(row.group(1)), row.group(2), row.group(3).strip()
+                    # These are legitimate variable-width payload descriptions,
+                    # not scalar fields whose width can be checked here.
+                    if typ in {"BYTE[]", "variable"}:
+                        continue
                     c.require(typ in sizes, f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
                     if typ in sizes:
                         c.require(offset >= 8,
