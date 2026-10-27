@@ -425,6 +425,26 @@ class GoldenXGEEventTests(unittest.TestCase):
             self.assertIn("shared", event_match.group(1).lower())
             self.assertIn("reason-code registry", event_match.group(1).lower())
 
+    def test_shared_reason_code_values_match_both_event_validators(self):
+        registry = (ROOT / "registries" / "reason-codes.md").read_text(encoding="utf-8")
+        registered = {
+            int(value)
+            for value in re.findall(
+                r"^\|\s*(\d+)\s*\|\s*\x60[A-Z_]+\x60\s*\|\s*$",
+                registry, re.M,
+            )
+        }
+        self.assertTrue(registered, "device reason-code registry has no assigned values")
+        # Both wire validators must track the shared append-only registry. This
+        # prevents an appended reason code from being rejected by stale event-local
+        # hard-coded ranges for one event but not the other.
+        self.assertEqual(set(EVENT_VALUE_RANGES[1][1]), registered, "DEVICE_LOST reason-code range is stale")
+        self.assertEqual(
+            set(EVENT_SECONDARY_VALUE_RANGES[2][0][1]),
+            registered,
+            "DEVICE_STATUS_CHANGED reason-code range is stale",
+        )
+
     def test_memory_pressure_heap_index_uses_physical_device_heap_count(self):
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
