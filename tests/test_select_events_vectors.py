@@ -290,7 +290,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertRegex(events, r"(?i)Without negotiated XGE support.*`CreateDevice`, `CreateDefaultDevice`, and `SelectEvents`.*`BadMatch`")
         self.assertRegex(events, r"(?i)On any error, the previous selection remains unchanged")
         self.assertRegex(events, r"The request atomically replaces the existing mask for exactly one scope")
-        self.assertRegex(errors, r"Eine erforderliche XAverius-XID, die keine live Ressource.*ergibt `BadValue`")
+        self.assertRegex(errors, r"An XID that identifies no live resource.*results in `BadValue`")
         self.assertRegex(errors, r"Eine XID, die eine live Ressource bezeichnet, aber nicht den erwarteten Ressourcentyp hat, ergibt `BadMatch`")
 
     def test_negative_golden_vectors_cover_each_structural_error_class(self):
@@ -435,7 +435,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             lifetime,
         )
         self.assertIn(
-            "If device loss is first detected during or after processing of `DestroyDevice`, no new event for the already destroyed `device_xid` is generated or delivered",
+            "After successful processing of `DestroyDevice`, the server MUST NOT generate or deliver new XAverius events whose `device_xid` identifies the destroyed logical Device",
             lifetime,
         )
 
@@ -554,7 +554,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             lifetime,
         )
         self.assertIn(
-            "Before queueing an event, the server MUST verify that the original connection remains active and able to receive events",
+            "Before queueing an event, it MUST verify that the original connection remains active and able to receive events",
             lifetime,
         )
         self.assertIn(
@@ -610,7 +610,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             synchronization,
         )
         self.assertIn(
-            "If the server can prove the failed operation did not change the semaphore payload, the previously confirmed signal state is retained.",
+            "payloads proven not to have been consumed retain their confirmed state",
             synchronization,
         )
         self.assertIn(
@@ -646,7 +646,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("If the device is lost, `WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply.", memory)
         self.assertIn("A failed upload likewise MUST NOT produce a successful reply; the destination contents are then not guaranteed.", memory)
         self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
-        self.assertIn("Deferred requests are then processed in normal request order.", memory.lower())
+        self.assertIn("deferred requests are then processed in normal request order.", memory.lower())
 
 
     def test_read_buffer_has_ordered_snapshot_and_explicit_failure_semantics(self):
@@ -660,7 +660,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("späteren `QueueSubmit`-Requests", read)
         self.assertIn("Daten-Snapshot", read)
         self.assertIn("`ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply", read)
-        self.assertIn("A failed `ReadBuffer` promises no snapshot", read)
+        self.assertIn("Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`", errors)
@@ -691,7 +691,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         bind = memory.split("## 5.6 `BindBufferMemory`", 1)[1].split("## 5.7 ", 1)[0]
         self.assertIn("memory_type_count", props)
         self.assertIn("memory_heap_count", props)
-        self.assertIn("Bits außerhalb von `memory_type_count` müssen null sein", reqs)
+        self.assertIn("bits beyond `memory_type_count` MUST be zero", reqs)
         self.assertIn("mindestens ein unterstützter Memory-Type-Bit gesetzt sein", reqs)
         self.assertIn("Memory-Type-Index muss für das Physical Device", alloc)
         self.assertIn("die `memory_xid` bleibt unangelegt", alloc)
@@ -709,7 +709,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         free = memory.split("## 5.5 `FreeMemory`", 1)[1].split("## 5.6 ", 1)[0]
         self.assertIn("Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, parent-child ownership, and active server operations.", lifetime)
-        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", lifetime)
+        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", memory)
         self.assertIn("any internally live buffer remains bound to this allocation", free)
         self.assertIn("public XID has already been invalidated by `DestroyResource`", free)
         self.assertIn("buffers whose public XID has already been invalidated by `DestroyResource`", errors)
