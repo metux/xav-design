@@ -185,7 +185,7 @@ class CommonRequestErrorPrecedenceTests(unittest.TestCase):
         for phrase in (
             "## Common Request Validation Precedence",
             "Validate the X11 envelope independently of XAverius fields",
-            "Validate the common XAverius header fields",
+            "Validate the common-header fields that have invariant meanings",
             "These checks precede subopcode dispatch, profile gating, request-specific parsing",
             "The `flags` byte at offset 5 is request-specific",
             "An unsupported presentation request returns `BadRequest` before parsing",
