@@ -1858,6 +1858,9 @@ def check_reply_layouts(c: Check) -> None:
             (r"\|\s*24\s*\|\s*CARD32\s*\|\s*\x60memory_type_bits\x60\s*\|", "memory type bits at reply offset 24"),
             (r"\|\s*28\s*\|\s*CARD32\s*\|\s*\x60reserved = 0\x60\s*\|", "reserved word at reply offset 28"),
             (r"reply payload length is zero", "fixed 32-byte reply"),
+            (r"Size and alignment MUST be positive", "positive size and alignment"),
+            (r"bits beyond `memory_type_count` MUST be zero", "memory-type mask bounded by type count"),
+            (r"MUST return at least one supported memory-type bit", "nonzero supported memory-type mask"),
         ]),
         "WriteBuffer": ("memory", [
             (r"Total length:\s*\n+\x60?28 \+ \(\(uint64\(data_length\) \+ 3\) & ~uint64\(3\)\)", "request payload length formula"),
