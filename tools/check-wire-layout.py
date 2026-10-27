@@ -793,18 +793,55 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             # A request with no machine-readable field offsets is accepted only
             # when its compact layout is covered by a dedicated exact-contract
             # assertion below. This prevents silent gaps in the per-request audit.
-            compact_layout_assertions = {
-                "EnumeratePhysicalDevices", "GetPhysicalDeviceMemoryProperties",
-                "GetBufferMemoryRequirements", "FreeMemory", "BindBufferMemory",
-                "GetSemaphoreCounterValue", "GetFenceStatus", "ResetFence",
-                "DestroyFence", "DestroySemaphore",
+            # Compact prose layouts are not exempt from auditing: require a
+            # per-request contract with exact fixed length and every field offset/type.
+            compact_contracts = {
+                "EnumeratePhysicalDevices": (8, ()),
+                "GetPhysicalDeviceMemoryProperties": (12, ((8, "XID"),)),
+                "GetBufferMemoryRequirements": (16, ((8, "XID"), (12, "XID"))),
+                "FreeMemory": (16, ((8, "XID"), (12, "XID"))),
+                "BindBufferMemory": (28, ((8, "XID"), (12, "XID"), (16, "XID"), (20, "CARD64"))),
+                "GetSemaphoreCounterValue": (16, ((8, "XID"), (12, "XID"))),
+                "GetFenceStatus": (16, ((8, "XID"), (12, "XID"))),
+                "ResetFence": (16, ((8, "XID"), (12, "XID"))),
+                "DestroyFence": (16, ((8, "XID"), (12, "XID"))),
+                "DestroySemaphore": (16, ((8, "XID"), (12, "XID"))),
+            }
+            compact = compact_contracts.get(name)
+            if compact is not None:
+                expected_length, expected_fields = compact
+                length_declared = bool(re.search(
+                    rf"\b(?:total length|fixed total length)\s*(?:of|is|:)?\s*{expected_length}\s*bytes\b",
+                    section, re.I,
+                )) or (expected_length == 8 and bool(re.search(
+                    r"no request-specific payload.{0,80}8 bytes in total", section, re.I | re.S
+                )))
+                c.require(length_declared,
+                          f"{name}: compact layout must explicitly assert exact total length {expected_length} bytes")
+                for offset, typ in expected_fields:
+                    field_declared = bool(re.search(
+                        rf"(?:Offset\s+{offset}\s*:\s*(?:`?{typ}`?\b|[^\n]*\b{typ}\b)|"
+                        rf"\|\s*{offset}\s*\|\s*{typ}\s*\|)",
+                        section, re.I,
+                    ))
+                    if typ == "XID":
+                        field_declared = field_declared or bool(re.search(
+                            rf"\b(?:[A-Za-z][A-Za-z -]* )?XID\s+at offset\s+{offset}\b",
+                            section, re.I,
+                        ))
+                    c.require(field_declared,
+                              f"{name}: compact layout missing explicit {typ} field at offset {offset}")
+            else:
+                # Presentation compact contracts still require a request-local
+                # section with an explicit request layout, not merely registry membership.
+                c.require(bool(re.search(r"\b(?:total length|fixed total length|Offset\s+8|offset 8)\b", section, re.I)),
+                          f"{name}: compact presentation request lacks explicit length or field-offset contract")
+                c.require(bool(re.search(r"\b(?:reserved|padding|padded|zero padding)\b", section, re.I)),
+                          f"{name}: compact presentation request lacks explicit reserved/padding contract")
+            c.require(name in compact_contracts if name in compact_contracts else name in {
                 "CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
                 "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent",
-            }
-            c.require(
-                name in compact_layout_assertions,
-                f"{name}: no typed request-field offsets found and no explicit compact-layout assertion is registered",
-            )
+            }, f"{name}: no explicit compact-layout assertion is registered")
             field_layout_names.add(name)
             continue
         checked += 1
