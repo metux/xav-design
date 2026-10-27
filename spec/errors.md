@@ -221,6 +221,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - Ressourcentyp, der nicht für den generischen Request zugelassen ist (insbesondere Fence und Semaphore), oder falsche Ownership: `BadMatch`
 - Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln: `INVALID_SYNCHRONIZATION_STATE`
 - Ablehnung lässt XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert.
+- Verbindliche Präzedenz: (1) exakte Request-Länge (`BadLength`); (2) Auflösung der `resource_xid` (`BadValue` bei unbekannt/nicht live); (3) erlaubter Ressourcentyp und Client-Ownership (`BadMatch`); (4) typabhängige Recording-/Pending-Lebensdauerregeln (`INVALID_SYNCHRONIZATION_STATE`). Die Prüfungen und die öffentliche Invalidierung bilden einen atomaren Übergang. Device Loss allein ist kein zusätzlicher Ablehnungsgrund und darf nicht pauschal `DEVICE_LOST` für `DestroyResource` erzeugen. Bereits terminalisierte GPU-Arbeit blockiert nicht mehr allein wegen ihres früheren Pending-Zustands; tatsächliche Recording-Referenzen und typabhängige noch aktive Verwendungen bleiben maßgeblich. Interne Objekte und Backend-Referenzen werden bis zur sicheren Quieszenz erhalten oder quarantänisiert. `DestroyDevice` darf anschließend die definierte Kaskadeninvalidierung durchführen.
 
 ### Ressourcenzerstörung und Memory-Freigabe
 
