@@ -194,7 +194,7 @@ Request:
 
 Total length: `16 + 4 * queue_count`.
 
-The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a suitable physical device and a compute-capable queue family. No optional features or extensions are enabled implicitly.
+The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a physical device and a compute-capable queue family that can supply the requested `queue_count`; if no such combination is available, it reports `DEVICE_UNAVAILABLE`. No optional features or extensions are enabled implicitly.
 
 `CreateDefaultDevice` is a void request. If no suitable device exists, the server reports the XAverius X11 error `DEVICE_UNAVAILABLE`; no normal reply is generated.
 
