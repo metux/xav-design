@@ -359,18 +359,18 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Mixed-failure vectors and atomic rejection must be present in the
         # conformance oracle and agree with the normative/error descriptions.
         for phrase in (
-            "Bei `CommandBufferData` mit ungültiger Flag-Kombination und ungültiger Ziel-XID gewinnt",
-            "bei strukturell abgeschnittenem Entry und ungültiger Ziel-XID gewinnt `BadLength`",
-            "Bei CREATE/Append/FINAL auf einem verlorenen Device gewinnt",
-            "ABORT bleibt die Ausnahme",
+            "For `CommandBufferData`, an invalid flag combination combined with an invalid target XID returns `BadValue`",
+            "a structurally truncated entry combined with an invalid target XID returns `BadLength`",
+            "For CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence",
+            "ABORT is the exception",
         ):
             with self.subTest(command_buffer_vector=phrase):
                 self.assertIn(phrase, conformance)
         for phrase in (
             "`QueueSubmit` mit Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
-            "live resource of the wrong type/fremde Ownership `BadMatch`",
-            "Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
-            "Wait-Stage-Maske mit reservierten Bits ergibt `BadValue`",
+            "a live resource of the wrong type or foreign ownership results in `BadMatch`",
+            "Device Loss `DEVICE_LOST` before a non-`EXECUTABLE` command buffer",
+            "A wait-stage mask with reserved bits results in `BadValue`",
         ):
             with self.subTest(submit_vector=phrase):
                 self.assertIn(phrase, conformance)
@@ -378,15 +378,15 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Every synchronous rejection remains non-mutating, even when earlier
         # objects in the same request passed their individual validation.
         for phrase in (
-            "kein Teil des aktuellen Chunks angehängt",
-            "Zustand, Entries und Referenzen unverändert",
+            "the current chunk is never partially accepted",
+            "state, entries, and references remain unchanged",
         ):
             with self.subTest(command_buffer_atomicity=phrase):
                 self.assertIn(phrase, conformance + recording)
         for phrase in (
             "fully non-mutating",
             "no submission objects",
-            "Semaphore-Counter, Signalverfügbarkeit, Pending-Slots",
+            "semaphore counters, signal availability, and pending slots",
         ):
             with self.subTest(submit_atomicity=phrase):
                 self.assertIn(phrase, queue + errors)
@@ -534,9 +534,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [signal.index(phrase) for phrase in signal_order]
         self.assertEqual(positions, sorted(positions))
         for phrase in (
-            "`SignalSemaphore` prüft exakt 24 Bytes mit Präzedenz",
-            "insbesondere gewinnt `DEVICE_LOST` nach gültiger Ressourcenzuordnung gegen einen Binary-Semaphore-Typfehler",
-            "Eine synchrone Ablehnung verändert weder Counter noch Signalreservierungen",
+            "`SignalSemaphore` has an exact length of 24 bytes and validates in this order",
+            "check device state (`DEVICE_UNAVAILABLE` or `DEVICE_LOST`)",
+            "All checks before signaling form one atomic request operation; synchronous rejection changes neither counters nor reservations",
         ):
             with self.subTest(signal_contract=phrase):
                 self.assertIn(phrase, conformance)
