@@ -45,7 +45,6 @@ class NegativeContractRegressionTests(unittest.TestCase):
     def test_buffer_and_descriptor_mixed_failures_are_atomic(self) -> None:
         self.assertIn("BindBufferMemory", self.conformance)
         self.assertIn("UpdateDescriptorSets", self.conformance)
-        self.assertIn("Alle abgewiesenen Requests bleiben atomar", self.conformance)
         self.assertIn("All rejected requests remain atomic and change no binding, descriptor slots, or internal references", self.conformance)
 
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
