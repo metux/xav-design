@@ -453,13 +453,11 @@ class PresentationReplyWireTests(unittest.TestCase):
             with self.subTest(order=order):
                 wire = encode_capabilities(order)
                 validate_presentation_reply("capabilities", wire, order)
-                malformed = bytearray(wire)
-                # One format pair occupies offsets 64..71; the mode follows.
-                malformed[72:76] = pack32(order, 2)
+                malformed = encode_capabilities(order, modes=())
                 with self.assertRaisesRegex(
                     ValueError, "presentable capabilities do not advertise baseline FIFO mode"
                 ):
-                    validate_presentation_reply("capabilities", bytes(malformed), order)
+                    validate_presentation_reply("capabilities", malformed, order)
 
     def test_capability_lists_reject_duplicate_entries_and_unknown_registry_ids(self) -> None:
         cases = (
