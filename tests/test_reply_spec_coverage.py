@@ -128,6 +128,8 @@ class ReplySpecCoverageTests(unittest.TestCase):
         self.assertIn("Reserved; MUST be zero", body)
         self.assertIn("For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero", body)
         self.assertIn("`reply.length = 0`", body)
+        self.assertIn("MUST return at least one supported memory-type bit", body)
+        self.assertIn("bits beyond `memory_type_count` MUST be zero", body)
         checker = (ROOT / "tools/check-wire-layout.py").read_text(encoding="utf-8")
         self.assertIn("physical-device property registry missing exact value/reply contract", checker)
 
@@ -180,6 +182,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
             "device-record-reserved", "memory-payload-length", "memory-reserved-zero",
             "memory-type-flags-range", "memory-heap-flags-range", "memory-properties-flags-zero",
             "read-buffer-payload-length", "reserved-zero", "buffer-requirements-size-positive", "buffer-requirements-alignment-positive",
+            "buffer-requirements-memory-type-bits-nonzero",
         }
         for rule in sorted(required_rules):
             for order in ("little", "big"):
