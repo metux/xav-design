@@ -211,7 +211,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
             (shaders, "## 6.3 Descriptor Pool", ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
         )
         for document, heading, phrases in cases:
-            section = document.split(heading, 1)[1].split("\\n## ", 1)[0]
+            section = document.split(heading, 1)[1].split(chr(10) + "## ", 1)[0]
             positions = [section.find(phrase) for phrase in phrases]
             self.assertTrue(all(position >= 0 for position in positions), heading)
             self.assertEqual(positions, sorted(positions), heading)
