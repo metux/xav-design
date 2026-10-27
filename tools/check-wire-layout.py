@@ -2596,6 +2596,38 @@ def check_compact_request_layouts(c: Check) -> None:
         and "Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12." in sync,
         "synchronization query requests: both XID slots must stay at offsets 8 and 12 in 16-byte requests",
     )
+    shaders = read("spec/shaders-pipelines.md")
+    recording = read("spec/command-recording.md")
+    queue = read("spec/queue-submission.md")
+    events = read("spec/events.md")
+    c.require(
+        "| 8 | XID | `device_xid` |" in shaders
+        and "| 12 | XID | `shader_module_xid` |" in shaders
+        and "| 16 | CARD32 | `data_length`" in shaders
+        and "| 20 | BYTE[] | SPIR-V bytes" in shaders
+        and "`20 + ((data_length + 3) & ~3)` bytes" in shaders,
+        "ShaderModuleData: chunk header offsets and padded variable payload formula must be explicit",
+    )
+    c.require(
+        "Offset 8: Device-XID\n- Offset 12: Buffer-XID\n- Offset 16: `CARD64 buffer_offset`\n- Offset 24: `CARD32 data_length`\n- Offset 28: Byte-Payload" in memory
+        and "`28 + ((uint64(data_length) + 3) & ~uint64(3))`" in memory
+        and "Total length: 28 bytes." in memory,
+        "WriteBuffer/ReadBuffer: fixed prefixes, data length field, and upload padding formula must remain exact",
+    )
+    c.require(
+        "| 8 | XID | Device-XID |" in queue
+        and "| 32 | CARD64 | `submission_token` |" in queue
+        and "| 40 | variable | Command-Buffer-XIDs, Wait-Entries, Signal-Entries |" in queue
+        and "Each wait entry is 16 bytes" in queue
+        and "Each signal entry is 12 bytes" in queue,
+        "QueueSubmit: fixed header offsets and variable entry widths must be explicit",
+    )
+    c.require(
+        "`SelectEvents` is a void request with a fixed total length of 32 bytes" in events
+        and "common-header `flags` field at offset 5" in events
+        and "reserved common-header field at offset 6" in events,
+        "SelectEvents: fixed length and common-header reserved-field offsets must remain explicit",
+    )
     c.require(
         "The final layouts include the common 8-byte header" in presentation
         and "a 16-byte CreateSurface (target Surface XID plus X11 Window XID)" in presentation
