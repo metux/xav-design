@@ -2696,6 +2696,22 @@ def check_compact_request_layouts(c: Check) -> None:
         "QueueSubmit: fixed header offsets and variable entry widths must be explicit",
     )
     c.require(
+        "followed by zero padding to a four-byte boundary" in shaders
+        and "the server checks request length, padding, flag combinations" in shaders
+        and "invalid padding" in shaders
+        and "Padding MUST consist entirely of zero bytes; non-zero padding results in `BadValue`." in memory,
+        "variable byte payloads: shader chunks and WriteBuffer must specify zero-padding validation and failure behavior",
+    )
+    c.require(
+        "Padding-Bytes müssen null sein." in shaders
+        and "exakt `28 + ((entry_point_length + 3) & ~3)` Bytes" in shaders
+        and "Gesamtlänge: `24 + 16 * binding_count`" in shaders
+        and "Each binding record is 16 bytes" in shaders
+        and "Gesamtlänge: `20 + 36 * write_count`" in shaders
+        and "Jeder Write ist 36 Bytes groß." in shaders,
+        "variable/count-based request contracts must keep exact formulas, entry widths, and zero-padding rules",
+    )
+    c.require(
         "`SelectEvents` is a void request with a fixed total length of 32 bytes" in events
         and "common-header `flags` field at offset 5" in events
         and "reserved common-header field at offset 6" in events,
