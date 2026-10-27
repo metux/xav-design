@@ -259,7 +259,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                 "reserved": "reserved",
                 "reason_code": "`reason_code`",
                 "device_generation": "`device_generation`",
-                "physical_device_xid": "Physical Device XID",
+                "physical_device_xid": "Physical-Device XID",
                 "new_status": "`new_status`",
                 "heap_index": "`heap_index`",
                 "pressure_level": "`pressure_level`",
