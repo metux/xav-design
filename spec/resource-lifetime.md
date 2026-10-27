@@ -216,3 +216,11 @@ Successful device-wide cascading invalidation is a special rule and is not block
 
 
 Presentation lifecycle rule: an accepted present has one serialized terminal status and one internal cleanup. A later resize, Surface loss, or Device loss cannot overwrite an already terminal status. If still pending and forced to fail by OUT_OF_DATE, SURFACE_LOST, or DEVICE_LOST, its image is invalidated and IMAGE_RELEASED is not emitted. PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence and confirmation that the Swapchain remains usable. Event suppression never skips internal cleanup.
+
+
+
+### Command-buffer recorded references and deferred retirement
+
+A command buffer owns a distinct set of recorded-resource reference edges while it is RECORDING or EXECUTABLE. Successful reset detaches its recorded entries and retires those edges exactly once; successful execution preserves them when the buffer returns to EXECUTABLE. Execution failure or device loss makes the buffer INVALID, but does not permit early destruction of objects retained by an accepted submission or potentially reachable by the backend. Submission references are independent from recorded references and are retired by submission cleanup only after the terminal outcome and backend quiescence requirements are satisfied.
+
+The reset/invalidation cleanup paths MUST be idempotent with respect to edge ownership. If invalidation retires a command buffer's recorded edges, a later reset MUST NOT retire those same edges again. If invalidation only marks the buffer invalid while an internal edge is still required for backend safety, that edge remains explicitly owned/retained until the safe cleanup point; reset may retire only the command-buffer-owned recorded edge and MUST NOT release the separate submission/backend hold. Re-recording creates a fresh reference set tied to the current internal resource identities and MUST NOT inherit stale references from the previous recording. All delayed callbacks use immutable internal identities, not re-resolved XIDs.
