@@ -701,8 +701,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 (offset, sizes[typ], field, line_no)
                 for off, width, typ, field, line_no in records
                 for offset in [off]
-                if any(offset == table_off and field == table_field
-                       for table_off, table_field, _table_line in table_rows)
+                if any(offset == table_off and field == table_field and line_no == table_line
+                       for table_off, table_field, table_line in table_rows)
             )
             for index, (offset, width, field, line_no) in enumerate(table_layout):
                 if index:
