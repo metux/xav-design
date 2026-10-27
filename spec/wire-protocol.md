@@ -32,9 +32,11 @@ This profile boundary does not change central subopcode assignments and does not
 
 - X11 request lengths are expressed in four-byte units.
 - Variable byte fields are rounded up to a four-byte boundary and padded with zero bytes.
-- Padding bytes MUST be zero.
+- Padding bytes MUST be zero. The receiver MUST validate padding bytes rather than silently ignoring non-zero padding; non-zero padding results in `BadValue`.
+- Every request-header reserved field, request-specific reserved field, and reserved bit MUST be zero unless a future protocol version explicitly assigns it a meaning. Receivers MUST reject non-zero reserved fields/bits with `BadValue` before XID resolution, resource allocation, or state changes. Reserved fields are not padding: each is a fixed-width wire field whose location and width remain part of the request layout.
+- A request-specific layout MUST state the width and offset of each reserved field and MUST state the zero requirement. Any gap between fields MUST either be explicitly identified as reserved zero bytes or be accounted for by the variable-payload padding rule; undocumented holes are forbidden.
 - An inconsistent request layout or a payload size that does not match the declared layout results in `BadLength`.
-- Invalid values or reserved bits normally result in `BadValue`.
+- Invalid values or reserved bits normally result in `BadValue`; non-zero padding and non-zero reserved fields/bits specifically result in `BadValue`.
 - BIG-REQUESTS is not supported in v0.1. Its extended-length field is at offset 4, where it conflicts with the XAverius common header. Clients MUST NOT send XAverius requests in BIG-REQUESTS format. The server MUST reject a XAverius request whose X11 header `length` field is zero with `BadLength` before interpreting bytes at offset 4 as the XAverius subopcode, flags, or reserved field.
 - Without BIG-REQUESTS, the maximum ordinary request length is 262140 bytes, including the complete request and both the X11 and XAverius headers. Larger payloads MUST be transferred in multiple requests where the request definition permits chunking.
 - For every variable-length request, the server MUST calculate the expected total length using checked arithmetic. Arithmetic overflow, an expected length greater than 262140 bytes, an X11 length field of zero, or a mismatch among the declared length, counts, and actual packet end MUST result in `BadLength`. All length and count validation MUST finish before payload allocation, XID resolution, or state changes.
