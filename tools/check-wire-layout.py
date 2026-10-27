@@ -1149,8 +1149,32 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         "QueueSubmit": "40 + 4*C + 16*W + 12*S",
         "WaitSemaphores": "28 + 12 * semaphore_count",
     }
-    c.require(len(rows) in (40, 47),
-              f"request matrix: expected 40 baseline or 47 audited rows, found {len(rows)}")
+    registry_by_opcode = {
+        int(opcode): (name, kind.strip())
+        for name, opcode, kind, _responsibility in re.findall(
+            r"^\|\s*\x60([^\x60]+)\x60\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
+            registry_text, re.M,
+        )
+    }
+    matrix_by_opcode = {}
+    for opcode_text, request, kind, matrix_length in rows:
+        opcode = int(opcode_text)
+        c.require(opcode not in matrix_by_opcode,
+                  f"request matrix: duplicate subopcode {opcode}")
+        matrix_by_opcode[opcode] = (request, kind.strip(), matrix_length.strip())
+    c.require(len(registry_by_opcode) == 47,
+              f"request registry: expected 47 assigned requests, found {len(registry_by_opcode)}")
+    c.require(len(rows) == 47,
+              f"request matrix: expected all 47 assigned requests, found {len(rows)}")
+    c.require(set(matrix_by_opcode) == set(registry_by_opcode),
+              "request matrix: subopcode set must exactly match the central request registry")
+    for opcode, (request, kind, _matrix_length) in matrix_by_opcode.items():
+        registered = registry_by_opcode.get(opcode)
+        c.require(registered is not None and registered[0] == request,
+                  f"request matrix: subopcode {opcode} name {request!r} disagrees with central registry")
+        if registered is not None:
+            c.require(registered[1] == kind,
+                      f"request matrix: {request} kind {kind!r} disagrees with registry kind {registered[1]!r}")
     for _opcode, request, _kind, matrix_length in rows:
         if request not in formula_overrides and request not in fixed_lengths and request != "CommandBufferData":
             continue
