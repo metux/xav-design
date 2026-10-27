@@ -94,7 +94,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
             "DescriptorSet XID does not by itself prove that its slot-held Buffer references",
             "retire descriptor-slot and recorded-command references",
             "MUST NOT release a bound Memory allocation before the old Buffer identity",
-            "FreeMemory must reject while that internal Buffer remains bound",
+            "a publicly invalidated Buffer can remain internally live because a descriptor slot",
         ):
             with self.subTest(lifetime_contract=phrase):
                 self.assertIn(phrase, lifetime)
