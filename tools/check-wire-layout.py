@@ -2874,7 +2874,7 @@ def check_compact_request_layouts(c: Check) -> None:
         and "| 28 | CARD16 | Signal-Semaphore-Count |" in queue
         and "| 30 | CARD16 | `reserved = 0` |" in queue
         and "`40 + 4*C + 16*W + 12*S`" in queue
-        and re.search(r"(?is)(?:C\s*=\s*Command-Buffer-Count|Command-Buffer-Count\s*\(C\)).{0,160}(?:W\s*=\s*Wait-Semaphore-Count|Wait-Semaphore-Count\s*\(W\)).{0,160}(?:S\s*=\s*Signal-Semaphore-Count|Signal-Semaphore-Count\s*\(S\))", queue) is not None,
+        and re.search(r"(?is)(?:C\s*=\s*Command-Buffer-Count|Command-Buffer-Count\s*\(C\)|`C`\s+for\s+Command-Buffer-Count).{0,160}(?:W\s*=\s*Wait-Semaphore-Count|Wait-Semaphore-Count\s*\(W\)|`W`\s+for\s+Wait-Semaphore-Count).{0,160}(?:S\s*=\s*Signal-Semaphore-Count|Signal-Semaphore-Count\s*\(S\)|`S`\s+for\s+Signal-Semaphore-Count)", queue) is not None,
         "QueueSubmit: each 16-bit count must map to its own array term and the complete variable length formula",
     )
     c.require(
