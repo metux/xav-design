@@ -231,7 +231,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                 document, re.M,
             )
             self.assertIsNotNone(match, f"missing normative event section {event}")
-            body = match.group(1).replace("Device-XID", "Device XID")
+            body = match.group(1).replace("Device-XID", "Device XID").replace("Physical-Device-XID", "Physical Device XID")
             expected = sorted((offset, size) for offset, size in fields.values())
             actual = []
             for line in body.splitlines():
@@ -259,7 +259,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                 "reserved": "reserved",
                 "reason_code": "`reason_code`",
                 "device_generation": "`device_generation`",
-                "physical_device_xid": "Physical-Device-XID",
+                "physical_device_xid": "Physical Device XID",
                 "new_status": "`new_status`",
                 "heap_index": "`heap_index`",
                 "pressure_level": "`pressure_level`",
