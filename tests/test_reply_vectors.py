@@ -32,7 +32,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     if 32 + declared * 4 != len(wire):
         errors.append("standard-header")
     if kind == "GetFenceStatus":
-        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
+        if 32 + declared * 4 == len(wire) and (len(wire) != 32 or declared != 0): errors.append("fixed-reply-size")
         if wire[1] not in (0, 1, 2, 3): errors.append("fence-status")
         if wire[8:32] != bytes(24): errors.append("reserved-zero")
     elif kind in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
