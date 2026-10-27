@@ -616,6 +616,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
     field_layout_names: set[str] = set()
     for name, _opcode, _kind, responsibility in registry_rows:
         link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
+        c.require(link is not None,
+                  f"{name}: central registry responsibility must link to a normative spec chapter")
         if not link:
             continue
         chapter = read("spec/" + link.group(1))
@@ -643,6 +645,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 len(chapter_lines),
             )
             section = "\n".join(chapter_lines[start_line + 1:end_line])
+        c.require(bool(section),
+                  f"{name}: normative request section could not be resolved from its registry chapter")
         if not section:
             continue
         request_lines = []
