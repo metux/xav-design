@@ -223,6 +223,33 @@ class GoldenWireVectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reserved common-header"):
             validate_request_wire(bytes(wire), vector["byte_order"])
 
+    def test_rejects_nonzero_raw_x11_data_and_xaverius_flags(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        for offset, value, message in (
+            (1, 1, "X11 data byte"),
+            (5, 1, "reserved flags"),
+        ):
+            with self.subTest(offset=offset):
+                wire = bytearray(encode_request(vector))
+                wire[offset] = value
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_request_wire(bytes(wire), vector["byte_order"])
+
+    def test_rejects_zero_length_raw_request_before_common_header(self) -> None:
+        # The normative framing rule reserves length=0 for BIG-REQUESTS,
+        # whose extended length would overlap the XAverius common header.
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = bytearray(encode_request(vector))
+        wire[2:4] = bytes(2)
+        with self.assertRaisesRegex(ValueError, "zero request length"):
+            validate_request_wire(bytes(wire), vector["byte_order"])
+
+    def test_rejects_non_word_aligned_raw_request(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = encode_request(vector) + bytes(1)
+        with self.assertRaisesRegex(ValueError, "divisible by four"):
+            validate_request_wire(wire, vector["byte_order"])
+
     def test_rejects_declared_length_mismatch(self) -> None:
         vector = next(v.copy() for v in self.vectors if v["request"] == "ReadBuffer")
         vector["length_bytes"] += 4
