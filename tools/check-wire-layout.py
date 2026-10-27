@@ -673,7 +673,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     offset, typ, field = int(row.group(1)), row.group(2), row.group(3).strip()
                     # These are legitimate variable-width payload descriptions,
                     # not scalar fields whose width can be checked here.
-                    if typ in {"BYTE[]", "variable"}:
+                    if typ.endswith("[]") or typ == "variable":
                         continue
                     c.require(typ in sizes, f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
                     if typ in sizes:
