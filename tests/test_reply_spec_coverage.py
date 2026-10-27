@@ -79,6 +79,29 @@ class ReplySpecCoverageTests(unittest.TestCase):
                     for v in self.vectors
                 ), f"WaitSemaphores status {value} missing for {order}-endian")
 
+
+    def test_physical_property_registry_matches_exact_reply_value_contracts(self):
+        registry = (ROOT / "registries/physical-device-properties.md").read_text(encoding="utf-8")
+        body = section(self.devices, "GetPhysicalDeviceProperty")
+        contracts = (
+            "`XAverius.deviceUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes",
+            "`XAverius.driverUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes",
+            "`XAverius.compute.maxWorkGroupInvocations` | `CARD32` (1) | One unsigned 32-bit integer",
+            "`XAverius.compute.maxWorkGroupSize` | `CARD32_ARRAY` (6) | Exactly three unsigned 32-bit integers",
+            "For `SUCCESS`, the reply's `property_type` MUST match the registered type",
+            "`value_length` MUST equal the exact size specified above",
+            "padding bytes MUST be zero",
+            "the server MUST NOT fabricate a UUID",
+        )
+        for contract in contracts:
+            with self.subTest(contract=contract):
+                self.assertIn(contract, registry)
+        self.assertIn("Reserved; MUST be zero", body)
+        self.assertIn("For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero", body)
+        self.assertIn("`reply.length = 0`", body)
+        checker = (ROOT / "tools/check-wire-layout.py").read_text(encoding="utf-8")
+        self.assertIn("physical-device property registry missing exact value/reply contract", checker)
+
     def test_property_statuses_follow_normative_table(self):
         body = section(self.devices, "GetPhysicalDeviceProperty")
         statuses = assignments(body, {"SUCCESS", "NOT_SUPPORTED", "NOT_AVAILABLE"})
