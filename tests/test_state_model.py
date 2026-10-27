@@ -2047,28 +2047,63 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
         self.assertEqual([child.descriptor_sets for child in children], [[], []])
         self.assertEqual([child.indirect_buffer_refs for child in children], [set(), set()])
 
-    def test_pool_destroy_retains_recorded_refs_until_backend_hold_retires(self) -> None:
+    def test_pool_destroy_retains_refs_until_each_backend_hold_retires(self) -> None:
         descriptor_set = DescriptorSetLifetime(slots={0: "buffer-kept"})
         child = CommandBufferModel(
             lifecycle=CommandBufferLifecycle.EXECUTABLE,
             entries=[b"backend-visible"],
             descriptor_sets=[descriptor_set],
             indirect_buffer_refs={"buffer-kept", "indirect-kept"},
-            backend_holds=1,
+            backend_holds=3,
         )
-        self.assertEqual(destroy_command_pool([child]), "SUCCESS")
-        self.assertFalse(child.buffer_live)
-        self.assertFalse(child.pool_live)
+        sibling = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.INVALID,
+            entries=[b"sibling-backend-visible"],
+            indirect_buffer_refs={"sibling-buffer-kept"},
+            backend_holds=2,
+        )
+
+        self.assertEqual(destroy_command_pool([child, sibling]), "SUCCESS")
+        for buffer in (child, sibling):
+            self.assertFalse(buffer.buffer_live)
+            self.assertFalse(buffer.pool_live)
         self.assertEqual(child.entries, [b"backend-visible"])
         self.assertEqual(child.descriptor_sets, [descriptor_set])
         self.assertEqual(child.indirect_buffer_refs, {"buffer-kept", "indirect-kept"})
-        self.assertEqual(child.backend_holds, 1)
+        self.assertEqual(sibling.entries, [b"sibling-backend-visible"])
+        self.assertEqual(sibling.indirect_buffer_refs, {"sibling-buffer-kept"})
 
+        # A callback retiring one backend use must not release references still
+        # needed by either of the other outstanding uses.
+        self.assertEqual(retire_command_buffer_backend_hold(child), "SUCCESS")
+        self.assertEqual(child.backend_holds, 2)
+        self.assertEqual(child.entries, [b"backend-visible"])
+        self.assertEqual(child.descriptor_sets, [descriptor_set])
+        self.assertEqual(child.indirect_buffer_refs, {"buffer-kept", "indirect-kept"})
+        self.assertEqual(retire_command_buffer_backend_hold(sibling), "SUCCESS")
+        self.assertEqual(sibling.backend_holds, 1)
+        self.assertEqual(sibling.entries, [b"sibling-backend-visible"])
+        self.assertEqual(sibling.indirect_buffer_refs, {"sibling-buffer-kept"})
+
+        self.assertEqual(retire_command_buffer_backend_hold(child), "SUCCESS")
+        self.assertEqual(child.backend_holds, 1)
+        self.assertEqual(child.entries, [b"backend-visible"])
+        self.assertEqual(child.descriptor_sets, [descriptor_set])
+        self.assertEqual(child.indirect_buffer_refs, {"buffer-kept", "indirect-kept"})
         self.assertEqual(retire_command_buffer_backend_hold(child), "SUCCESS")
         self.assertEqual(child.backend_holds, 0)
         self.assertEqual(child.entries, [])
         self.assertEqual(child.descriptor_sets, [])
         self.assertEqual(child.indirect_buffer_refs, set())
+        # Retiring the last hold of one child does not release another child's
+        # references while that sibling still has a backend user.
+        self.assertEqual(sibling.entries, [b"sibling-backend-visible"])
+        self.assertEqual(sibling.indirect_buffer_refs, {"sibling-buffer-kept"})
+        self.assertEqual(retire_command_buffer_backend_hold(sibling), "SUCCESS")
+        self.assertEqual(sibling.backend_holds, 0)
+        self.assertEqual(sibling.entries, [])
+        self.assertEqual(sibling.indirect_buffer_refs, set())
+
         before = copy.deepcopy(child)
         self.assertEqual(retire_command_buffer_backend_hold(child),
                          "INVALID_SYNCHRONIZATION_STATE")
