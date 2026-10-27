@@ -225,6 +225,26 @@ class PresentationReplyWireTests(unittest.TestCase):
                 self.assertEqual(u32(failure, 36, order), 0)
                 self.assertEqual(u32(failure, 40, order), 0)
 
+    def test_all_acquire_statuses_follow_normative_reply_contract(self) -> None:
+        spec = (ROOT / "spec" / "presentation.md").read_text(encoding="utf-8")
+        match = re.search(r"Acquire status values are\s*(.*?)(?=\.\s+TIMEOUT/)", spec, re.S)
+        self.assertIsNotNone(match, "AcquireNextImage status table missing")
+        documented = {name: int(value) for name, value in
+                      re.findall(r"([A-Z][A-Z_]+)\s*=\s*(\d+)", match.group(1))}
+        self.assertEqual(documented, {
+            "SUCCESS": 0, "TIMEOUT": 1, "NOT_READY": 2, "OUT_OF_DATE": 3,
+            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6,
+        })
+        for order in ("little", "big"):
+            for status in documented.values():
+                with self.subTest(order=order, status=status):
+                    index = 1 if status == 0 else 0
+                    wire = encode_acquire_reply(order, status, index)
+                    validate_presentation_reply("acquire", wire, order, expected_image_count=3)
+                    self.assertEqual(u32(wire, 32, order), status)
+                    self.assertEqual(u32(wire, 36, order), index)
+                    self.assertEqual(u32(wire, 40, order), 0)
+
     def test_acquire_success_image_index_is_bounded_by_swapchain(self) -> None:
         for order in ("little", "big"):
             with self.subTest(order=order):
