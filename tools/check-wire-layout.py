@@ -1486,7 +1486,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
     )
 
     def request_section(document: str, name: str) -> str:
-        match = re.search(rf"^## (?:[0-9]+(?:\\.[0-9]+)* )?`{re.escape(name)}`\\s*$([\\s\\S]*?)(?=^## |\\Z)", document, re.M)
+        match = re.search(rf"^## (?:[0-9]+(?:\.[0-9]+)* )?`{re.escape(name)}`\s*$([\s\S]*?)(?=^## |\Z)", document, re.M)
         return match.group(1) if match else ""
 
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
