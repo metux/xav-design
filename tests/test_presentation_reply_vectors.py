@@ -231,15 +231,15 @@ class PresentationReplyWireTests(unittest.TestCase):
         spec = (ROOT / "spec" / "presentation.md").read_text(encoding="utf-8")
 
         def numbered_statuses(text: str) -> dict[str, int]:
-            return {name: int(value) for value, name in re.findall(r"\\b(\\d+)\\s+([A-Z][A-Z_]+)\\b", text)}
+            return {name: int(value) for value, name in re.findall(r"\b(\d+)\s+([A-Z][A-Z_]+)\b", text)}
 
         def named_statuses(text: str) -> dict[str, int]:
-            return {name: int(value) for name, value in re.findall(r"\\b([A-Z][A-Z_]+)\\s*=\\s*(\\d+)\\b", text)}
+            return {name: int(value) for name, value in re.findall(r"\b([A-Z][A-Z_]+)\s*=\s*(\d+)\b", text)}
 
-        capabilities = re.search(r"Status values:\\s*(.*?)(?=\\.\\s+CreateSwapchain status values)", spec, re.S)
-        swapchain = re.search(r"CreateSwapchain status values are\\s*(.*?)(?=\\.\\s+SUCCESS with)", spec, re.S)
-        acquire = re.search(r"Acquire status values are\\s*(.*?)(?=\\.\\s+TIMEOUT/)", spec, re.S)
-        present = re.search(r"QueuePresent reply status values are\\s*(.*?)(?=; these are local)", spec, re.S)
+        capabilities = re.search(r"Status values:\s*(.*?)(?=\.\s+CreateSwapchain status values)", spec, re.S)
+        swapchain = re.search(r"CreateSwapchain status values are\s*(.*?)(?=\.\s+SUCCESS with)", spec, re.S)
+        acquire = re.search(r"Acquire status values are\s*(.*?)(?=\.\s+TIMEOUT/)", spec, re.S)
+        present = re.search(r"QueuePresent reply status values are\s*(.*?)(?=; these are local)", spec, re.S)
         for label, match in (("GetSurfaceCapabilities", capabilities), ("CreateSwapchain", swapchain),
                              ("AcquireNextImage", acquire), ("QueuePresent", present)):
             self.assertIsNotNone(match, f"normative status list missing for {label}")
