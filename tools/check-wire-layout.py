@@ -618,12 +618,39 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         if not link:
             continue
         chapter = read("spec/" + link.group(1))
-        section = request_normative_section(chapter, name)
+        # Bound the scan to this request heading, not sibling requests or
+        # reply fields that happen to share the same normative section.
+        chapter_lines = chapter.splitlines()
+        headings = []
+        for i, heading_line in enumerate(chapter_lines):
+            heading_match = re.match(r"^(#{2,4})\\s+(.+?)\\s*$", heading_line)
+            if heading_match:
+                headings.append((i, len(heading_match.group(1)), heading_match.group(2)))
+        heading_index = next(
+            (i for i, (_line, _level, title) in enumerate(headings)
+             if name in title and chr(96) + name + chr(96) in title),
+            None,
+        )
+        if heading_index is None:
+            section = request_normative_section(chapter, name)
+        else:
+            start_line, level, _title = headings[heading_index]
+            end_line = next(
+                (line_index for line_index, heading_level, _title2 in headings[heading_index + 1:]
+                 if heading_level <= level),
+                len(chapter_lines),
+            )
+            section = "\\n".join(chapter_lines[start_line + 1:end_line])
         if not section:
             continue
+        request_lines = []
+        for line in section.splitlines():
+            if re.match(r"^\\s*(?:Reply(?: layout| fields)?|Reply:|The reply contains|Reply payload)\\b", line, re.I):
+                break
+            request_lines.append(line)
         records: list[tuple[int, int, str, str, int]] = []
         in_absolute_table = False
-        for line_no, line in enumerate(section.splitlines(), 1):
+        for line_no, line in enumerate(request_lines, 1):
             if re.search(r"^\|\s*Relative Offset\s*\|", line, re.I):
                 in_absolute_table = False
                 continue
