@@ -1988,14 +1988,17 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
             backend_holds=2,
         )
 
+        old_epoch = state.recording_epoch
         self.assertEqual(reset_command_buffer(state), "SUCCESS")
         self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
         self.assertEqual(state.entries, [])
         self.assertEqual(state.descriptor_sets, [])
         self.assertEqual(state.indirect_buffer_refs, set())
         self.assertEqual(state.backend_holds, 0)
+        self.assertEqual(state.recording_epoch, old_epoch + 1)
         self.assertEqual(len(state.retired_recordings), 1)
         retired = state.retired_recordings[0]
+        self.assertEqual(retired.epoch, old_epoch)
         self.assertEqual(retired.backend_holds, 2)
         self.assertEqual(retired.entries, [b"old recording"])
         self.assertEqual(retired.descriptor_sets, [old_set])
@@ -2014,27 +2017,43 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
         state.indirect_buffer_refs = {"buffer-new", "indirect-new"}
         state.backend_holds = 1
 
-        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        new_epoch = state.recording_epoch
+        # A newer recording can finish before an older backend callback arrives.
+        # The explicit epoch must release only the new hold, not consume an old one.
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=new_epoch), "SUCCESS"
+        )
+        self.assertEqual(state.backend_holds, 0)
+        self.assertEqual(state.retired_recordings[0].backend_holds, 2)
+        self.assertEqual(state.entries, [b"new recording"])
+        self.assertEqual(state.descriptor_sets, [new_set])
+        self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
+
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=old_epoch), "SUCCESS"
+        )
         self.assertEqual(state.retired_recordings[0].backend_holds, 1)
         self.assertEqual(state.retired_recordings[0].entries, [b"old recording"])
         self.assertEqual(state.entries, [b"new recording"])
         self.assertEqual(state.descriptor_sets, [new_set])
         self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
 
-        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=old_epoch), "SUCCESS"
+        )
         self.assertEqual(state.retired_recordings, [])
         self.assertEqual(state.entries, [b"new recording"])
         self.assertEqual(state.descriptor_sets, [new_set])
         self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
-        self.assertEqual(state.backend_holds, 1)
 
         # Completing the new recording's backend use must not clear its
         # executable references; those remain until the next reset/destroy.
-        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
-        self.assertEqual(state.entries, [b"new recording"])
-        self.assertEqual(state.descriptor_sets, [new_set])
-        self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
-        self.assertEqual(state.backend_holds, 0)
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=new_epoch),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
 
     def test_abort_with_backend_hold_defers_old_recording_reference_release(self) -> None:
         old_set = DescriptorSetLifetime(slots={0: "buffer-old"})
