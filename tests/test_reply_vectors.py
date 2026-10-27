@@ -32,14 +32,17 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
     if 32 + declared * 4 != len(wire):
         errors.append("standard-header")
     if kind == "GetFenceStatus":
+        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         if wire[1] not in (0, 1, 2, 3): errors.append("fence-status")
         if wire[8:32] != bytes(24): errors.append("reserved-zero")
     elif kind in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
+        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         status = int.from_bytes(wire[8:12], byte_order)
         if status not in (0, 1): errors.append("wait-status")
         if status in (0, 1) and status != (1 if kind.endswith("timeout") else 0): errors.append("wait-status-match")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("WaitForFence"):
+        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3, 4): errors.append("wait-for-fence-status")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("GetPhysicalDeviceProperty-success"):
@@ -133,10 +136,12 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
                     if heap_flags & ~0x1: errors.append("memory-heap-flags-range")
                     if entry[12:16] != bytes(4): errors.append("memory-heap-reserved")
     elif kind == "GetBufferMemoryRequirements":
+        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         if int.from_bytes(wire[8:16], byte_order) == 0: errors.append("buffer-requirements-size-positive")
         if int.from_bytes(wire[16:24], byte_order) == 0: errors.append("buffer-requirements-alignment-positive")
         if wire[28:32] != bytes(4): errors.append("reserved-zero")
     elif kind == "GetSemaphoreCounterValue":
+        if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         if wire[16:32] != bytes(16): errors.append("reserved-zero")
     return errors
 
