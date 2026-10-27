@@ -149,6 +149,7 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
         if int.from_bytes(wire[8:16], byte_order) == 0: errors.append("buffer-requirements-size-positive")
         if int.from_bytes(wire[16:24], byte_order) == 0: errors.append("buffer-requirements-alignment-positive")
+        if int.from_bytes(wire[24:28], byte_order) == 0: errors.append("buffer-requirements-memory-type-bits-nonzero")
         if wire[28:32] != bytes(4): errors.append("reserved-zero")
     elif kind == "GetSemaphoreCounterValue":
         if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
