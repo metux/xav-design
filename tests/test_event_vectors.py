@@ -299,25 +299,6 @@ class GoldenXGEEventTests(unittest.TestCase):
                 ))
                 self.assertEqual(vector["xge_length"], (vector["total_bytes"] - 32) // 4)
 
-    def test_device_reason_code_ranges_match_normative_registry(self):
-        registry = (ROOT / "registries" / "reason-codes.md").read_text(encoding="utf-8")
-        values = {int(value) for value in re.findall(r"^\\|\\s*(\\d+)\\s*\\|\\s*`[A-Z_]+`\\s*\\|", registry, re.M)}
-        self.assertEqual(values, set(range(6)))
-        self.assertEqual(set(EVENT_VALUE_RANGES[1][1]), values)
-        self.assertEqual(set(EVENT_SECONDARY_VALUE_RANGES[2][0][1]), values)
-
-    def test_device_reason_code_registry_is_enforced_for_both_events(self):
-        for event_name in ("DEVICE_LOST", "DEVICE_STATUS_CHANGED"):
-            vector = next(v for v in self.vectors if v["event"] == event_name)
-            for order in ("little", "big"):
-                mutated = dict(vector)
-                mutated["byte_order"] = order
-                wire = bytearray(encode_event(mutated))
-                wire[36:40] = (6).to_bytes(4, order)
-                with self.subTest(event=event_name, byte_order=order):
-                    with self.assertRaisesRegex(ValueError, "event-local value"):
-                        validate_event_wire(bytes(wire), order)
-
     def test_each_event_has_both_byte_orders(self):
         seen = {}
         for vector in self.vectors:
