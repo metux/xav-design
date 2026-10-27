@@ -3119,6 +3119,32 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
         and "backend hold still needed to protect a possible in-flight access remains retained" in queue,
         "command-buffer reference retirement: submission terminalization must not release backend holds early",
     )
+    # The transition matrix must cover both invalidation paths and the only legal
+    # recovery path; checking only reset would miss stale executable recordings.
+    for contract in (
+        "After asynchronous execution failure or device loss, it becomes INVALID",
+        "A failed submission makes every affected command buffer `INVALID` after the pending phase ends",
+        "must be reset and recorded again",
+        "A successful FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk",
+        "no partially finalized executable recording is published",
+        "A failed FINAL chunk leaves the buffer in `RECORDING`",
+        "A later chunk MUST NOT revive a recording interrupted by device loss",
+    ):
+        c.require(contract in command or contract in queue,
+                  f"command-buffer transition matrix: missing failure/recovery contract: {contract}")
+    for contract in (
+        "backend object until access is impossible",
+        "immutable internal identities",
+        "must not release backend storage before",
+    ):
+        c.require(contract in lifetime,
+                  f"command-buffer invalidation: missing deferred-lifetime contract: {contract}")
+    c.require(
+        "A PENDING command buffer MUST NOT be modified, reset, freed, or submitted again." in command
+        and "If submission acceptance wins, reset is rejected while the command buffer is PENDING." in command
+        and "If reset wins, the buffer is INITIAL and cannot be submitted" in command,
+        "command-buffer reset/submit race: pending exclusion and serialized winner must be explicit",
+    )
 
 def check_create_device_precedence(c: Check) -> None:
     """Keep CreateDevice's framing, scalar, XID, capability, and publication order explicit."""
