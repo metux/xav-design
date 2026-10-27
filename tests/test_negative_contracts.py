@@ -200,5 +200,68 @@ class CommonRequestErrorPrecedenceTests(unittest.TestCase):
 
 
 
+class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
+    def test_signal_semaphore_keeps_xid_checks_before_value_reservation_checks(self):
+        sync = read("spec/synchronization.md")
+        section = sync.split("## `SignalSemaphore`", 1)[1].split("\n## ", 1)[0]
+        phrases = (
+            "exact total length of 24 bytes",
+            "resolve the device XID, then the semaphore XID",
+            "check resource type, client/device ownership",
+            "check device state",
+            "check timeline type and signal-value/reservation consistency",
+        )
+        positions = [section.find(phrase) for phrase in phrases]
+        self.assertTrue(all(p >= 0 for p in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+
+    def test_wait_semaphores_keeps_scalar_checks_before_xid_resolution(self):
+        sync = read("spec/synchronization.md")
+        section = sync.split("## `WaitSemaphores`", 1)[1].split("\n## ", 1)[0]
+        phrases = (
+            "length and checked arithmetic",
+            "semaphore_count != 0",
+            "resolve the device XID and then semaphore XIDs in array order",
+            "check resource type, client/device ownership",
+            "check device state",
+            "verify that all semaphores are timeline semaphores",
+        )
+        positions = [section.find(phrase) for phrase in phrases]
+        self.assertTrue(all(p >= 0 for p in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+
+    def test_queue_submit_and_command_buffer_exceptions_are_explicit(self):
+        queue = read("spec/queue-submission.md")
+        command = read("spec/command-recording.md")
+        self.assertIn("syntactic fields are checked", queue)
+        self.assertIn("required XIDs are resolved in wire order", queue)
+        self.assertIn("wire-structure errors take precedence over field errors", command)
+        self.assertIn("target XID is checked before the pool XID", command)
+
+    def test_presentation_statuses_follow_synchronous_validation(self):
+        presentation = read("spec/presentation.md")
+        section = presentation.split("## 5.3 Request validation, status precedence, and atomic acceptance", 1)[1].split("\n## ", 1)[0]
+        phrases = (
+            "wire length and checked arithmetic",
+            "scalar/reserved-field validation",
+            "XID resolution in the defined order",
+            "type and ownership validation",
+            "Device availability",
+            "immutable request constraints",
+            "lifecycle/capability status",
+            "mutable state and synchronization eligibility",
+        )
+        positions = [section.find(phrase) for phrase in phrases]
+        self.assertTrue(all(p >= 0 for p in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+
+    def test_checker_audits_request_specific_precedence_exceptions(self):
+        checker = read("tools/check-wire-layout.py")
+        self.assertIn("def check_request_specific_precedence_exceptions", checker)
+        self.assertIn("check_request_specific_precedence_exceptions(c)", checker)
+
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
