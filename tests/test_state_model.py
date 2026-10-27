@@ -2486,6 +2486,40 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         state = SubmissionModel(command_buffers=[first, second], buffer_registry=[buffer])
         return state, descriptor_set, buffer
 
+    def test_device_loss_terminalizes_submission_but_preserves_backend_hold(self) -> None:
+        buffer = BufferMemoryLifetime(backend_accesses=1)
+        command_buffer = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            indirect_buffer_refs={buffer.identity},
+        )
+        state = SubmissionModel(
+            command_buffers=[command_buffer], buffer_registry=[buffer],
+        )
+        memory = MemoryAllocationLifetime()
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=803, command_buffer_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual((buffer.accepted_uses, buffer.backend_accesses), (1, 1))
+
+        # Simulate device-wide public invalidation while backend cleanup still
+        # holds the internal allocation identity.
+        buffer.xid_valid = False
+        buffer.live = False
+        buffer.internal_state = "DESTROY_PENDING"
+        self.assertEqual(mark_device_lost(state), "SUCCESS")
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.INVALID)
+        self.assertEqual(buffer.accepted_uses, 0)
+        self.assertEqual(buffer.backend_accesses, 1)
+        self.assertEqual(buffer.internal_state, "DESTROY_PENDING")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "BadMatch")
+
+        # Only proven backend quiescence releases the final internal hold.
+        self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
+        self.assertEqual(buffer.internal_state, "RELEASED")
+        self.assertEqual(free_memory_lifetime(memory, [buffer]), "SUCCESS")
+
+
     def test_out_of_order_terminal_callbacks_release_only_their_own_refs(self) -> None:
         state, descriptor_set, buffer = self.shared_state()
         self.assertEqual(queue_submit(state, SubmitRequest(token=801, command_buffer_indices=(0,))), "SUCCESS")
