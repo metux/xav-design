@@ -78,7 +78,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
             with self.subTest(contract=phrase):
                 self.assertIn(phrase, section)
         for phrase in (
-            "DestroyDevice cascade linearization",
+            "`DestroyDevice` cascade linearization",
             "A wait whose success, timeout, or Device-loss result was established first keeps that result",
             "MUST NOT mutate the new resource",
             "remain retained or quarantined until backend access is known to be impossible",
