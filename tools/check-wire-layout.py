@@ -671,6 +671,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     continue
                 if row:
                     offset, typ, field = int(row.group(1)), row.group(2), row.group(3).strip()
+                    c.require(typ in sizes, f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
                     if typ in sizes:
                         c.require(offset >= 8,
                                   f"{name}: field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
