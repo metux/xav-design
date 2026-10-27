@@ -374,7 +374,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
 
     def test_create_device_validation_precedence_is_explicit_and_ordered(self):
         devices = read("spec/devices.md")
-        section = devices.split("## `CreateDevice`", 1)[1].split("\\n## ", 1)[0]
+        section = devices.split("## `CreateDevice`", 1)[1].split("\n## ", 1)[0]
         phases = (
             "1. Validate the complete variable-length request framing",
             "2. Validate wire-level and scalar fields",
