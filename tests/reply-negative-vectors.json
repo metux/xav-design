@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Intentionally malformed XAverius reply bytes; each case violates one named normative invariant. Adds malformed fixed-size replies carrying an illegal payload, in both byte orders.",
+  "description": "Intentionally malformed XAverius reply bytes; each case violates one named normative invariant. Includes fixed-size payload, empty buffer memory-type mask, and other ABI boundary negatives.",
   "vectors": [
     {
       "name": "reply-length-mismatch-little",
@@ -715,6 +715,20 @@
       "byte_order": "big",
       "wire_hex": "0100123400000000000000010000000000000000000000000000000000000000",
       "violates": "wait-for-fence-status-match"
+    },
+    {
+      "name": "buffer-requirements-zero-memory-type-bits-little",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "little",
+      "wire_hex": "0100341200000000001000000000000000010000000000000000000000000000",
+      "violates": "buffer-requirements-memory-type-bits-nonzero"
+    },
+    {
+      "name": "buffer-requirements-zero-memory-type-bits-big",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "big",
+      "wire_hex": "0100123400000000000000000000100000000000000001000000000000000000",
+      "violates": "buffer-requirements-memory-type-bits-nonzero"
     }
   ]
 }
