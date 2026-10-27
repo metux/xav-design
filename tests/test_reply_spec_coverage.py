@@ -195,6 +195,21 @@ class ReplySpecCoverageTests(unittest.TestCase):
             self.assertEqual(pos, len(payload))
             self.assertEqual(int.from_bytes(wire[4:8], order), len(payload) // 4)
 
+    def test_queue_family_single_record_formula_in_both_byte_orders(self):
+        body = section(self.devices, "GetPhysicalDeviceQueueFamilyProperties")
+        self.assertIn("reply.length = 3 * queue_family_count", body)
+        for order in ("little", "big"):
+            matches = [v for v in self.vectors
+                       if v["event"] == "GetPhysicalDeviceQueueFamilyProperties-one-record"
+                       and v["byte_order"] == order]
+            self.assertEqual(len(matches), 1, f"single queue-family record missing in {order}-endian")
+            wire = bytes.fromhex(matches[0]["wire_hex"])
+            payload = wire[32:]
+            self.assertEqual(len(payload), 12)
+            self.assertEqual(int.from_bytes(wire[4:8], order), 3)
+            self.assertEqual(int.from_bytes(payload[8:12], order), 0)
+            self.assertEqual(len(wire), 44)
+
     def test_property_payload_boundaries_follow_normative_formula(self):
         body = section(self.devices, "GetPhysicalDeviceProperty")
         self.assertIn("ceil(value_length / 4)", body)
