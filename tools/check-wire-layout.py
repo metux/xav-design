@@ -3072,6 +3072,35 @@ def check_compact_request_layouts(c: Check) -> None:
         "presentation compact request layouts must include the common header and exact create/destroy lengths",
     )
 
+def check_command_buffer_reference_retirement(c: Check) -> None:
+    """Assert reset/invalidation/rerecording ownership and deferred-release contracts."""
+    command = read("spec/command-recording.md")
+    lifetime = read("spec/resource-lifetime.md")
+    queue = read("spec/queue-submission.md")
+    contracts = (
+        "A successful ResetCommandBuffer is a single state transition from the prior non-pending state to INITIAL.",
+        "retires the command buffer's recorded-resource reference edges exactly once",
+        "A rejected reset, including reset of a PENDING buffer",
+        "A subsequent successful rerecording begins from INITIAL and builds a fresh reference set",
+        "If submission acceptance wins, reset is rejected while the command buffer is PENDING.",
+        "If reset wins, the buffer is INITIAL and cannot be submitted",
+    )
+    for contract in contracts:
+        c.require(contract in command,
+                  f"command-buffer reference retirement: missing command-recording contract: {contract}")
+    for contract in (
+        "Successful reset detaches its recorded entries and retires those edges exactly once",
+        "reset MUST NOT retire those same edges again",
+        "All delayed callbacks use immutable internal identities, not re-resolved XIDs",
+    ):
+        c.require(contract in lifetime,
+                  f"command-buffer reference retirement: missing lifetime contract: {contract}")
+    c.require(
+        "Command-buffer reference retirement is separate from submission terminalization" in queue
+        and "backend hold still needed to protect a possible in-flight access remains retained" in queue,
+        "command-buffer reference retirement: submission terminalization must not release backend holds early",
+    )
+
 def main() -> int:
     c = Check()
     check_events(c)
@@ -3082,6 +3111,7 @@ def main() -> int:
     check_other_numeric_registries(c)
     check_request_field_offsets_and_widths(c)
     check_compact_request_layouts(c)
+    check_command_buffer_reference_retirement(c)
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
     check_common_request_error_precedence(c)
