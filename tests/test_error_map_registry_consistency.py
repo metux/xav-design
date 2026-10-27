@@ -43,9 +43,12 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             self.assertIn(f"`{name}`", section, f"error map omits {name}")
 
     def test_request_and_error_registries_are_complete_and_referenced(self):
+        table = self.registry.split("| Request | Subopcode | Kind | Responsibility |", 1)[1].split(
+            "## Allocation policy", 1
+        )[0]
         rows = re.findall(
-            r"^\\| `([^\`]+)` \\| (\\d+) \\| (Void(?: \\+ async events)?|Reply) \\| (.*?) \\|$",
-            self.registry,
+            r"^\| `([^`]+)` \| (\d+) \| (Void(?: \+ async events)?|Reply) \| (.*?) \|$",
+            table,
             re.M,
         )
         self.assertEqual(len(rows), 47, "every assigned request must have one registry row")
