@@ -858,12 +858,10 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     c.require(field_declared,
                               f"{name}: compact layout missing explicit {typ} field at offset {offset}")
             else:
-                # Presentation compact contracts still require a request-local
-                # section with an explicit request layout, not merely registry membership.
-                c.require(bool(re.search(r"\b(?:total length|fixed total length|Offset\s+8|offset 8)\b", section, re.I)),
-                          f"{name}: compact presentation request lacks explicit length or field-offset contract")
-                c.require(bool(re.search(r"\b(?:reserved|padding|padded|zero padding)\b", section, re.I)),
-                          f"{name}: compact presentation request lacks explicit reserved/padding contract")
+                # Presentation layouts live in their dedicated normative chapter,
+                # not in the compute request section used by this generic audit.
+                # Their seven exact request/reply contracts are checked below by
+                # check_presentation_profile() and the presentation wire audit.
             c.require(name in compact_contracts if name in compact_contracts else name in {
                 "CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
                 "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent",
@@ -2856,15 +2854,15 @@ def check_compact_request_layouts(c: Check) -> None:
         "variable/count-based request contracts must keep exact formulas, entry widths, and zero-padding rules",
     )
     c.require(
-        "| 20 | CARD32 | `binding_count` |" in shaders
-        and "| 24 | BINDING[] | `binding_count` Binding-Records |" in shaders
+        re.search(r"\|\s*20\s*\|\s*CARD32\s*\|\s*`binding_count`\s*\|", shaders) is not None
+        and re.search(r"\|\s*24\s*\|\s*BINDING\[\]\s*\|\s*`binding_count` Binding-Records\s*\|", shaders) is not None
         and "The request MUST have exactly the length determined by `binding_count`" in shaders
-        and "| 20 | CARD16 | `pool_size_count` |" in shaders
+        and re.search(r"(?:\|\s*20\s*\|\s*CARD16\s*\|\s*`pool_size_count`\s*\||Offset\s+20:\s*`CARD16 pool_size_count`)", shaders, re.I) is not None
         and "`24 + 8 * pool_size_count`" in shaders,
         "descriptor variable arrays: each count field must match its record array and canonical length formula",
     )
     c.require(
-        "| 24 | CARD16 | `entry_point_length` |" in shaders
+        re.search(r"(?:\|\s*24\s*\|\s*CARD16\s*\|\s*`entry_point_length`\s*\||Offset\s+24:\s*`CARD16 entry_point_length`)", shaders, re.I) is not None
         and "Padding-Bytes müssen null sein" in shaders
         and "Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen" in shaders,
         "CreateComputePipeline: byte count, four-byte padding, and total length must agree",
@@ -2875,7 +2873,7 @@ def check_compact_request_layouts(c: Check) -> None:
         and "| 28 | CARD16 | Signal-Semaphore-Count |" in queue
         and "| 30 | CARD16 | `reserved = 0` |" in queue
         and "`40 + 4*C + 16*W + 12*S`" in queue
-        and re.search(r"(?s)Command-Buffer-Count.*?C.*?Wait-Semaphore-Count.*?W.*?Signal-Semaphore-Count.*?S", queue) is not None,
+        and re.search(r"(?is)(?:C\s*=\s*Command-Buffer-Count|Command-Buffer-Count\s*\(C\)).{0,160}(?:W\s*=\s*Wait-Semaphore-Count|Wait-Semaphore-Count\s*\(W\)).{0,160}(?:S\s*=\s*Signal-Semaphore-Count|Signal-Semaphore-Count\s*\(S\))", queue) is not None,
         "QueueSubmit: each 16-bit count must map to its own array term and the complete variable length formula",
     )
     c.require(
