@@ -1044,7 +1044,7 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
             )
             c.require(length_evidence is not None,
                       f"{request}: normative section does not explicitly state the matrix's {expected_bytes}-byte request length")
-            c.require(normalize_length_formula(matrix_length).strip("\`") == str(expected_bytes),
+            c.require(normalize_length_formula(matrix_length).strip("`") == str(expected_bytes),
                       f"{request}: audit matrix fixed length {matrix_length!r} disagrees with normative {expected_bytes} bytes")
         else:
             c.require(("at least 16 bytes" in section.lower() or "mindestens 16 Bytes" in section) and ("exactly 16 bytes" in section.lower() or "exakt 16 Bytes" in section),
