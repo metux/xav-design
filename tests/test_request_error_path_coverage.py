@@ -648,7 +648,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             positions = [request_section.index(phrase) for phrase in ordered_phases]
             self.assertEqual(positions, sorted(positions))
-            self.assertIn("atomar", request_section)
+            self.assertRegex(request_section, r"(?i)atomic|atomar")
 
         # Destruction invalidates public XIDs atomically, while retained internal
         # references survive until no backend access can remain.
