@@ -345,6 +345,8 @@ def check_events(c: Check) -> None:
     protocol_checks = [
         (r"QueryExtension", "dynamic major opcode discovery via QueryExtension"),
         (r"128–255", "X11 extension major opcode range 128–255"),
+        (r"non-zero value MUST result in `BadValue` before subopcode dispatch", "nonzero X11 data byte rejection before request dispatch"),
+        (r"common-header `flags` byte at offset 5 and `reserved` CARD16 at offset 6", "common-header flags and reserved-field zero rule"),
     ]
     for pattern, label in protocol_checks:
         c.require(re.search(pattern, wire_protocol, re.I) is not None, f"wire-protocol.md: missing {label}")
