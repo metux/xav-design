@@ -1978,6 +1978,87 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
         self.assertEqual(state.descriptor_sets, [])
         self.assertEqual(state.indirect_buffer_refs, set())
 
+    def test_reset_and_rerecord_preserve_old_refs_until_all_old_backend_holds_retire(self) -> None:
+        old_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+        state = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"old recording"],
+            descriptor_sets=[old_set],
+            indirect_buffer_refs={"buffer-old", "indirect-old"},
+            backend_holds=2,
+        )
+
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+        self.assertEqual(state.entries, [])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+        self.assertEqual(state.backend_holds, 0)
+        self.assertEqual(len(state.retired_recordings), 1)
+        retired = state.retired_recordings[0]
+        self.assertEqual(retired.backend_holds, 2)
+        self.assertEqual(retired.entries, [b"old recording"])
+        self.assertEqual(retired.descriptor_sets, [old_set])
+        self.assertEqual(retired.indirect_buffer_refs, {"buffer-old", "indirect-old"})
+
+        # A fresh recording owns independent references while the old backend
+        # work is still draining.
+        new_set = DescriptorSetLifetime(slots={1: "buffer-new"})
+        self.assertEqual(
+            command_buffer_data(
+                state, CommandBufferChunk(operation="CREATE", entries=(b"new recording",))
+            ),
+            "SUCCESS",
+        )
+        state.descriptor_sets = [new_set]
+        state.indirect_buffer_refs = {"buffer-new", "indirect-new"}
+        state.backend_holds = 1
+
+        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        self.assertEqual(state.retired_recordings[0].backend_holds, 1)
+        self.assertEqual(state.retired_recordings[0].entries, [b"old recording"])
+        self.assertEqual(state.entries, [b"new recording"])
+        self.assertEqual(state.descriptor_sets, [new_set])
+        self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
+
+        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        self.assertEqual(state.retired_recordings, [])
+        self.assertEqual(state.entries, [b"new recording"])
+        self.assertEqual(state.descriptor_sets, [new_set])
+        self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
+        self.assertEqual(state.backend_holds, 1)
+
+        # Completing the new recording's backend use must not clear its
+        # executable references; those remain until the next reset/destroy.
+        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        self.assertEqual(state.entries, [b"new recording"])
+        self.assertEqual(state.descriptor_sets, [new_set])
+        self.assertEqual(state.indirect_buffer_refs, {"buffer-new", "indirect-new"})
+        self.assertEqual(state.backend_holds, 0)
+
+    def test_abort_with_backend_hold_defers_old_recording_reference_release(self) -> None:
+        old_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+        state = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.RECORDING,
+            entries=[b"old partial recording"],
+            descriptor_sets=[old_set],
+            indirect_buffer_refs={"buffer-old"},
+            backend_holds=1,
+        )
+        self.assertEqual(
+            command_buffer_data(state, CommandBufferChunk(operation="ABORT")),
+            "SUCCESS",
+        )
+        self.assertEqual(state.entries, [])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+        self.assertEqual(len(state.retired_recordings), 1)
+        self.assertEqual(state.retired_recordings[0].entries, [b"old partial recording"])
+        self.assertEqual(state.retired_recordings[0].descriptor_sets, [old_set])
+        self.assertEqual(state.retired_recordings[0].indirect_buffer_refs, {"buffer-old"})
+        self.assertEqual(retire_command_buffer_backend_hold(state), "SUCCESS")
+        self.assertEqual(state.retired_recordings, [])
+
     def test_abort_retires_recorded_references_and_rerecording_starts_fresh(self) -> None:
         descriptor_set = DescriptorSetLifetime(slots={0: "buffer-old"})
         state = CommandBufferModel(
