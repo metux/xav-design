@@ -613,6 +613,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         "XID": 4, "ATOM": 4, "FLOAT32": 4,
     }
     checked = 0
+    field_layout_names: set[str] = set()
     for name, _opcode, _kind, responsibility in registry_rows:
         link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
         if not link:
@@ -778,8 +779,10 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 name in compact_layout_assertions,
                 f"{name}: no typed request-field offsets found and no explicit compact-layout assertion is registered",
             )
+            field_layout_names.add(name)
             continue
         checked += 1
+        field_layout_names.add(name)
         # If the request section declares an exact fixed total length, every
         # explicitly located request field must fit inside it. Ignore minimum
         # and variable-length contracts such as chunked uploads.
@@ -812,6 +815,13 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             if width > 1:
                 c.require(offset % min(width, 4) == 0,
                           f"{name}: {typ} field {field!r} at offset {offset} is misaligned (spec line {line_no})")
+    expected_request_names = {name for name, _opcode, _kind, _responsibility in registry_rows}
+    c.require(len(expected_request_names) == len(registry_rows),
+              "request field audit: duplicate request names in the central registry")
+    c.require(field_layout_names == expected_request_names,
+              "request field audit: layout coverage mismatch; "
+              f"missing={sorted(expected_request_names - field_layout_names)}, "
+              f"unexpected={sorted(field_layout_names - expected_request_names)}")
     c.require(checked >= 25,
               f"request field audit: expected typed offsets in at least 25 registered request sections, found {checked}")
 
