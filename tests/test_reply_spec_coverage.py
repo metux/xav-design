@@ -90,6 +90,25 @@ class ReplySpecCoverageTests(unittest.TestCase):
                 ), f"WaitSemaphores status {value} missing for {order}-endian")
 
 
+    def test_semaphore_counter_reply_matches_normative_layout(self):
+        body = section(self.sync, "GetSemaphoreCounterValue")
+        for contract in (
+            "Offset 8: `CARD64 counter_value`",
+            "Offset 16–31: reserved, zero",
+            "Reply payload length: zero",
+        ):
+            self.assertIn(contract, body)
+        expected = 0x0102030405060708
+        for order in ("little", "big"):
+            matches = [v for v in self.vectors
+                       if v["event"] == "GetSemaphoreCounterValue" and v["byte_order"] == order]
+            self.assertEqual(len(matches), 1, f"counter reply fixture missing or duplicated for {order}-endian")
+            wire = bytes.fromhex(matches[0]["wire_hex"])
+            self.assertEqual(len(wire), 32)
+            self.assertEqual(int.from_bytes(wire[4:8], order), 0)
+            self.assertEqual(int.from_bytes(wire[8:16], order), expected)
+            self.assertEqual(wire[16:32], bytes(16))
+
     def test_physical_property_registry_matches_exact_reply_value_contracts(self):
         registry = (ROOT / "registries/physical-device-properties.md").read_text(encoding="utf-8")
         body = section(self.devices, "GetPhysicalDeviceProperty")
