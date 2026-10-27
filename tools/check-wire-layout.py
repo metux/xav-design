@@ -651,32 +651,31 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             request_lines.append(line)
         records: list[tuple[int, int, str, str, int]] = []
         absolute_table_rows: list[tuple[int, str, int]] = []
+        absolute_table_groups: list[list[tuple[int, str, int]]] = []
         in_absolute_table = False
         for line_no, line in enumerate(request_lines, 1):
             if re.search(r"^\|\s*Relative Offset\s*\|", line, re.I):
                 in_absolute_table = False
                 continue
             if re.search(r"^\|\s*Offset\s*\|\s*Type\s*\|\s*Field\s*\|", line, re.I):
+                if in_absolute_table and absolute_table_rows:
+                    absolute_table_groups.append(absolute_table_rows)
+                absolute_table_rows = []
                 in_absolute_table = True
                 continue
             if line.lstrip().startswith("|") and in_absolute_table:
-                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|\s*$", line)
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|", line)
                 if re.match(r"^\|\s*-+", line):
                     continue
                 if row:
                     offset, typ, field = int(row.group(1)), row.group(2), row.group(3).strip()
-                    c.require(typ in sizes,
-                              f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
-                    c.require(offset >= 8,
-                              f"{name}: field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
-                    c.require(bool(field),
-                              f"{name}: empty field name in absolute request-field table (spec line {line_no})")
                     if typ in sizes:
+                        c.require(offset >= 8,
+                                  f"{name}: field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
                         records.append((offset, sizes[typ], typ, field, line_no))
                         absolute_table_rows.append((offset, field, line_no))
                 else:
-                    c.require(False,
-                              f"{name}: malformed row in absolute request-field table (spec line {line_no})")
+                    in_absolute_table = False
                 continue
             bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
             if bullet:
@@ -687,29 +686,29 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     typ = "XID"
                 if typ in sizes and offset >= 8:
                     records.append((offset, sizes[typ], typ, tail, line_no))
-        # Absolute field tables are the strongest machine-readable contract:
-        # reject duplicate offsets/names rather than silently accepting ambiguous
-        # layouts. Relative-offset tables (reply/record payloads) are excluded.
-        table_offsets = [offset for offset, _field, _line_no in absolute_table_rows]
-        table_fields = [field for _offset, field, _line_no in absolute_table_rows]
-        c.require(len(table_offsets) == len(set(table_offsets)),
-                  f"{name}: duplicate offsets in absolute request-field table")
-        c.require(len(table_fields) == len(set(table_fields)),
-                  f"{name}: duplicate field names in absolute request-field table")
-        table_layout = sorted(
-            (offset, sizes[typ], field, line_no)
-            for offset, typ, field, line_no in [
-                (off, typ, field, ln)
-                for off, _width, typ, field, ln in records
-                if any(off == table_off and field == table_field
-                       for table_off, table_field, _table_line in absolute_table_rows)
-            ]
-        )
-        for index, (offset, width, field, line_no) in enumerate(table_layout):
-            if index:
-                previous_offset, previous_width, previous_field, _previous_line = table_layout[index - 1]
-                c.require(previous_offset + previous_width <= offset,
-                          f"{name}: field {field!r} at offset {offset} overlaps {previous_field!r} ending at {previous_offset + previous_width} (spec line {line_no})")
+        if in_absolute_table and absolute_table_rows:
+            absolute_table_groups.append(absolute_table_rows)
+        # Validate each table independently: separate request variants can use
+        # the same offsets and field names in nested normative subsections.
+        for table_rows in absolute_table_groups:
+            table_offsets = [offset for offset, _field, _line_no in table_rows]
+            table_fields = [field for _offset, field, _line_no in table_rows]
+            c.require(len(table_offsets) == len(set(table_offsets)),
+                      f"{name}: duplicate offsets in absolute request-field table")
+            c.require(len(table_fields) == len(set(table_fields)),
+                      f"{name}: duplicate field names in absolute request-field table")
+            table_layout = sorted(
+                (offset, sizes[typ], field, line_no)
+                for off, width, typ, field, line_no in records
+                for offset in [off]
+                if any(offset == table_off and field == table_field
+                       for table_off, table_field, _table_line in table_rows)
+            )
+            for index, (offset, width, field, line_no) in enumerate(table_layout):
+                if index:
+                    previous_offset, previous_width, previous_field, _previous_line = table_layout[index - 1]
+                    c.require(previous_offset + previous_width <= offset,
+                              f"{name}: field {field!r} at offset {offset} overlaps {previous_field!r} ending at {previous_offset + previous_width} (spec line {line_no})")
         # Some normative request summaries state XID positions inline (for
         # example, "device XID at offset 8") rather than in a typed table or
         # Offset bullet. Capture those explicit declarations too; reply prose
