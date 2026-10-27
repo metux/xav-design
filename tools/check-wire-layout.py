@@ -684,6 +684,20 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                   f"{name}: duplicate offsets in absolute request-field table")
         c.require(len(table_fields) == len(set(table_fields)),
                   f"{name}: duplicate field names in absolute request-field table")
+        table_layout = sorted(
+            (offset, sizes[typ], field, line_no)
+            for offset, typ, field, line_no in [
+                (off, typ, field, ln)
+                for off, _width, typ, field, ln in records
+                if any(off == table_off and field == table_field
+                       for table_off, table_field, _table_line in absolute_table_rows)
+            ]
+        )
+        for index, (offset, width, field, line_no) in enumerate(table_layout):
+            if index:
+                previous_offset, previous_width, previous_field, _previous_line = table_layout[index - 1]
+                c.require(previous_offset + previous_width <= offset,
+                          f"{name}: field {field!r} at offset {offset} overlaps {previous_field!r} ending at {previous_offset + previous_width} (spec line {line_no})")
         # Some normative request summaries state XID positions inline (for
         # example, "device XID at offset 8") rather than in a typed table or
         # Offset bullet. Capture those explicit declarations too; reply prose
