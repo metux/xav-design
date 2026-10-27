@@ -225,11 +225,11 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         )
         for heading, phrases in cases:
             with self.subTest(request=heading):
-                section = shaders.split(heading, 1)[1].split("\\n## ", 1)[0]
+                section = shaders.split(heading, 1)[1].split("\n## ", 1)[0]
                 positions = [section.find(phrase) for phrase in phrases]
                 self.assertTrue(all(position >= 0 for position in positions), positions)
                 self.assertEqual(positions, sorted(positions))
-        self.assertIn("after assembly lookup", shaders)
+        self.assertIn("before assembly lookup", shaders)
         self.assertIn("This device-loss rule overrides the generic missing-assembly sentence above.", shaders)
 
     def test_create_default_device_has_total_validation_precedence(self):
