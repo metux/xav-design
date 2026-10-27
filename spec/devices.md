@@ -105,6 +105,22 @@ The `queue_flags` bits are normatively defined in the [Queue Flag Registry](../r
 
 ## `CreateDevice`
 
+### Normative validation precedence
+
+The following order is normative; the server MUST complete these checks before publishing a logical Device or creating externally visible state:
+
+1. Validate the complete variable-length request framing with checked arithmetic. The exact length formula below must match; truncation, trailing bytes, or arithmetic overflow returns `BadLength`.
+2. Validate wire-level and scalar fields: all reserved fields and padding are zero; every queue count is positive; queue-family entries are unique; every priority is finite and in [0,1]; feature IDs and extension names are unique; extension names have valid ASCII Vulkan-name syntax and length 1–255. Any violation returns `BadValue`. An unknown feature ID, because no optional feature IDs are assigned in v0.1, also returns `BadValue` at this stage. A syntactically valid extension name is not rejected merely for being absent from the registry at this stage.
+3. Validate `device_xid` as a create-XID. An invalid or already occupied target returns `BadIDChoice`.
+4. Resolve `physical_device_xid`; an unknown or no-longer-live XID returns `BadValue`.
+5. Validate that the XID is a Physical-Device resource owned by the server and usable by this connection. A live resource of the wrong type or invalid ownership/association returns `BadMatch`.
+6. Require successful XGE 1.0-or-later negotiation through `GEQueryVersion`; otherwise return `BadMatch`.
+7. Check physical-device availability; if unavailable, return `DEVICE_UNAVAILABLE`.
+8. Check requested registry-defined features and extensions against the selected Physical Device. A registered feature unsupported by that device, or a syntactically valid extension unknown to the XAverius extension registry or unsupported by that device, returns `BadMatch`. In v0.1 every syntactically valid extension name is unregistered, because the optional extension registry is intentionally empty.
+9. Only after all prior checks succeed may backend device creation begin. If backend creation fails, report the defined allocation/device error and publish no logical Device. Any failure leaves `device_xid` unallocated and creates no partially visible child resources.
+
+A later phase MUST NOT override an error from an earlier phase. In particular, malformed lengths or scalar fields take precedence over XID errors; an unknown feature ID takes precedence over target-XID occupancy; and target-XID validation precedes physical-device lookup. The error mappings below define the outcome within each phase.
+
 Before creation, this connection MUST have successfully negotiated XGE 1.0 or later through `GEQueryVersion`, so that the server can safely deliver later extended XAverius events. Otherwise, `BadMatch` is reported and the target XID remains unallocated.
 
 Request:
