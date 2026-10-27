@@ -2553,6 +2553,57 @@ def check_presentation_profile(c: Check) -> None:
         "presentation lifecycle: uncertain semaphore consumption must not be guessed or silently reset",
     )
 
+
+def check_compact_request_layouts(c: Check) -> None:
+    """Assert compact request layouts whose prose contracts are easy to miss in typed tables."""
+    devices = read("spec/devices.md")
+    memory = read("spec/memory-buffers.md")
+    sync = read("spec/synchronization.md")
+    presentation = read("spec/presentation.md")
+    exact_contracts = (
+        (devices, "EnumeratePhysicalDevices",
+         "The request has no request-specific payload and is 8 bytes in total."),
+        (memory, "GetPhysicalDeviceMemoryProperties",
+         "Request: physical-device XID at offset 8; total length 12 bytes."),
+        (memory, "GetBufferMemoryRequirements",
+         "Offset 8: Device-XID\n- Offset 12: Buffer-XID\n- Total length: 16 bytes"),
+        (memory, "FreeMemory",
+         "Total length: 16 bytes.\n\n- Offset 8: Device-XID\n- Offset 12: Memory-XID"),
+        (memory, "BindBufferMemory",
+         "Total length: 28 bytes.\n\n- Offset 8: Device-XID\n- Offset 12: Buffer-XID\n- Offset 16: Memory-XID\n- Offset 20: `CARD64 memory_offset`"),
+        (sync, "GetSemaphoreCounterValue",
+         "Request: exactly 16 bytes; device XID at offset 8 and semaphore XID at offset 12."),
+        (sync, "GetFenceStatus",
+         "Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12."),
+        (sync, "ResetFence",
+         "Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12."),
+        (sync, "DestroyFence",
+         "`DestroyFence` is a void request with a fixed total length of 16 bytes: device XID at offset 8 and fence XID at offset 12."),
+        (sync, "DestroySemaphore",
+         "`DestroySemaphore` is a void request with a fixed total length of 16 bytes: device XID at offset 8 and semaphore XID at offset 12."),
+    )
+    for document, request_name, contract in exact_contracts:
+        c.require(contract in document,
+                  f"{request_name}: compact request wire layout/length contract is missing or has drifted")
+
+    c.require(
+        "The request MUST have exactly this length; extra or missing bytes result in `BadLength`." in devices
+        and "The request has no request-specific payload and is 8 bytes in total." in devices,
+        "EnumeratePhysicalDevices: empty payload and exact 8-byte request framing must remain explicit",
+    )
+    c.require(
+        "Request: exactly 16 bytes; device XID at offset 8 and semaphore XID at offset 12." in sync
+        and "Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12." in sync,
+        "synchronization query requests: both XID slots must stay at offsets 8 and 12 in 16-byte requests",
+    )
+    c.require(
+        "The final layouts include the common 8-byte header" in presentation
+        and "a 16-byte CreateSurface (target Surface XID plus X11 Window XID)" in presentation
+        and "a 12-byte DestroySurface" in presentation
+        and "a 12-byte DestroySwapchain" in presentation,
+        "presentation compact request layouts must include the common header and exact create/destroy lengths",
+    )
+
 def main() -> int:
     c = Check()
     check_events(c)
@@ -2562,6 +2613,7 @@ def main() -> int:
     check_error_registry(c)
     check_other_numeric_registries(c)
     check_request_field_offsets_and_widths(c)
+    check_compact_request_layouts(c)
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
     check_request_limit_contract(c)
