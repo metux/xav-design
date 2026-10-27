@@ -137,9 +137,9 @@ def check_events(c: Check) -> None:
         "DestroyDevice: cascade, open-wait outcomes, and callback terminalization must share a linearization point",
     )
     c.require(
-        "MUST use the immutable internal Device/resource/submission identity" in lifetime
+        "MUST be keyed by the immutable internal Device/resource/submission identity" in lifetime
         and "MUST NOT mutate the new resource" in lifetime
-        and "retained or quarantined until backend access is known to be impossible" in lifetime,
+        and "remain retained or quarantined until backend access is known to be impossible" in lifetime,
         "DestroyDevice: late callbacks and cleanup must not be redirected by XID reuse or free active backend storage",
     )
     c.require(re.search(r"(?:Suppressing delivery does not change the internal terminal outcome of accepted submissions or the requirement to retain backend references until possible accesses have ended|Die Unterdrückung der Zustellung ändert weder den internen terminalen Ausgang angenommener Submissions noch die Pflicht, Backend-Referenzen bis zum Ende möglicher Zugriffe zu halten)", lifetime, re.S) is not None,
