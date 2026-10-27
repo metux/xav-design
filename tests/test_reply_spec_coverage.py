@@ -60,10 +60,20 @@ class ReplySpecCoverageTests(unittest.TestCase):
         status_part = body.split("Reply status:", 1)[-1]
         statuses = assignments(status_part, {"SUCCESS", "TIMEOUT", "EXECUTION_FAILED", "DEVICE_LOST", "DEVICE_DESTROYED"})
         self.assertEqual(statuses, {"SUCCESS": 0, "TIMEOUT": 1, "EXECUTION_FAILED": 2, "DEVICE_LOST": 3, "DEVICE_DESTROYED": 4})
-        self.assert_values_covered_in_both_orders(
-            "WaitForFence", set(statuses.values()),
-            lambda vector, order: int.from_bytes(bytes.fromhex(vector["wire_hex"])[8:12], order),
-        )
+        event_for_status = {
+            0: "WaitForFence-success",
+            1: "WaitForFence-timeout",
+            2: "WaitForFence-execution-failed",
+            3: "WaitForFence-device-lost",
+            4: "WaitForFence-device-destroyed",
+        }
+        for value, event in event_for_status.items():
+            for order in ("little", "big"):
+                self.assertTrue(any(
+                    vector["event"] == event and vector["byte_order"] == order
+                    and int.from_bytes(bytes.fromhex(vector["wire_hex"])[8:12], order) == value
+                    for vector in self.vectors
+                ), f"WaitForFence status {value} missing for {order}-endian")
 
     def test_semaphore_wait_statuses_follow_normative_contract(self):
         body = section(self.sync, "WaitSemaphores")
