@@ -181,8 +181,8 @@ class ReplySpecCoverageTests(unittest.TestCase):
         self.assertIn("If the number of memory types or memory heaps is zero, no corresponding records may follow", body)
         for order in ("little", "big"):
             matches = [v for v in self.vectors
-                       if v["event"] == "GetPhysicalDeviceMemoryProperties-zero-counts"
-                       and v["byte_order"] == order]
+                       if v["event"] == "GetPhysicalDeviceMemoryProperties"
+                       and "zero-counts" in v["name"] and v["byte_order"] == order]
             self.assertEqual(len(matches), 1, f"zero-count memory properties fixture missing for {order}-endian")
             wire = bytes.fromhex(matches[0]["wire_hex"])
             self.assertEqual(len(wire), 48)
