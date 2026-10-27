@@ -56,6 +56,8 @@ def validate_event(wire: bytes, byte_order: str, name: str) -> None:
         raise ValueError("event size must be divisible by four")
     if wire[0] != 35:
         raise ValueError("response_type must be GenericEvent")
+    if wire[1] not in range(128, 256):
+        raise ValueError("extension major opcode must be in 128..255")
     endian = "<" if byte_order == "little" else ">"
     if struct.unpack_from(endian + "I", wire, 4)[0] != 8:
         raise ValueError("XGE length must be 8")
@@ -63,6 +65,10 @@ def validate_event(wire: bytes, byte_order: str, name: str) -> None:
         raise ValueError("event type ID mismatch")
     if any(wire[10:32]):
         raise ValueError("XGE reserved header bytes must be zero")
+    if struct.unpack_from(endian + "I", wire, 32)[0] == 0:
+        raise ValueError("Device-XID must be nonzero")
+    if struct.unpack_from(endian + "I", wire, 44)[0] == 0:
+        raise ValueError("Swapchain-XID must be nonzero")
     if struct.unpack_from(endian + "I", wire, 52)[0] not in (
         STATUS.values() if name == "PRESENTATION_COMPLETE" else (0,)
     ):
@@ -205,6 +211,12 @@ class PresentationEventWireTests(unittest.TestCase):
                  "invalid event status or reserved field"),
                 ("zero_presentation_token", "PRESENTATION_COMPLETE", 56, "Q", 0,
                  "presentation token must be nonzero"),
+                ("invalid_extension_opcode", "PRESENTATION_COMPLETE", 1, "B", 127,
+                 "extension major opcode must be in 128..255"),
+                ("zero_device_xid", "PRESENTATION_COMPLETE", 32, "I", 0,
+                 "Device-XID must be nonzero"),
+                ("zero_swapchain_xid", "PRESENTATION_COMPLETE", 44, "I", 0,
+                 "Swapchain-XID must be nonzero"),
             )
             for label, name, offset, fmt, value, message in cases:
                 with self.subTest(order=order, case=label):
