@@ -663,6 +663,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 absolute_table_rows = []
                 in_absolute_table = True
                 continue
+            if not line.lstrip().startswith("|") and in_absolute_table:
+                in_absolute_table = False
             if line.lstrip().startswith("|") and in_absolute_table:
                 row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|", line)
                 if re.match(r"^\|\s*-+", line):
