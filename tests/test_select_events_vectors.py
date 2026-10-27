@@ -285,7 +285,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         # Wire-level failures and runtime resource failures are distinct.
         self.assertRegex(events, r"Unknown scope values.*invalid mask bits.*BadValue")
         self.assertRegex(events, r"Unknown or non-live XIDs result in `BadValue`")
-        self.assertRegex(events, r"falscher Ressourcentyp oder fremde Client-Ownership ergeben `BadMatch`")
+        self.assertRegex(events, r"an incorrect resource type or foreign client ownership results in `BadMatch`")
         self.assertRegex(events, r"A nonexistent queue within a valid device results in `BadValue`")
         self.assertRegex(events, r"(?i)Without negotiated XGE support.*`CreateDevice`, `CreateDefaultDevice`, and `SelectEvents`.*`BadMatch`")
         self.assertRegex(events, r"(?i)On any error, the previous selection remains unchanged")
@@ -514,7 +514,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
 
         required_cases = (
             "unknown mask bits",
-            "invalid zero values",
+            "scope fields with incorrect zero values",
             "unrequested queue combination",
             "unmaskable `DEVICE_LOST` and `ASYNC_ERROR` events",
             "shared serialized linearization point",
@@ -622,12 +622,12 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_write_buffer_detects_deferred_binary_and_timeline_signal_cycles(self):
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
-        self.assertIn("signal entries in deferred `QueueSubmit` requests", queue)
-        self.assertIn("If a deferred submission signals a Binary semaphore awaited by an earlier non-terminal submission", queue)
+        self.assertIn("signal entries in deferred `QueueSubmit` requests", memory)
+        self.assertIn("If a deferred submission signals a Binary semaphore awaited by an earlier non-terminal submission", memory)
         self.assertIn("Signal entries in deferred submissions do not count as accepted or available signals", memory)
         self.assertIn("terminate the pending `WriteBuffer` with `DEPENDENCY_FAILED`", memory)
-        self.assertIn("Deferred requests are then processed in normal request order", queue)
-        self.assertIn("While a `QueueSubmit` is deferred, it MUST NOT change semaphore/fence state or pending reservations", queue)
+        self.assertIn("Deferred requests are then processed in normal request order", memory)
+        self.assertIn("While a `QueueSubmit` is deferred, it MUST NOT change semaphore/fence state or pending reservations", memory)
         self.assertIn("full validation and atomic state transfer occur only after `WriteBuffer` completes", memory)
 
     def test_device_loss_terminalization_preserves_sync_and_backend_lifetime(self):
@@ -637,8 +637,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("A device-loss transition MUST mark all submissions that are still non-terminal at that point as `FAILED/DEVICE_LOST`", queue)
         self.assertIn("a later success MUST NOT set `SIGNALED`, advance a timeline counter", queue)
         self.assertIn("If the server cannot prove whether an accepted but failed backend operation took effect on a binary semaphore signal or wait, it MUST mark that semaphore `UNTRUSTED`.", sync)
-        self.assertIn("Internal resources and memory remain referenced until possible backend accesses are proven to have ended, or are quarantined under the device-loss rules.", lifetime)
-        self.assertIn("MUST complete even when lifecycle rules suppress delivery", lifetime)
+        self.assertIn("Objects with remaining internal references or backend accesses remain `DESTROY_PENDING`", lifetime)
+        self.assertIn("For accepted presentations, internal terminal states and safe backend cleanup MUST complete even when lifecycle rules suppress delivery of presentation events.", lifetime)
 
     def test_write_buffer_device_loss_never_claims_upload_visibility(self):
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
@@ -716,21 +716,20 @@ class GoldenSelectEventsTests(unittest.TestCase):
 
     def test_destroyed_buffer_descriptor_slot_release_chain(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
-        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        recording = (ROOT / "spec" / "command-recording.md").read_text(encoding="utf-8")
+        descriptors = (ROOT / "spec" / "shaders-pipelines.md").read_text(encoding="utf-8")
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
 
-        # Destroying the public Buffer XID does not silently repair stale sets.
-        buffer_rules = lifetime.split("## Buffer und Memory", 1)[1].split("## Fehler bei ungültigen Lebenszyklusoperationen", 1)[0]
-        self.assertIn("Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen", buffer_rules)
-        self.assertIn("bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden", buffer_rules)
-        self.assertIn("interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen", buffer_rules)
+        # Public XID invalidation does not release descriptor-held or backend references.
+        self.assertIn("buffer handles in descriptor slots", lifetime)
+        self.assertIn("The server MUST NOT treat an executable command buffer as valid if one of its recorded resource dependencies has been publicly destroyed.", lifetime)
+        self.assertIn("A successful `UpdateDescriptorSets` atomically updates the derived buffer references", recording)
+        self.assertIn("A non-pending `EXECUTABLE` command buffer uses the set's current contents at submission time", recording)
+        self.assertIn("A destroy request is atomic: if the resource-specific rule rejects destruction", lifetime)
 
-        # Both release paths are atomic and invalidate executable command buffers.
-        self.assertIn("nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`", lifetime)
-        self.assertIn("nicht-pending `EXECUTABLE`-Command-Buffer, die sie referenzieren, `INVALID`", lifetime)
-        self.assertIn("`DestroyDescriptorPool` oder `FreeDescriptorSets`", errors)
-        self.assertIn("irgendein intern noch lebender Buffer", memory)
-        self.assertIn("Bei Ablehnung bleiben Memory-XID und Allokation unverändert", memory)
+        # Memory remains allocated while an internally live bound Buffer exists.
+        self.assertIn("any internally live buffer remains bound to this allocation", memory)
+        self.assertIn("On rejection, the memory XID and allocation remain unchanged.", memory)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
