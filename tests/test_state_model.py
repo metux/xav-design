@@ -2951,3 +2951,87 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
             "INVALID_SYNCHRONIZATION_STATE",
         )
         self.assertEqual(state, before)
+
+    def test_multiple_successful_resets_keep_each_backend_epoch_independent(self):
+        first_set = DescriptorSetLifetime(slots={0: "buffer-epoch-0"})
+        state = self._state(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"epoch-0"],
+            descriptor_sets=[first_set],
+            indirect_buffer_refs={"buffer-epoch-0"},
+            backend_holds=2,
+            recording_epoch=10,
+        )
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        self.assertEqual(state.retired_recordings[0].epoch, 10)
+
+        # A later recording acquires its own hold and references. Resetting it
+        # must create a second retired epoch rather than merging old ownership.
+        second_set = DescriptorSetLifetime(slots={0: "buffer-epoch-1"})
+        state.lifecycle = CommandBufferLifecycle.EXECUTABLE
+        state.entries = [b"epoch-1"]
+        state.descriptor_sets = [second_set]
+        state.indirect_buffer_refs = {"buffer-epoch-1"}
+        state.backend_holds = 1
+        second_epoch = state.recording_epoch
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        self.assertEqual(
+            [(r.epoch, r.backend_holds) for r in state.retired_recordings],
+            [(10, 2), (second_epoch, 1)],
+        )
+
+        # Complete the newer epoch first; it must not consume either old hold.
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=second_epoch),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            [(r.epoch, r.backend_holds) for r in state.retired_recordings],
+            [(10, 2)],
+        )
+        self.assertEqual(state.retired_recordings[0].entries, [b"epoch-0"])
+        self.assertEqual(state.retired_recordings[0].descriptor_sets, [first_set])
+        self.assertEqual(state.retired_recordings[0].indirect_buffer_refs, {"buffer-epoch-0"})
+
+        self.assertEqual(retire_command_buffer_backend_hold(state, recording_epoch=10), "SUCCESS")
+        self.assertEqual(state.retired_recordings[0].backend_holds, 1)
+        self.assertEqual(retire_command_buffer_backend_hold(state, recording_epoch=10), "SUCCESS")
+        self.assertEqual(state.retired_recordings, [])
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=10),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+
+    def test_reset_success_matrix_covers_all_non_pending_lifecycles(self):
+        for lifecycle in (
+            CommandBufferLifecycle.INITIAL,
+            CommandBufferLifecycle.RECORDING,
+            CommandBufferLifecycle.EXECUTABLE,
+            CommandBufferLifecycle.INVALID,
+        ):
+            for holds in (0, 2):
+                with self.subTest(lifecycle=lifecycle, holds=holds):
+                    descriptor_set = DescriptorSetLifetime(slots={0: "buffer-old"})
+                    state = self._state(
+                        lifecycle=lifecycle,
+                        entries=[b"recorded"],
+                        descriptor_sets=[descriptor_set],
+                        indirect_buffer_refs={"buffer-old"},
+                        backend_holds=holds,
+                        recording_epoch=4,
+                    )
+                    self.assertEqual(reset_command_buffer(state), "SUCCESS")
+                    self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+                    self.assertEqual(state.recording_epoch, 5)
+                    self.assertEqual(state.entries, [])
+                    self.assertEqual(state.descriptor_sets, [])
+                    self.assertEqual(state.indirect_buffer_refs, set())
+                    self.assertEqual(state.backend_holds, 0)
+                    if holds:
+                        self.assertEqual(len(state.retired_recordings), 1)
+                        self.assertEqual(state.retired_recordings[0].epoch, 4)
+                        self.assertEqual(state.retired_recordings[0].backend_holds, holds)
+                    else:
+                        self.assertEqual(state.retired_recordings, [])
