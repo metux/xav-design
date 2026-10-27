@@ -660,11 +660,23 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 in_absolute_table = True
                 continue
             if line.lstrip().startswith("|") and in_absolute_table:
-                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|", line)
-                if row and row.group(2) in sizes and int(row.group(1)) >= 8:
-                    records.append((int(row.group(1)), sizes[row.group(2)], row.group(2), row.group(3).strip(), line_no))
-                elif not re.match(r"^\|\s*-+", line):
-                    in_absolute_table = False
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Z][A-Z0-9_]*)\s*\|\s*([^|]+?)\s*\|\s*$", line)
+                if re.match(r"^\|\s*-+", line):
+                    continue
+                if row:
+                    offset, typ, field = int(row.group(1)), row.group(2), row.group(3).strip()
+                    c.require(typ in sizes,
+                              f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
+                    c.require(offset >= 8,
+                              f"{name}: field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
+                    c.require(bool(field),
+                              f"{name}: empty field name in absolute request-field table (spec line {line_no})")
+                    if typ in sizes:
+                        records.append((offset, sizes[typ], typ, field, line_no))
+                        absolute_table_rows.append((offset, field, line_no))
+                else:
+                    c.require(False,
+                              f"{name}: malformed row in absolute request-field table (spec line {line_no})")
                 continue
             bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
             if bullet:
