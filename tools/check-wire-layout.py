@@ -3126,7 +3126,7 @@ def check_create_device_precedence(c: Check) -> None:
         bool(section) and all(position >= 0 for position in positions)
         and positions == sorted(positions)
         and len(set(positions)) == len(positions),
-        "CreateDevice precedence: framing, scalar syntax, create-XID, input-XID, ownership, XGE, availability, support, and publication must be ordered",
+        "CreateDevice precedence: framing, scalar syntax, create-XID, input-XID, ownership, XGE, availability, queue support, feature support, and publication must be ordered",
     )
     c.require(
         "unknown feature ID takes precedence over target-XID occupancy" in section
