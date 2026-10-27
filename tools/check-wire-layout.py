@@ -235,7 +235,7 @@ def check_events(c: Check) -> None:
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
     c.require(re.search(r"Any other dependency that prevents acceptance results in `DEPENDENCY_FAILED`", queue_order, re.I) is not None and
-              re.search(r"Only already-accepted signal operations count as possible releases; signal entries in deferred submissions do not", memory, re.I) is not None,
+              re.search(r"Signal entries in deferred submissions do not count as accepted or available signals", memory, re.I) is not None,
               "QueueSubmit/WriteBuffer: deferred signals must not satisfy earlier waits and dependency rejection must be explicit")
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
