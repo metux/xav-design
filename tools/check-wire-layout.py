@@ -664,7 +664,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 elif not re.match(r"^\|\s*-+", line):
                     in_absolute_table = False
                 continue
-            bullet = re.match(r"^\s*[-*]\s*Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
+            bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
             if bullet:
                 offset, tail = int(bullet.group(1)), bullet.group(2).strip()
                 tm = re.search(r"\b(CARD8|CARD16|CARD32|CARD64|XID|ATOM|FLOAT32)\b", tail)
