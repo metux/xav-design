@@ -78,6 +78,7 @@ def validate_presentation_reply(
     order: str,
     *,
     expected_image_count: int | None = None,
+    expected_queue_family_count: int | None = None,
 ) -> None:
     if order not in ("little", "big"):
         raise ValueError("unknown byte order")
@@ -118,6 +119,9 @@ def validate_presentation_reply(
                 raise ValueError("successful capabilities reply has invalid image-count bounds")
             if families == 0:
                 raise ValueError("successful capabilities reply has zero queue families")
+            if (expected_queue_family_count is not None and
+                    families != expected_queue_family_count):
+                raise ValueError("queue-family count does not match physical-device properties")
             start = 64 + 8 * formats + 4 * modes
             family_indices = []
             family_support = []
@@ -413,6 +417,26 @@ class PresentationReplyWireTests(unittest.TestCase):
                     struct.pack_into(endian + fmt, wire, offset, value)
                     with self.assertRaisesRegex(ValueError, message):
                         validate_presentation_reply(kind, bytes(wire), order)
+
+    def test_capabilities_queue_family_count_matches_physical_device(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                wire = encode_capabilities(order)
+                validate_presentation_reply(
+                    "capabilities", wire, order, expected_queue_family_count=2
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "queue-family count does not match physical-device properties"
+                ):
+                    validate_presentation_reply(
+                        "capabilities", wire, order, expected_queue_family_count=3
+                    )
+                with self.assertRaisesRegex(
+                    ValueError, "queue-family count does not match physical-device properties"
+                ):
+                    validate_presentation_reply(
+                        "capabilities", wire, order, expected_queue_family_count=1
+                    )
 
     def test_successful_capabilities_rejects_zero_queue_families(self) -> None:
         for order in ("little", "big"):
