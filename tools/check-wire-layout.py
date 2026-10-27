@@ -614,6 +614,25 @@ def check_other_numeric_registries(c: Check) -> None:
     for fragment in ("`BYTE_ARRAY` (5)", "`CARD32` (1)", "`CARD32_ARRAY` (6)"):
         c.require(fragment in property_registry,
                   f"physical-device property registry missing type mapping {fragment}")
+    property_contracts = (
+        "`XAverius.deviceUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes",
+        "`XAverius.driverUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes",
+        "`XAverius.compute.maxWorkGroupInvocations` | `CARD32` (1) | One unsigned 32-bit integer",
+        "`XAverius.compute.maxWorkGroupSize` | `CARD32_ARRAY` (6) | Exactly three unsigned 32-bit integers",
+        "For `SUCCESS`, the reply's `property_type` MUST match the registered type",
+        "`value_length` MUST equal the exact size specified above",
+        "padding bytes MUST be zero",
+        "the server MUST NOT fabricate a UUID",
+    )
+    for contract in property_contracts:
+        c.require(contract in property_registry,
+                  f"physical-device property registry missing exact value/reply contract: {contract}")
+    c.require(
+        "For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero" in devices
+        and "`reply.length = 0`" in devices
+        and "Reserved; MUST be zero" in devices,
+        "GetPhysicalDeviceProperty: error statuses, reserved bytes, and empty reply encoding must be normative",
+    )
 
     feature_registry = read("registries/feature-ids.md")
     extension_registry = read("registries/device-extensions.md")
