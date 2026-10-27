@@ -239,7 +239,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "descriptor-slot contents are not copied into the command buffer as an immutable snapshot",
             "atomically updates the derived buffer references",
-            uses the set's current descriptor contents at later submission time,
+            "uses the set's current descriptor contents at later submission time",
             "does not invalidate such a command buffer solely because descriptor contents changed",
         ):
             with self.subTest(recording_rule=phrase):
