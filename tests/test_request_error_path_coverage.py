@@ -481,23 +481,23 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [reset.index(phrase) for phrase in reset_order]
         self.assertEqual(positions, sorted(positions))
         for phrase in (
-            "Nach erfolgreicher XID-/Ownership-Prüfung ergeben ein nicht verfügbares oder verlorenes logisches Device",
-            "Jede Ablehnung lässt Zustand, Entries und Ressourcenreferenzen unverändert",
+            "After successful XID and ownership validation, an unavailable device results in `DEVICE_UNAVAILABLE` and a lost device in `DEVICE_LOST`",
+            "On rejection, the state, entries, and references remain unchanged.",
         ):
             with self.subTest(reset_contract=phrase):
-                self.assertIn(phrase, errors)
+                self.assertIn(phrase, reset)
         self.assertIn("`ResetCommandBuffer` prüft Request-Länge", conformance)
 
         # WaitSemaphores rejects malformed requests before registration; pending waits
         # have terminal outcomes distinct from initial request validation.
         wait = synchronization[synchronization.index("## `WaitSemaphores`"):synchronization.index("## `WaitForFence`") ]
         wait_order = (
-            "length or arithmetic overflow results in `BadLength`",
-            "semaphore_count",
-            "Device and Semaphore XIDs in wire order",
-            "resource type, client/device ownership, and cross-device association",
-            "device state",
-            "all semaphores are timeline semaphores",
+            "length and checked arithmetic",
+            "semaphore_count != 0",
+            "resolve the device XID and then semaphore XIDs in array order",
+            "check resource type, client/device ownership, and cross-device association",
+            "check device state",
+            "verify that all semaphores are timeline semaphores",
         )
         positions = [wait.index(phrase) for phrase in wait_order]
         self.assertEqual(positions, sorted(positions))
