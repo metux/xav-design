@@ -55,7 +55,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         self.assertEqual(values, list(range(1, 48)), "request subopcodes must be unique and append-only")
 
         for name, _value, kind, details in rows:
-            chapters = re.findall(r"\\]\\(\\.\\./spec/([^)]+)\\)", details)
+            chapters = re.findall(r"\]\(\.\./spec/([^)]+)\)", details)
             self.assertTrue(chapters, f"{name} must point to its normative chapter")
             found = False
             for chapter in chapters:
@@ -68,7 +68,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             self.assertTrue(found, f"{name} is absent from every normative chapter linked by its registry row")
 
         error_rows = re.findall(
-            r"^\\|\\s*(\\d+)\\s*\\|\\s*`([A-Z_]+)`\\s*\\|$",
+            r"^\|\s*(\d+)\s*\|\s*`([A-Z_]+)`\s*\|$",
             (ROOT / "registries" / "errors.md").read_text(encoding="utf-8"),
             re.M,
         )
