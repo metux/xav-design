@@ -372,6 +372,19 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
 
 
 
+    def test_create_default_device_validation_precedence_is_explicit_and_ordered(self):
+        devices = read("spec/devices.md")
+        section = devices.split("## `CreateDefaultDevice`", 1)[1].split("\n## ", 1)[0]
+        phases = ("(1) validate the exact/formula-based request length", "(2) validate `queue_count`, the reserved field, and every priority", "(3) validate the target `device_xid` as a create-XID", "(4) require successful XGE 1.0-or-later negotiation", "(5) select a suitable physical device and compute-capable queue family")
+        positions = [section.find(phase) for phase in phases]
+        self.assertTrue(all(p >= 0 for p in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("that can supply the requested `queue_count`", section)
+        self.assertIn("if no such combination is available, it reports `DEVICE_UNAVAILABLE`", section)
+        checker = read("tools/check-wire-layout.py")
+        self.assertIn("def check_create_default_device_precedence", checker)
+        self.assertIn("check_create_default_device_precedence(c)", checker)
+
     def test_create_device_validation_precedence_is_explicit_and_ordered(self):
         devices = read("spec/devices.md")
         section = devices.split("## `CreateDevice`", 1)[1].split("\n## ", 1)[0]
