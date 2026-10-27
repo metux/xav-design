@@ -699,6 +699,35 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             # normative text actually locates.
             continue
         checked += 1
+        # If the request section declares an exact fixed total length, every
+        # explicitly located request field must fit inside it. Ignore minimum
+        # and variable-length contracts such as chunked uploads.
+        fixed_length = None
+        for line in request_lines:
+            if re.search(r"\\b(?:at least|minimum|variable|variable-length)\\b", line, re.I):
+                continue
+            match = re.search(
+                r"\\b(?:fixed total length of|total length(?: is|:)?|exactly)\\s+(\\d+)\\s+bytes\\b",
+                line, re.I,
+            )
+            if match:
+                fixed_length = int(match.group(1))
+                break
+        if fixed_length is not None:
+            for offset, width, typ, field, line_no in ordered:
+                c.require(offset + width <= fixed_length,
+                          f"{name}: field {field!r} at offset {offset} (width {width}) exceeds fixed request length {fixed_length} (spec line {line_no})")
+        # Conflicting declarations at the same offset usually mean that request
+        # and reply layouts were accidentally mixed or the normative layout is
+        # inconsistent. Identical repeated mentions have already been deduped.
+        offsets: dict[int, tuple[int, str, int]] = {}
+        for offset, width, typ, field, line_no in ordered:
+            previous = offsets.get(offset)
+            if previous is not None and (previous[0] != width or previous[1] != field):
+                c.require(False,
+                          f"{name}: conflicting request fields at offset {offset}: {previous[1]!r} and {field!r} (spec lines {previous[2]} and {line_no})")
+            else:
+                offsets[offset] = (width, field, line_no)
         # Widths are used to check scalar alignment. Overlap is not inferred
         # across mixed prose/table declarations because some request sections
         # also describe reply fields in the same subsection.
