@@ -1467,6 +1467,73 @@ def check_common_request_error_precedence(c: Check) -> None:
                       f"{name}: common precedence registry link has no defining request section")
 
 
+def check_request_specific_precedence_exceptions(c: Check) -> None:
+    """Guard documented request-local orderings that refine the common baseline."""
+    wire = read("spec/wire-protocol.md")
+    errors = read("spec/errors.md")
+    memory = read("spec/memory-buffers.md")
+    shaders = read("spec/shaders-pipelines.md")
+    command = read("spec/command-recording.md")
+    queue = read("spec/queue-submission.md")
+    sync = read("spec/synchronization.md")
+    presentation = read("spec/presentation.md")
+
+    c.require(
+        "The default is scalar/reserved/padding validation before XID resolution" in wire
+        and "a request chapter MAY explicitly reorder checks within these later phases" in wire
+        and "Such an exception MUST state the affected checks and their precedence" in wire,
+        "request-specific precedence: common rule must permit only explicit later-phase refinements",
+    )
+
+    # Each tuple is an intentional request-local order, not an alternate common-header rule.
+    contracts = (
+        ("BindBufferMemory", memory,
+         ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
+          "resource type, client/device ownership", "device state", "binding-specific checks")),
+        ("UpdateDescriptorSets", shaders,
+         ("Request-Länge/Count und strukturelle Integrität", "syntax- und feldlokale Prüfungen",
+          "Auflösung der XIDs in Wire-Reihenfolge", "Ressourcentyp, Client-/Device-Ownership",
+          "Device-Zustand")),
+        ("CommandBufferData", command,
+         ("wire-structure errors take precedence over field errors",
+          "field errors take precedence over target/pool XID errors",
+          "target XID is checked before the pool XID")),
+        ("QueueSubmit", queue,
+         ("incorrect total length", "syntactic fields are checked",
+          "required XIDs are resolved in wire order", "resource type, client/device ownership",
+          "unavailable or lost device takes precedence over mutable submission state")),
+        ("WaitSemaphores", sync,
+         ("length and checked arithmetic", "semaphore_count != 0",
+          "resolve the device XID and then semaphore XIDs", "check device state",
+          "verify that all semaphores are timeline semaphores")),
+        ("SignalSemaphore", sync,
+         ("exact total length of 24 bytes", "resolve the device XID, then the semaphore XID",
+          "check resource type, client/device ownership", "check device state",
+          "check timeline type and signal-value/reservation consistency")),
+        ("presentation requests", presentation,
+         ("wire length and checked arithmetic", "scalar/reserved-field validation",
+          "XID resolution in the defined order", "type and ownership validation",
+          "Device availability", "immutable request constraints",
+          "lifecycle/capability status", "mutable state and synchronization eligibility")),
+    )
+    for name, document, phrases in contracts:
+        positions = [document.find(phrase) for phrase in phrases]
+        c.require(all(position >= 0 for position in positions)
+                  and positions == sorted(positions)
+                  and len(set(positions)) == len(positions),
+                  f"{name}: documented validation phases must be present and ordered")
+
+    # Global create-XID precedence is distinct from input-XID lookup.
+    create_rules = (
+        "The target XID of a create request is not an input XID",
+        "an invalid or occupied target XID therefore results in `BadIDChoice`",
+        "The first invalid XID determines the reported resource error",
+    )
+    for phrase in create_rules:
+        c.require(phrase in errors,
+                  f"create-XID precedence: missing central rule {phrase!r}")
+
+
 def check_request_limit_contract(c: Check) -> None:
     """Guard ordinary X11 request limits and the incompatible BIG-REQUESTS header."""
     wire = read("spec/wire-protocol.md")
@@ -2969,6 +3036,7 @@ def main() -> int:
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
     check_common_request_error_precedence(c)
+    check_request_specific_precedence_exceptions(c)
     check_request_limit_contract(c)
     check_local_markdown_links(c)
     check_reply_matrix(c)
