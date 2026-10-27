@@ -173,6 +173,8 @@ def validate_presentation_reply(
         }[kind]
         if len(wire) != size or declared != words:
             raise ValueError("invalid fixed presentation reply size")
+        if any(wire[8:32]):
+            raise ValueError("fixed presentation reply has nonzero unused reply-header bytes")
         status = u32(wire, 32, order)
         if status not in range(statuses):
             raise ValueError("invalid presentation status")
@@ -425,6 +427,9 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 56, "I", 2, "capabilities advertise unassigned image-usage flags"),
                 ("capabilities", 76, "I", 1, "queue-family indices must cover every family in ascending order"),
                 ("capabilities", 84, "I", 0, "queue-family indices must cover every family in ascending order"),
+                ("create_swapchain", 8, "I", 1, "fixed presentation reply has nonzero unused reply-header bytes"),
+                ("acquire", 8, "I", 1, "fixed presentation reply has nonzero unused reply-header bytes"),
+                ("queue_present", 8, "I", 1, "fixed presentation reply has nonzero unused reply-header bytes"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
                 ("create_swapchain", 32, "I", 6, "invalid presentation status"),
                 ("create_swapchain", 36, "I", 0, "successful CreateSwapchain has zero image count"),
