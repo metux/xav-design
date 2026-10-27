@@ -351,7 +351,7 @@ class SelectEventsContractTests(unittest.TestCase):
     def test_lifetime_and_submission_specs_preserve_terminal_state_independently_of_delivery(self):
         self.assertIn("after successful processing of `DestroyDevice`", EVENTS)
         self.assertIn("events already queued in the X11 output stream remain unaffected", EVENTS)
-        self.assertIn("Suppressing delivery does not change the internal terminal outcome", EVENTS)
+        self.assertIn("This does not change the Submission's internal terminal outcome.", EVENTS)
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event", SUBMISSIONS)
         self.assertIn("Every accepted submission has exactly one terminal outcome", SUBMISSIONS)
         self.assertIn("DestroyDevice", LIFETIME)
