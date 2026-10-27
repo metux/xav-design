@@ -29,6 +29,7 @@ from xa_state_model import (
     queue_submit,
     shader_module_data,
     finish_submission,
+    mark_device_lost,
     signal_timeline_host,
     reset_fence,
     DescriptorSetLifetime,
@@ -1822,6 +1823,53 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
         before = copy.deepcopy(state)
         self.assertEqual(finish_submission(state, 414, success=False), "BadValue")
+        self.assertEqual(state, before)
+
+
+    def test_device_loss_terminalizes_all_pending_submissions_before_late_callbacks(self) -> None:
+        buffers = [
+            CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            for _ in range(2)
+        ]
+        state = self.state(
+            command_buffers=buffers,
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3],
+            signal_slots=[None],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=420, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=421, command_buffer_indices=(1,),
+                signal_indices=(0,), signal_values=(13,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(state.pending_submissions, [420, 421])
+        self.assertEqual(state.pending_timeline_signals, [(420, 0, 8), (421, 0, 13)])
+
+        self.assertEqual(mark_device_lost(state), "SUCCESS")
+        self.assertTrue(state.device_lost)
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(
+            [buffer.lifecycle for buffer in buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.INVALID],
+        )
+
+        # Backend callbacks arriving after loss terminalization cannot revive
+        # either command buffer or publish a reserved timeline value.
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 420, success=True), "BadValue")
+        self.assertEqual(finish_submission(state, 421, success=True), "BadValue")
         self.assertEqual(state, before)
 
 
