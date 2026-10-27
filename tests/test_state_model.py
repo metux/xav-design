@@ -2876,3 +2876,77 @@ class BinaryWaitReservationFailureTests(unittest.TestCase):
         result = queue_present(present, PresentRequest(token=322, wait_indices=(0,)))
         self.assertEqual((result.result, result.accepted), ("DEPENDENCY_FAILED", False))
         self.assertEqual(present, before)
+
+
+class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
+    """Reset error precedence must match the normative validation phases."""
+
+    def _state(self, **overrides):
+        values = dict(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"retained entry"],
+            descriptor_sets=[DescriptorSetLifetime(slots={0: "buffer-retained"})],
+            indirect_buffer_refs={"buffer-retained", "indirect-retained"},
+            backend_holds=2,
+        )
+        values.update(overrides)
+        return CommandBufferModel(**values)
+
+    def test_reset_error_precedence_is_spec_ordered_and_rejection_is_atomic(self):
+        cases = (
+            # Device/buffer XID resolution precedes ownership and device state.
+            ("xid", {"device_xid_valid": False, "device_available": False},
+             {"correct_type_and_ownership": False, "device_lost": True}, "BadValue"),
+            # Type/ownership precedes unavailable/lost device status.
+            ("ownership", {"device_available": False},
+             {"correct_type_and_ownership": False, "device_lost": True}, "BadMatch"),
+            # Availability precedes loss, and both precede reset flag/lifecycle.
+            ("unavailable", {"device_available": False, "reset_flag": False},
+             {"device_lost": True, "lifecycle": CommandBufferLifecycle.PENDING}, "DEVICE_UNAVAILABLE"),
+            ("lost", {"reset_flag": False},
+             {"device_lost": True, "lifecycle": CommandBufferLifecycle.PENDING}, "DEVICE_LOST"),
+            ("flag", {"reset_flag": False},
+             {"lifecycle": CommandBufferLifecycle.PENDING}, "INVALID_SYNCHRONIZATION_STATE"),
+            ("pending", {},
+             {"lifecycle": CommandBufferLifecycle.PENDING}, "INVALID_SYNCHRONIZATION_STATE"),
+        )
+        for name, kwargs, state_kwargs, expected in cases:
+            with self.subTest(name=name):
+                state = self._state(**state_kwargs)
+                before = copy.deepcopy(state)
+                self.assertEqual(reset_command_buffer(state, **kwargs), expected)
+                self.assertEqual(state, before)
+
+    def test_successful_reset_moves_only_held_recording_refs_to_retired_epoch(self):
+        state = self._state()
+        old_epoch = state.recording_epoch
+        old_entries = list(state.entries)
+        old_sets = list(state.descriptor_sets)
+        old_indirect = set(state.indirect_buffer_refs)
+
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.INITIAL)
+        self.assertEqual(state.recording_epoch, old_epoch + 1)
+        self.assertEqual(state.entries, [])
+        self.assertEqual(state.descriptor_sets, [])
+        self.assertEqual(state.indirect_buffer_refs, set())
+        self.assertEqual(state.backend_holds, 0)
+        self.assertEqual(len(state.retired_recordings), 1)
+        retired = state.retired_recordings[0]
+        self.assertEqual(retired.epoch, old_epoch)
+        self.assertEqual(retired.backend_holds, 2)
+        self.assertEqual(retired.entries, old_entries)
+        self.assertEqual(retired.descriptor_sets, old_sets)
+        self.assertEqual(retired.indirect_buffer_refs, old_indirect)
+
+    def test_invalid_hold_retirement_after_rejected_reset_is_mutation_free(self):
+        state = self._state(lifecycle=CommandBufferLifecycle.PENDING)
+        before = copy.deepcopy(state)
+        self.assertEqual(reset_command_buffer(state), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=state.recording_epoch),
+            "SUCCESS",
+        )
+        # The pending lifecycle is deliberately not rewritten by the hold callback.
+        self.assertEqual(state.lifecycle, CommandBufferLifecycle.PENDING)
