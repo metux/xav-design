@@ -1504,7 +1504,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
          ("exact total length `20 + pad4(data_length)`", "request-specific flag combination", "for `CREATE`, validate `shader_module_xid` as a create-XID", "resolve `device_xid`", "resource type and client/device ownership", "logical-device state", "upload-assembly state and chunk-size/aggregate-size limits", "on `FINAL`, validate the assembled SPIR-V")), 
         ("CreatePipelineLayout", request_section(shaders, "CreatePipelineLayout"),
          ("exakte, count-konsistente Wire-Länge", "reservierte Felder, nicht unterstützte Stage-Bits", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")), 
-        ("CreateComputePipeline", request_section(shaders, "CreateComputePipeline"),
+        ("CreateComputePipeline", shaders.split("## 6.8 Compute Pipeline", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.8 Compute Pipeline" in shaders else "",
          ("exakte Wire-Länge", "positiven Entry-Point-Count", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
         ("CreateDefaultDevice", request_section(read("spec/devices.md"), "CreateDefaultDevice"),
          ("validate the exact/formula-based request length using checked arithmetic",
