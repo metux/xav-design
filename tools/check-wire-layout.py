@@ -718,17 +718,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             for offset, width, typ, field, line_no in ordered:
                 c.require(offset + width <= fixed_length,
                           f"{name}: field {field!r} at offset {offset} (width {width}) exceeds fixed request length {fixed_length} (spec line {line_no})")
-        # Conflicting declarations at the same offset usually mean that request
-        # and reply layouts were accidentally mixed or the normative layout is
-        # inconsistent. Identical repeated mentions have already been deduped.
-        offsets: dict[int, tuple[int, str, int]] = {}
-        for offset, width, typ, field, line_no in ordered:
-            previous = offsets.get(offset)
-            if heading_index is not None and previous is not None and (previous[0] != width or previous[1] != field):
-                c.require(False,
-                          f"{name}: conflicting request fields at offset {offset}: {previous[1]!r} and {field!r} (spec lines {previous[2]} and {line_no})")
-            else:
-                offsets[offset] = (width, field, line_no)
+        # Do not infer overlap from independent prose fragments: some normative
+        # request sections define several payload variants in one subsection.
         # Widths are used to check scalar alignment. Overlap is not inferred
         # across mixed prose/table declarations because some request sections
         # also describe reply fields in the same subsection.
