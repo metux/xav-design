@@ -1149,6 +1149,11 @@ def check_reply_matrix(c: Check) -> None:
     readme = read("README.md")
     c.require("47 assigned request subopcodes" in readme and "compute baseline 1–40 and presentation-profile-only 41–47" in readme,
               "README: request registry summary must describe all 47 assignments and the profile boundary")
+    registry_readme = read("registries/README.md")
+    c.require("47 requests assigned: compute baseline 1–40; presentation-profile-only 41–47" in registry_readme,
+              "registries/README.md: request inventory summary must match the central 47-request registry")
+    c.require("Values 1–4 are assigned for the compute baseline; value 5 is presentation-profile-only" in registry_readme,
+              "registries/README.md: command-entry summary must include presentation-only entry 5")
     audit_text = read("spec/request-audit.md")
     c.require("all 47 assigned request contracts" in audit_text and
               "compute baseline 1–40 and presentation-profile-only 41–47" in audit_text,
@@ -1159,12 +1164,12 @@ def check_reply_matrix(c: Check) -> None:
               "request audit: obsolete 40-request inventory summaries must be removed")
     opcodes = [opcode for _name, opcode, _kind in registry_rows]
     names = [name for name, _opcode, _kind in registry_rows]
-    c.require(len(registry_rows) in (40, 47),
-              f"request registry: expected 40 baseline or 47 audited table rows, found {len(registry_rows)}")
+    c.require(len(registry_rows) == 47,
+              f"request registry: expected all 47 assigned requests, found {len(registry_rows)}")
     c.require(len(set(opcodes)) == len(opcodes), "request registry contains duplicate subopcode values")
     c.require(len(set(names)) == len(names), "request registry contains duplicate request names")
-    c.require(set(opcodes) in (set(range(1, 41)), set(range(1, 48))),
-              "request registry must preserve IDs 1–40 and append presentation IDs 41–47; 0 is reserved")
+    c.require(set(opcodes) == set(range(1, 48)),
+              "request registry must contain every assigned ID 1–47 exactly once; 0 is reserved")
     audit = read("spec/request-audit.md")
     matrix = audit.split("## Per-request contract matrix", 1)
     c.require(len(matrix) == 2, "request-audit.md: missing per-request contract matrix")
@@ -1176,13 +1181,12 @@ def check_reply_matrix(c: Check) -> None:
         if row:
             opcode, name, kind, length = int(row.group(1)), row.group(2), row.group(3).strip(), row.group(4).strip()
             matrix_rows[opcode] = (name, kind, length)
-    c.require(len(registry) in (40, 47),
-              f"request registry: expected 40 baseline or 47 audited requests, found {len(registry)}")
-    c.require(len(matrix_rows) in (40, 47),
-              f"request audit matrix: expected 40 baseline or 47 audited rows, found {len(matrix_rows)}")
-    c.require(set(matrix_rows) - set(registry) <= set(range(41, 48)) and
-              set(registry) - set(matrix_rows) <= set(range(41, 48)),
-              "request audit matrix and registry may differ only by presentation IDs 41–47 during staged updates")
+    c.require(len(registry) == 47,
+              f"request registry: expected all 47 assigned requests, found {len(registry)}")
+    c.require(len(matrix_rows) == 47,
+              f"request audit matrix: expected all 47 assigned rows, found {len(matrix_rows)}")
+    c.require(set(matrix_rows) == set(registry),
+              "request audit matrix and central registry must contain exactly the same assigned subopcodes")
     for opcode, (name, kind) in registry.items():
         c.require(opcode in matrix_rows, f"request audit matrix: missing subopcode {opcode} ({name})")
         if opcode not in matrix_rows:
