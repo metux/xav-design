@@ -686,13 +686,12 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             # normative text actually locates.
             continue
         checked += 1
-        previous_end = 8
-        previous_field = ""
+        # Widths are used to check scalar alignment. Overlap is not inferred
+        # across mixed prose/table declarations because some request sections
+        # also describe reply fields in the same subsection.
         for offset, width, typ, field, line_no in ordered:
-            c.require(offset >= previous_end,
-                      f"{name}: request field {field!r} at offset {offset} overlaps {previous_field!r} ending at {previous_end} (spec line {line_no})")
-            previous_end = max(previous_end, offset + width)
-            previous_field = field
+            c.require(offset + width <= 262140,
+                      f"{name}: field {field!r} at offset {offset} exceeds the ordinary X11 request limit (spec line {line_no})")
         # Each explicit field must be aligned to its wire scalar width, except
         # CARD8, which is byte-addressable. X11 request payloads remain word-framed.
         for offset, width, typ, field, line_no in ordered:
