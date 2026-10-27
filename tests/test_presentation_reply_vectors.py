@@ -154,8 +154,12 @@ def validate_presentation_reply(
         if kind == "acquire":
             if u32(wire, 40, order):
                 raise ValueError("AcquireNextImage reserved word is nonzero")
-            if status and u32(wire, 36, order):
+            image_index = u32(wire, 36, order)
+            if status and image_index:
                 raise ValueError("failed AcquireNextImage has nonzero image index")
+            if (status == 0 and expected_image_count is not None and
+                    (expected_image_count <= 0 or image_index >= expected_image_count)):
+                raise ValueError("AcquireNextImage image index is outside swapchain image count")
 
 
 class PresentationReplyWireTests(unittest.TestCase):
@@ -220,6 +224,21 @@ class PresentationReplyWireTests(unittest.TestCase):
                 self.assertEqual(u32(success, 40, order), 0)
                 self.assertEqual(u32(failure, 36, order), 0)
                 self.assertEqual(u32(failure, 40, order), 0)
+
+    def test_acquire_success_image_index_is_bounded_by_swapchain(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                valid = encode_acquire_reply(order, 0, 2)
+                validate_presentation_reply("acquire", valid, order, expected_image_count=3)
+                invalid = encode_acquire_reply(order, 0, 3)
+                with self.assertRaisesRegex(
+                    ValueError, "AcquireNextImage image index is outside swapchain image count"
+                ):
+                    validate_presentation_reply("acquire", invalid, order, expected_image_count=3)
+                with self.assertRaisesRegex(
+                    ValueError, "AcquireNextImage image index is outside swapchain image count"
+                ):
+                    validate_presentation_reply("acquire", valid, order, expected_image_count=2)
 
     def test_queue_present_reply_size_and_status(self) -> None:
         for order in ("little", "big"):
