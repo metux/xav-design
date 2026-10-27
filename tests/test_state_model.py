@@ -2939,14 +2939,15 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
         self.assertEqual(retired.descriptor_sets, old_sets)
         self.assertEqual(retired.indirect_buffer_refs, old_indirect)
 
-    def test_invalid_hold_retirement_after_rejected_reset_is_mutation_free(self):
+    def test_rejected_reset_and_stale_hold_retirement_are_mutation_free(self):
         state = self._state(lifecycle=CommandBufferLifecycle.PENDING)
         before = copy.deepcopy(state)
         self.assertEqual(reset_command_buffer(state), "INVALID_SYNCHRONIZATION_STATE")
         self.assertEqual(state, before)
+
+        before = copy.deepcopy(state)
         self.assertEqual(
-            retire_command_buffer_backend_hold(state, recording_epoch=state.recording_epoch),
-            "SUCCESS",
+            retire_command_buffer_backend_hold(state, recording_epoch=state.recording_epoch + 99),
+            "INVALID_SYNCHRONIZATION_STATE",
         )
-        # The pending lifecycle is deliberately not rewritten by the hold callback.
-        self.assertEqual(state.lifecycle, CommandBufferLifecycle.PENDING)
+        self.assertEqual(state, before)
