@@ -622,7 +622,7 @@ def check_other_numeric_registries(c: Check) -> None:
         "For `SUCCESS`, the reply's `property_type` MUST match the registered type",
         "`value_length` MUST equal the exact size specified above",
         "padding bytes MUST be zero",
-        "the server MUST NOT fabricate a UUID",
+        "MUST NOT fabricate a UUID",
     )
     for contract in property_contracts:
         c.require(contract in property_registry,
