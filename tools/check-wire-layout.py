@@ -3122,10 +3122,10 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
     # The transition matrix must cover both invalidation paths and the only legal
     # recovery path; checking only reset would miss stale executable recordings.
     for contract in (
-        "Execution failure or device loss makes the buffer INVALID",
+        "Asynchronous execution failure or device loss → `INVALID` after the pending phase ends",
         "A failed submission makes every affected command buffer `INVALID` after the pending phase ends",
         "must be reset and recorded again",
-        "A successful FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk",
+        "A FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk",
         "no partially finalized executable recording is published",
         "A failed FINAL chunk leaves the buffer in `RECORDING`",
         "A later chunk MUST NOT revive a recording interrupted by device loss",
@@ -3140,7 +3140,7 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
         c.require(contract in lifetime,
                   f"command-buffer invalidation: missing deferred-lifetime contract: {contract}")
     c.require(
-        "A PENDING command buffer MUST NOT be modified, reset, freed, or submitted again." in command
+        "A `PENDING` command buffer MUST NOT be modified, reset, freed, or submitted again." in command
         and "If submission acceptance wins, reset is rejected while the command buffer is PENDING." in command
         and "If reset wins, the buffer is INITIAL and cannot be submitted" in command,
         "command-buffer reset/submit race: pending exclusion and serialized winner must be explicit",
