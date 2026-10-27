@@ -89,8 +89,19 @@ class PresentationEventWireTests(unittest.TestCase):
             )
         }
         self.assertEqual({name: rows[name] for name in EVENTS}, EVENTS)
-        for symbol, value in STATUS.items():
-            self.assertRegex(registry, rf"\|\s*{value}\s*\|\s*{symbol}\s*\|")
+        status_section = re.search(
+            r"^## Presentation event status values\s*$([\s\S]*?)(?=^## |\Z)",
+            registry, re.M,
+        )
+        self.assertIsNotNone(status_section, "missing presentation status registry")
+        registered_statuses = {
+            symbol: int(value)
+            for value, symbol in re.findall(
+                r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|\s*$",
+                status_section.group(1), re.M,
+            )
+        }
+        self.assertEqual(registered_statuses, STATUS)
         for name in EVENTS:
             section = re.search(
                 rf"^## `{name}`\s*$([\s\S]*?)(?=^## |\Z)", spec, re.M
