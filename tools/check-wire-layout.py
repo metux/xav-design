@@ -664,6 +664,9 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 in_absolute_table = True
                 continue
             if not line.lstrip().startswith("|") and in_absolute_table:
+                if absolute_table_rows:
+                    absolute_table_groups.append(absolute_table_rows)
+                    absolute_table_rows = []
                 in_absolute_table = False
             if line.lstrip().startswith("|") and in_absolute_table:
                 row = re.match(r"^\|\s*(\d+)\s*\|\s*([A-Za-z][A-Za-z0-9_\[\]]*)\s*\|\s*([^|]+?)\s*\|", line)
@@ -693,6 +696,9 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     if first_cell.isdecimal():
                         c.require(False,
                                   f"{name}: malformed row in absolute request-field table (spec line {line_no})")
+                    if absolute_table_rows:
+                        absolute_table_groups.append(absolute_table_rows)
+                        absolute_table_rows = []
                     in_absolute_table = False
                 continue
             bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
