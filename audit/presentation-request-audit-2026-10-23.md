@@ -1,7 +1,7 @@
 # XAverius Presentation Request Audit
 
 **Branch:** `docs/restructure-2026-10-21`  
-**Audit date:** 2026-10-23  
+**Audit date:** 2026-10-27  
 **Scope:** Presentation requests targeting server-side X11 Windows; wire layouts, error precedence, status replies, and atomic state transitions.
 
 ## Current result
@@ -53,11 +53,11 @@ The wire-layout text and static checker define 41–47 as the planned append-onl
 
 ## CI/checker status
 
-The repository records a successful earlier wire-layout run, [39950681596](https://github.com/metux/xav-design/actions/runs/39950681596), whose `wire-layout` job passed syntax checks, request/reply/XGE validation, and 119 golden-wire tests. That run predates the latest presentation audit edits and does not validate these commits. The current commits returned no combined status entries, and the available workflow-run lookup did not expose a run for them. Therefore current-commit CI remains **unverified**; an empty status response is not evidence that the checker passed.
+The current branch head `a60d8c1ba2c902181ced1f561cb48301767d3af7` has a successful `wire-layout` workflow run, [40482324248](https://github.com/metux/xav-design/actions/runs/40482324248), completed 2026-10-27 09:38:40 UTC. The workflow syntax-checks the checker and wire tests, runs `tools/check-wire-layout.py`, runs Timeline semaphore regressions, and executes the full `unittest` suite. The latest run is green; earlier runs 1522–1531 failed while incremental assertions were being reconciled, then subsequent commits passed. This confirms the workflow result for the branch head, not implementation against a running X server (the tests are specification-contract and wire-fixture tests).
 
 ## Remaining work
 
-1. Locate and execute the existing static checker against the current presentation layouts and conformance rules.
-2. Run or trigger CI and inspect actual job results; do not infer success from an empty status response.
-3. Resolve any checker or cross-chapter contradictions before assigning request subopcodes.
+1. Keep presentation subopcodes 41–47 and command-entry ID 5 prospective until the design decision to include presentation in the profile is explicitly made and the central registries are intentionally updated.
+2. Continue cross-checking request/reply/XGE/error/register coverage against normative chapters; passing static tests establishes consistency with the current contract, not completeness of the design itself.
+3. Preserve the distinction between presentation completion, image release, and actual runtime/server behavior; no running X server or GPU backend is exercised by this workflow.
 4. Keep `master` unchanged; all edits in this audit are on `docs/restructure-2026-10-21`.
