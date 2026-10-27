@@ -661,7 +661,9 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         if re.search(r"\breserved(?:\s+(?:field|word|bytes?|bits?|CARD\d+)|\s*=)|\b(?:bits?|bytes?|CARD\d+|offset\s+\d+)[^\n.;]{0,80}\breserved\b", request_text, re.I):
             c.require(bool(re.search(
                 r"reserved.{0,100}(?:MUST|must|shall|SHALL|=|is)\s*(?:be\s+)?(?:zero|0)\b|"
-                r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,100}reserved",
+                r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,100}reserved|"
+                r"non.?zero.{0,100}reserved.{0,100}(?:BadValue|reject|invalid)|"
+                r"reserved.{0,100}non.?zero.{0,100}(?:BadValue|reject|invalid)",
                 request_text, re.I | re.S,
             )), f"{name}: request-local reserved field/bit must explicitly require zero")
             c.require(not bool(re.search(
