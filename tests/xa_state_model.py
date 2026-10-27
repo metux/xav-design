@@ -923,6 +923,16 @@ def finish_submission(
     return "SUCCESS"
 
 
+def mark_device_lost(state: SubmissionModel) -> str:
+    """Atomically terminalize every accepted non-terminal submission on loss."""
+    state.device_lost = True
+    # Snapshot tokens because finish_submission removes each token and its
+    # owned reservations. Backend quiescence is modeled separately by holds.
+    for token in list(state.pending_submissions):
+        finish_submission(state, token, success=False)
+    return "SUCCESS"
+
+
 def reset_fence(state: SubmissionModel) -> str:
     """Model ResetFence state eligibility and atomic state transition."""
     if state.device_lost:
