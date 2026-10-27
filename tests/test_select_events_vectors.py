@@ -546,7 +546,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_backend_completion_keeps_original_connection_and_resource_identity(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Backend callbacks and completion records MUST carry the immutable internal identity of the specific submission or resource and the identity of the original X11 connection.",
+            "Every backend callback or completion record MUST carry the immutable internal identity of the specific submission or resource and the identity of the original X11 connection.",
             lifetime,
         )
         self.assertIn(
@@ -574,23 +574,23 @@ class GoldenSelectEventsTests(unittest.TestCase):
             submission,
         )
         self.assertIn(
-            "Success callbacks, failure callbacks, and Device-loss processing compete for the same transition; the first valid outcome serialized by the server wins.",
+            "Success callbacks, failure callbacks, and device-loss handling compete for this same transition; the first valid outcome serialized by the server wins.",
             submission,
         )
         self.assertIn(
-            "A callback arriving after a terminal state has been established MUST NOT change the result, Fence/Semaphore state, or event decisions.",
+            "A callback arriving after a terminal state has been established MUST NOT change the outcome, fence/semaphore states, or event decisions.",
             submission,
         )
         self.assertIn(
-            "a later success MUST NOT set `SIGNALED`, increment the Timeline counter, or mark a signal as successfully consumed.",
+            "If device loss was terminalized first, a later success MUST NOT set `SIGNALED`, advance a timeline counter, or mark a signal as successfully consumed.",
             submission,
         )
         self.assertIn(
-            "Each wait/signal reservation, Fence assignment, pending reference, and command-buffer pending marker is released or completed at most once.",
+            "Jede Wait-/Signal-Reservierung, Fence-Zuordnung, Pending-Referenz und Pending-Markierung des Command Buffers wird höchstens einmal freigegeben beziehungsweise abgeschlossen.",
             submission,
         )
         self.assertIn(
-            "Event delivery is a downstream effect of the terminal decision and cannot roll it back or repeat it.",
+            "Event-Zustellung ist ein nachgelagerter Effekt der terminalen Entscheidung und kann diese weder zurückrollen noch wiederholen.",
             submission,
         )
 
@@ -598,23 +598,23 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_uncertain_binary_semaphore_failure_poisoning_is_explicit(self):
         synchronization = (ROOT / "spec" / "synchronization.md").read_text(encoding="utf-8")
         self.assertIn(
-            "muss er die Binary-Semaphore als `UNTRUSTED` markieren.",
+            "it MUST mark that semaphore `UNTRUSTED`.",
             synchronization,
         )
         self.assertIn(
-            "weitere Queue-Waits und Queue-Signals auf dieser Semaphore werden vor Annahme mit `DEPENDENCY_FAILED` abgewiesen.",
+            "further queue waits and queue signals on the semaphore are rejected before acceptance with `DEPENDENCY_FAILED`.",
             synchronization,
         )
         self.assertIn(
-            "Der Server darf die Semaphore nicht als signalverfügbar oder unsignaled behandeln",
+            "The server MUST NOT treat the semaphore as signaled or unsignaled",
             synchronization,
         )
         self.assertIn(
-            "Ist dagegen nachweisbar, dass die fehlgeschlagene Operation das Semaphore-Payload nicht verändert hat, bleibt der vorherige bestätigte Signalzustand erhalten.",
+            "If the server can prove the failed operation did not change the semaphore payload, the previously confirmed signal state is retained.",
             synchronization,
         )
         self.assertIn(
-            "Der beobachtbare Counter steigt erst, wenn die jeweilige Signaloperation tatsächlich erfolgreich ausgeführt wurde.",
+            "The observable counter advances only when the corresponding signal operation has actually completed successfully.",
             synchronization,
         )
 
@@ -622,31 +622,31 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_write_buffer_detects_deferred_binary_and_timeline_signal_cycles(self):
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
-        self.assertIn("einen Binary- oder Timeline-Signal-Entry", queue)
-        self.assertIn("bei Binary-Semaphoren muss es sich um dieselbe Semaphore handeln", queue)
-        self.assertIn("Signal-Entries aus zurückgestellten Submissions nicht als angenommene oder verfügbare Signale", memory)
-        self.assertIn("`WriteBuffer` mit `DEPENDENCY_FAILED` beenden", memory)
-        self.assertIn("Der zurückgestellte `QueueSubmit` wird danach normal verarbeitet", queue)
-        self.assertIn("Solange er zurückgestellt ist, gilt er nicht als angenommen", queue)
-        self.assertIn("vollständige Validierung und atomare Zustandsübernahme erfolgen erst nach Abschluss des `WriteBuffer`", memory)
+        self.assertIn("signal entries in deferred `QueueSubmit` requests", queue)
+        self.assertIn("If a deferred submission signals a Binary semaphore awaited by an earlier non-terminal submission", queue)
+        self.assertIn("Signal entries in deferred submissions do not count as accepted or available signals", memory)
+        self.assertIn("terminate the pending `WriteBuffer` with `DEPENDENCY_FAILED`", memory)
+        self.assertIn("Deferred requests are then processed in normal request order", queue)
+        self.assertIn("While a `QueueSubmit` is deferred, it MUST NOT change semaphore/fence state or pending reservations", queue)
+        self.assertIn("full validation and atomic state transfer occur only after `WriteBuffer` completes", memory)
 
     def test_device_loss_terminalization_preserves_sync_and_backend_lifetime(self):
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
         sync = (ROOT / "spec" / "synchronization.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
-        self.assertIn("Ein Device-Loss-Übergang muss alle zu diesem Zeitpunkt noch nicht-terminalen Submissions auf `FAILED/DEVICE_LOST` setzen", queue)
-        self.assertIn("darf ein späterer Erfolg weder `SIGNALED` setzen noch den Timeline-Counter erhöhen", queue)
-        self.assertIn("Kann der Server nach einem angenommenen, fehlgeschlagenen Backend-Vorgang nicht sicher nachweisen, ob eine Binary-Semaphore-Signal- oder Wait-Operation wirksam wurde, muss er die Binary-Semaphore als `UNTRUSTED` markieren.", sync)
-        self.assertIn("Interne Ressourcen und zugehörige Speicher werden in Quarantäne gehalten", lifetime)
-        self.assertIn("müssen trotzdem genau einmal terminalisiert werden", lifetime)
+        self.assertIn("A device-loss transition MUST mark all submissions that are still non-terminal at that point as `FAILED/DEVICE_LOST`", queue)
+        self.assertIn("a later success MUST NOT set `SIGNALED`, advance a timeline counter", queue)
+        self.assertIn("If the server cannot prove whether an accepted but failed backend operation took effect on a binary semaphore signal or wait, it MUST mark that semaphore `UNTRUSTED`.", sync)
+        self.assertIn("Internal resources and memory remain referenced until possible backend accesses are proven to have ended, or are quarantined under the device-loss rules.", lifetime)
+        self.assertIn("MUST complete even when lifecycle rules suppress delivery", lifetime)
 
     def test_write_buffer_device_loss_never_claims_upload_visibility(self):
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
-        self.assertIn("Ist das Device verloren, schlägt `WriteBuffer` mit `DEVICE_LOST` fehl und darf keinen erfolgreichen Reply senden.", memory)
-        self.assertIn("Bei einem fehlgeschlagenen Upload wird ebenfalls kein erfolgreicher Reply gesendet; der Inhalt des Zielbereichs ist dann nicht garantiert.", memory)
+        self.assertIn("If the device is lost, `WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply.", memory)
+        self.assertIn("A failed upload likewise MUST NOT produce a successful reply; the destination contents are then not guaranteed.", memory)
         self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
-        self.assertIn("danach werden zurückgestellte requests in normaler request-reihenfolge verarbeitet", memory.lower())
+        self.assertIn("Deferred requests are then processed in normal request order.", memory.lower())
 
 
     def test_read_buffer_has_ordered_snapshot_and_explicit_failure_semantics(self):
@@ -659,8 +659,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Eine bloße logische Terminalisierung reicht nicht aus", read)
         self.assertIn("späteren `QueueSubmit`-Requests", read)
         self.assertIn("Daten-Snapshot", read)
-        self.assertIn("`DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden", read)
-        self.assertIn("Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot", read)
+        self.assertIn("`ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply", read)
+        self.assertIn("A failed `ReadBuffer` promises no snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`", errors)
@@ -673,8 +673,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
         write = memory.split("## 5.7 `WriteBuffer`", 1)[1].split("## 5.8 `ReadBuffer`", 1)[0]
         read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
         self.assertIn("uint64(data_length)", write)
-        self.assertIn("maximale X11-Request-Länge", write)
-        self.assertIn("nicht-null Padding ergibt `BadValue`", write)
+        self.assertIn("maximum X11 request length", write)
+        self.assertIn("non-zero padding results in `BadValue`", write)
         self.assertIn("buffer_offset <= buffer_size", write)
         self.assertIn("data_length <= buffer_size - buffer_offset", write)
         self.assertIn("floor((uint64(data_length) + 3) / 4)", read)
@@ -690,7 +690,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         alloc = memory.split("## 5.4 `AllocateMemory`", 1)[1].split("## 5.5 ", 1)[0]
         bind = memory.split("## 5.6 `BindBufferMemory`", 1)[1].split("## 5.7 ", 1)[0]
         self.assertIn("memory_type_count", props)
-        self.assertIn("kleiner als `memory_heap_count`", props)
+        self.assertIn("memory_heap_count", props)
         self.assertIn("Bits außerhalb von `memory_type_count` müssen null sein", reqs)
         self.assertIn("mindestens ein unterstützter Memory-Type-Bit gesetzt sein", reqs)
         self.assertIn("Memory-Type-Index muss für das Physical Device", alloc)
@@ -708,11 +708,11 @@ class GoldenSelectEventsTests(unittest.TestCase):
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         free = memory.split("## 5.5 `FreeMemory`", 1)[1].split("## 5.6 ", 1)[0]
-        self.assertIn("Seine interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen", lifetime)
-        self.assertIn("auch dann mit `BadMatch` abgewiesen werden", lifetime)
-        self.assertIn("irgendein intern noch lebender Buffer", free)
-        self.assertIn("öffentliche XID bereits durch `DestroyResource` invalidiert", free)
-        self.assertIn("auch bei bereits invalidierter Buffer-XID", errors)
+        self.assertIn("Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, parent-child ownership, and active server operations.", lifetime)
+        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", lifetime)
+        self.assertIn("any internally live buffer remains bound to this allocation", free)
+        self.assertIn("public XID has already been invalidated by `DestroyResource`", free)
+        self.assertIn("buffers whose public XID has already been invalidated by `DestroyResource`", errors)
 
     def test_destroyed_buffer_descriptor_slot_release_chain(self):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
