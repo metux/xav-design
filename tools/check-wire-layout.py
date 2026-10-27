@@ -1485,32 +1485,36 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
         "request-specific precedence: common rule must permit only explicit later-phase refinements",
     )
 
+    def request_section(document: str, name: str) -> str:
+        match = re.search(rf"^## (?:[0-9]+(?:\\.[0-9]+)* )?`{re.escape(name)}`\\s*$([\\s\\S]*?)(?=^## |\\Z)", document, re.M)
+        return match.group(1) if match else ""
+
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
     contracts = (
         ("BindBufferMemory", memory,
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),
-        ("UpdateDescriptorSets", shaders,
+        ("UpdateDescriptorSets", request_section(shaders, "UpdateDescriptorSets"),
          ("Request-Länge/Count und strukturelle Integrität", "syntax- und feldlokale Prüfungen",
           "Auflösung der XIDs in Wire-Reihenfolge", "Ressourcentyp, Client-/Device-Ownership",
           "Device-Zustand")),
-        ("CommandBufferData", command,
+        ("CommandBufferData", request_section(command, "CommandBufferData"),
          ("wire-structure errors take precedence over field errors",
           "field errors take precedence over target/pool XID errors",
           "target XID is checked before the pool XID")),
-        ("QueueSubmit", queue,
+        ("QueueSubmit", request_section(queue, "QueueSubmit"),
          ("incorrect total length", "syntactic fields are checked",
           "required XIDs are resolved in wire order", "resource type, client/device ownership",
           "unavailable or lost device takes precedence over mutable submission state")),
-        ("WaitSemaphores", sync,
+        ("WaitSemaphores", request_section(sync, "WaitSemaphores"),
          ("length and checked arithmetic", "semaphore_count != 0",
           "resolve the device XID and then semaphore XIDs", "check device state",
           "verify that all semaphores are timeline semaphores")),
-        ("SignalSemaphore", sync,
+        ("SignalSemaphore", request_section(sync, "SignalSemaphore"),
          ("exact total length of 24 bytes", "resolve the device XID, then the semaphore XID",
           "check resource type, client/device ownership", "check device state",
           "check timeline type and signal-value/reservation consistency")),
-        ("presentation requests", presentation,
+        ("presentation requests", presentation.split("## 5.3 Request validation, status precedence, and atomic acceptance", 1)[-1].split("\\n## ", 1)[0],
          ("wire length and checked arithmetic", "scalar/reserved-field validation",
           "XID resolution in the defined order", "type and ownership validation",
           "Device availability", "immutable request constraints",
@@ -1526,7 +1530,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
     # Global create-XID precedence is distinct from input-XID lookup.
     create_rules = (
         "The target XID of a create request is not an input XID",
-        "an invalid or occupied target XID therefore results in `BadIDChoice`",
+        "An invalid or occupied target XID therefore results in `BadIDChoice`",
         "The first invalid XID determines the reported resource error",
     )
     for phrase in create_rules:
