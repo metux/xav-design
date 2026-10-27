@@ -678,6 +678,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                         records.append((offset, sizes[typ], typ, field, line_no))
                         absolute_table_rows.append((offset, field, line_no))
                 else:
+                    c.require(False,
+                              f"{name}: malformed row in absolute request-field table (spec line {line_no})")
                     in_absolute_table = False
                 continue
             bullet = re.match(r"^\s*(?:[-*]\s*)?Offset\s+(\d+)\s*:\s*(.+)$", line, re.I)
