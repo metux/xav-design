@@ -623,7 +623,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         chapter_lines = chapter.splitlines()
         headings = []
         for i, heading_line in enumerate(chapter_lines):
-            heading_match = re.match(r"^(#{2,4})\\s+(.+?)\\s*$", heading_line)
+            heading_match = re.match(r"^(#{2,4})\s+(.+?)\s*$", heading_line)
             if heading_match:
                 headings.append((i, len(heading_match.group(1)), heading_match.group(2)))
         heading_index = next(
@@ -640,12 +640,12 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                  if heading_level <= level),
                 len(chapter_lines),
             )
-            section = "\\n".join(chapter_lines[start_line + 1:end_line])
+            section = "\n".join(chapter_lines[start_line + 1:end_line])
         if not section:
             continue
         request_lines = []
         for line in section.splitlines():
-            if re.match(r"^\\s*(?:Reply(?: layout| fields)?|Reply:|The reply contains|Reply payload)\\b", line, re.I):
+            if re.match(r"^\s*(?:Reply(?: layout| fields)?|Reply:|The reply contains|Reply payload)\b", line, re.I):
                 break
             request_lines.append(line)
         records: list[tuple[int, int, str, str, int]] = []
