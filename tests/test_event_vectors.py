@@ -251,7 +251,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                     actual.append((offset, size))
             self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
             field_labels = {
-                "device_xid": "Device-XID",
+                "device_xid": "Device XID",
                 "error_code": "`error_code`",
                 "origin": "Origin values",
                 "submission_token": "`submission_token`",
