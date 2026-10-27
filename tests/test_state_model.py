@@ -26,6 +26,7 @@ from xa_state_model import (
     command_buffer_data,
     reset_command_buffer,
     destroy_command_pool,
+    retire_command_buffer_backend_hold,
     queue_submit,
     shader_module_data,
     finish_submission,
@@ -2041,8 +2042,37 @@ class CommandBufferResetAndPoolDestructionTests(unittest.TestCase):
         ]
         self.assertEqual(destroy_command_pool(children), "SUCCESS")
         self.assertTrue(all(not child.buffer_live and not child.pool_live for child in children))
-        # Logical invalidation does not pretend backend references are already freed.
-        self.assertEqual([child.entries for child in children], [[b"a"], [b"b"]])
+        # With no backend hold, logical invalidation can retire recorded refs.
+        self.assertEqual([child.entries for child in children], [[], []])
+        self.assertEqual([child.descriptor_sets for child in children], [[], []])
+        self.assertEqual([child.indirect_buffer_refs for child in children], [set(), set()])
+
+    def test_pool_destroy_retains_recorded_refs_until_backend_hold_retires(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-kept"})
+        child = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"backend-visible"],
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-kept", "indirect-kept"},
+            backend_holds=1,
+        )
+        self.assertEqual(destroy_command_pool([child]), "SUCCESS")
+        self.assertFalse(child.buffer_live)
+        self.assertFalse(child.pool_live)
+        self.assertEqual(child.entries, [b"backend-visible"])
+        self.assertEqual(child.descriptor_sets, [descriptor_set])
+        self.assertEqual(child.indirect_buffer_refs, {"buffer-kept", "indirect-kept"})
+        self.assertEqual(child.backend_holds, 1)
+
+        self.assertEqual(retire_command_buffer_backend_hold(child), "SUCCESS")
+        self.assertEqual(child.backend_holds, 0)
+        self.assertEqual(child.entries, [])
+        self.assertEqual(child.descriptor_sets, [])
+        self.assertEqual(child.indirect_buffer_refs, set())
+        before = copy.deepcopy(child)
+        self.assertEqual(retire_command_buffer_backend_hold(child),
+                         "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(child, before)
 
 
 class CommandBufferLifecycleTransitionTests(unittest.TestCase):
