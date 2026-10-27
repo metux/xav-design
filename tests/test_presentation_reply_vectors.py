@@ -134,8 +134,17 @@ def validate_presentation_reply(
                 family_support.append(supported)
             if family_indices != list(range(families)):
                 raise ValueError("queue-family indices must cover every family in ascending order")
-            if u32(wire, 12, order) != int(any(family_support)):
+            aggregate_supported = int(any(family_support))
+            if u32(wire, 12, order) != aggregate_supported:
                 raise ValueError("aggregate present_supported does not match queue-family records")
+            # The initial registry assigns only TRANSFER_DST (bit 0).
+            if u32(wire, 56, order) & ~1:
+                raise ValueError("capabilities advertise unassigned image-usage flags")
+            mode_start = 64 + 8 * formats
+            modes_list = [u32(wire, off, order)
+                          for off in range(mode_start, mode_start + 4 * modes, 4)]
+            if aggregate_supported and 1 not in modes_list:
+                raise ValueError("presentable capabilities do not advertise baseline FIFO mode")
     else:
         size, words, statuses = {
             "create_swapchain": (40, 2, 6),
@@ -393,6 +402,7 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("capabilities", 28, "I", 1, "successful capabilities reply has invalid image-count bounds"),
                 ("capabilities", 80, "I", 7, "invalid queue-family present_supported value"),
                 ("capabilities", 12, "I", 0, "aggregate present_supported does not match queue-family records"),
+                ("capabilities", 56, "I", 2, "capabilities advertise unassigned image-usage flags"),
                 ("capabilities", 76, "I", 1, "queue-family indices must cover every family in ascending order"),
                 ("capabilities", 84, "I", 0, "queue-family indices must cover every family in ascending order"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
@@ -417,6 +427,19 @@ class PresentationReplyWireTests(unittest.TestCase):
                     struct.pack_into(endian + fmt, wire, offset, value)
                     with self.assertRaisesRegex(ValueError, message):
                         validate_presentation_reply(kind, bytes(wire), order)
+
+    def test_presentable_capabilities_must_advertise_fifo(self) -> None:
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                wire = encode_capabilities(order)
+                validate_presentation_reply("capabilities", wire, order)
+                malformed = bytearray(wire)
+                # One format pair occupies offsets 64..71; the mode follows.
+                malformed[72:76] = pack32(order, 2)
+                with self.assertRaisesRegex(
+                    ValueError, "presentable capabilities do not advertise baseline FIFO mode"
+                ):
+                    validate_presentation_reply("capabilities", bytes(malformed), order)
 
     def test_capabilities_queue_family_count_matches_physical_device(self) -> None:
         for order in ("little", "big"):
