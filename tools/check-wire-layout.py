@@ -811,7 +811,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             if compact is not None:
                 expected_length, expected_fields = compact
                 length_declared = bool(re.search(
-                    rf"\\b(?:total length|fixed total length|exactly)\\s*(?:of|is|:)?\\s*{expected_length}\\s*bytes\\b|request\\s*:\\s*exactly\\s*{expected_length}\\s*bytes\\b",
+                    rf"\b(?:total length|fixed total length|exactly)\s*(?:of|is|:)?\s*{expected_length}\s*bytes\b|request\s*:\s*exactly\s*{expected_length}\s*bytes\b",
                     section, re.I,
                 )) or (expected_length == 8 and bool(re.search(
                     r"no request-specific payload.{0,80}8 bytes in total", section, re.I | re.S
