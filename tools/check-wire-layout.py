@@ -658,7 +658,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         # implementation-defined slack. Check each request's own contract in
         # addition to the shared common-header rule in wire-protocol.md.
         request_text = "\n".join(request_lines)
-        if re.search(r"\breserved(?:\s+(?:field|word|bytes?|bits?|CARD\\d+)|\\s*=)", request_text, re.I):
+        if re.search(r"\breserved(?:\s+(?:field|word|bytes?|bits?|CARD\d+)|\s*=)", request_text, re.I):
             c.require(bool(re.search(
                 r"reserved.{0,100}(?:MUST|must|shall|SHALL|=|is)\s*(?:be\s+)?(?:zero|0)\b|"
                 r"(?:MUST|must|shall|SHALL)\s+be\s+zero.{0,100}reserved",
