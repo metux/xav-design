@@ -176,6 +176,23 @@ class ReplySpecCoverageTests(unittest.TestCase):
             self.assertEqual(len(wire), 32 + expected_words * 4)
 
 
+    def test_zero_memory_counts_allow_header_only_record_payload(self):
+        body = section(self.memory, "GetPhysicalDeviceMemoryProperties")
+        self.assertIn("If the number of memory types or memory heaps is zero, no corresponding records may follow", body)
+        for order in ("little", "big"):
+            matches = [v for v in self.vectors
+                       if v["event"] == "GetPhysicalDeviceMemoryProperties-zero-counts"
+                       and v["byte_order"] == order]
+            self.assertEqual(len(matches), 1, f"zero-count memory properties fixture missing for {order}-endian")
+            wire = bytes.fromhex(matches[0]["wire_hex"])
+            self.assertEqual(len(wire), 48)
+            self.assertEqual(int.from_bytes(wire[4:8], order), 4)
+            payload = wire[32:]
+            self.assertEqual(len(payload), 16)
+            self.assertEqual(int.from_bytes(payload[0:4], order), 0)
+            self.assertEqual(int.from_bytes(payload[4:8], order), 0)
+            self.assertEqual(payload[8:16], bytes(8))
+
     def test_negative_fixtures_cover_normative_boundaries_in_both_orders(self):
         fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
