@@ -445,6 +445,33 @@ class GoldenXGEEventTests(unittest.TestCase):
             "DEVICE_STATUS_CHANGED reason-code range is stale",
         )
 
+    def test_event_validator_enum_ranges_match_central_registry(self):
+        registry = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
+        cases = (
+            (0, "ASYNC_ERROR.origin"),
+            (2, "DEVICE_STATUS_CHANGED.new_status"),
+            (3, "DEVICE_MEMORY_PRESSURE.pressure_level"),
+            (4, "DEVICE_IDLE.idle_reason"),
+            (6, "SUBMISSION_FAILED.failure_class"),
+        )
+        for event_type, heading in cases:
+            with self.subTest(heading=heading):
+                match = re.search(
+                    r"^## \x60" + re.escape(heading) + r"\x60\s*$"
+                    + r"([\s\S]*?)(?=^## |\Z)",
+                    registry, re.M,
+                )
+                self.assertIsNotNone(match, f"missing registry section {heading}")
+                registered = {
+                    int(value)
+                    for value in re.findall(r"^\|\s*(\d+)\s*\|\s*\x60[A-Z_]+\x60\s*\|", match.group(1), re.M)
+                }
+                self.assertEqual(
+                    set(EVENT_VALUE_RANGES[event_type][1]),
+                    registered,
+                    f"{heading} validator range is stale",
+                )
+
     def test_memory_pressure_heap_index_uses_physical_device_heap_count(self):
         for order in ("little", "big"):
             vector = next(v for v in self.vectors
