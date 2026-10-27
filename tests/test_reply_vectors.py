@@ -43,7 +43,17 @@ def reply_contract_errors(kind: str, wire: bytes, byte_order: str) -> list[str]:
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("WaitForFence"):
         if len(wire) != 32 or declared != 0: errors.append("fixed-reply-size")
-        if int.from_bytes(wire[8:12], byte_order) not in (0, 1, 2, 3, 4): errors.append("wait-for-fence-status")
+        status = int.from_bytes(wire[8:12], byte_order)
+        if status not in (0, 1, 2, 3, 4): errors.append("wait-for-fence-status")
+        expected_status = {
+            "WaitForFence-success": 0,
+            "WaitForFence-timeout": 1,
+            "WaitForFence-execution-failed": 2,
+            "WaitForFence-device-lost": 3,
+            "WaitForFence-device-destroyed": 4,
+        }.get(kind)
+        if expected_status is not None and status != expected_status:
+            errors.append("wait-for-fence-status-match")
         if wire[12:32] != bytes(20): errors.append("reserved-zero")
     elif kind.startswith("GetPhysicalDeviceProperty-success"):
         if int.from_bytes(wire[8:12], byte_order) != 0: errors.append("property-success-status")
@@ -391,15 +401,28 @@ class GoldenReplyVectorTests(unittest.TestCase):
             self.assertEqual(wire[32+size:], bytes(padding))
 
     def test_all_fence_wait_status_values(self):
+        wait_for_fence_statuses = {
+            "WaitForFence-success": 0,
+            "WaitForFence-timeout": 1,
+            "WaitForFence-execution-failed": 2,
+            "WaitForFence-device-lost": 3,
+            "WaitForFence-device-destroyed": 4,
+        }
         for vector in self.vectors:
             wire = bytes.fromhex(vector["wire_hex"])
             order = vector["byte_order"]
             if vector["event"] == "GetFenceStatus":
                 self.assertIn(wire[1], (0, 1, 2, 3))
-            elif vector["event"].startswith("WaitForFence"):
+            elif vector["event"] in wait_for_fence_statuses:
+                self.assertEqual(int.from_bytes(wire[8:12], order), wait_for_fence_statuses[vector["event"]])
+            elif vector["event"] == "WaitForFence":
                 self.assertIn(int.from_bytes(wire[8:12], order), (0, 1, 2, 3, 4))
             elif vector["event"] in ("WaitSemaphores-timeout", "WaitSemaphores-success"):
                 self.assertIn(int.from_bytes(wire[8:12], order), (0, 1))
+        for kind in wait_for_fence_statuses:
+            for order in ("little", "big"):
+                self.assertEqual(sum(v["event"] == kind and v["byte_order"] == order for v in self.vectors), 1,
+                                 f"{kind} status vector missing or duplicated for {order}-endian")
 
     def test_maximum_memory_type_and_heap_counts(self):
         for vector in self.vectors:
