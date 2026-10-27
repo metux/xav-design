@@ -264,6 +264,25 @@ class GoldenReplyVectorTests(unittest.TestCase):
             validate_reply_wire(bytes(28), "little")
 
 
+    def test_rejects_invalid_raw_response_type(self):
+        vector = self.vectors[0]
+        wire = bytearray.fromhex(vector["wire_hex"])
+        wire[0] = 0
+        with self.assertRaisesRegex(ValueError, "response_type"):
+            validate_reply_wire(bytes(wire), vector["byte_order"])
+
+    def test_rejects_non_word_aligned_raw_reply(self):
+        vector = self.vectors[0]
+        wire = bytes.fromhex(vector["wire_hex"]) + bytes(1)
+        with self.assertRaisesRegex(ValueError, "divisible by four"):
+            validate_reply_wire(wire, vector["byte_order"])
+
+    def test_rejects_unknown_reply_byte_order(self):
+        vector = self.vectors[0]
+        with self.assertRaisesRegex(ValueError, "byte order"):
+            validate_reply_wire(bytes.fromhex(vector["wire_hex"]), "middle")
+
+
     def test_property_variable_payload_boundaries(self):
         expected = {1: bytes([0xA5]), 5: bytes([1, 2, 3, 4, 5])}
         for size, value in expected.items():
