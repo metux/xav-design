@@ -36,6 +36,8 @@ Each signal entry is 12 bytes:
 
 For binary semaphores, `signal_value` MUST be zero. For timeline semaphores, `signal_value` is the counter value to signal.
 
+The variable-length formula uses `C` for Command-Buffer-Count, `W` for Wait-Semaphore-Count, and `S` for Signal-Semaphore-Count; each symbol is the corresponding 16-bit count from the fixed header.
+
 Total length:
 
 `40 + 4*C + 16*W + 12*S`
