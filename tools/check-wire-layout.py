@@ -1404,6 +1404,67 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
                       "CommandBufferData: normative variable length must define 16-byte minimum and exact 16-byte ABORT")
 
 
+def check_common_request_error_precedence(c: Check) -> None:
+    """Cross-check shared validation order against the complete request registry."""
+    wire = read("spec/wire-protocol.md")
+    errors = read("spec/errors.md")
+    conformance = read("spec/conformance.md")
+    registry = read("registries/request-subopcodes.md")
+    ordered_phases = (
+        "1. Validate the X11 envelope independently of XAverius fields",
+        "2. Validate the common XAverius header fields",
+        "3. Dispatch the subopcode and apply the profile gate",
+        "4. For a supported request, validate its exact layout",
+        "5. No rejected request may allocate variable payload storage",
+    )
+    positions = [wire.find(phase) for phase in ordered_phases]
+    c.require(all(position >= 0 for position in positions)
+              and positions == sorted(positions)
+              and len(set(positions)) == len(positions),
+              "common request precedence: envelope/header/dispatch/request/state phases must be explicit and ordered")
+    for phrase in (
+        "These checks precede subopcode dispatch, profile gating, request-specific parsing",
+        "a common-header violation takes precedence over an unsupported presentation subopcode",
+        "the zero-length/envelope `BadLength` checks above still take precedence",
+        "A request-specific chapter MAY refine the order of later phases, but MUST NOT override phases 1–3",
+        "do not bypass the common envelope/header checks",
+    ):
+        c.require(phrase in wire,
+                  f"common request precedence: wire protocol missing {phrase!r}")
+    c.require(
+        "wire structure first, then field values, then XIDs in the field order" in errors
+        and "framing before scalar syntax" in conformance
+        and "scalar syntax before XID resolution" in conformance
+        and "XID/type/ownership checks before lifecycle" in conformance,
+        "common request precedence: error map and conformance matrix must preserve phase order",
+    )
+
+    rows = []
+    for line in registry.splitlines():
+        cells = line.split("|")
+        if len(cells) < 5:
+            continue
+        name = cells[1].strip().strip("`")
+        opcode = cells[2].strip()
+        if name and opcode.isdecimal():
+            rows.append((name, cells[4].strip()))
+    c.require(len(rows) == 47,
+              f"common request precedence: expected 47 registered requests, found {len(rows)}")
+    seen: set[str] = set()
+    for name, responsibility in rows:
+        if name in seen:
+            c.require(False, f"common request precedence: duplicate registry entry {name}")
+            continue
+        seen.add(name)
+        link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
+        c.require(link is not None,
+                  f"{name}: common precedence cannot be applied without a normative chapter")
+        if link:
+            chapter = read("spec/" + link.group(1))
+            c.require(bool(request_normative_section(chapter, name)),
+                      f"{name}: common precedence registry link has no defining request section")
+
+
 def check_request_limit_contract(c: Check) -> None:
     """Guard ordinary X11 request limits and the incompatible BIG-REQUESTS header."""
     wire = read("spec/wire-protocol.md")
@@ -2905,6 +2966,7 @@ def main() -> int:
     check_compact_request_layouts(c)
     check_request_document_coverage(c)
     check_request_matrix_normative_lengths(c)
+    check_common_request_error_precedence(c)
     check_request_limit_contract(c)
     check_local_markdown_links(c)
     check_reply_matrix(c)
