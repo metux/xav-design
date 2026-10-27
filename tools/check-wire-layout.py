@@ -1499,7 +1499,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
         ("CreateDescriptorSetLayout", shaders.split("## 6.2 Descriptor Set Layout", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.2 Descriptor Set Layout" in shaders else "",
          ("exact count-consistent request length", "flags, binding records, counts, unique binding numbers", "target `descriptor_set_layout_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "device-limit/descriptor support checks", "backend allocation")),
         ("CreateDescriptorPool", shaders.split("## 6.3 Descriptor Pool", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.3 Descriptor Pool" in shaders else "",
-         ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
+         ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID (`BadValue` bei unbekannter/nicht-live XID)", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
         ("CreateDefaultDevice", request_section(read("spec/devices.md"), "CreateDefaultDevice"),
          ("validate the exact/formula-based request length using checked arithmetic",
           "validate `queue_count`, the reserved field, and every priority",
