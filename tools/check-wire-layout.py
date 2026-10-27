@@ -1175,8 +1175,22 @@ def check_request_matrix_normative_lengths(c: Check) -> None:
         if registered is not None:
             c.require(registered[1] == kind,
                       f"request matrix: {request} kind {kind!r} disagrees with registry kind {registered[1]!r}")
+    presentation_profile_requests = {
+        "CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
+        "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent",
+    }
+    c.require(
+        presentation_profile_requests <= set(registry_rows),
+        "request matrix: presentation-profile layout checks must cover all seven registered presentation requests",
+    )
     for _opcode, request, _kind, matrix_length in rows:
+        if request in presentation_profile_requests:
+            # These seven requests are checked against the presentation chapter's
+            # independent profile matrix and exact request/reply layout contracts.
+            continue
         if request not in formula_overrides and request not in fixed_lengths and request != "CommandBufferData":
+            c.require(False,
+                      f"{request}: request matrix has no fixed-length, variable-formula, or chunked-layout verifier")
             continue
         responsibility = registry_rows.get(request, "")
         link = re.search(r"\.\./spec/([^)]*\.md)", responsibility)
