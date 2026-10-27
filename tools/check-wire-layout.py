@@ -3138,7 +3138,7 @@ def check_create_device_precedence(c: Check) -> None:
 
 def check_create_default_device_precedence(c: Check) -> None:
     devices = read("spec/devices.md")
-    section_match = re.search(r"^## `CreateDefaultDevice`[\\s\\S]*?(?=^## |\\Z)", devices, re.M)
+    section_match = re.search(r"^## `CreateDefaultDevice`[\s\S]*?(?=^## |\Z)", devices, re.M)
     section = section_match.group(0) if section_match else ""
     phases = ("(1) validate the exact/formula-based request length", "(2) validate `queue_count`, the reserved field, and every priority", "(3) validate the target `device_xid` as a create-XID", "(4) require successful XGE 1.0-or-later negotiation", "(5) select a suitable physical device and compute-capable queue family")
     positions = [section.find(phase) for phase in phases]
