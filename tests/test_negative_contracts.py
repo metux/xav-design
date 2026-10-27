@@ -59,7 +59,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
                 positions = [section.find(phrase) for phrase in phrases]
                 self.assertTrue(all(position >= 0 for position in positions), positions)
                 self.assertEqual(positions, sorted(positions))
-        self.assertIn("safe quiescence", destroy)
+        self.assertIn("sicheren Quieszenz", destroy)
         self.assertIn("quarantining the internal allocation", free)
 
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
