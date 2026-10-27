@@ -371,6 +371,32 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
 
 
 
+
+    def test_create_device_validation_precedence_is_explicit_and_ordered(self):
+        devices = read("spec/devices.md")
+        section = devices.split("## `CreateDevice`", 1)[1].split("\\n## ", 1)[0]
+        phases = (
+            "1. Validate the complete variable-length request framing",
+            "2. Validate wire-level and scalar fields",
+            "An unknown feature ID, because no optional feature IDs are assigned in v0.1",
+            "3. Validate `device_xid` as a create-XID",
+            "4. Resolve `physical_device_xid`",
+            "5. Validate that the XID is a Physical-Device resource",
+            "6. Require successful XGE 1.0-or-later negotiation",
+            "7. Check physical-device availability",
+            "8. Check requested registry-defined features and extensions",
+            "9. Only after all prior checks succeed may backend device creation begin",
+        )
+        positions = [section.find(phrase) for phrase in phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("unknown feature ID takes precedence over target-XID occupancy", section)
+        self.assertIn("target-XID validation precedes physical-device lookup", section)
+        self.assertIn("every syntactically valid extension name is unregistered", section)
+        checker = read("tools/check-wire-layout.py")
+        self.assertIn("def check_create_device_precedence", checker)
+        self.assertIn("check_create_device_precedence(c)", checker)
+
     def test_command_buffer_reset_invalidation_and_rerecording_retire_references_once(self):
         command = read("spec/command-recording.md")
         lifetime = read("spec/resource-lifetime.md")
