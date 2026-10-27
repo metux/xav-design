@@ -555,9 +555,6 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("`ResetFence` prüft exakt 16 Bytes und Device-/Fence-XIDs vor dem Zustandscheck", conformance)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_buffer_memory_precedence_and_transfer_atomicity_stay_aligned(self):
         memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
         lifetime = self.lifetime
@@ -667,3 +664,6 @@ if __name__ == "__main__":
             with self.subTest(request=phrase):
                 self.assertIn("`" + phrase + "`", errors)
                 self.assertIn("`" + phrase + "`", conformance)
+
+if __name__ == "__main__":
+    unittest.main()
