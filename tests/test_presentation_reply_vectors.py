@@ -227,6 +227,54 @@ class PresentationReplyWireTests(unittest.TestCase):
                     self.assertEqual(u32(wire, 32, order), status)
 
 
+    def test_reply_status_cases_match_normative_specification(self) -> None:
+        spec = (ROOT / "spec" / "presentation.md").read_text(encoding="utf-8")
+
+        def numbered_statuses(text: str) -> dict[str, int]:
+            return {name: int(value) for value, name in re.findall(r"\\b(\\d+)\\s+([A-Z][A-Z_]+)\\b", text)}
+
+        def named_statuses(text: str) -> dict[str, int]:
+            return {name: int(value) for name, value in re.findall(r"\\b([A-Z][A-Z_]+)\\s*=\\s*(\\d+)\\b", text)}
+
+        capabilities = re.search(r"Status values:\\s*(.*?)(?=\\.\\s+CreateSwapchain status values)", spec, re.S)
+        swapchain = re.search(r"CreateSwapchain status values are\\s*(.*?)(?=\\.\\s+SUCCESS with)", spec, re.S)
+        acquire = re.search(r"Acquire status values are\\s*(.*?)(?=\\.\\s+TIMEOUT/)", spec, re.S)
+        present = re.search(r"QueuePresent reply status values are\\s*(.*?)(?=; these are local)", spec, re.S)
+        for label, match in (("GetSurfaceCapabilities", capabilities), ("CreateSwapchain", swapchain),
+                             ("AcquireNextImage", acquire), ("QueuePresent", present)):
+            self.assertIsNotNone(match, f"normative status list missing for {label}")
+
+        expected = {
+            "capabilities": numbered_statuses(capabilities.group(1)),
+            "create_swapchain": numbered_statuses(swapchain.group(1)),
+            "acquire": named_statuses(acquire.group(1)),
+            "queue_present": numbered_statuses(present.group(1)),
+        }
+        self.assertEqual(expected["capabilities"], {
+            "SUCCESS": 0, "TEMPORARILY_NOT_PRESENTABLE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
+        })
+        self.assertEqual(expected["create_swapchain"], {
+            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
+            "UNSUPPORTED_CONFIGURATION": 4, "ALLOCATION_FAILED": 5,
+        })
+        self.assertEqual(expected["acquire"], {
+            "SUCCESS": 0, "TIMEOUT": 1, "NOT_READY": 2, "OUT_OF_DATE": 3,
+            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6,
+        })
+        self.assertEqual(expected["queue_present"], {
+            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
+        })
+
+        tested = {
+            "capabilities": set(range(4)),
+            "create_swapchain": set(range(6)),
+            "acquire": set(range(7)),
+            "queue_present": set(range(4)),
+        }
+        for kind, values in expected.items():
+            self.assertEqual(set(values.values()), tested[kind],
+                             f"{kind} wire tests must exercise exactly the normative status values")
+
     def test_all_documented_presentation_reply_statuses_have_valid_wire_shapes(self) -> None:
         # Status values are separate per-reply namespaces. Exercise every
         # normative value, not only representative failure codes.
