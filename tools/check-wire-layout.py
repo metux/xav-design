@@ -130,7 +130,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"(?:After successful processing of `DestroyDevice`.*MUST NOT generate or deliver new XAverius events|Nach erfolgreicher Verarbeitung von `DestroyDevice` darf der Server keine neuen XAverius-Events mehr erzeugen oder zustellen)", lifetime, re.S) is not None,
               "DestroyDevice: must suppress later events for the destroyed logical device")
     c.require(
-        "DestroyDevice cascade linearization" in lifetime
+        "`DestroyDevice` cascade linearization" in lifetime
         and "as one indivisible public-state transition" in lifetime
         and "callbacks may finish internal state and release references exactly once" in lifetime
         and "after the destroy linearization point they MUST NOT enqueue or deliver a new event" in lifetime,
