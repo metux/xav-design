@@ -501,7 +501,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         )
         positions = [wait.index(phrase) for phrase in wait_order]
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("A synchronous rejection leaves no wait registration", wait)
+        self.assertIn("every synchronous rejection leaves no wait registration", wait)
         self.assertIn("An open wait has exactly one terminal outcome", wait)
         self.assertIn("WaitSemaphores", errors)
 
