@@ -1492,6 +1492,12 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
 
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
     contracts = (
+        ("CreateDefaultDevice", request_section(read("spec/devices.md"), "CreateDefaultDevice"),
+         ("validate the exact/formula-based request length using checked arithmetic",
+          "validate `queue_count`, the reserved field, and every priority",
+          "validate the target `device_xid` as a create-XID",
+          "require successful XGE 1.0-or-later negotiation",
+          "select a suitable physical device and compute-capable queue family")),
         ("BindBufferMemory", request_section(memory, "BindBufferMemory"),
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),

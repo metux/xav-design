@@ -166,7 +166,7 @@ If the selected physical device is unavailable, `DEVICE_UNAVAILABLE` is reported
 
 ## `CreateDefaultDevice`
 
-Before creation, this connection MUST have successfully negotiated XGE 1.0 or later through `GEQueryVersion`. Otherwise, `BadMatch` is reported and the target XID remains unallocated.
+Validation precedence is normative: (1) validate the exact/formula-based request length using checked arithmetic (`BadLength`); (2) validate `queue_count`, the reserved field, and every priority (`BadValue`); (3) validate the target `device_xid` as a create-XID (`BadIDChoice` if invalid or already occupied); (4) require successful XGE 1.0-or-later negotiation through `GEQueryVersion` (`BadMatch` otherwise); (5) select a suitable physical device and compute-capable queue family (`DEVICE_UNAVAILABLE` if none exists). Every check completes before device publication, and failure leaves `device_xid` unallocated.
 
 Request:
 

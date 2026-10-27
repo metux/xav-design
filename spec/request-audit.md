@@ -2,7 +2,7 @@
 
 ## Request-specific error-precedence cross-check — 2026-10-27
 
-The shared wire-protocol rule now distinguishes invariant envelope/header checks from request-local ordering among scalar validation, XID resolution, ownership/type, lifecycle, and mutable-state checks. The checker audits the explicit ordering contracts for `BindBufferMemory`, `UpdateDescriptorSets`, `CommandBufferData`, `QueueSubmit`, `WaitSemaphores`, `SignalSemaphore`, and all seven presentation requests, and retains the central create-XID versus input-XID distinction. Regression tests specifically guard the differing `WaitSemaphores` and `SignalSemaphore` orderings rather than incorrectly forcing them into one identical phase order. These are static specification-consistency checks, not tests against a running server.
+The shared wire-protocol rule now distinguishes invariant envelope/header checks from request-local ordering among scalar validation, XID resolution, ownership/type, lifecycle, and mutable-state checks. The checker audits the explicit ordering contracts for `CreateDefaultDevice`, `BindBufferMemory`, `UpdateDescriptorSets`, `CommandBufferData`, `QueueSubmit`, `WaitSemaphores`, `SignalSemaphore`, and all seven presentation requests, and retains the central create-XID versus input-XID distinction. Regression tests specifically guard the differing `WaitSemaphores` and `SignalSemaphore` orderings rather than incorrectly forcing them into one identical phase order. These are static specification-consistency checks, not tests against a running server.
 
 
 ## Presentation registry value-coverage audit — 2026-10-23

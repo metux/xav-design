@@ -201,6 +201,24 @@ class CommonRequestErrorPrecedenceTests(unittest.TestCase):
 
 
 class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
+    def test_create_default_device_has_total_validation_precedence(self):
+        devices = read("spec/devices.md")
+        errors = read("spec/errors.md")
+        section = devices.split("## `CreateDefaultDevice`", 1)[1].split("\n## ", 1)[0]
+        phrases = (
+            "validate the exact/formula-based request length using checked arithmetic",
+            "validate `queue_count`, the reserved field, and every priority",
+            "validate the target `device_xid` as a create-XID",
+            "require successful XGE 1.0-or-later negotiation",
+            "select a suitable physical device and compute-capable queue family",
+        )
+        positions = [section.find(phrase) for phrase in phrases]
+        self.assertTrue(all(p >= 0 for p in positions))
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("ungültige/belegte `device_xid` `BadIDChoice`", errors)
+        self.assertIn("fehlende XGE-Aushandlung `BadMatch`", errors)
+        self.assertIn("kein geeignetes Gerät `DEVICE_UNAVAILABLE`", errors)
+
     def test_signal_semaphore_keeps_xid_checks_before_value_reservation_checks(self):
         sync = read("spec/synchronization.md")
         section = sync.split("## `SignalSemaphore`", 1)[1].split("\n## ", 1)[0]
