@@ -1424,7 +1424,9 @@ def check_common_request_error_precedence(c: Check) -> None:
               "common request precedence: envelope/header/dispatch/request/state phases must be explicit and ordered")
     for phrase in (
         "These checks precede subopcode dispatch, profile gating, request-specific parsing",
-        "a common-header violation takes precedence over an unsupported presentation subopcode",
+        "The `flags` byte at offset 5 is request-specific",
+        "any bits reserved by that request must be zero",
+        "a nonzero `data` or common `reserved` field takes precedence over an unsupported presentation subopcode",
         "the zero-length/envelope `BadLength` checks above still take precedence",
         "A request-specific chapter MAY refine the order of later phases, but MUST NOT override phases 1–3",
         "do not bypass the common envelope/header checks",
