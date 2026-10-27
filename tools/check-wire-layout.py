@@ -3122,7 +3122,7 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
     # The transition matrix must cover both invalidation paths and the only legal
     # recovery path; checking only reset would miss stale executable recordings.
     for contract in (
-        "After asynchronous execution failure or device loss, it becomes INVALID",
+        "Execution failure or device loss makes the buffer INVALID",
         "A failed submission makes every affected command buffer `INVALID` after the pending phase ends",
         "must be reset and recorded again",
         "A successful FINAL chunk transitions `RECORDING` to `EXECUTABLE` only after the entire chunk",
@@ -3133,9 +3133,9 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
         c.require(contract in command or contract in queue,
                   f"command-buffer transition matrix: missing failure/recovery contract: {contract}")
     for contract in (
-        "backend object until access is impossible",
-        "immutable internal identities",
-        "must not release backend storage before",
+        "If invalidation only marks the buffer invalid while an internal edge is still required for backend safety",
+        "All delayed callbacks use immutable internal identities, not re-resolved XIDs",
+        "Submission references are independent from recorded references",
     ):
         c.require(contract in lifetime,
                   f"command-buffer invalidation: missing deferred-lifetime contract: {contract}")
