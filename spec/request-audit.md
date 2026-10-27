@@ -1,5 +1,10 @@
 # Request catalogue and wire-contract audit — 2026-10-21
 
+## Request-specific error-precedence cross-check — 2026-10-27
+
+The shared wire-protocol rule now distinguishes invariant envelope/header checks from request-local ordering among scalar validation, XID resolution, ownership/type, lifecycle, and mutable-state checks. The checker audits the explicit ordering contracts for `BindBufferMemory`, `UpdateDescriptorSets`, `CommandBufferData`, `QueueSubmit`, `WaitSemaphores`, `SignalSemaphore`, and all seven presentation requests, and retains the central create-XID versus input-XID distinction. Regression tests specifically guard the differing `WaitSemaphores` and `SignalSemaphore` orderings rather than incorrectly forcing them into one identical phase order. These are static specification-consistency checks, not tests against a running server.
+
+
 ## Presentation registry value-coverage audit — 2026-10-23
 
 Added a golden-registry test for the future presentation profile. It now verifies that presentation event IDs 7 (`IMAGE_RELEASED`) and 8 (`PRESENTATION_COMPLETE`) extend, without colliding with, the compute baseline IDs 0–6; that the combined event namespace remains contiguous through 8; and that presentation-local terminal status values remain exactly 0–4 (`SUCCESS`, `OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`, `PRESENTATION_FAILED`). It also asserts that the registry remains explicitly outside compute-only v0.1 and that presentation-only queue mask bits are rejected there.
