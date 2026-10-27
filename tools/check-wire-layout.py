@@ -628,7 +628,8 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 headings.append((i, len(heading_match.group(1)), heading_match.group(2)))
         heading_index = next(
             (i for i, (_line, _level, title) in enumerate(headings)
-             if name in title and chr(96) + name + chr(96) in title),
+             if (chr(96) + name + chr(96) in title)
+             or re.fullmatch(r"(?:\\d+(?:\\.\\d+)*\\s+)?"+re.escape(name), title.strip())),
             None,
         )
         if heading_index is None:
