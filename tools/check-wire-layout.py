@@ -862,6 +862,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 # not in the compute request section used by this generic audit.
                 # Their seven exact request/reply contracts are checked below by
                 # check_presentation_profile() and the presentation wire audit.
+                pass
             c.require(name in compact_contracts if name in compact_contracts else name in {
                 "CreateSurface", "DestroySurface", "GetSurfaceCapabilities",
                 "CreateSwapchain", "DestroySwapchain", "AcquireNextImage", "QueuePresent",
