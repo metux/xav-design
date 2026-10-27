@@ -522,6 +522,38 @@ class PresentationReplyWireTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "successful capabilities reply has zero queue families"):
                     validate_presentation_reply("capabilities", bytes(wire), order)
 
+    def test_every_capability_lifecycle_failure_requires_empty_payload(self) -> None:
+        for order in ("little", "big"):
+            endian = "<" if order == "little" else ">"
+            for status in (1, 2, 3):
+                with self.subTest(order=order, status=status):
+                    valid = encode_capabilities(order, status=status)
+                    validate_presentation_reply("capabilities", valid, order)
+                    self.assertEqual(len(valid), 64)
+                    self.assertEqual(u32(valid, 4, order), 8)
+                    self.assertEqual(valid[12:64], bytes(52))
+                    malformed = bytearray(valid)
+                    struct.pack_into(endian + "I", malformed, 60, 1)
+                    with self.assertRaisesRegex(ValueError, "invalid capabilities failure payload"):
+                        validate_presentation_reply("capabilities", bytes(malformed), order)
+
+    def test_all_unused_fixed_reply_header_bytes_must_be_zero(self) -> None:
+        for order in ("little", "big"):
+            valid = {
+                "create_swapchain": encode_create_swapchain_reply(order, 0, 2),
+                "acquire": encode_acquire_reply(order, 0, 1),
+                "queue_present": encode_queue_present_reply(order, 0),
+            }
+            for kind, baseline in valid.items():
+                for offset in range(8, 32):
+                    with self.subTest(order=order, kind=kind, offset=offset):
+                        malformed = bytearray(baseline)
+                        malformed[offset] = 1
+                        with self.assertRaisesRegex(
+                            ValueError, "fixed presentation reply has nonzero unused reply-header bytes"
+                        ):
+                            validate_presentation_reply(kind, bytes(malformed), order)
+
     def test_capability_failure_rejects_nonzero_payload(self) -> None:
         for order in ("little", "big"):
             with self.subTest(order=order):
