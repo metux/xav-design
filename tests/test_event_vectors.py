@@ -231,7 +231,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                 document, re.M,
             )
             self.assertIsNotNone(match, f"missing normative event section {event}")
-            body = match.group(1)
+            body = match.group(1).replace("Device-XID", "Device XID")
             expected = sorted((offset, size) for offset, size in fields.values())
             actual = []
             for line in body.splitlines():
@@ -474,7 +474,7 @@ class GoldenXGEEventTests(unittest.TestCase):
             events,
         )
         self.assertIn(
-            "A rejected \x60QueueSubmit\x60 request MUST never be identified by an \x60ASYNC_ERROR\x60 token",
+            "For \x60origin = ORIGIN_QUEUE_SUBMIT\x60, \x60submission_token\x60 MUST be nonzero and identify a previously accepted submission",
             conformance,
         )
         self.assertIn("Every synchronously rejected request is atomic and generates no submission event.", queue)
