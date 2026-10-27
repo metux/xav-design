@@ -1505,7 +1505,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
         ("CreatePipelineLayout", request_section(shaders, "CreatePipelineLayout"),
          ("exakte, count-konsistente Wire-Länge", "reservierte Felder, nicht unterstützte Stage-Bits", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")), 
         ("CreateComputePipeline", shaders.split("## 6.8 Compute Pipeline", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.8 Compute Pipeline" in shaders else "",
-         ("exakte Wire-Länge", "`entry_point_length` muss positiv sein", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
+         ("exakte Wire-Länge", "positiven Entry-Point-Count", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
         ("CreateDefaultDevice", request_section(read("spec/devices.md"), "CreateDefaultDevice"),
          ("validate the exact/formula-based request length using checked arithmetic",
           "validate `queue_count`, the reserved field, and every priority",
