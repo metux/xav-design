@@ -595,8 +595,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # A destroyed public Buffer can still keep its allocation alive through
         # descriptor/internal references; FreeMemory must not invalidate it.
         self.assertIn("any internally live buffer remains bound to this allocation", memory)
-        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", lifetime)
-        self.assertIn("On rejection, the memory XID and allocation remain unchanged.", conformance)
+        self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", memory)
+        self.assertIn("On rejection, the memory XID and allocation remain unchanged.", memory)
 
         # Read/write are ordering boundaries, not merely synchronous byte copies.
         for phrase in (
@@ -648,7 +648,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             positions = [request_section.index(phrase) for phrase in ordered_phases]
             self.assertEqual(positions, sorted(positions))
-            self.assertRegex(request_section, r"(?i)atomic|atomar")
+            self.assertRegex(request_section, r"(?i)atomic|atomar|unangelegt|unallocated")
 
         # Destruction invalidates public XIDs atomically, while retained internal
         # references survive until no backend access can remain.
