@@ -216,6 +216,22 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
             self.assertTrue(all(position >= 0 for position in positions), heading)
             self.assertEqual(positions, sorted(positions), heading)
 
+    def test_pipeline_and_shader_upload_precedence_is_normative(self):
+        shaders = read("spec/shaders-pipelines.md")
+        cases = (
+            ("## 6.1 Shader Modules", ("exact total length `20 + pad4(data_length)`", "request-specific flag combination", "for `CREATE`, validate `shader_module_xid` as a create-XID", "resolve `device_xid`", "resource type and client/device ownership", "logical-device state", "upload-assembly state and chunk-size/aggregate-size limits", "on `FINAL`, validate the assembled SPIR-V")),
+            ("## 6.7 `CreatePipelineLayout`", ("exakte, count-konsistente Wire-Länge", "reservierte Felder, nicht unterstützte Stage-Bits", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")),
+            ("## 6.8 Compute Pipeline", ("exakte Wire-Länge", "positiven Entry-Point-Count", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
+        )
+        for heading, phrases in cases:
+            with self.subTest(request=heading):
+                section = shaders.split(heading, 1)[1].split("\\n## ", 1)[0]
+                positions = [section.find(phrase) for phrase in phrases]
+                self.assertTrue(all(position >= 0 for position in positions), positions)
+                self.assertEqual(positions, sorted(positions))
+        self.assertIn("after assembly lookup", shaders)
+        self.assertIn("This device-loss rule overrides the generic missing-assembly sentence above.", shaders)
+
     def test_create_default_device_has_total_validation_precedence(self):
         devices = read("spec/devices.md")
         errors = read("spec/errors.md")
