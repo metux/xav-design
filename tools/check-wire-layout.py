@@ -2028,13 +2028,22 @@ def check_reply_golden_vectors(c: Check) -> None:
                           f"{name}: ReadBuffer padding must be zero")
             except (ValueError, IndexError):
                 c.require(False, f"{name}: malformed ReadBuffer vector kind")
-        elif kind in ("GetFenceStatus", "WaitForFence", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
+        elif kind in ("GetFenceStatus", "WaitForFence", "WaitForFence-success", "WaitForFence-timeout", "WaitForFence-execution-failed", "WaitForFence-device-lost", "WaitForFence-device-destroyed", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
             c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
             if kind == "GetFenceStatus":
                 c.require(wire[1] in (0, 1, 2, 3), f"{name}: invalid fence status")
             elif kind.startswith("WaitForFence"):
                 status = int.from_bytes(wire[8:12], order)
                 c.require(status in (0, 1, 2, 3, 4), f"{name}: invalid WaitForFence status")
+                expected_status = {
+                    "WaitForFence-success": 0,
+                    "WaitForFence-timeout": 1,
+                    "WaitForFence-execution-failed": 2,
+                    "WaitForFence-device-lost": 3,
+                    "WaitForFence-device-destroyed": 4,
+                }.get(kind)
+                if expected_status is not None:
+                    c.require(status == expected_status, f"{name}: status does not match vector kind")
                 c.require(wire[12:32] == bytes(20), f"{name}: reserved bytes must be zero")
             elif kind == "WaitSemaphores-success":
                 c.require(int.from_bytes(wire[8:12], order) == 0, f"{name}: status must be SUCCESS")
@@ -2145,6 +2154,15 @@ def check_reply_golden_vectors(c: Check) -> None:
                 elif rule == "wait-status": invalid = kind == "WaitSemaphores-timeout" and int.from_bytes(wire[8:12], order) not in (0, 1)
                 elif rule == "wait-status-match": invalid = kind in ("WaitSemaphores-timeout", "WaitSemaphores-success") and int.from_bytes(wire[8:12], order) != (1 if kind.endswith("timeout") else 0)
                 elif rule == "wait-for-fence-status": invalid = kind == "WaitForFence" and int.from_bytes(wire[8:12], order) not in (0, 1, 2, 3, 4)
+                elif rule == "wait-for-fence-status-match":
+                    expected_status = {
+                        "WaitForFence-success": 0,
+                        "WaitForFence-timeout": 1,
+                        "WaitForFence-execution-failed": 2,
+                        "WaitForFence-device-lost": 3,
+                        "WaitForFence-device-destroyed": 4,
+                    }.get(kind)
+                    invalid = expected_status is not None and int.from_bytes(wire[8:12], order) != expected_status
                 elif rule == "property-success-status": invalid = kind == "GetPhysicalDeviceProperty-success" and int.from_bytes(wire[8:12], order) != 0
                 elif rule == "property-failure-status": invalid = kind in ("GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available") and int.from_bytes(wire[8:12], order) != (1 if kind.endswith("not-supported") else 2)
                 elif rule == "buffer-requirements-size-positive": invalid = kind == "GetBufferMemoryRequirements" and int.from_bytes(wire[8:16], order) == 0
