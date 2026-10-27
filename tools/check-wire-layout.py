@@ -658,15 +658,20 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         absolute_table_rows: list[tuple[int, str, int]] = []
         absolute_table_groups: list[list[tuple[int, str, int]]] = []
         in_absolute_table = False
+        saw_variable_field = False
+        absolute_table_start_line = 0
         for line_no, line in enumerate(request_lines, 1):
             if re.search(r"^\|\s*Relative Offset\s*\|", line, re.I):
                 in_absolute_table = False
+                saw_variable_field = False
                 continue
             if re.search(r"^\|\s*Offset\s*\|\s*Type\s*\|\s*Field\s*\|", line, re.I):
                 if in_absolute_table and absolute_table_rows:
                     absolute_table_groups.append(absolute_table_rows)
                 absolute_table_rows = []
                 in_absolute_table = True
+                saw_variable_field = False
+                absolute_table_start_line = line_no
                 continue
             if not line.lstrip().startswith("|") and in_absolute_table:
                 if absolute_table_rows:
@@ -682,20 +687,37 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     # These are legitimate variable-width payload descriptions,
                     # not scalar fields whose width can be checked here.
                     if typ.endswith("[]") or typ == "variable":
-                        # Variable-width fields have no scalar width, but their
-                        # start offset is still part of the wire contract.
-                        # Enforce header exclusion, word framing, and the
-                        # ordinary X11 request limit just as for scalar fields.
+                        # A variable payload has no scalar width, but its start
+                        # and position relative to fixed fields are still part
+                        # of the wire contract. It must be the final field in
+                        # its layout table; otherwise the table cannot define
+                        # an unambiguous payload boundary.
+                        c.require(not saw_variable_field,
+                                  f"{name}: multiple variable-width fields in one absolute request-field table (spec line {line_no})")
+                        saw_variable_field = True
                         c.require(offset >= 8,
                                   f"{name}: variable field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
                         c.require(offset % 4 == 0,
                                   f"{name}: variable field {field!r} at offset {offset} is not four-byte aligned (spec line {line_no})")
                         c.require(offset < 262140,
                                   f"{name}: variable field {field!r} at offset {offset} exceeds the ordinary X11 request limit (spec line {line_no})")
+                        prior_scalars = [
+                            (old_offset, old_width, old_field, old_line)
+                            for old_offset, old_width, _old_type, old_field, old_line in records
+                            if absolute_table_start_line < old_line < line_no
+                        ]
+                        for old_offset, old_width, old_field, old_line in prior_scalars:
+                            c.require(old_offset + old_width <= offset,
+                                      f"{name}: variable field {field!r} at offset {offset} overlaps fixed field {old_field!r} ending at {old_offset + old_width} (spec line {line_no})")
+                        if typ == "BYTE[]":
+                            c.require(bool(re.search(r"padding|padded", field, re.I)),
+                                      f"{name}: byte payload {field!r} must explicitly describe its padding rule (spec line {line_no})")
                         # Keep variable-width fields in table-level uniqueness
                         # checks even though their scalar width is not known.
                         absolute_table_rows.append((offset, field, line_no))
                         continue
+                    c.require(not saw_variable_field,
+                              f"{name}: fixed field {field!r} follows a variable-width field in the absolute request-field table (spec line {line_no})")
                     c.require(typ in sizes, f"{name}: unknown wire type {typ!r} in absolute request-field table (spec line {line_no})")
                     if typ in sizes:
                         c.require(offset >= 8,
