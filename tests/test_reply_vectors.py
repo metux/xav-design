@@ -164,7 +164,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 66)
+        self.assertEqual(len(self.vectors), 68)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
