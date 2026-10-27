@@ -677,6 +677,16 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     # These are legitimate variable-width payload descriptions,
                     # not scalar fields whose width can be checked here.
                     if typ.endswith("[]") or typ == "variable":
+                        # Variable-width fields have no scalar width, but their
+                        # start offset is still part of the wire contract.
+                        # Enforce header exclusion, word framing, and the
+                        # ordinary X11 request limit just as for scalar fields.
+                        c.require(offset >= 8,
+                                  f"{name}: variable field {field!r} at offset {offset} overlaps the common 8-byte header (spec line {line_no})")
+                        c.require(offset % 4 == 0,
+                                  f"{name}: variable field {field!r} at offset {offset} is not four-byte aligned (spec line {line_no})")
+                        c.require(offset < 262140,
+                                  f"{name}: variable field {field!r} at offset {offset} exceeds the ordinary X11 request limit (spec line {line_no})")
                         # Keep variable-width fields in table-level uniqueness
                         # checks even though their scalar width is not known.
                         absolute_table_rows.append((offset, field, line_no))
