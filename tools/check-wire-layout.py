@@ -1428,7 +1428,8 @@ def check_common_request_error_precedence(c: Check) -> None:
         "any bits reserved by that request must be zero",
         "a nonzero `data` or common `reserved` field takes precedence over an unsupported presentation subopcode",
         "the zero-length/envelope `BadLength` checks above still take precedence",
-        "A request-specific chapter MAY refine the order of later phases, but MUST NOT override phases 1–3",
+        "a request chapter MAY explicitly reorder checks within these later phases",
+        "Such an exception MUST state the affected checks and their precedence",
         "do not bypass the common envelope/header checks",
     ):
         c.require(phrase in wire,
@@ -1491,7 +1492,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
 
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
     contracts = (
-        ("BindBufferMemory", memory,
+        ("BindBufferMemory", request_section(memory, "BindBufferMemory"),
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),
         ("UpdateDescriptorSets", request_section(shaders, "UpdateDescriptorSets"),
@@ -1514,7 +1515,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
          ("exact total length of 24 bytes", "resolve the device XID, then the semaphore XID",
           "check resource type, client/device ownership", "check device state",
           "check timeline type and signal-value/reservation consistency")),
-        ("presentation requests", presentation.split("## 5.3 Request validation, status precedence, and atomic acceptance", 1)[-1].split("\\n## ", 1)[0],
+        ("presentation requests", presentation.split("## 5.3 Request validation, status precedence, and atomic acceptance", 1)[-1].split("\n## ", 1)[0],
          ("wire length and checked arithmetic", "scalar/reserved-field validation",
           "XID resolution in the defined order", "type and ownership validation",
           "Device availability", "immutable request constraints",
