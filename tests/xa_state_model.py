@@ -337,6 +337,24 @@ class CommandBufferModel:
     # Descriptor-derived Buffer references are separate from recorded Set refs.
     descriptor_sets: list[DescriptorSetLifetime] = field(default_factory=list)
     indirect_buffer_refs: set[str] = field(default_factory=set)
+    # Backend work can outlive logical XID invalidation and terminal callbacks.
+    backend_holds: int = 0
+
+
+def _retire_command_buffer_refs_if_quiescent(state: CommandBufferModel) -> None:
+    if not state.buffer_live and state.backend_holds == 0:
+        state.entries.clear()
+        state.descriptor_sets.clear()
+        state.indirect_buffer_refs.clear()
+
+
+def retire_command_buffer_backend_hold(state: CommandBufferModel) -> str:
+    """Drop one backend hold; retire recorded refs only after final quiescence."""
+    if state.backend_holds <= 0:
+        return "INVALID_SYNCHRONIZATION_STATE"
+    state.backend_holds -= 1
+    _retire_command_buffer_refs_if_quiescent(state)
+    return "SUCCESS"
 
 
 @dataclass(frozen=True)
@@ -444,6 +462,7 @@ def destroy_command_pool(command_buffers: list[CommandBufferModel]) -> str:
         if buffer.buffer_live:
             buffer.buffer_live = False
             buffer.pool_live = False
+            _retire_command_buffer_refs_if_quiescent(buffer)
     return "SUCCESS"
 
 
