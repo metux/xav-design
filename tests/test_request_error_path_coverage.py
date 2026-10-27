@@ -336,21 +336,21 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # Assert the normative phase ordering, not merely that each error is named.
         cb_phases = (
-            "Request-Länge, ABORT-Länge",
-            "Common-Header-Flags",
-            "Ziel-XID, danach Pool-XID",
-            "Ressourcentyp, Client-Ownership",
-            "Zustand des zugehörigen Devices",
+            "Request length, ABORT length",
+            "Common-header flags",
+            "Target XID, then pool XID",
+            "Resource type, client ownership",
+            "associated device state is checked",
         )
         positions = [recording.index(phrase) for phrase in cb_phases]
         self.assertEqual(positions, sorted(positions))
         submit_phases = (
             "incorrect total length",
             "submission_token = 0",
-            "erforderliche XIDs werden in Wire-Reihenfolge",
-            "Ressourcentyp, Client-/Device-Ownership",
+            "required XIDs are resolved in wire order",
+            "resource type, client/device ownership",
             "an unavailable or lost device",
-            "veränderlichen Voraussetzungen in Wire-Reihenfolge",
+            "mutable preconditions are checked in wire order",
         )
         positions = [queue.index(phrase) for phrase in submit_phases]
         self.assertEqual(positions, sorted(positions))
@@ -367,7 +367,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, conformance)
         for phrase in (
             "`QueueSubmit` mit Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
-            "falscher live Ressourcentyp/fremde Ownership `BadMatch`",
+            "live resource of the wrong type/fremde Ownership `BadMatch`",
             "Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
             "Wait-Stage-Maske mit reservierten Bits ergibt `BadValue`",
         ):
@@ -440,7 +440,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(acquire_precedence=phrase):
                 self.assertIn(phrase, acquire)
 
-        queue_present = errors[errors.index("### Normative validation precedence for the seven presentation requests"):errors.index("## Synchron versus asynchron") ]
+        queue_present = errors[errors.index("### Normative validation precedence for the seven presentation requests"):errors.index("## Synchronous versus Asynchronous Errors") ]
         queue_stages = (
             "Device loss takes precedence over Surface loss",
             "`QueuePresent` returns `SURFACE_LOST` before `OUT_OF_DATE`",
@@ -468,14 +468,14 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
 
         # ResetCommandBuffer: structural and identity failures precede device/state checks.
-        reset_start = recording.index("`ResetCommandBuffer` ist ein Void-Request")
-        reset = recording[reset_start:recording.index("`TRANSIENT` und `RESET_COMMAND_BUFFER` sind unabhängige Bits", reset_start)]
+        reset_start = recording.index("`ResetCommandBuffer` is a void request")
+        reset = recording[reset_start:recording.index("## 7.2 Command Buffer States", reset_start)]
         reset_order = (
-            "mit fester Gesamtlänge von 16 Bytes",
-            "Unbekannte/nicht-live Device- oder Buffer-XIDs ergeben `BadValue`",
+            "fixed total length of 16 bytes",
+            "Unknown or non-live device or buffer XIDs result in `BadValue`",
             "falscher live Ressourcentyp",
-            "Nach erfolgreicher XID-/Ownership-Prüfung ergibt ein nicht verfügbares Device",
-            "Erst danach prüft der Server das `RESET_COMMAND_BUFFER`-Flag",
+            "After successful XID and ownership validation, an unavailable device",
+            "Only then does the server check the pool's `RESET_COMMAND_BUFFER` flag",
         )
         positions = [reset.index(phrase) for phrase in reset_order]
         self.assertEqual(positions, sorted(positions))
@@ -522,7 +522,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         errors = self.errors
         conformance = self.conformance
 
-        signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## Semaphore-Zerstörung") ]
+        signal = synchronization[synchronization.index("## `SignalSemaphore`"):synchronization.index("## Destroying Semaphores") ]
         signal_order = (
             "(1) Gesamtlänge exakt 24 Bytes",
             "(2) Device-XID, danach Semaphore-XID auflösen",
