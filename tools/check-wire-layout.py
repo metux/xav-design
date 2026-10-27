@@ -714,7 +714,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             if match:
                 fixed_length = int(match.group(1))
                 break
-        if fixed_length is not None:
+        if fixed_length is not None and heading_index is not None:
             for offset, width, typ, field, line_no in ordered:
                 c.require(offset + width <= fixed_length,
                           f"{name}: field {field!r} at offset {offset} (width {width}) exceeds fixed request length {fixed_length} (spec line {line_no})")
@@ -724,7 +724,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
         offsets: dict[int, tuple[int, str, int]] = {}
         for offset, width, typ, field, line_no in ordered:
             previous = offsets.get(offset)
-            if previous is not None and (previous[0] != width or previous[1] != field):
+            if heading_index is not None and previous is not None and (previous[0] != width or previous[1] != field):
                 c.require(False,
                           f"{name}: conflicting request fields at offset {offset}: {previous[1]!r} and {field!r} (spec lines {previous[2]} and {line_no})")
             else:
