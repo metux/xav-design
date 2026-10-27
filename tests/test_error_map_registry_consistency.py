@@ -42,6 +42,43 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             )
             self.assertIn(f"`{name}`", section, f"error map omits {name}")
 
+    def test_request_and_error_registries_are_complete_and_referenced(self):
+        rows = re.findall(
+            r"^\\| `([^\`]+)` \\| (\\d+) \\| (Void(?: \\+ async events)?|Reply) \\| (.*?) \\|$",
+            self.registry,
+            re.M,
+        )
+        self.assertEqual(len(rows), 47, "every assigned request must have one registry row")
+        names = [name for name, _value, _kind, _details in rows]
+        values = [int(value) for _name, value, _kind, _details in rows]
+        self.assertEqual(len(names), len(set(names)), "request names must be unique")
+        self.assertEqual(values, list(range(1, 48)), "request subopcodes must be unique and append-only")
+
+        for name, _value, kind, details in rows:
+            chapters = re.findall(r"\\]\\(\\.\\./spec/([^)]+)\\)", details)
+            self.assertTrue(chapters, f"{name} must point to its normative chapter")
+            found = False
+            for chapter in chapters:
+                document = (ROOT / "spec" / chapter).read_text(encoding="utf-8")
+                if f"`{name}`" in document:
+                    found = True
+                    if kind == "Reply":
+                        self.assertRegex(document, r"(?i)reply")
+                    break
+            self.assertTrue(found, f"{name} is absent from every normative chapter linked by its registry row")
+
+        error_rows = re.findall(
+            r"^\\|\\s*(\\d+)\\s*\\|\\s*`([A-Z_]+)`\\s*\\|$",
+            (ROOT / "registries" / "errors.md").read_text(encoding="utf-8"),
+            re.M,
+        )
+        self.assertEqual([int(value) for value, _symbol in error_rows], list(range(9)))
+        error_names = [symbol for _value, symbol in error_rows]
+        self.assertEqual(len(error_names), len(set(error_names)))
+        for symbol in error_names:
+            with self.subTest(error=symbol):
+                self.assertIn(f"`{symbol}`", self.errors)
+
     def test_conformance_keeps_profile_dispatch_boundary_explicit(self):
         self.assertIn(
             "requests 41–47 with core X11 `BadRequest` before parsing presentation payloads or resolving their XIDs",
