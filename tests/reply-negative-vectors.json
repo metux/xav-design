@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Intentionally malformed XAverius reply bytes; each case violates one named normative invariant.",
+  "description": "Intentionally malformed XAverius reply bytes; each case violates one named normative invariant. Adds malformed fixed-size replies carrying an illegal payload, in both byte orders.",
   "vectors": [
     {
       "name": "reply-length-mismatch-little",
@@ -631,6 +631,76 @@
       "byte_order": "big",
       "wire_hex": "0100123400000009000000000000000000000000000000000000000000000000000000000000000200001002000020030040300000010002000000010004000047505530",
       "violates": "device-xid-nonzero"
+    },
+    {
+      "name": "GetFenceStatus-unexpected-payload-little",
+      "kind": "GetFenceStatus",
+      "byte_order": "little",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "GetFenceStatus-unexpected-payload-big",
+      "kind": "GetFenceStatus",
+      "byte_order": "big",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "WaitSemaphores-timeout-unexpected-payload-little",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "little",
+      "wire_hex": "010034120100000001000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "WaitSemaphores-timeout-unexpected-payload-big",
+      "kind": "WaitSemaphores-timeout",
+      "byte_order": "big",
+      "wire_hex": "010034120100000001000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "WaitForFence-unexpected-payload-little",
+      "kind": "WaitForFence",
+      "byte_order": "little",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "WaitForFence-unexpected-payload-big",
+      "kind": "WaitForFence",
+      "byte_order": "big",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "GetSemaphoreCounterValue-unexpected-payload-little",
+      "kind": "GetSemaphoreCounterValue",
+      "byte_order": "little",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "GetSemaphoreCounterValue-unexpected-payload-big",
+      "kind": "GetSemaphoreCounterValue",
+      "byte_order": "big",
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "GetBufferMemoryRequirements-unexpected-payload-little",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "little",
+      "wire_hex": "010034120100000000100000000000000001000000000000030000000000000000000000",
+      "violates": "fixed-reply-size"
+    },
+    {
+      "name": "GetBufferMemoryRequirements-unexpected-payload-big",
+      "kind": "GetBufferMemoryRequirements",
+      "byte_order": "big",
+      "wire_hex": "010034120100000000100000000000000001000000000000030000000000000000000000",
+      "violates": "fixed-reply-size"
     }
   ]
 }
