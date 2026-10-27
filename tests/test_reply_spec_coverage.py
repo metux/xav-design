@@ -206,7 +206,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
     def test_fixed_reply_reserved_fields_are_covered_per_kind(self):
         fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
-        for kind in ("GetFenceStatus", "WaitForFence", "WaitSemaphores-timeout", "WaitSemaphores-success"):
+        for kind in ("GetFenceStatus", "WaitForFence", "WaitSemaphores-timeout", "WaitSemaphores-success", "GetSemaphoreCounterValue"):
             for order in ("little", "big"):
                 self.assertTrue(any(v["kind"] == kind and v["byte_order"] == order
                                     and v["violates"] == "reserved-zero" for v in vectors),
