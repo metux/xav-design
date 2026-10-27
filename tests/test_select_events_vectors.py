@@ -678,7 +678,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("buffer_offset <= buffer_size", write)
         self.assertIn("data_length <= buffer_size - buffer_offset", write)
         self.assertIn("floor((uint64(data_length) + 3) / 4)", read)
-        self.assertIn("Das Padding ist Teil des X11-Reply-Transports", read)
+        self.assertIn("Padding is part of X11 reply transport, not buffer data.", read)
         self.assertIn("Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`", errors)
 
 
@@ -692,13 +692,13 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("memory_type_count", props)
         self.assertIn("memory_heap_count", props)
         self.assertIn("bits beyond `memory_type_count` MUST be zero", reqs)
-        self.assertIn("mindestens ein unterstützter Memory-Type-Bit gesetzt sein", reqs)
-        self.assertIn("Memory-Type-Index muss für das Physical Device", alloc)
-        self.assertIn("die `memory_xid` bleibt unangelegt", alloc)
+        self.assertIn("at least one supported memory-type bit", reqs)
+        self.assertIn("the memory-type index MUST exist for the physical device", alloc)
+        self.assertIn("`memory_xid` remains unallocated", alloc)
         self.assertIn("(memory_type_bits & (1u << memory_type_index)) != 0", bind)
-        self.assertIn("Vielfaches des gemeldeten `alignment`", bind)
-        self.assertIn("`requirements.size` maßgeblich", bind)
-        self.assertIn("Der Request ist atomar: bei Ablehnung bleibt der Buffer ungebunden.", bind)
+        self.assertIn("multiple of the reported `alignment`", bind)
+        self.assertIn("`requirements.size`", bind)
+        self.assertIn("The request is atomic: if rejected, the buffer remains unbound.", bind)
         self.assertIn("`ALLOCATION_FAILED`", errors)
         self.assertIn("`BindBufferMemory`", errors)
 
