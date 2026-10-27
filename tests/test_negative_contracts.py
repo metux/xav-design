@@ -62,6 +62,30 @@ class NegativeContractRegressionTests(unittest.TestCase):
         self.assertIn("sicheren Quieszenz", destroy)
         self.assertIn("quarantining the internal allocation", free)
 
+    def test_destroy_device_cascade_and_late_callbacks_are_identity_safe(self) -> None:
+        devices = read("spec/devices.md")
+        lifetime = read("spec/resource-lifetime.md")
+        section = devices.split("## `DestroyDevice`", 1)[1].split("\n## ", 1)[0]
+        for phrase in (
+            "single server-side linearization point",
+            "cascading public invalidation",
+            "wait already terminally established",
+            "Accepted submissions are not cancelled",
+            "MUST NOT enqueue a new event",
+            "captured internal object identities rather than re-resolving numeric XIDs",
+            "retained or quarantined",
+        ):
+            with self.subTest(contract=phrase):
+                self.assertIn(phrase, section)
+        for phrase in (
+            "DestroyDevice cascade linearization",
+            "A wait whose success, timeout, or Device-loss result was established first keeps that result",
+            "MUST NOT mutate the new resource",
+            "must be retained or quarantined until backend access is known to be impossible",
+        ):
+            with self.subTest(lifetime_contract=phrase):
+                self.assertIn(phrase, lifetime)
+
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
             "Device loss beats Surface loss and accepted-token reuse",
