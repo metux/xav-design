@@ -379,6 +379,8 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
         if state.lifecycle is not CommandBufferLifecycle.RECORDING:
             return "INVALID_SYNCHRONIZATION_STATE"
         state.entries.clear()
+        state.descriptor_sets.clear()
+        state.indirect_buffer_refs.clear()
         state.lifecycle = CommandBufferLifecycle.INITIAL
         return "SUCCESS"
     if state.device_lost:
@@ -386,7 +388,11 @@ def command_buffer_data(state: CommandBufferModel, request: CommandBufferChunk) 
     if request.operation in {"CREATE", "CREATE_FINAL"}:
         if state.lifecycle is not CommandBufferLifecycle.INITIAL:
             return "INVALID_SYNCHRONIZATION_STATE"
+        # INITIAL is a fresh recording epoch. Never inherit references from
+        # a prior recording even if a caller constructed an inconsistent model.
         state.entries = list(request.entries)
+        state.descriptor_sets.clear()
+        state.indirect_buffer_refs.clear()
         state.lifecycle = (
             CommandBufferLifecycle.EXECUTABLE if request.operation == "CREATE_FINAL"
             else CommandBufferLifecycle.RECORDING
@@ -423,6 +429,8 @@ def reset_command_buffer(
     # Commit only after every validation phase: entries/references are discarded
     # together with the lifecycle transition.
     state.entries.clear()
+    state.descriptor_sets.clear()
+    state.indirect_buffer_refs.clear()
     state.lifecycle = CommandBufferLifecycle.INITIAL
     return "SUCCESS"
 
