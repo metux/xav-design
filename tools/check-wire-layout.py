@@ -650,6 +650,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                 break
             request_lines.append(line)
         records: list[tuple[int, int, str, str, int]] = []
+        absolute_table_rows: list[tuple[int, str, int]] = []
         in_absolute_table = False
         for line_no, line in enumerate(request_lines, 1):
             if re.search(r"^\|\s*Relative Offset\s*\|", line, re.I):
@@ -674,6 +675,15 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
                     typ = "XID"
                 if typ in sizes and offset >= 8:
                     records.append((offset, sizes[typ], typ, tail, line_no))
+        # Absolute field tables are the strongest machine-readable contract:
+        # reject duplicate offsets/names rather than silently accepting ambiguous
+        # layouts. Relative-offset tables (reply/record payloads) are excluded.
+        table_offsets = [offset for offset, _field, _line_no in absolute_table_rows]
+        table_fields = [field for _offset, field, _line_no in absolute_table_rows]
+        c.require(len(table_offsets) == len(set(table_offsets)),
+                  f"{name}: duplicate offsets in absolute request-field table")
+        c.require(len(table_fields) == len(set(table_fields)),
+                  f"{name}: duplicate field names in absolute request-field table")
         # Some normative request summaries state XID positions inline (for
         # example, "device XID at offset 8") rather than in a typed table or
         # Offset bullet. Capture those explicit declarations too; reply prose
