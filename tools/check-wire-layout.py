@@ -215,7 +215,7 @@ def check_events(c: Check) -> None:
               "SignalSemaphore: validation precedence and atomic rejection must be explicit")
     c.require("total length: `28 + 12 * semaphore_count` bytes" in sync and
               "no duplicate semaphore XIDs (`BadValue`)" in sync and
-              "normative precedence" in errors and "`DEVICE_DESTROYED`" in errors,
+              "WaitSemaphores`: normative precedence" in errors and "`DEVICE_DESTROYED`" in errors,
               "WaitSemaphores: exact length, XID/ownership errors, and terminal device outcomes must be explicit")
     c.require("Synchronous validation MUST follow this order" in sync and
               "finally require every Semaphore to be `TIMELINE` (`BadMatch`)" in errors and
@@ -234,7 +234,7 @@ def check_events(c: Check) -> None:
               "`DEPENDENCY_FAILED`" in memory,
               "WriteBuffer: deferred signal dependency cycles must fail rather than deadlock")
     queue_order = read("spec/queue-submission.md")
-    c.require(re.search(r"deferred requests.*Timeline signal entry.*`DEPENDENCY_FAILED`", queue_order, re.S) is not None,
+    c.require(re.search(r"deferred QueueSubmit requests.*(?:Timeline|Binary) signal entry.*`DEPENDENCY_FAILED`", queue_order, re.S | re.I) is not None,
               "QueueSubmit: dependency-cycle handling must be consistent with WriteBuffer ordering")
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
