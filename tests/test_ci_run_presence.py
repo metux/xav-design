@@ -127,7 +127,7 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
             '  shift\n'
             '  if [ "${1:-}" = "--method" ] && [ "${2:-}" = "POST" ]; then\n'
             '    if mkdir "$REMOTE_LOCK_DIR" 2>/dev/null; then printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\n\'; else exit 1; fi\n'
-            '  elif [ "${1:-}" = "--method" ] && [ "${2:-}" = "DELETE" ]; then rmdir "$REMOTE_LOCK_DIR"; printf "{}\n"\n'
+            '  elif [ "${1:-}" = "--method" ] && [ "${2:-}" = "DELETE" ] && [[ "${3:-}" == repos/*/git/refs/heads/xav-ci-alert-issue-lock ]]; then rmdir "$REMOTE_LOCK_DIR"; printf "{}\n"\n'
             '  elif [[ "${1:-}" == repos/*/git/ref/heads/docs/restructure-2026-10-21* ]]; then printf \'{"object":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}\n\'\n'
             '  elif [[ "${1:-}" == repos/*/git/ref/heads/xav-ci-alert-issue-lock* ]]; then [ -d "$REMOTE_LOCK_DIR" ] && printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\n\' || exit 1\n'
             '  else echo "unexpected gh api: $*" >&2; exit 91; fi\n'
