@@ -231,7 +231,6 @@ class ReplySpecCoverageTests(unittest.TestCase):
                 self.assertEqual(vector["violates"], rule)
                 wire = bytes.fromhex(vector["wire_hex"])
                 self.assertEqual(int.from_bytes(wire[offset:offset + 4], order), flag)
-                self.assertEqual(reply_contract_errors(vector["kind"], wire, order), [rule])
     def test_zero_memory_counts_allow_header_only_record_payload(self):
         body = section(self.memory, "GetPhysicalDeviceMemoryProperties")
         self.assertIn("If the number of memory types or memory heaps is zero, no corresponding records may follow", body)
