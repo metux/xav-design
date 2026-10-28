@@ -63,15 +63,19 @@ Error mapping distinguishes invalid input from valid but unsupported requirement
 - Duplicate extension names: `BadValue`.
 - All requirements MUST be checked before device creation. On any failure, the requested `device_xid` remains unallocated; the server MUST NOT silently omit features or extensions.
 
-The following error precedence applies to `CreateDevice` and refines the general XID rule for this request:
+The following error precedence applies to `CreateDevice` and refines the general XID rule for this request. It MUST match the ordered phases in [Device Discovery and Logical Devices](devices.md):
 
-1. Request length and field rules checkable from wire data alone: reserved fields, queue and feature counts, queue priorities, `enabled = 1`, duplicate queue-family/feature/extension entries, and extension-name syntax and length. These failures result in `BadLength` or `BadValue`, respectively.
-2. Create-XID `device_xid`: ungültig oder bereits belegt ergibt `BadIDChoice`.
-3. `physical_device_xid`: unbekannt/nicht live ergibt `BadValue`; falscher live Ressourcentyp ergibt `BadMatch`.
-4. Ressourcen-Ownership und die für die Verbindung erforderliche erfolgreiche XGE-`GEQueryVersion)-Aushandlung mindestens Version 1.0. Ein fehlender XGE-Handshake ergibt `BadMatch`; ein Fehler darf die Ziel-XID nicht belegen.
-5. Geräteabhängige Anforderungen: Verfügbarkeit des Physical Device, Queue-Family-/Queue-Anzahl und Unterstützung angeforderter Features/Extensions. Ein nicht verfügbares Gerät ergibt `DEVICE_UNAVAILABLE`; eine nicht unterstützte Queue-Anforderung, ein registriertes aber nicht unterstütztes Feature oder eine formal gültige, aber unbekannte/nicht unterstützte Extension ergibt `BadMatch`.
+1. Validate request framing and all wire-only fields: exact length with checked arithmetic, reserved fields, counts, priorities, `enabled = 1`, duplicates, and extension-name syntax/length. Framing failures return `BadLength`; invalid field values return `BadValue`.
+2. Validate create-XID `device_xid`; an invalid or occupied target returns `BadIDChoice`.
+3. Resolve `physical_device_xid`; an unknown or non-live XID returns `BadValue`.
+4. Validate that the resolved XID is a Physical-Device resource and that its ownership/association is valid for this connection; wrong type or invalid ownership/association returns `BadMatch`.
+5. Require successful XGE 1.0-or-later negotiation through `GEQueryVersion`; otherwise return `BadMatch`.
+6. Check Physical-Device availability; an unavailable device returns `DEVICE_UNAVAILABLE`.
+7. Validate queue-family indices and requested queue counts; an out-of-range family index returns `BadValue`, while a valid family unable to supply the requested count returns `BadMatch`.
+8. Validate registered feature support and extension registration/support. An unknown feature ID was already rejected in phase 1 with `BadValue`; a registered but unsupported feature, or a syntactically valid but unknown/unsupported extension, returns `BadMatch`.
+9. Only after all validation succeeds may backend creation begin. Backend failures use the defined allocation/device error, and no logical Device or child resources may be published.
 
-Alle Feature- und Extension-Records müssen vor der Erstellung geprüft werden. Insbesondere darf ein früherer, geräteabhängiger Fehler nicht dazu führen, dass spätere Wire-Records ungeprüft oder teilweise aktiviert werden. Bei jedem Fehler bleibt `device_xid` unangelegt und es werden keine partiellen Device-/Queue-Objekte veröffentlicht.
+A later phase MUST NOT override an error from an earlier phase. In particular, malformed wire fields take precedence over XID errors; target-XID validation precedes physical-device lookup; resource type/ownership checks precede XGE negotiation; and XGE negotiation precedes device availability. All feature and extension records must be validated before creation, and every failure leaves `device_xid` unallocated with no partial Device or Queue objects.
 
 ## Request-spezifische Fehlerzuordnung
 

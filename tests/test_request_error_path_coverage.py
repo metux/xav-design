@@ -59,6 +59,41 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("an unsent reply alone does not keep destruction blocked", self.conformance)
         self.assertIn("offene `WaitForFence`-Registrierung", self.errors)
 
+    def test_create_device_error_precedence_matches_device_chapter(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        errors = self.errors
+        device_order = [
+            "Validate the complete variable-length request framing",
+            "Validate wire-level and scalar fields",
+            "Validate `device_xid` as a create-XID",
+            "Resolve `physical_device_xid`",
+            "Validate that the XID is a Physical-Device resource",
+            "Require successful XGE 1.0-or-later negotiation",
+            "Check physical-device availability",
+            "Validate every requested queue-family index and queue count",
+            "Check requested registry-defined features and extensions",
+            "Only after all prior checks succeed may backend device creation begin",
+        ]
+        errors_order = [
+            "Validate request framing and all wire-only fields",
+            "Validate create-XID `device_xid`",
+            "Resolve `physical_device_xid`",
+            "Validate that the resolved XID is a Physical-Device resource",
+            "Require successful XGE 1.0-or-later negotiation",
+            "Check Physical-Device availability",
+            "Validate queue-family indices and requested queue counts",
+            "Validate registered feature support and extension registration/support",
+            "Only after all validation succeeds may backend creation begin",
+        ]
+        device_section = devices.split("### Normative validation precedence", 1)[1].split("\n\nBefore creation", 1)[0]
+        error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n### Request-specific", 1)[0]
+        for phrase in device_order:
+            self.assertIn(phrase, device_section)
+        for phrase in errors_order:
+            self.assertIn(phrase, error_section)
+        for earlier, later in zip(errors_order, errors_order[1:]):
+            self.assertLess(error_section.index(earlier), error_section.index(later))
+
     def test_discovery_allocation_and_transfer_negative_matrix(self):
         section = self.conformance.split(
             "## Discovery, allocation, and transfer rejection matrix", 1
