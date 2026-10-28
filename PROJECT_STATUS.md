@@ -1,16 +1,14 @@
 # Project status
 
-## Current branch-head status — 2026-10-27
+## Current specification-finalization status — 2026-10-28
 
-The current branch head is `e0263d344714ad8844f47273933fbe971a57e3d4` on `docs/restructure-2026-10-21`. The latest workflow run, [40482250536](https://github.com/metux/xav-design/actions/runs/40482250536), completed successfully on that exact commit. CI reports 3,066 wire-layout checks, 53 focused tests, and 388 tests in the full Python suite. The audit includes request registry cross-checks, baseline reply vectors in both byte orders, presentation reply status shapes, and error-registry consistency. This is static specification and golden-wire validation only; there is no XAverius server/client implementation in this repository to exercise live X11/XGE interoperability or Vulkan backend behavior.
+The project is in the final specification-audit phase, not yet at a declared protocol freeze. The central registry contains 47 assigned request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains outside the initial compute-only implementation target unless the server explicitly implements that profile.
 
-The static request audit now covers 47 assigned request contracts: compute baseline 1–40 and presentation-profile requests 41–47. Presentation event IDs 7 and 8 remain profile-specific, separate from compute-only v0.1. The recent lifecycle tests assert that terminal-event delivery, internal backend release, and image reacquisition are distinct milestones; masking an event must not skip cleanup, and invalidated images must not emit `IMAGE_RELEASED`.
+The current branch is `docs/restructure-2026-10-21`; `master` remains untouched. The latest verified successful CI run before the current documentation-only freeze-gate updates is [wire-layout run 40752407440](https://github.com/metux/xav-design/actions/runs/40752407440), on commit `5dd11c3017dbcd34575222557019ce749be9fd33`. The documentation changes made after that run still require their own CI result; do not describe the current tip as verified until that run completes.
 
-**Remaining work is implementation validation, not missing protocol assignments:**
-- Live X11/XGE interoperability for extension discovery, `GEQueryVersion`, `SelectEvents`, framing, mask behavior, and connection isolation.
-- Backend conformance for queue ordering, `WriteBuffer` visibility, synchronization/device loss, and presentation acquire/present/release/resize/window-destruction transitions.
-- Continue targeted cross-chapter drift checks when normative semantics change. Keep static checks clearly distinguished from runtime conformance.
+The new [specification freeze checklist](spec/freeze-checklist.md) separates normative completeness and static evidence from implementation acceptance. The immediate goal is to finish the cross-chapter consistency audit, run the full suite on the exact freeze candidate, and record any remaining design ambiguity as either resolved or explicitly deferred. Passing static tests does not prove live X11/XGE interoperability or Vulkan backend conformance.
 
+**Open implementation acceptance gates:** live X11/XGE interoperability (see [test plan](spec/xge-interoperability-test-plan.md)); real-backend compute ordering, upload visibility, synchronization, readback and teardown; and presentation runtime validation if that profile is implemented. These are not evidence that the written wire contract is incomplete, but they must remain visible until tested against an implementation.
 
 ## Live XGE validation plan — 2026-10-23
 
@@ -24,7 +22,7 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
 **Specification baseline:** consolidated working draft dated 2026-10-20  
 **Initial implementation target:** Xvfb, compute-only  
-**Status:** Design work in progress; wire protocol and registries are not frozen.
+**Status:** Working draft; specification freeze is pending the evidence gates in [spec/freeze-checklist.md](spec/freeze-checklist.md).
 
 ## Working rules
 
