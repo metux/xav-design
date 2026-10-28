@@ -159,7 +159,7 @@ def resolve_alias(alias, aliases, seen=None):
     return None
 
 
-def aliases_visible_from(path, sources):
+def aliases_visible_from(path, sources, includes):
     """Collect typedefs in one translation unit and its supplied quoted headers."""
     aliases = defaultdict(set)
     visited = set()
@@ -172,7 +172,7 @@ def aliases_visible_from(path, sources):
         source = sources[current]
         for alias, target in iter_function_pointer_typedefs(source):
             aliases[alias].add(target)
-        for include in INCLUDE.findall(source):
+        for include in includes[current]:
             candidate = (current.parent / include).resolve()
             if candidate in sources:
                 visit(candidate)
@@ -208,12 +208,16 @@ def main(paths):
     if not paths:
         print(f"usage: {Path(sys.argv[0]).name} source.c [...]", file=sys.stderr)
         return 2
+    resolved_paths = [Path(path).resolve() for path in paths]
     sources = {Path(path).resolve(): clean_source(path) for path in paths}
+    includes = {
+        Path(path).resolve(): INCLUDE.findall(Path(path).read_text(encoding="utf-8", errors="replace"))
+        for path in paths
+    }
     signatures = defaultdict(set)
     origins = defaultdict(set)
-    for path in paths:
-        resolved = Path(path).resolve()
-        found, locations = scan(path, sources[resolved], aliases_visible_from(resolved, sources))
+    for path, resolved in zip(paths, resolved_paths):
+        found, locations = scan(path, sources[resolved], aliases_visible_from(resolved, sources, includes))
         for name, types in found.items():
             signatures[name].update(types)
             origins[name].update(locations[name])
