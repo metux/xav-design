@@ -1780,6 +1780,29 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.pending_timeline_signals, [])
         self.assertEqual(state.signal_slots, [None])
 
+    def test_timeline_host_signal_rejects_device_loss_observed_by_shared_model(self) -> None:
+        shared = SharedBinarySemaphore()
+        owner = SubmissionModel(
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3],
+            signal_slots=[None],
+            shared_semaphores=[shared],
+        )
+        observer = SubmissionModel(shared_semaphores=[shared])
+
+        # A different model observes device loss first, setting the canonical
+        # device-wide flag while the timeline owner's local flag is still clear.
+        self.assertEqual(mark_device_lost(observer), "SUCCESS")
+        self.assertFalse(owner.device_lost)
+        self.assertTrue(shared.device_lost)
+        before = copy.deepcopy(owner)
+
+        self.assertEqual(signal_timeline_host(owner, 0, 8), "DEVICE_LOST")
+        self.assertTrue(owner.device_lost)
+        self.assertEqual(owner.signal_counters, before.signal_counters)
+        self.assertEqual(owner.signal_slots, before.signal_slots)
+        self.assertEqual(owner.pending_timeline_signals, before.pending_timeline_signals)
+
     def test_host_signal_then_reverse_gpu_callbacks_keep_timeline_monotonic(self) -> None:
         state = self.state(
             command_buffers=[
