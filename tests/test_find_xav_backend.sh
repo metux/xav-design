@@ -37,11 +37,19 @@ cat >"$cmake/config/include/xav_build_config.h" <<'EOF'
 EOF
 cat >"$cmake/config/include/configured_handlers.h" <<'EOF'
 #include <xav_build_config.h>
-#ifdef XAV_CONFIGURED_HANDLER
+#if defined(XAV_ENABLE_CONFIGURED)
 static int (*ConfiguredProcVector[])(ClientPtr) = {
     ProcConfiguredHeaderReq,
 };
 static int ProcConfiguredHeaderReq(ClientPtr client)
+{
+    return Success;
+}
+#elif defined(XAV_HANDLER_VARIANT_B)
+static int (*AlternateProcVector[])(ClientPtr) = {
+    ProcAlternateHeaderReq,
+};
+static int ProcAlternateHeaderReq(ClientPtr client)
 {
     return Success;
 }
@@ -54,6 +62,13 @@ int configured_translation_unit(void)
     return Success;
 }
 EOF
+cat >"$cmake/src/configured_dispatch_alt.c" <<'EOF'
+#include <configured_handlers.h>
+int alternate_translation_unit(void)
+{
+    return Success;
+}
+EOF
 # Model the compile database emitted by CMake or Meson: its -D and -I
 # options are essential to expose the real conditional dispatch table.
 python3 - "$cmake" <<'PY'
@@ -61,18 +76,30 @@ import json
 import os
 import sys
 root = os.path.realpath(sys.argv[1])
-entry = {
-    "directory": root,
-    "file": os.path.join(root, "src", "configured_dispatch.c"),
-    "arguments": [
-        "cc", "-DXAV_ENABLE_CONFIGURED=1", "-I",
-        os.path.join(root, "config", "include"), "-c",
-        os.path.join(root, "src", "configured_dispatch.c"), "-o",
-        os.path.join(root, "build", "configured_dispatch.o")
-    ]
-}
+entries = [
+    {
+        "directory": root,
+        "file": os.path.join(root, "src", "configured_dispatch.c"),
+        "arguments": [
+            "cc", "-DXAV_ENABLE_CONFIGURED=1", "-I",
+            os.path.join(root, "config", "include"), "-c",
+            os.path.join(root, "src", "configured_dispatch.c"), "-o",
+            os.path.join(root, "build", "configured_dispatch.o")
+        ]
+    },
+    {
+        "directory": root,
+        "file": os.path.join(root, "src", "configured_dispatch_alt.c"),
+        "arguments": [
+            "cc", "-DXAV_HANDLER_VARIANT_B=1", "-I",
+            os.path.join(root, "config", "include"), "-c",
+            os.path.join(root, "src", "configured_dispatch_alt.c"), "-o",
+            os.path.join(root, "build", "configured_dispatch_alt.o")
+        ]
+    }
+]
 with open(os.path.join(root, "build", "compile_commands.json"), "w", encoding="utf-8") as f:
-    json.dump([entry], f)
+    json.dump(entries, f)
 PY
 cat >"$cmake/src/inline_comment.rs" <<'EOF'
 let marker = 0; // vkQueueSubmit(device, 1, &submit, fence);
@@ -289,6 +316,8 @@ printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handlers.h' >/dev/null || { echo "FAIL: header without a compile database entry was not evaluated with its including translation unit's -D/-I flags" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'ProcConfiguredHeaderReq' >/dev/null || { echo "FAIL: first configured header variant was missed" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'ProcAlternateHeaderReq' >/dev/null || { echo "FAIL: alternate header handler enabled only in a second translation unit was missed" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
     echo "FAIL: handler defined only in an included header was attributed to the including source" >&2
