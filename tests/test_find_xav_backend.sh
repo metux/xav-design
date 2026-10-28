@@ -96,6 +96,7 @@ EOF
 cat >"$cmake/src/macro_table.h" <<'EOF'
 #define XORG_HANDLER(name) name
 #define XORG_HANDLER_GROUP(a, b) { a, b }
+#define XORG_PASTE(prefix, suffix) prefix##suffix
 EOF
 cat >"$cmake/src/multiline_macro_table.c" <<'EOF'
 #include "macro_table.h"
@@ -105,12 +106,17 @@ static const struct {
 } ProcVector[] =
 {
     XORG_HANDLER(ProcMacroTableReq),
+    XORG_PASTE(Proc, PastedMacroReq),
     XORG_HANDLER_GROUP(
         ProcNestedFirstReq,
         ProcNestedSecondReq
     ),
     ProcGenericDispatch,
 };
+int ProcPastedMacroReq(ClientPtr client)
+{
+    return Success;
+}
 int ProcMacroTableReq(ClientPtr client)
 {
     return Success;
@@ -225,7 +231,7 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/n
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_header_request.c' >/dev/null || { echo "FAIL: handler macro from a non-dixstruct header not recognized" >&2; exit 1; } >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c'
-for handler in ProcMacroTableReq ProcNestedFirstReq ProcNestedSecondReq; do
+for handler in ProcPastedMacroReq ProcMacroTableReq ProcNestedFirstReq ProcNestedSecondReq; do
     printf '%s\\n' "$output" | grep -F "X11-HANDLER: src/multiline_macro_table.c" -A8 | grep -F "$handler" >/dev/null || {
         echo "FAIL: multiline/macro dispatch handler $handler not recognized" >&2; exit 1;
     }
