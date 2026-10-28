@@ -2822,6 +2822,82 @@ class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
 
 
+
+    def _shared_signal_submission(self, shared: SharedBinarySemaphore, token: int) -> SubmissionModel:
+        return SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[shared.signal_state],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+
+    def _shared_present(self, shared: SharedBinarySemaphore, token: int) -> PresentState:
+        return PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[shared.signal_state],
+            shared_semaphores=[shared],
+        )
+
+    def test_present_consumption_before_submit_signal_callback_is_not_resurrected(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = self._shared_signal_submission(shared, 301)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=301, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = self._shared_present(shared, 302)
+        self.assertTrue(queue_present(present, PresentRequest(token=302, wait_indices=(0,))).accepted)
+        self.assertEqual(shared.signal_reservation, ("submit", 301))
+        self.assertEqual(shared.wait_reservation, ("present", 302))
+
+        # Presentation proves consumption before the submit completion arrives.
+        self.assertEqual(finish_present_wait(present, 302, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(finish_submission(submit, 301, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+
+    def test_submit_signal_callback_before_present_consumption_is_not_resurrected(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = self._shared_signal_submission(shared, 311)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=311, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = self._shared_present(shared, 312)
+        self.assertTrue(queue_present(present, PresentRequest(token=312, wait_indices=(0,))).accepted)
+
+        self.assertEqual(finish_submission(submit, 311, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(finish_present_wait(present, 312, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(present.pending_present_waits, [])
+
+    def test_submit_and_present_cannot_both_reserve_the_same_binary_wait(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = self._shared_present(shared, 321)
+        self.assertTrue(queue_present(present, PresentRequest(token=321, wait_indices=(0,))).accepted)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(shared)
+        self.assertEqual(queue_submit(submit, SubmitRequest(token=322, wait_indices=(0,))), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(shared, before)
+        self.assertEqual(shared.wait_reservation, ("present", 321))
+        self.assertNotIn(322, submit.accepted_tokens)
+
 class BinaryDeviceLossReservationTests(unittest.TestCase):
     def test_device_loss_quarantines_uncertain_binary_signal_and_releases_reservation_once(self) -> None:
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
