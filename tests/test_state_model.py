@@ -2114,7 +2114,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.pending_command_buffers, [])
         self.assertEqual(
             [buffer.lifecycle for buffer in state.command_buffers],
-            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.INVALID],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.EXECUTABLE],
         )
         before = copy.deepcopy(state)
         self.assertEqual(finish_submission(state, 441, success=True), "BadValue")
