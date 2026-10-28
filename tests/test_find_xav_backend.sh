@@ -47,7 +47,7 @@ EOF
 cat >"$meson/target/build_output.zig" <<'EOF'
 vkQueueSubmit(device, 1, &submit, fence);
 EOF
-output=$(MAX_DEPTH=8 "$SCRIPT" "$fixture" 2>&1)
+output=$(MAX_DEPTH=8 sh "$SCRIPT" "$fixture" 2>&1)
 printf '%s\n' "$output" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: CMake project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: Meson project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
