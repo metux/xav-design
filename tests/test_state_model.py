@@ -3636,11 +3636,11 @@ class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
         self.assertTrue(shared.signal_consumed)
         self.assertEqual(shared.signal_reservation, ("submit", 811))
-        # Device-loss observation through Present updates the canonical
-        # semaphore, not another SubmissionModel's local mirror. That mirror
-        # remains SIGNAL_PENDING until its owner callback reconciles it.
+        # Device loss fans out immediately, including the submit owner's
+        # local mirror, while its pending token remains available for callback
+        # retirement.
         self.assertEqual(
-            submit.binary_signal_states, [BinarySignalState.SIGNAL_PENDING]
+            submit.binary_signal_states, [BinarySignalState.UNSIGNALED]
         )
 
         # The owning Submit callback retires its reservation exactly once;
@@ -4055,14 +4055,17 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
             [s.signal_state for s in (shared_ab, shared_bc, shared_c)],
             [BinarySignalState.UNTRUSTED] * 3,
         )
-        self.assertEqual(model_c.pending_submissions, [])
-        self.assertEqual(model_c.pending_binary_signals, [])
+        # Foreign pending work remains callback-owned, but its mirrors and
+        # payloads are quarantined immediately. The callback can drain its own
+        # token without restoring trust.
+        self.assertEqual(model_c.pending_submissions, [972])
+        self.assertEqual(model_c.pending_binary_signals, [(972, 1)])
         self.assertEqual(
             model_c.binary_signal_states,
             [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
         )
-        # A late success cannot resurrect the signal on the far end of the set.
-        self.assertEqual(finish_submission(model_c, 972, success=True), "BadValue")
+        self.assertEqual(finish_submission(model_c, 972, success=True), "SUCCESS")
+        self.assertEqual(model_c.pending_submissions, [])
         self.assertEqual(shared_c.signal_state, BinarySignalState.UNTRUSTED)
 
     def test_submit_device_loss_preserves_confirmed_empty_shared_payload(self):
