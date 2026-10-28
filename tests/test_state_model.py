@@ -3237,6 +3237,71 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
                         self.assertEqual(state.retired_recordings, [])
 
 
+class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
+    """Device Loss must dominate late cross-API semaphore callback mirrors."""
+
+    def test_late_present_consumed_success_cannot_restore_trust_after_submit_device_loss(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(
+                submit,
+                SubmitRequest(token=801, signal_indices=(0,), signal_values=(0,)),
+            ),
+            "SUCCESS",
+        )
+
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_present(present, PresentRequest(token=802, wait_indices=(0,))).result,
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_reservation, ("submit", 801))
+        self.assertEqual(shared.wait_reservation, ("present", 802))
+
+        # Device Loss terminalizes the submit and quarantines the shared
+        # payload, while the already accepted present still owns its wait.
+        self.assertEqual(mark_device_lost(submit), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(shared.wait_reservation, ("present", 802))
+
+        # A late successful-looking Present callback must not downgrade the
+        # canonical UNTRUSTED state, even when it reports known consumption.
+        self.assertEqual(
+            finish_present_wait(present, 802, 0, consumed=True), "SUCCESS"
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(present.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        self.assertEqual(present.wait_states, [WaitState.UNTRUSTED])
+        self.assertIsNone(shared.signal_reservation)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(present.pending_present_waits, [])
+
+        # Neither terminal callback may mutate state or release another
+        # operation's reservations a second time.
+        after_terminal = copy.deepcopy((submit, present, shared))
+        self.assertEqual(finish_submission(submit, 801, success=True), "BadValue")
+        self.assertEqual(
+            finish_present_wait(present, 802, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual((submit, present, shared), after_terminal)
+
+
 class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
     """Cross-API wait reservations are exclusive and callbacks are token-owned."""
 
