@@ -9,7 +9,7 @@ on:
       - docs/restructure-2026-10-21
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   issues: write
 
