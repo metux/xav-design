@@ -106,8 +106,8 @@ class VisibleAlertTests(unittest.TestCase):
         self.assertIn("gh issue create", helper)
         self.assertIn("gh issue list --state open --limit 1000 --json number,title", helper)
         self.assertIn("git/refs", helper)
-        self.assertIn("git/ref/heads/xav-ci-alert-issue-lock", helper)
-        self.assertIn("method DELETE", helper)
+        self.assertIn("git/ref/$lock_api_ref", helper)
+        self.assertIn("git/refs/$lock_api_ref", helper)
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
         self.assertIn("outputs.result", workflow)
@@ -150,6 +150,7 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
             "GH_REPO": "metux/xav-design",
             "RUN_URL": "https://github.com/metux/xav-design/actions/runs/1",
             "CREATED_MARKER": str(self.created_marker),
+            "REMOTE_LOCK_DIR": str(self.remote_lock),
         })
 
     def run_helper(self, issues):
