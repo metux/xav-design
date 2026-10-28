@@ -6,6 +6,7 @@
 set -eu
 PROGRAM=${0##*/}
 MAX_DEPTH=${MAX_DEPTH:-8}
+case "$MAX_DEPTH" in ""|*[!0-9]*) echo "$PROGRAM: MAX_DEPTH must be a non-negative integer" >&2; exit 2 ;; esac
 ALL=0
 ROOTS=""
 NL='
