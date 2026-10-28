@@ -302,6 +302,32 @@ class ReplySpecCoverageTests(unittest.TestCase):
             self.assertEqual(int.from_bytes(payload[8:12], order), 0)
             self.assertEqual(len(wire), 44)
 
+
+    def test_queue_flag_registry_and_positive_vectors_cover_all_defined_bits(self):
+        registry = (ROOT / "registries/queue-flags.md").read_text(encoding="utf-8")
+        entries = re.findall(r"^\|\s*(\d+)\s*\|\s*`(0x[0-9A-Fa-f]+)`\s*\|\s*([A-Z_]+)\s*\|", registry, re.M)
+        self.assertEqual([(int(bit), int(mask, 16), symbol) for bit, mask, symbol in entries], [
+            (0, 0x01, "GRAPHICS"), (1, 0x02, "COMPUTE"),
+            (2, 0x04, "TRANSFER"), (3, 0x08, "SPARSE_BINDING"),
+            (4, 0x10, "PROTECTED"),
+        ])
+        known_mask = 0
+        for _bit, mask, _symbol in entries:
+            known_mask |= mask
+        self.assertEqual(known_mask, 0x1F)
+        validator = (ROOT / "tests/test_reply_vectors.py").read_text(encoding="utf-8")
+        self.assertIn("if flags & ~0x1F", validator)
+        for order in ("little", "big"):
+            observed = 0
+            for vector in self.vectors:
+                if vector["event"] != "GetPhysicalDeviceQueueFamilyProperties-two-records" or vector["byte_order"] != order:
+                    continue
+                payload = bytes.fromhex(vector["payload_hex"])
+                for offset in (0, 12):
+                    observed |= int.from_bytes(payload[offset:offset + 4], order)
+            self.assertEqual(observed & known_mask, known_mask,
+                             f"valid queue-family fixtures do not exercise every defined flag in {order}-endian")
+
     def test_property_payload_boundaries_follow_normative_formula(self):
         body = section(self.devices, "GetPhysicalDeviceProperty")
         self.assertIn("ceil(value_length / 4)", body)
