@@ -40,9 +40,22 @@ class AsyncFenceCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(replacement.status, "UNSIGNALED")
         self.assertIs(self.model.fences[44], replacement)
 
+    def test_recreated_device_identity_cannot_validate_old_fence_callback(self):
+        self.assertEqual(self.model.accept(self.old, 1001), "SUCCESS")
+        self.assertEqual(self.model.mark_device_lost("device-1"), "SUCCESS")
+
+        # The public/logical identity is reused, but this is a new device
+        # generation. An old backend success must not signal its old fence.
+        self.model.register_device("device-1")
+        self.assertEqual(self.model.callback(self.old, 1001, True), "SUCCESS")
+        self.assertEqual(self.old.status, "FAILED")
+        self.assertEqual(self.model.accept(self.old, 1002), "DEVICE_LOST")
+        self.assertEqual(self.model.reset(self.old), "DEVICE_LOST")
+
+
     def test_device_loss_turns_late_success_into_failed_fence(self):
         self.assertEqual(self.model.accept(self.old, 1001), "SUCCESS")
-        self.model.devices["device-1"] = False
+        self.assertEqual(self.model.mark_device_lost("device-1"), "SUCCESS")
         self.assertEqual(self.model.callback(self.old, 1001, True), "SUCCESS")
         self.assertEqual(self.old.status, "FAILED")
         self.assertEqual(self.model.accept(self.old, 1002), "DEVICE_LOST")
