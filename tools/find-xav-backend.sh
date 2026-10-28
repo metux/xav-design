@@ -156,13 +156,68 @@ scan_project() {
         wrappers=$(printf '%s\n' "$code" | grep -E '(queue_submit(_2)?|queueSubmit(_2)?|queue_present|queuePresent|wait_semaphores|waitSemaphores|signal_semaphore|signalSemaphore|cmd_dispatch|dispatch_workgroups|create_device|createDevice|create_instance|createInstance)[[:space:]]*\(' 2>/dev/null || :)
         wrappers=$(printf '%s\n' "$wrappers" | grep -E '(=|return[[:space:]]|try!?[[:space:]]*\(|\.)' 2>/dev/null || :)
         if [ -n "$wrappers" ]; then printf '  WRAPPER-CALL: %s\n%s\n' "$f" "$wrappers" >>"$matches"; fi
-        # A request-size macro/prototype alone is not a handler. Require a
-        # Proc*/SProc*Req function signature whose body opens before ';'.
+        # Distinguish concrete handlers from generic dispatch entry points.
+        # Xorg extensions commonly use proc_*_vector tables; table members
+        # count only when the same source file also defines the function body.
         req=$(printf '%s\n' "$code" | awk '
-          /(^|[^[:alnum:]_])(Proc|SProc)[A-Za-z0-9_]*(Req|Request)[[:space:]]*\(/ { active=1; sig=$0 }
-          active { if ($0 ~ /\{/) { print sig; active=0 } else if ($0 ~ /;/) active=0 }
-        ' 2>/dev/null || :)
-        if [ -n "$req" ]; then dispatch=$((dispatch+1)); printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"; fi
+          {
+            line[NR]=$0
+            low=tolower($0)
+            if (!table && low ~ /vector/ && $0 ~ /=/) {
+              table=1
+              if ($0 ~ /\{/) depth=1
+            } else if (table && depth==0 && $0 ~ /\{/) depth=1
+            if (table && depth>0) {
+              rest=$0
+              while (match(rest, /(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+/)) {
+                name=substr(rest,RSTART,RLENGTH); entries[name]=1
+                rest=substr(rest,RSTART+RLENGTH)
+              }
+              if ($0 ~ /\}/) { table=0; depth=0 }
+            }
+          }
+          END {
+            for (i=1; i<=NR; i++) {
+              text=line[i]
+              for (name in entries) {
+                if (text ~ ("(^|[^[:alnum:]_])" name "[[:space:]]*\\(")) {
+                  # Look forward from the function signature: a body must
+                  # open before a semicolon, so prototypes/calls are rejected.
+                  active=1
+                  for (j=i; j<=NR && j<i+8; j++) {
+                    if (line[j] ~ /\{/) { defined[name]=1; defline[name]=i; break }
+                    if (line[j] ~ /;/) break
+                  }
+                }
+              }
+            }
+            for (name in defined) {
+              low=tolower(name)
+              if (low ~ /dispatch|vector|wrapper|forward/) continue
+              print defline[name] ":" name
+            }
+          }' 2>/dev/null || :)
+        # Classic core handlers use ProcFooReq/SProcFooReq names even when
+        # no local vector initializer is visible in this translation unit.
+        classic=$(printf '%s\n' "$code" | awk '
+          /(^|[^[:alnum:]_])(Proc|SProc)[A-Za-z0-9_]*(Req|Request)[[:space:]]*\(/ {
+            sig=$0; active=1
+            if ($0 ~ /\{/) { print sig; active=0 }
+            else {
+              for (j=NR+1; j<=NR+8; j++) {
+                if (getline nextline <= 0) break
+                if (nextline ~ /\{/) { print sig; break }
+                if (nextline ~ /;/) break
+              }
+            }
+          }' 2>/dev/null || :)
+        if [ -n "$req" ] || [ -n "$classic" ]; then
+          dispatch=$((dispatch+1))
+          [ -z "$req" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"
+          [ -z "$classic" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$classic" >>"$matches"
+        fi
+        generic=$(printf '%s\n' "$code" | grep -E '(^|[^[:alnum:]_])[A-Za-z_][A-Za-z0-9_]*(dispatch|Dispatch)[A-Za-z0-9_]*[[:space:]]*\\(' 2>/dev/null || :)
+        if [ -n "$generic" ]; then printf '  X11-GENERIC-DISPATCH: %s\n%s\n' "$f" "$generic" >>"$matches"; fi
       fi
     done <"$files"
     [ "$xav" -eq 0 ] || score=$((score+3))
