@@ -203,7 +203,8 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second_err)
         combined = first_out + second_out
         self.assertEqual(combined.count("Created alert issue:"), 1, combined)
-        self.assertEqual(combined.count("Existing alert issue #123 remains open"), 1, combined)\n        self.assertFalse(self.remote_lock.exists(), "distributed lock must be released")
+        self.assertEqual(combined.count("Existing alert issue #123 remains open"), 1, combined)
+        self.assertFalse(self.remote_lock.exists(), "distributed lock must be released")
 
 if __name__ == "__main__":
     unittest.main()
