@@ -78,6 +78,22 @@ DISPATCH_PROC(ProcHeaderMacroReq)
     return Success;
 }
 EOF
+cat >"$cmake/src/header_owned_handlers.h" <<'EOF'
+static int (*HeaderProcVector[1])(ClientPtr) = {
+    ProcHeaderOwnedReq,
+};
+static int ProcHeaderOwnedReq(ClientPtr client)
+{
+    return Success;
+}
+EOF
+cat >"$cmake/src/header_includes_only.c" <<'EOF'
+#include "header_owned_handlers.h"
+int unrelated_translation_unit(void)
+{
+    return Success;
+}
+EOF
 cat >"$cmake/src/tables.c" <<'EOF'
 /* Mirrors the checked-in Xorg dix/tables.c request vector pattern. */
 int (*ProcVector[2]) (ClientPtr) = {
@@ -229,6 +245,10 @@ printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
+if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
+    echo "FAIL: handler defined only in an included header was attributed to the including source" >&2
+    exit 1
+fi
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null || { echo "FAIL: switch-dispatched Xorg handlers not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
