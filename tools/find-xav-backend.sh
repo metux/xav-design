@@ -171,7 +171,7 @@ scan_project() {
               # unit, but discard declarations/definitions pulled in from
               # headers. Otherwise a header's own ProcVector and function
               # bodies can be mistaken for handlers local to this source file.
-              dispatch_code=$(printf '%s\\n' "$preprocessed" | awk -v source_file="$full" '
+              dispatch_code=$(printf '%s\n' "$preprocessed" | awk -v source_file="$full" '
                 /^#[[:space:]]*[0-9]+[[:space:]]+"/ {
                   if (match($0, /^#[[:space:]]*[0-9]+[[:space:]]+"[^"]+"/)) {
                     marker=substr($0, RSTART, RLENGTH)
