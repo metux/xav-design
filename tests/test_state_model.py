@@ -210,6 +210,51 @@ class QueuePresentStateModelTests(unittest.TestCase):
         self.assertEqual(finish_present_wait(state, 41, 0, consumed=True), "BadValue")
         self.assertEqual(state, after_terminal, "duplicate terminal callback mutated state")
 
+
+    def test_duplicate_wait_indices_are_scalar_error_and_mutation_free(self) -> None:
+        state = self.state()
+        self.assert_rejected_atomically(
+            state, PresentRequest(token=81, wait_indices=(0, 0)), "BadValue"
+        )
+
+    def test_unknown_wait_xid_precedes_device_loss_and_mutates_nothing(self) -> None:
+        state = self.state(
+            device_lost=True,
+            valid_wait_xids=(True, False),
+            wait_states=[WaitState.READY, WaitState.READY],
+        )
+        self.assert_rejected_atomically(
+            state, PresentRequest(token=82, wait_indices=(1,)), "BadValue"
+        )
+
+    def test_shared_untrusted_signal_fails_even_when_local_wait_mirror_is_ready(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNTRUSTED)
+        state = self.state(
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED, BinarySignalState.UNSIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assert_rejected_atomically(
+            state, PresentRequest(token=83, wait_indices=(0,)), "DEPENDENCY_FAILED"
+        )
+
+    def test_existing_shared_wait_reservation_rejects_all_waits_atomically(self) -> None:
+        shared = SharedBinarySemaphore(
+            signal_state=BinarySignalState.SIGNALED,
+            wait_reservation=("submit", 901),
+        )
+        state = self.state(
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED, BinarySignalState.SIGNALED],
+            shared_semaphores=[shared, SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)],
+        )
+        before = copy.deepcopy(state)
+        self.assert_rejected_atomically(
+            state, PresentRequest(token=84, wait_indices=(1, 0)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before, "later invalid wait partially reserved earlier waits")
+
 class ShaderModuleDataModelTests(unittest.TestCase):
     def test_single_create_final_and_chunk_concatenation(self) -> None:
         single = ShaderAssemblyState()
