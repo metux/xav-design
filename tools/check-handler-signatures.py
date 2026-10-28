@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 NAME = r"(?:Proc|SProc|proc_|sproc_)[A-Za-z0-9_]*(?:Req|Request)?"
+IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
 RETURN = r"(?:(?:[A-Za-z_][A-Za-z0-9_]*\s+)*[A-Za-z_][A-Za-z0-9_]*\s*\*\s*|[A-Za-z_][A-Za-z0-9_ \t]*?)"
 FUNCTION = re.compile(
     rf"(?P<ret>{RETURN})\s*(?P<name>{NAME})\s*\((?P<args>[^;{{}}]*)\)\s*(?=[{{;])"
@@ -23,9 +24,11 @@ TYPEDEF_PREFIX = re.compile(
     r"\btypedef\s+(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)"
     r"\(\s*\*\s*(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*\)\s*"
 )
+TYPEDEF_ALIAS = re.compile(
+    rf"\btypedef\s+(?P<base>{IDENT})\s+(?P<alias>{IDENT})\s*;"
+)
 ALIASED_TABLE = re.compile(
-    r"\b(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+"
-    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)\s*"
+    rf"\b(?P<alias>{IDENT})\s+(?P<table>{IDENT})\s*"
     r"(?:\[[^]]*\])?\s*=\s*\{(?P<body>[^}]*)\}",
     re.S,
 )
@@ -104,6 +107,12 @@ def normalize_return(value):
         value = stripped
 
 
+def clean_source(path):
+    source = Path(path).read_text(encoding="utf-8", errors="replace")
+    source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
+    return re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", source)
+
+
 def iter_function_pointer_typedefs(source):
     for match in TYPEDEF_PREFIX.finditer(source):
         opening = match.end()
@@ -112,10 +121,12 @@ def iter_function_pointer_typedefs(source):
         end = matching_delimiter(source, opening)
         if end is None:
             continue
-        tail = re.match(r"\s*;", source[end + 1:])
-        if not tail:
-            continue
-        yield match.group("alias"), match.group("ret"), source[opening + 1:end]
+        if re.match(r"\s*;", source[end + 1:]):
+            yield match.group("alias"), (
+                f"{normalize_return(match.group('ret'))} (*)({normalize_args(source[opening + 1:end])})"
+            )
+    for match in TYPEDEF_ALIAS.finditer(source):
+        yield match.group("alias"), match.group("base")
 
 
 def iter_dispatch_tables(source):
@@ -127,15 +138,29 @@ def iter_dispatch_tables(source):
         if end is None:
             continue
         tail = re.match(r"\s*=\s*\{(?P<body>[^}]*)\}", source[end + 1:], re.S)
-        if not tail:
-            continue
-        yield match.group("table"), match.group("ret"), source[opening + 1:end], tail.group("body")
+        if tail:
+            yield match.group("table"), (
+                f"{normalize_return(match.group('ret'))} (*)({normalize_args(source[opening + 1:end])})"
+            ), tail.group("body")
 
 
-def scan(path):
-    source = Path(path).read_text(encoding="utf-8", errors="replace")
-    source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
-    source = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", source)
+def resolve_alias(alias, aliases, seen=None):
+    """Resolve a typedef chain only when every link has one unambiguous target."""
+    seen = set() if seen is None else seen
+    if alias in seen:
+        return None
+    targets = aliases.get(alias, set())
+    if len(targets) != 1:
+        return None
+    target = next(iter(targets))
+    if target.endswith(")") and "(*)" in target:
+        return target
+    if re.fullmatch(IDENT, target):
+        return resolve_alias(target, aliases, seen | {alias})
+    return None
+
+
+def scan(path, source, aliases):
     signatures = defaultdict(set)
     origins = defaultdict(set)
     for match in FUNCTION.finditer(source):
@@ -144,16 +169,12 @@ def scan(path):
         signatures[name].add(signature)
         origins[name].add(str(path))
 
-    typedefs = {}
-    for alias, ret, args in iter_function_pointer_typedefs(source):
-        typedefs[alias] = f"{normalize_return(ret)} (*)({normalize_args(args)})"
-    for table, ret, args, body in iter_dispatch_tables(source):
-        pointer_type = f"{normalize_return(ret)} (*)({normalize_args(args)})"
+    for table, pointer_type, body in iter_dispatch_tables(source):
         for name in HANDLER_REF.findall(body):
             signatures[name].add(pointer_type)
             origins[name].add(f"{path} [{table}]")
     for match in ALIASED_TABLE.finditer(source):
-        pointer_type = typedefs.get(match.group("alias"))
+        pointer_type = resolve_alias(match.group("alias"), aliases)
         if pointer_type is None:
             continue
         for name in HANDLER_REF.findall(match.group("body")):
@@ -166,10 +187,16 @@ def main(paths):
     if not paths:
         print(f"usage: {Path(sys.argv[0]).name} source.c [...]", file=sys.stderr)
         return 2
+    sources = [(path, clean_source(path)) for path in paths]
+    aliases = defaultdict(set)
+    for _, source in sources:
+        for alias, target in iter_function_pointer_typedefs(source):
+            aliases[alias].add(target)
+
     signatures = defaultdict(set)
     origins = defaultdict(set)
-    for path in paths:
-        found, locations = scan(path)
+    for path, source in sources:
+        found, locations = scan(path, source, aliases)
         for name, types in found.items():
             signatures[name].update(types)
             origins[name].update(locations[name])
