@@ -3804,6 +3804,57 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertFalse(shared.signal_consumed)
 
 
+    def test_present_device_loss_quarantines_late_submit_signal_callback(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(
+                submit, SubmitRequest(token=908, signal_indices=(0,), signal_values=(0,))
+            ),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(
+            queue_present(present, PresentRequest(token=909, wait_indices=(0,))).accepted
+        )
+
+        # Device loss is device-wide even when first observed by Present.
+        # A later success-shaped Submit callback must not resurrect the payload
+        # or clear the quarantine just because its local model missed the event.
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertTrue(shared.device_lost)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(finish_submission(submit, 908, success=True), "SUCCESS")
+        self.assertTrue(submit.device_lost)
+        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+
+        before_submit = copy.deepcopy(submit)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=910)),
+            "DEVICE_LOST",
+        )
+        # The request observes the device-wide terminal state without
+        # mutating unrelated submission reservations or resource state.
+        self.assertEqual(submit, before_submit)
+
+
 class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
     """Out-of-order wait completions must retire only their own reservations."""
 
