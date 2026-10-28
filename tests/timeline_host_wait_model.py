@@ -16,6 +16,7 @@ class Timeline:
     pending_gpu_signals: dict[int, int] = field(default_factory=dict)
     pending_host_waits: dict[int, int] = field(default_factory=dict)
     terminal_waits: dict[int, str] = field(default_factory=dict)
+    terminal_gpu_signals: set[int] = field(default_factory=set)
     lifecycle: str = "ACTIVE"
 
     def begin_host_wait(self, token: int, value: int) -> str:
@@ -49,7 +50,8 @@ class Timeline:
             return "DEVICE_LOST"
         if self.lifecycle == "DEVICE_DESTROYED":
             return "DEVICE_DESTROYED"
-        if token == 0 or token in self.pending_gpu_signals:
+        if (token == 0 or token in self.pending_gpu_signals
+                or token in self.terminal_gpu_signals):
             return "BadValue"
         if value <= self.counter or any(
             value <= reserved for reserved in self.pending_gpu_signals.values()
@@ -62,6 +64,7 @@ class Timeline:
         if token not in self.pending_gpu_signals:
             return "BadValue"
         value = self.pending_gpu_signals.pop(token)
+        self.terminal_gpu_signals.add(token)
         # A late backend callback after device loss/destruction must not
         # manufacture successful timeline progress or resurrect host waits.
         if self.lifecycle != "ACTIVE":
