@@ -133,7 +133,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         )[0]
         error_map = self.errors.split(
             "- `CreateDefaultDevice`:", 1
-        )[1].split("- Beide Requests sind Void-Requests", 1)[0]
+        )[1].split("- Both requests are void requests", 1)[0]
         for phase in (
             "exact/formula-based request length",
             "`queue_count`",
@@ -144,11 +144,11 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             with self.subTest(device_phase=phase):
                 self.assertIn(phase, section)
         for phase in (
-            "Request-Länge",
+            "request length",
             "`queue_count`",
-            "Ziel-XID",
-            "XGE-1.0",
-            "Auswahl eines geeigneten Physical Device",
+            "target XID",
+            "XGE 1.0 negotiation",
+            "selection of a suitable Physical Device",
         ):
             with self.subTest(error_phase=phase):
                 self.assertIn(phase, error_map)
@@ -156,11 +156,11 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         self.assertLess(section.index("`queue_count`"), section.index("target `device_xid`"))
         self.assertLess(section.index("target `device_xid`"), section.index("XGE 1.0-or-later"))
         self.assertLess(section.index("XGE 1.0-or-later"), section.index("suitable physical device"))
-        self.assertLess(error_map.index("Request-Länge"), error_map.index("`queue_count`"))
-        self.assertLess(error_map.index("`queue_count`"), error_map.index("Ziel-XID"))
-        self.assertLess(error_map.index("Ziel-XID"), error_map.index("XGE-1.0"))
-        self.assertLess(error_map.index("XGE-1.0"), error_map.index("Auswahl eines geeigneten Physical Device"))
-        self.assertIn("bei jedem Fehler bleibt die Ziel-XID unbelegt", error_map)
+        self.assertLess(error_map.index("request length"), error_map.index("`queue_count`"))
+        self.assertLess(error_map.index("`queue_count`"), error_map.index("target XID"))
+        self.assertLess(error_map.index("Ziel-XID"), error_map.index("XGE 1.0 negotiation"))
+        self.assertLess(error_map.index("XGE-1.0"), error_map.index("selection of a suitable Physical Device"))
+        self.assertIn("on any error, the target XID remains unallocated", error_map)
 
     def test_conformance_keeps_profile_dispatch_boundary_explicit(self):
         self.assertIn(
