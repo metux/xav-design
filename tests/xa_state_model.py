@@ -1376,6 +1376,8 @@ def update_descriptor_sets(
     """
     if not writes_valid:
         return "BadValue"
+    if len({(w.set_index, w.slot) for w in writes}) != len(writes):
+        return "BadValue"
     if any(w.set_index < 0 or w.set_index >= len(sets)
            or not sets[w.set_index].live or w.slot < 0 for w in writes):
         return "BadValue"
