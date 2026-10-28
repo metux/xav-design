@@ -159,6 +159,16 @@ scan_project() {
         # Distinguish concrete handlers from generic dispatch entry points.
         # Xorg extensions commonly use proc_*_vector tables; table members
         # count only when the same source file also defines the function body.
+        # Prefer the real C preprocessor for dispatch tables so token-pasting
+        # and function-like macros are resolved. If preprocessing is unavailable
+        # or a project's headers are incomplete, retain the source-text fallback.
+        dispatch_code=$code
+        case "$f" in *.c|*.h)
+          if command -v "${CC:-cc}" >/dev/null 2>&1; then
+            preprocessed=$(cd "$repo" && "${CC:-cc}" -E -P -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
+            [ -z "$preprocessed" ] || dispatch_code=$preprocessed
+          fi ;;
+        esac
         req=$(printf '%s\n' "$code" | awk '
           {
             line[NR]=$0
