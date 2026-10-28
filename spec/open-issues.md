@@ -1,28 +1,39 @@
 # Remaining v0.1 issues and future maintenance
 
-This file distinguishes unresolved v0.1 validation work from rules that are already normative and questions intentionally deferred to later protocol versions. Listing a maintenance rule or future question here does not make it a blocker for the v0.1 specification.
+This file separates specification design gaps from implementation acceptance tests. A protocol rule can be fully specified before a server exists; static checks cannot prove runtime interoperability. The release gate is [the specification freeze checklist](freeze-checklist.md).
 
-## Remaining v0.1 validation work
+## Specification freeze status
 
-1. **Open — implementation-level XGE interoperability.** Exercise `SelectEvents` and XGE framing against an actual X11/XGE implementation. The normative 32-byte GenericEvent header, dynamic extension opcode, static event type IDs, event lengths, and scope-specific selection masks are specified in [events](events.md), [wire protocol](wire-protocol.md), and the conformance checklist. The step-by-step execution matrix, positive/negative cases, and evidence requirements are in the [XGE interoperability test plan](xge-interoperability-test-plan.md). This requires implementation-level testing; documentation-only checks cannot prove interoperability.
+The request and event registries currently define 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation requests and event types remain profile-gated; their assignment does not imply support in the initial compute-only implementation.
+
+The remaining work before declaring the written contract frozen is to complete and record the normative cross-chapter audit and automated evidence gates in the freeze checklist. Do not treat the existence of registry values or a passing static checker alone as proof that every semantic contract has been reviewed. The checklist is the authoritative definition of the freeze evidence required.
+
+## Implementation acceptance work (not a missing wire assignment)
+
+1. **Open — live X11/XGE interoperability.** Exercise standard `QueryExtension("XAverius")`, dynamic major-opcode use, `GEQueryVersion`, `SelectEvents`, XGE framing, masks, byte order, and connection isolation against an actual X11/XGE server and XAverius implementation. Follow the [XGE interoperability test plan](xge-interoperability-test-plan.md). Documentation-only checks cannot prove interoperability.
+2. **Open — compute backend conformance.** Validate queue ordering, successful `WriteBuffer` visibility, dispatch/readback, synchronization, Device loss, late callbacks, client disconnect, and resource teardown against an actual Vulkan backend.
+3. **Open if presentation is implemented — presentation backend conformance.** Validate Window/Surface lifetime, swapchain creation, acquire/present/release transitions, resize/out-of-date, terminal event behavior, and device/connection teardown races. Keep these results separate from compute-only conformance.
+
+These are implementation acceptance gates. They do not require inventing new request IDs or leaving already-defined layouts ambiguous. They remain open until a real implementation is exercised and evidence is recorded.
 
 ## Normative maintenance rules
 
-These points are already specified and are not unresolved v0.1 design questions:
+These are settled rules, not open v0.1 design questions:
 
-- **Request subopcodes:** the 40 compute-baseline requests retain stable assignments 1–40, and the presentation-capable profile appends requests 41–47 in the [central request subopcode registry](../registries/request-subopcodes.md). New assignments are append-only; existing assignments MUST NOT be renumbered.
+- **Request subopcodes:** compute-baseline requests retain assignments 1–40; presentation-capable-profile requests use 41–47. The [central request registry](../registries/request-subopcodes.md) is append-only; existing assignments MUST NOT be renumbered.
 - **Physical-device properties:** the four v0.1 properties and their wire representations are defined in the [property registry](../registries/physical-device-properties.md). Future properties must be registered append-only.
 - **Feature IDs and device extensions:** future assignments must be registered append-only. The v0.1 optional sets are intentionally empty; see [feature IDs](../registries/feature-ids.md) and [device extensions](../registries/device-extensions.md).
 - **Memory properties flags:** `memory_properties_flags` MUST be zero in v0.1 until a registry definition is explicitly assigned; see [memory properties](memory-buffers.md#52-getphysicaldevicememoryproperties).
 - **Physical Device UUID and Driver UUID:** both are opaque 16-byte `BYTE_ARRAY` properties. The server preserves Vulkan-returned bytes exactly and MUST NOT fabricate unavailable UUIDs; see the [property registry](../registries/physical-device-properties.md).
+- **Presentation profile boundary:** the initial implementation target remains compute-only. A server that does not implement the presentation-capable profile rejects requests 41–47 with core X11 `BadRequest` before payload parsing or XID resolution. Event IDs 7 and 8 and their queue-mask bits remain presentation-profile-only.
 
 ## Deferred to future protocol versions
 
-These topics do not block the current v0.1 contract:
+These topics do not block the current contract unless a future version explicitly brings them into scope:
 
-- **Queue fairness and bounded progress:** v0.1 specifies same-queue submission order, no implicit cross-queue ordering, semaphore dependencies, and no fairness or latency guarantee in [queue submission and ordering](queue-submission.md). Any stronger guarantee is a future-version design question.
-- **X11 resource sharing:** ownership and semantics for future cross-client or cross-device resource-sharing mechanisms remain unspecified. v0.1 does not implicitly provide such sharing; current ownership rules are in [device discovery](devices.md) and [resource lifetime](resource-lifetime.md).
-- **Presentation-capable profile:** server-side presentation into ordinary X11 windows has an architectural chapter in [presentation](presentation.md), but it is not part of the initial compute-only v0.1 request inventory. Surface/swapchain ownership, capability semantics, image acquisition/presentation synchronization, event distinction, resize/loss behavior, assigned request layouts, and static wire/error-map checks are documented. The latest verified static checker and golden-vector run is [40482250536](https://github.com/metux/xav-design/actions/runs/40482250536) on branch head `e0263d344714ad8844f47273933fbe971a57e3d4`; it passed 3,066 wire-layout checks and the 388-test Python suite. This confirms static contract checks only, not runtime presentation conformance. These checks are not runtime presentation conformance tests. Presentation request subopcodes 41–47 and command-entry ID 5 are assigned and statically checked. Remaining work is implementation-level backend validation and runtime X11/XGE interoperability testing.
+- **Queue fairness and bounded progress:** v0.1 defines same-queue submission order, no implicit cross-queue ordering, and explicit semaphore dependencies, but promises no fairness or bounded scheduling latency. See [queue submission and ordering](queue-submission.md).
+- **X11 resource sharing:** cross-client or cross-device sharing is not implicitly provided by v0.1. Current ownership rules are in [device discovery](devices.md) and [resource lifetime](resource-lifetime.md).
+- **Additional optional features/extensions:** v0.1 registers none; adding support requires explicit append-only registry assignments and a reviewed protocol change.
 
 ## Closed items
 
