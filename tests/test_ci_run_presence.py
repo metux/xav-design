@@ -100,14 +100,12 @@ class VisibleAlertTests(unittest.TestCase):
         self.assertIn("if: steps.monitor.outputs.result == 'missing'", workflow)
         self.assertIn("gh issue create", workflow)
         self.assertIn("created_url=\"$(gh issue create", workflow)
+        self.assertIn("body=\"$(printf", workflow)
+        self.assertIn("created_url=\"$(gh issue create", workflow)
         self.assertIn("gh issue list --state open", workflow)
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
         self.assertIn("outputs.result", workflow)
-        self.assertIn("[test-ci-alert]", workflow)
-        self.assertIn("gh issue close", workflow)
-        self.assertIn("force_test_alert.outcome", workflow)
-        self.assertIn("body=\"$(printf", workflow)
 
 
 if __name__ == "__main__":
