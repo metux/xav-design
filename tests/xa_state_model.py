@@ -207,20 +207,21 @@ def mark_present_device_lost(state: PresentState) -> str:
         finish_present_terminal(state, token, "DEVICE_LOST")
     for index, shared in enumerate(state.shared_semaphores):
         shared.device_lost = True
-        # A cross-API callback may already have proved that the signal payload
-        # was consumed. Preserve that known-empty state across repeated loss
-        # notifications until the Submit owner retires its own reservation.
-        # Unknown or merely pending payloads must remain quarantined.
-        consumed = shared.signal_consumed and (
+        # A known-empty payload remains empty even if Device Loss is observed
+        # after the Submit owner has already retired its reservation. A live
+        # signal reservation without consumption evidence is still pending,
+        # despite the canonical state initially being UNSIGNALED.
+        known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
+            and (shared.signal_consumed or shared.signal_reservation is None)
         )
-        if not consumed:
+        if not known_empty:
             shared.signal_state = BinarySignalState.UNTRUSTED
             shared.signal_reservation = None
             shared.signal_consumed = False
         if index < len(state.binary_signal_states):
             state.binary_signal_states[index] = (
-                BinarySignalState.UNSIGNALED if consumed
+                BinarySignalState.UNSIGNALED if known_empty
                 else BinarySignalState.UNTRUSTED
             )
         if index < len(state.wait_states):
