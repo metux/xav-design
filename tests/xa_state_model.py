@@ -1602,6 +1602,15 @@ class AsyncSubmissionIdentity:
     terminal: str | None = None
 
 
+@dataclass(frozen=True)
+class AsyncWaitIdentity:
+    """One open server-side host wait, independent of accepted GPU work."""
+    connection_identity: str
+    token: int
+    kind: str
+    resource_identities: tuple[str, ...]
+
+
 @dataclass
 class AsyncSubmissionEventRegistry:
     """Serialized event-decision oracle for terminal callbacks."""
@@ -1612,6 +1621,9 @@ class AsyncSubmissionEventRegistry:
     # Disconnect detaches client/event links immediately, but accepted backend
     # work remains indexed here until its real terminal callback arrives.
     detached_submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    # Open host waits hold wait-only references and are canceled on disconnect;
+    # they are not backend submissions and must not survive the connection.
+    wait_registrations: dict[tuple[str, int], AsyncWaitIdentity] = field(default_factory=dict)
     emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
 
     def register_device(self, connection: str, device: AsyncDeviceIdentity) -> None:
@@ -1649,10 +1661,35 @@ class AsyncSubmissionEventRegistry:
             del self.queue_masks[key]
         return "SUCCESS"
 
+    def register_wait(
+        self, connection: str, token: int, kind: str,
+        resource_identities: tuple[str, ...],
+    ) -> str:
+        key = (connection, token)
+        if (connection not in self.live_connections or token == 0
+                or kind not in {"WaitSemaphores", "WaitForFence"}
+                or not resource_identities or key in self.wait_registrations):
+            return "BadValue"
+        self.wait_registrations[key] = AsyncWaitIdentity(
+            connection, token, kind, resource_identities
+        )
+        return "SUCCESS"
+
+    def finish_wait(self, connection: str, token: int) -> str:
+        key = (connection, token)
+        if key not in self.wait_registrations:
+            return "BadValue"
+        del self.wait_registrations[key]
+        return "SUCCESS"
+
     def disconnect(self, connection: str) -> None:
         self.live_connections.discard(connection)
         for key in [key for key in self.queue_masks if key[0] == connection]:
             del self.queue_masks[key]
+        # Open host waits are connection-owned, not backend work. Cancel them
+        # without a reply and release their wait-only resource references.
+        for key in [key for key in self.wait_registrations if key[0] == connection]:
+            del self.wait_registrations[key]
         # Remove client-facing callback links now. The detached table models
         # the independent backend completion ownership for accepted work.
         for key, submission in list(self.submissions.items()):
