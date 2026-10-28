@@ -1209,6 +1209,11 @@ def finish_submission(
                 state.wait_states[index] = WaitState.UNTRUSTED
         if index < len(state.shared_semaphores):
             shared = state.shared_semaphores[index]
+            # A terminal callback may update the canonical shared semaphore
+            # only while it still owns this exact wait reservation. If another
+            # lifecycle path has retired the old reservation and a newer
+            # operation now owns the semaphore, the stale local mirror must
+            # not overwrite that newer operation's payload state.
             if shared.wait_reservation == ("submit", token):
                 shared.wait_reservation = None
                 shared.signal_state = state.binary_signal_states[index]
