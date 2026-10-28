@@ -97,6 +97,7 @@ class Timeline:
             return "SUCCESS"
         self.lifecycle = "DEVICE_LOST"
         self._terminate_open_waits("DEVICE_LOST")
+        self._terminate_gpu_signals()
         return "SUCCESS"
 
     def destroy_device(self) -> str:
@@ -104,12 +105,19 @@ class Timeline:
             return "SUCCESS"
         self.lifecycle = "DEVICE_DESTROYED"
         self._terminate_open_waits("DEVICE_DESTROYED")
+        self._terminate_gpu_signals()
         return "SUCCESS"
 
     def _terminate_open_waits(self, status: str) -> None:
         for token in list(self.pending_host_waits):
             del self.pending_host_waits[token]
             self.terminal_waits[token] = status
+
+    def _terminate_gpu_signals(self) -> None:
+        # Lifecycle transitions own finalization. Backend callbacks arriving
+        # afterward are stale and must not consume or alias a reservation.
+        self.terminal_gpu_signals.update(self.pending_gpu_signals)
+        self.pending_gpu_signals.clear()
 
     def _resolve_waits(self) -> None:
         for token, value in list(self.pending_host_waits.items()):
