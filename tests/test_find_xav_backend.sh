@@ -68,6 +68,16 @@ DISPATCH_PROC(ProcMacroGeneratedReq)
     return Success;
 }
 EOF
+cat >"$cmake/src/request-macros.h" <<'EOF'
+#define DISPATCH_PROC(func) int func(ClientPtr client)
+EOF
+cat >"$cmake/src/macro_header_request.c" <<'EOF'
+#include "request-macros.h"
+DISPATCH_PROC(ProcHeaderMacroReq)
+{
+    return Success;
+}
+EOF
 cat >"$cmake/src/tables.c" <<'EOF'
 /* Mirrors the checked-in Xorg dix/tables.c request vector pattern. */
 int (*ProcVector[2]) (ClientPtr) = {
@@ -177,7 +187,8 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { e
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null || { echo "FAIL: switch-dispatched Xorg handlers not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
-printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c' >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_header_request.c' >/dev/null || { echo "FAIL: handler macro from a non-dixstruct header not recognized" >&2; exit 1; } >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c' >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
 if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/protocol_generated.c' >/dev/null; then
     echo "FAIL: generated request artifact was treated as a real source handler" >&2; exit 1
