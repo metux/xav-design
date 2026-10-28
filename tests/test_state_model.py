@@ -929,7 +929,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertIsNone(shared.wait_reservation)
         self.assertEqual(
-            queue_submit(submit, SubmitRequest(token=200, signal_indices=(0,), signal_values=(0,))),
+            queue_submit(submit, SubmitRequest(token=200, command_buffer_indices=(), signal_indices=(0,), signal_values=(0,))),
             "DEPENDENCY_FAILED",
         )
 
