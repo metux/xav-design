@@ -81,6 +81,8 @@ A later phase MUST NOT override an error from an earlier phase. In particular, m
 
 ### `WriteBuffer`
 
+Normative Präzedenz: (1) count-/overflow-sichere Gesamtlänge und X11-Request-Limit (`BadLength`); (2) positive `data_length` und Null-Padding (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_DST` und Bereich (`BadMatch`); (7) Transfer-/Synchronisationsarbeit.
+
 - Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
 - Falsche Request-Länge: `BadLength`
 - Länge null, nicht-null Padding oder ungültige reservierte Felder: `BadValue`
@@ -92,6 +94,8 @@ A later phase MUST NOT override an error from an earlier phase. In particular, m
 - Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`
 
 ### `ReadBuffer`
+
+Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `data_length` (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_SRC` und Bereich (`BadMatch`); (7) Snapshot-/Transferarbeit.
 
 - Falsche Request-Länge: `BadLength`
 - Länge null oder ungültige reservierte Felder: `BadValue`

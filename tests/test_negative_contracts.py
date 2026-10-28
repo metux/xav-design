@@ -61,6 +61,55 @@ class NegativeContractRegressionTests(unittest.TestCase):
         self.assertIn("maximum X11 request length", write_spec)
         self.assertIn("Request-Gesamtlänge mit Überlauf", write_errors)
 
+    def test_read_write_buffer_full_validation_precedence(self):
+        memory = read("spec/memory-buffers.md")
+        errors = self.errors
+        cases = (
+            ("WriteBuffer", "## 5.7 `WriteBuffer`", "### `WriteBuffer`", (
+                "checked wide arithmetic",
+                "`data_length > 0`",
+                "resolve `device_xid`, then `buffer_xid` in wire order",
+                "validate live resource types, client ownership, and device association",
+                "check logical-device availability",
+                "validate binding, `TRANSFER_DST` usage, and the overflow-safe buffer range",
+                "perform the ordered transfer",
+            ), (
+                "count-/overflow-sichere Gesamtlänge",
+                "positive `data_length`",
+                "`device_xid`, dann `buffer_xid` in Wire-Reihenfolge",
+                "live Ressourcentyp, Client-Ownership und Device-Zuordnung",
+                "Device-Zustand",
+                "Buffer-Bindung, `TRANSFER_DST` und Bereich",
+                "Transfer-/Synchronisationsarbeit",
+            )),
+            ("ReadBuffer", "## 5.8 `ReadBuffer`", "### `ReadBuffer`", (
+                "exact 28-byte request length",
+                "`data_length > 0`",
+                "resolve `device_xid`, then `buffer_xid` in wire order",
+                "validate live resource types, client ownership, and device association",
+                "check logical-device availability",
+                "validate binding, `TRANSFER_SRC` usage, and the overflow-safe buffer range",
+                "establish the required snapshot ordering and perform the read",
+            ), (
+                "exakte 28-Byte-Länge",
+                "positive `data_length`",
+                "`device_xid`, dann `buffer_xid` in Wire-Reihenfolge",
+                "live Ressourcentyp, Client-Ownership und Device-Zuordnung",
+                "Device-Zustand",
+                "Buffer-Bindung, `TRANSFER_SRC` und Bereich",
+                "Snapshot-/Transferarbeit",
+            )),
+        )
+        for name, heading, error_heading, memory_phases, error_phases in cases:
+            section = memory.split(heading, 1)[1].split("\n## ", 1)[0]
+            error_section = errors.split(error_heading, 1)[1].split("\n### ", 1)[0]
+            for document, phrases in ((section, memory_phases), (error_section, error_phases)):
+                positions = [document.find(phrase) for phrase in phrases]
+                with self.subTest(request=name, phases=phrases):
+                    self.assertTrue(all(position >= 0 for position in positions), positions)
+                    self.assertEqual(positions, sorted(positions))
+            with self.subTest(request=name, device_loss=True):
+                self.assertIn("reported before binding/usage/range errors", section)
     def test_buffer_and_descriptor_mixed_failures_are_atomic(self) -> None:
         self.assertIn("BindBufferMemory", self.conformance)
         self.assertIn("UpdateDescriptorSets", self.conformance)

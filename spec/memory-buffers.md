@@ -158,6 +158,8 @@ Total length:
 
 The buffer MUST be bound, have `TRANSFER_DST` usage, and cover the complete destination range. Bounds are checked without overflow using `buffer_offset <= buffer_size` and `data_length <= buffer_size - buffer_offset`.
 
+Validation precedence is normative: (1) calculate the total request length with checked wide arithmetic and enforce the connection's X11 request limit (`BadLength`); (2) validate `data_length > 0` and zero payload padding (`BadValue`); (3) resolve `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) validate live resource types, client ownership, and device association (`BadMatch`); (5) check logical-device availability (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) validate binding, `TRANSFER_DST` usage, and the overflow-safe buffer range (`BadMatch`); (7) perform the ordered transfer, returning `DEPENDENCY_FAILED`, `ALLOCATION_FAILED`, or `TRANSFER_FAILED` as applicable. No wait, transfer, or state reservation may begin before stages 1–6 succeed. A lost Device is reported before binding/usage/range errors, but not before malformed framing, scalar syntax, or earlier XID/type/ownership errors.
+
 Each `WriteBuffer` request is an independent write operation. There is no upload ID, multi-part upload transaction state, or final-chunk flag.
 
 Clients may send multiple requests consecutively in the normal X11 request stream. Each request receives its own sequence number and reply.
@@ -192,6 +194,8 @@ Request:
 Total length: 28 bytes.
 
 The length MUST be positive. The buffer MUST be bound, have `TRANSFER_SRC` usage, and cover the requested range. Bounds are checked without overflow using `buffer_offset <= buffer_size` and `data_length <= buffer_size - buffer_offset`.
+
+Validation precedence is normative: (1) exact 28-byte request length (`BadLength`); (2) validate `data_length > 0` (`BadValue`); (3) resolve `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) validate live resource types, client ownership, and device association (`BadMatch`); (5) check logical-device availability (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) validate binding, `TRANSFER_SRC` usage, and the overflow-safe buffer range (`BadMatch`); (7) establish the required snapshot ordering and perform the read, returning `DEPENDENCY_FAILED`, `ALLOCATION_FAILED`, or `TRANSFER_FAILED` as applicable. No wait, snapshot, or backend read may begin before stages 1–6 succeed. A lost Device is reported before binding/usage/range errors, but not before malformed framing, scalar syntax, or earlier XID/type/ownership errors.
 
 After the 32-byte header, the reply contains exactly `data_length` bytes read from offset 32, followed by zero padding to a four-byte boundary. `reply.length = floor((uint64(data_length) + 3) / 4)`; the calculation uses at least 64-bit arithmetic. Padding is part of X11 reply transport, not buffer data.
 
