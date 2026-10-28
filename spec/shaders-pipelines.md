@@ -87,28 +87,28 @@ After successful pipeline-layout creation, the descriptor set layout may be publ
 - Offset 16: `CARD32 max_sets`
 - Offset 20: `CARD16 pool_size_count`
 - Offset 22: `CARD16 reserved = 0`
-- Offset 24: array of 8-byte entries
+- Offset 24: Array aus 8-Byte-Entries
 
-Each pool entry contains `CARD32 descriptor_type` and `CARD32 descriptor_count`.
+Jeder Pool-Entry enthält `CARD32 descriptor_type` und `CARD32 descriptor_count`.
 
-`max_sets`, `pool_size_count`, and every descriptor count MUST be positive. Duplicate pool-size entries are invalid. `CreateDescriptorPool` validates in this order: (1) exact count-consistent request length (`BadLength`); (2) positive counts, duplicate pool-size types, supported descriptor types, and the reserved field (`BadValue`); (3) target pool XID as a create-XID (`BadIDChoice` if invalid or already occupied); (4) Device XID (`BadValue` for an unknown or non-live XID); (5) resource type and client/Device ownership (`BadMatch`); (6) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) backend allocation (`ALLOCATION_FAILED`). Unknown or non-live Device XIDs result in `BadValue`; a live resource of the wrong type or foreign Device ownership results in `BadMatch`. An unavailable or lost logical Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; a backend allocation failure results in `ALLOCATION_FAILED`. Creation is atomic: on any error, the pool XID remains unallocated.
+`max_sets`, `pool_size_count` und alle Descriptor-Counts müssen positiv sein. Doppelte Pool-Size-Einträge sind ungültig. `CreateDescriptorPool` prüft in dieser Reihenfolge: (1) exakte count-konsistente Request-Länge (`BadLength`); (2) positive Counts, doppelte Pool-Size-Typen, unterstützte Descriptor-Typen und reserviertes Feld (`BadValue`); (3) Ziel-Pool-XID als Create-XID (`BadIDChoice` bei ungültiger oder belegter XID); (4) Device-XID (`BadValue` bei unbekannter/nicht-live XID); (5) Ressourcentyp und Client-/Device-Ownership (`BadMatch`); (6) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) Backend-Allokation (`ALLOCATION_FAILED`). Unbekannte/nicht-live Device-XIDs ergeben `BadValue`; ein falscher live Ressourcentyp oder fremde Device-Ownership ergibt `BadMatch`. Ein nicht verfügbares oder verlorenes logisches Device ergibt `DEVICE_UNAVAILABLE` beziehungsweise `DEVICE_LOST`; ein Backend-Allokationsfehler ergibt `ALLOCATION_FAILED`. Die Erstellung ist atomar: bei jedem Fehler bleibt die Pool-XID unangelegt.
 
 ## 6.3.1 Destroy Descriptor Pool
 
-`DestroyDescriptorPool` has a fixed total length of 16 bytes:
+`DestroyDescriptorPool` hat eine feste Gesamtlänge von 16 Bytes:
 
 - Offset 8: Device-XID
 - Offset 12: Descriptor-Pool-XID
 
-The pool MUST belong to the specified logical Device. The request is atomically rejected if any contained Descriptor Set is used by pending work or referenced by a `RECORDING` command buffer; the error is `INVALID_SYNCHRONIZATION_STATE`. On rejection, the pool, its sets, and command-buffer states remain unchanged.
+Der Pool muss zum angegebenen logischen Device gehören. Der Request wird atomar abgewiesen, wenn ein enthaltenes Descriptor Set pending verwendet wird oder von einem `RECORDING`-Command-Buffer referenziert wird; der Fehler ist `INVALID_SYNCHRONIZATION_STATE`. Bei Ablehnung bleiben Pool, Sets und Command-Buffer-Zustände unverändert.
 
-On success, the pool and all contained Descriptor Sets are publicly invalidated. Non-pending `EXECUTABLE` command buffers that reference any of these sets become `INVALID`. Internal objects remain alive until all references and backend accesses have ended.
+Bei Erfolg werden der Pool und alle enthaltenen Descriptor Sets öffentlich invalidiert. Nicht-pending `EXECUTABLE`-Command-Buffer, die eines dieser Sets referenzieren, werden `INVALID`. Interne Objekte bleiben erhalten, bis alle Referenzen und Backend-Zugriffe beendet sind.
 
 Device loss alone does not prevent `DestroyDescriptorPool` and does not itself produce a `DEVICE_LOST` error for this logical cleanup. Normal atomic validation still applies: a child Set referenced by a `RECORDING` command buffer continues to block destruction. The client can destroy the relevant Command Pool first; after Device loss, the server MUST NOT start new GPU work and MUST retain internal references until safe quiescence or quarantine.
 
 ## 6.4 `AllocateDescriptorSets`
 
-`AllocateDescriptorSets` is a Void request with a fixed 20-byte header.
+`AllocateDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Descriptor-Pool-XID
@@ -116,15 +116,15 @@ Device loss alone does not prevent `DestroyDescriptorPool` and does not itself p
 - Offset 18: `CARD16 reserved = 0`
 - Offset 20: `DESCRIPTORSETALLOCATION[]`
 
-Each allocation entry is eight bytes and contains a Descriptor Set XID and a Descriptor Set Layout XID.
+Jeder Allocation-Entry ist acht Bytes groß und enthält Descriptor-Set-XID sowie Descriptor-Set-Layout-XID.
 
-Total length: `20 + 8 * descriptor_set_count`; `descriptor_set_count` MUST be positive.
+Gesamtlänge: `20 + 8 * descriptor_set_count`; `descriptor_set_count` muss positiv sein.
 
-`AllocateDescriptorSets` validates in this order: (1) request length and complete allocation entries (`BadLength`); (2) `descriptor_set_count > 0` and reserved fields (`BadValue`); (3) each target Set XID in array order, including duplicates (`BadIDChoice`); (4) input XIDs in wire order: Device, Pool, then Layout XIDs in entry order (`BadValue` for an unknown or non-live XID); (5) resource type, client/Device ownership, and Device association (`BadMatch`); (6) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) Pool/Layout compatibility, pool capacity, and backend allocation (`BadMatch` / `ALLOCATION_FAILED`). The operation is atomic. On error, no subset of the sets may remain publicly created.
+`AllocateDescriptorSets` prüft in dieser Reihenfolge: (1) Request-Länge und vollständige Allocation-Entries (`BadLength`); (2) `descriptor_set_count > 0` und reservierte Felder (`BadValue`); (3) jede Ziel-Set-XID in Array-Reihenfolge einschließlich Duplikaten (`BadIDChoice`); (4) Eingabe-XIDs in Wire-Reihenfolge: Device, Pool, danach Layout-XIDs in Entry-Reihenfolge (`BadValue` bei unbekannter/nicht-live XID); (5) Ressourcentyp, Client-/Device-Ownership und Device-Zuordnung (`BadMatch`); (6) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) Pool-/Layout-Kompatibilität, Pool-Kapazität und Backend-Allokation (`BadMatch` / `ALLOCATION_FAILED`). Die Operation ist atomar. Bei einem Fehler darf keine Teilmenge der Sets öffentlich angelegt bleiben.
 
 ## 6.5 `UpdateDescriptorSets`
 
-`UpdateDescriptorSets` is a Void request with a fixed 20-byte header.
+`UpdateDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: `CARD16 write_count`
@@ -132,7 +132,7 @@ Total length: `20 + 8 * descriptor_set_count`; `descriptor_set_count` MUST be po
 - Offset 16: `CARD32 reserved = 0`
 - Offset 20: `DESCRIPTORWRITE[]`
 
-Each write is 36 bytes.
+Jeder Write ist 36 Bytes groß.
 
 | Relative Offset | Type | Field |
 |---:|---|---|
@@ -146,54 +146,54 @@ Each write is 36 bytes.
 
 Gesamtlänge: `20 + 36 * write_count`.
 
-In v0.1, only buffer descriptors are supported; Storage Buffer is the primary type for the initial compute path.
+In v0.1 sind nur Buffer-Deskriptoren vorgesehen, für den initialen Compute-Pfad insbesondere Storage Buffer.
 
-The server checks the layout, binding, array slot, type, Device ownership, buffer binding, alignment, range bounds, and device limits.
+Der Server prüft Layout, Binding, Array-Slot, Typ, Device-Ownership, Buffer-Bindung, Alignment, Bereichsgrenzen und Geräte-Limits.
 
-Multiple writes to the same descriptor slot within one request are invalid and result in `BadValue`. `descriptor_type` MUST be an assigned value in the Descriptor Type Registry; `0` and unassigned values result in `BadValue`. An assigned descriptor type that does not match the type of the specified layout binding results in `BadMatch`. A failed request MUST NOT leave partial changes. On successful update, descriptor-slot contents and their derived internal Buffer references are replaced atomically. Command buffers retain a reference to the Descriptor Set object when binding it; they do not store a snapshot of its slot contents. A non-pending `EXECUTABLE` command buffer therefore uses the set's current descriptor contents at later submission time. A successful update does not invalidate such a command buffer solely because descriptor contents changed.
+Mehrere Writes desselben Descriptor-Slots innerhalb eines Requests sind ungültig und ergeben `BadValue`. `descriptor_type` muss ein zugewiesener Wert der Descriptor-Type-Registry sein; `0` und nicht zugewiesene Werte ergeben `BadValue`. Ein registrierter Descriptor-Typ, der nicht zum Typ des angegebenen Layout-Bindings passt, ergibt `BadMatch`. Ein fehlgeschlagener Request darf keine Teiländerungen hinterlassen. On successful update, descriptor-slot contents and their derived internal Buffer references are replaced atomically. Command buffers retain a reference to the Descriptor Set object when binding it; they do not store a snapshot of its slot contents. A non-pending `EXECUTABLE` command buffer therefore uses the set's current descriptor contents at later submission time. A successful update does not invalidate such a command buffer solely because descriptor contents changed.
 
-`UpdateDescriptorSets` uses this validation precedence: (1) request length/count and structural integrity (`BadLength`); (2) syntax and field-local checks, including `write_count > 0`, reserved fields, duplicate writes to the same slot, and assigned `descriptor_type` (`BadValue`); (3) resolve XIDs in wire order—Device XID, then each Descriptor Set XID and Buffer XID per write—with unknown or non-live XIDs resulting in `BadValue`; (4) resource type, client/Device ownership, and cross-Device association (`BadMatch`); (5) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) layout/binding/array-slot/descriptor-type compatibility, buffer binding, alignment, and range bounds (`BadMatch`), followed by checking whether an affected set is used by accepted work (`INVALID_SYNCHRONIZATION_STATE`). The Device-state check takes precedence over these request-specific compatibility and pending-state checks. An error terminates the request without partial changes; on success, all slot contents and derived Buffer references are replaced atomically.
+`UpdateDescriptorSets` verwendet diese Fehlerpräzedenz: (1) Request-Länge/Count und strukturelle Integrität (`BadLength`); (2) syntax- und feldlokale Prüfungen einschließlich `write_count > 0`, reservierter Felder, doppelter Writes desselben Slots und zugewiesener `descriptor_type` (`BadValue`); (3) Auflösung der XIDs in Wire-Reihenfolge – Device-XID, dann pro Write Descriptor-Set-XID und Buffer-XID – wobei unbekannte/nicht-live XIDs `BadValue` ergeben; (4) Ressourcentyp, Client-/Device-Ownership und Cross-Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Layout-/Binding-/Array-Slot-/Descriptor-Typ-Kompatibilität, Buffer-Bindung, Alignment und Bereichsgrenzen (`BadMatch`), danach die Prüfung, ob ein betroffenes Set von angenommener Arbeit verwendet wird (`INVALID_SYNCHRONIZATION_STATE`). The Device-state check takes precedence over these request-specific compatibility and pending-state checks. Ein Fehler beendet den Request ohne Teiländerungen; bei Erfolg werden alle Slot-Inhalte und abgeleiteten Buffer-Referenzen atomar ersetzt.
 
 ## 6.6 `FreeDescriptorSets`
 
-`FreeDescriptorSets` is a Void request with a fixed 20-byte header.
+`FreeDescriptorSets` ist ein Void-Request. Fester Header: 20 Bytes.
 
 - Offset 8: Device-XID
 - Offset 12: Descriptor-Pool-XID
 - Offset 16: `CARD16 descriptor_set_count`
 - Offset 18: `CARD16 reserved = 0`
-- Offset 20: array of Descriptor Set XIDs
+- Offset 20: Array aus Descriptor-Set-XIDs
 
-Total length: `20 + 4 * descriptor_set_count`; `descriptor_set_count` MUST be positive. The reserved field MUST be zero. Unknown or non-live Device, Pool, or Set XIDs result in `BadValue`; live resources of the wrong type, foreign ownership, or a Set that does not belong to the specified Pool/Device result in `BadMatch`. `FreeDescriptorSets` is a logical release and remains permitted after Device loss; it MUST NOT start new Vulkan work and MUST retain internal Descriptor Set/backend references until safe quiescence.
+Gesamtlänge: `20 + 4 * descriptor_set_count`; `descriptor_set_count` muss positiv sein. Das reservierte Feld muss null sein. Unbekannte/nicht-live Device-, Pool- oder Set-XIDs ergeben `BadValue`; falsche live Ressourcentypen, fremde Ownership oder ein Set, das nicht zum angegebenen Pool/Device gehört, ergeben `BadMatch`. `FreeDescriptorSets` ist eine logische Freigabe und bleibt nach Device Loss zulässig; es darf keine neue Vulkan-Arbeit auslösen und muss interne Descriptor-Set-/Backend-Referenzen bis zur sicheren Quieszenz erhalten.
 
-Release is atomic: if any requested XID is invalid, or an affected Set is used by pending work or referenced by a `RECORDING` command buffer, no Set is released. Such state conflicts result in `INVALID_SYNCHRONIZATION_STATE`. On success, all requested Sets are immediately invalidated publicly; internal references remain until all permitted accesses have ended.
+Die Freigabe ist atomar: Wenn eine angeforderte XID ungültig ist oder ein betroffenes Set pending verwendet wird beziehungsweise von einem `RECORDING`-Command-Buffer referenziert wird, wird kein Set freigegeben. Solche Zustandskonflikte ergeben `INVALID_SYNCHRONIZATION_STATE`. Bei Erfolg werden alle angeforderten Sets sofort öffentlich ungültig; interne Referenzen bleiben bis zum Ende aller zulässigen Zugriffe erhalten.
 
 ## 6.7 `CreatePipelineLayout`
 
-`CreatePipelineLayout` is a Void request containing:
+`CreatePipelineLayout` ist ein Void-Request und enthält:
 
 - Offset 8: Device-XID
 - Offset 12: Pipeline-Layout-XID
 - Offset 16: `CARD16 set_layout_count`
 - Offset 18: `CARD16 push_constant_range_count`
 - Offset 20: Descriptor-Set-Layout-XID-Array
-- followed by push-constant range records, each 12 bytes long
+- danach Push-Constant-Range-Records mit jeweils 12 Bytes
 
-Each push-constant range record contains:
+Jeder Push-Constant-Range-Record enthält:
 
 - `CARD32 stage_flags`
 - `CARD32 offset`
 - `CARD32 size`
 
-The total request length is `20 + 4 * set_layout_count + 12 * push_constant_range_count` bytes.
+Die Gesamtlänge des Requests beträgt `20 + 4 * set_layout_count + 12 * push_constant_range_count` Bytes.
 
-`CreatePipelineLayout` validates in this order: (1) exact count-consistent wire length (`BadLength`); (2) reserved fields, unsupported stage bits, and invalid range field values (`BadValue`); (3) target XID (`BadIDChoice`); (4) Device and Set Layout XIDs in wire order (`BadValue` for an unknown or non-live XID); (5) resource type, ownership, and cross-Device association (`BadMatch`); (6) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) device-dependent limits and Vulkan compatibility of the range/layout combination (`BadValue` or `BadMatch` according to the violated rule), followed by backend creation (`ALLOCATION_FAILED` for an allocation failure). On any error, the Pipeline Layout XID remains unallocated. This order is binding even when multiple errors are present: in particular, an invalid or occupied target XID takes precedence over unknown input XIDs; Device loss takes precedence over device-dependent compatibility checks and backend creation.
+`CreatePipelineLayout` prüft in dieser Reihenfolge: (1) exakte, count-konsistente Wire-Länge (`BadLength`); (2) reservierte Felder, nicht unterstützte Stage-Bits und ungültige Range-Feldwerte (`BadValue`); (3) Ziel-XID (`BadIDChoice`); (4) Device- und Set-Layout-XIDs in Wire-Reihenfolge (`BadValue` bei unbekannter/nicht-live XID); (5) Ressourcentyp, Ownership und Cross-Device-Zuordnung (`BadMatch`); (6) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) geräteabhängige Limits und Vulkan-Kompatibilität der Ranges/Layout-Kombination (`BadValue` oder `BadMatch` gemäß verletzter Regel), danach Backend-Erstellung (`ALLOCATION_FAILED` bei Allokationsfehler). Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt. Diese Reihenfolge ist auch bei mehreren gleichzeitigen Fehlern verbindlich: insbesondere hat ein ungültiges/belegtes Ziel-XID Vorrang vor unbekannten Eingabe-XIDs; Device Loss hat Vorrang vor geräteabhängigen Kompatibilitätsprüfungen und Backend-Erstellung.
 
-After successful creation, the Descriptor Set Layout may be publicly destroyed. Internal references MUST follow the actual Vulkan lifetime requirements.
+Nach erfolgreicher Erstellung darf das Descriptor Set Layout öffentlich zerstört werden. Die internen Referenzen müssen den tatsächlichen Vulkan-Lebensdauerregeln entsprechen.
 
 ## 6.8 Compute Pipeline
 
-`CreateComputePipeline` is a Void request. Its normative total length is:
+`CreateComputePipeline` ist ein Void-Request. Die normative Gesamtlänge beträgt:
 
 `28 + ((entry_point_length + 3) & ~3)`
 
@@ -203,9 +203,9 @@ After successful creation, the Descriptor Set Layout may be publicly destroyed. 
 - Offset 20: Shader-Module-XID
 - Offset 24: `CARD16 entry_point_length`
 - Offset 26: `CARD16 reserved = 0`
-- Offset 28: ASCII entry point without a NUL terminator, padded to a four-byte boundary
+- Offset 28: ASCII-Entry-Point ohne NUL, auf vier Bytes gepaddet
 
-The entry point MUST be nonempty and contain only ASCII bytes; NUL is forbidden. Padding bytes MUST be zero. The total length MUST be exactly `28 + ((entry_point_length + 3) & ~3)` bytes; `entry_point_length` MUST be positive. Specialization constants are not supported in v0.1. `CreateComputePipeline` validates in this order: (1) exact wire length (`BadLength`); (2) positive entry-point length, nonempty ASCII bytes without NUL, zero padding, and reserved fields (`BadValue`); (3) target Pipeline XID (`BadIDChoice`); (4) Device, Pipeline Layout, and Shader Module XIDs in wire order (`BadValue` for an unknown or non-live XID); (5) resource type, ownership, and cross-Device association (`BadMatch`); (6) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) backend pipeline creation (`ALLOCATION_FAILED` for an allocation failure; other backend failures use the central Vulkan error mapping). Creation is atomic; on error, no Pipeline object is publicly created. This precedence also applies to mixed-invalid requests: an invalid or occupied target XID results in `BadIDChoice` before resolving the Device, Pipeline Layout, and Shader Module; unknown or non-live input XIDs result in `BadValue` before type/ownership checks (`BadMatch`); and Device loss is reported before backend creation. A rejected request does not reserve the target XID.
+Der Entry-Point muss nichtleer sein und ausschließlich ASCII-Bytes enthalten; NUL ist nicht erlaubt. Padding-Bytes müssen null sein. Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen; `entry_point_length` muss positiv sein. Specialization Constants werden in v0.1 nicht unterstützt. `CreateComputePipeline` prüft in dieser Reihenfolge: (1) exakte Wire-Länge (`BadLength`); (2) positiven Entry-Point-Count, nichtleere ASCII-Bytes ohne NUL und Null-Padding sowie reservierte Felder (`BadValue`); (3) Ziel-Pipeline-XID (`BadIDChoice`); (4) Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge (`BadValue` bei unbekannter/nicht-live XID); (5) Ressourcentyp, Ownership und Cross-Device-Zuordnung (`BadMatch`); (6) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) Backend-Pipeline-Erstellung (`ALLOCATION_FAILED` bei Allokationsfehler; andere backendseitige Fehler folgen der zentralen Vulkan-Fehlerzuordnung). Die Erstellung ist atomar; bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt. Die Fehlerpräzedenz gilt auch bei Mehrfachfehlern: ein ungültiges/belegtes Ziel-XID ergibt `BadIDChoice` vor der Auflösung von Device, Pipeline-Layout und Shader-Modul; unbekannte/nicht-live Eingabe-XIDs ergeben `BadValue` vor Typ-/Ownership-Prüfungen (`BadMatch`), und Device Loss wird vor Backend-Erstellung gemeldet. Ein abgewiesener Request reserviert die Ziel-XID nicht.
 
 
 ### Descriptor-slot replacement and concurrent release invariants
