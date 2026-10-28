@@ -94,6 +94,8 @@ Reply:
 
 The reply payload length is zero. Size and alignment MUST be positive. `memory_type_bits` is a bitmask: bit N permits `memory_type_index = N`; bits beyond `memory_type_count` MUST be zero. A successful buffer query MUST return at least one supported memory-type bit, so `memory_type_bits` MUST NOT be zero. These values refer to the physical device associated with the specified logical device and remain stable for its lifetime.
 
+Validation precedence is normative: (1) exact 16-byte request length (`BadLength`); (2) resolve `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown or non-live XIDs); (3) validate live resource types, client ownership, and device association (`BadMatch`); (4) return the buffer's stored memory-requirement metadata. The requirements are fixed for the buffer's lifetime and this query MUST NOT start backend work. It therefore remains valid after logical-device loss, provided the Device and Buffer XIDs are still live and their types/ownership are valid. No state is changed.
+
 ## 5.4 `AllocateMemory`
 
 Total length: 32 bytes.

@@ -117,6 +117,32 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 for outcome in outcomes:
                     self.assertIn(outcome, section)
 
+    def test_buffer_memory_requirements_precedence_and_device_loss_contract(self):
+        memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        errors = self.errors
+        section = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("\\n## ", 1)[0]
+        error_section = errors.split("- `GetBufferMemoryRequirements`:", 1)[1].split("\\n- `AllocateMemory`:", 1)[0]
+        memory_phases = (
+            "exact 16-byte request length",
+            "resolve `device_xid`, then `buffer_xid` in wire order",
+            "validate live resource types, client ownership, and device association",
+            "return the buffer's stored memory-requirement metadata",
+        )
+        error_phases = (
+            "exakte 16-Byte-Länge",
+            "Device-XID, dann Buffer-XID in Wire-Reihenfolge",
+            "Ressourcentyp, Ownership und Device-Zuordnung",
+            "gespeicherte Requirements zurückgeben",
+        )
+        for document, phrases in ((section, memory_phases), (error_section, error_phases)):
+            positions = [document.find(phrase) for phrase in phrases]
+            self.assertTrue(all(position >= 0 for position in positions), positions)
+            self.assertEqual(positions, sorted(positions))
+        self.assertIn("MUST NOT start backend work", section)
+        self.assertIn("remains valid after logical-device loss", section)
+        self.assertIn("keine Backend-Arbeit", error_section)
+        self.assertIn("bei Device Loss zulässig", error_section)
+
     def test_discovery_and_memory_request_names_match_registry(self):
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
         names = (
