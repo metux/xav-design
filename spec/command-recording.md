@@ -120,7 +120,7 @@ Chunks may split only between complete command entries. An individual entry MUST
 
 ## 7.4 Entry-Header
 
-Jeder Entry beginnt mit:
+Each entry begins with:
 
 ```c
 CARD16 command_id;
@@ -175,7 +175,7 @@ Dispatch values MUST be within the limits supported by the device.
 - Offset 8: Pipeline-Layout-XID
 - Offset 12: `CARD32 offset`
 - Offset 16: `CARD32 data_length`
-- Offset 20: Datenbytes, danach Null-Padding bis zur Vierbytegrenze
+- Offset 20: data bytes, followed by zero padding to the next four-byte boundary
 
 Entry length: `5 + ceil(data_length / 4)` words.
 
