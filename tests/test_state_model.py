@@ -2810,7 +2810,7 @@ class BinaryDeviceLossReservationTests(unittest.TestCase):
             shared_semaphores=[shared],
         )
         self.assertEqual(
-            queue_submit(state, SubmitRequest(token=331, signal_indices=(0,))),
+            queue_submit(state, SubmitRequest(token=331, signal_indices=(0,), signal_values=(0,))),
             "SUCCESS",
         )
         self.assertEqual(shared.signal_reservation, ("submit", 331))
