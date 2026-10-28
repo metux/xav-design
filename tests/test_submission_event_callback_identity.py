@@ -44,9 +44,11 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
         self.assertEqual(registry.terminal_callback("client-old", 99, "COMPLETE"), "SUCCESS")
         self.assertEqual(registry.emitted_events, [])
-        self.assertIs(registry.submissions[("client-old", 99)], old_submission)
+        self.assertEqual(old_submission.terminal, "COMPLETE")
+        self.assertNotIn(("client-old", 99), registry.submissions)
         self.assertIs(registry.submissions[("client-new", 99)], replacement)
         self.assertEqual(registry.terminal_callback("client-new", 99, "FAILED"), "SUCCESS")
+        self.assertNotIn(("client-new", 99), registry.submissions)
         self.assertEqual(registry.emitted_events, [])
 
     def test_disconnect_suppresses_terminal_and_async_error_delivery(self):
@@ -56,7 +58,7 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(registry.terminal_callback("client-old", 99, "FAILED"), "SUCCESS")
         self.assertEqual(registry.async_error("client-old", device.identity, 99), "SUCCESS")
         self.assertEqual(registry.emitted_events, [])
-        self.assertEqual(registry.submissions[("client-old", 99)].terminal, "FAILED")
+        self.assertNotIn(("client-old", 99), registry.submissions)
 
     def test_async_error_ignores_select_events_mask_but_not_destroyed_device(self):
         registry, device, _ = self.setup_registry()
