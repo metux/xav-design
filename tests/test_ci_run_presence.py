@@ -105,6 +105,7 @@ class VisibleAlertTests(unittest.TestCase):
         self.assertIn("outputs.result", workflow)
         self.assertIn("[test-ci-alert]", workflow)
         self.assertIn("gh issue close", workflow)
+        self.assertIn("force_test_alert.outcome", workflow)
         self.assertIn("body=\"$(printf", workflow)
 
 
