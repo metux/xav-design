@@ -4029,6 +4029,70 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(present.pending_present_tokens, set())
 
 
+    def test_wait_callback_orders_converge_after_present_device_loss(self):
+        def make_state():
+            shared = [
+                SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED),
+                SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED),
+            ]
+            state = PresentState(
+                valid_wait_xids=(True, True),
+                wait_states=[WaitState.READY, WaitState.READY],
+                binary_signal_states=[
+                    BinarySignalState.SIGNALED, BinarySignalState.SIGNALED
+                ],
+                shared_semaphores=shared,
+            )
+            accepted = queue_present(
+                state, PresentRequest(token=906, wait_indices=(0, 1))
+            )
+            self.assertTrue(accepted.accepted)
+            return state
+
+        orders = (
+            ("loss", "wait0", "wait1"),
+            ("wait0", "loss", "wait1"),
+            ("wait1", "wait0", "loss"),
+            ("wait1", "loss", "wait0"),
+        )
+        final_states = []
+        for order in orders:
+            state = make_state()
+            for event in order:
+                if event == "loss":
+                    self.assertEqual(mark_present_device_lost(state), "SUCCESS")
+                else:
+                    index = int(event[-1])
+                    self.assertEqual(
+                        finish_present_wait(state, 906, index, consumed=True),
+                        "SUCCESS",
+                    )
+            # A terminal present callback arriving after loss must be rejected
+            # regardless of which wait callbacks were already processed.
+            snapshot = copy.deepcopy(state)
+            self.assertEqual(finish_present_terminal(state, 906, "SUCCESS"), "BadValue")
+            self.assertEqual(state, snapshot)
+            self.assertEqual(state.terminal_present_status, {906: "DEVICE_LOST"})
+            self.assertEqual(state.pending_present_tokens, set())
+            self.assertEqual(state.pending_present_waits, [])
+            self.assertEqual(state.image_state, ImageState.INVALID)
+            self.assertEqual(
+                [x.signal_state for x in state.shared_semaphores],
+                [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+            )
+            self.assertEqual(
+                state.binary_signal_states,
+                [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+            )
+            self.assertEqual(
+                state.wait_states, [WaitState.UNTRUSTED, WaitState.UNTRUSTED]
+            )
+            self.assertTrue(all(x.wait_reservation is None for x in state.shared_semaphores))
+            final_states.append(state)
+
+        for state in final_states[1:]:
+            self.assertEqual(state, final_states[0], "callback order changed terminal state")
+
     def test_stale_present_mirror_cannot_accept_wait_after_device_loss(self):
         shared = SharedBinarySemaphore(
             signal_state=BinarySignalState.UNTRUSTED,
