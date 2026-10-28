@@ -459,6 +459,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(command_buffer_indices=(99,)), "BadValue"
         )
 
+    def test_duplicate_command_buffer_is_rejected_atomically(self) -> None:
+        state = self.state()
+        self.assert_atomic_rejection(
+            state, SubmitRequest(command_buffer_indices=(0, 0)), "BadValue"
+        )
+
     def test_queue_mismatch_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, queue_xid_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
