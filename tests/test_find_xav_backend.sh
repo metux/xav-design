@@ -5,7 +5,7 @@ ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 SCRIPT="$ROOT/tools/find-xav-backend.sh"
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/test-find-xav-backend.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
-fixture="$tmp/fixtures"
+fixture="$tmp/fixtures with spaces"
 cmake="$fixture/cmake-project"
 meson="$fixture/meson-project"
 mkdir -p "$cmake/src" "$cmake/tests" "$cmake/generated" "$meson/src" "$meson/target"
@@ -57,4 +57,11 @@ if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|tar
     echo "FAIL: excluded/comment/declaration source was reported as a Vulkan call" >&2
     exit 1
 fi
+
+# Exercise multiple independent roots and the portable grep fallback.
+fallback=$(USE_GREP=1 MAX_DEPTH=8 sh "$SCRIPT" "$cmake" "$meson" 2>&1)
+printf '%s\n' "$fallback" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: first explicit root with spaces not discovered" >&2; exit 1; }
+printf '%s\n' "$fallback" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: second explicit root not discovered by grep fallback" >&2; exit 1; }
+printf '%s\n' "$fallback" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: grep fallback missed Vulkan symbol boundaries" >&2; exit 1; }
+
 echo "find-xav-backend regression tests: PASS"
