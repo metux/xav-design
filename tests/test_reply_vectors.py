@@ -165,7 +165,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 74)
+        self.assertEqual(len(self.vectors), 84)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -447,6 +447,39 @@ class GoldenReplyVectorTests(unittest.TestCase):
             for i in range(16):
                 entry = payload[heaps_start+i*16:heaps_start+(i+1)*16]
                 self.assertEqual(int.from_bytes(entry[12:16], order), 0)
+
+    def test_property_byte_array_padding_boundaries_in_both_orders(self):
+        expected_lengths = {1: 3, 2: 2, 3: 1, 4: 0, 5: 3, 8: 0, 16: 0}
+        for size, expected_padding in expected_lengths.items():
+            for order in ("little", "big"):
+                with self.subTest(size=size, order=order):
+                    matches = [v for v in self.vectors
+                               if v["event"] == f"GetPhysicalDeviceProperty-success-byte-array-{size}"
+                               and v["byte_order"] == order]
+                    self.assertEqual(len(matches), 1, f"byte-array {size} fixture missing or duplicated")
+                    wire = bytes.fromhex(matches[0]["wire_hex"])
+                    self.assertEqual(int.from_bytes(wire[4:8], order), (size + 3) // 4)
+                    self.assertEqual(int.from_bytes(wire[16:20], order), size)
+                    self.assertEqual(len(wire), 32 + ((size + 3) & ~3))
+                    self.assertEqual(wire[32 + size:], bytes(expected_padding))
+
+    def test_memory_properties_zero_types_with_nonzero_heap_count(self):
+        for order in ("little", "big"):
+            with self.subTest(order=order):
+                matches = [v for v in self.vectors
+                           if v["event"] == "GetPhysicalDeviceMemoryProperties-zero-types-one-heap"
+                           and v["byte_order"] == order]
+                self.assertEqual(len(matches), 1)
+                wire = bytes.fromhex(matches[0]["wire_hex"])
+                payload = wire[32:]
+                self.assertEqual(len(payload), 32)
+                self.assertEqual(int.from_bytes(wire[4:8], order), 8)
+                self.assertEqual(int.from_bytes(payload[0:4], order), 0)
+                self.assertEqual(int.from_bytes(payload[4:8], order), 1)
+                self.assertEqual(int.from_bytes(payload[8:16], order), 0)
+                self.assertEqual(int.from_bytes(payload[16:24], order), 1024)
+                self.assertEqual(int.from_bytes(payload[24:28], order), 0)
+                self.assertEqual(payload[28:32], bytes(4))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
