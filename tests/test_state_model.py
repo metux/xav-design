@@ -3961,7 +3961,7 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(present.binary_signal_states, [
             BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED,
         ])
-        self.assertEqual(present.wait_states, [WaitState.READY, WaitState.UNTRUSTED])
+        self.assertEqual(present.wait_states, [WaitState.UNTRUSTED, WaitState.UNTRUSTED])
         self.assertEqual(present.pending_present_waits, [])
         self.assertEqual(
             [item.wait_reservation for item in shared], [None, None]
