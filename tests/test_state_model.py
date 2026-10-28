@@ -4018,6 +4018,36 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
         self.assertEqual(shared, final_snapshot)
 
+    def test_submit_device_loss_preserves_confirmed_empty_shared_payload(self):
+        shared = SharedBinarySemaphore(
+            signal_state=BinarySignalState.UNSIGNALED,
+            signal_consumption_confirmed=True,
+        )
+        state = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+
+        self.assertEqual(mark_device_lost(state), "SUCCESS")
+        self.assertTrue(state.device_lost)
+        self.assertTrue(shared.device_lost)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertTrue(shared.signal_consumption_confirmed)
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(state.wait_states, [WaitState.READY])
+        # Loss remains terminal even though the known-empty binary payload is
+        # preserved for correct state accounting.
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=963, wait_indices=(0,))),
+            "DEVICE_LOST",
+        )
+
     def test_submit_device_loss_immediately_quarantines_foreign_shared_signal(self):
         shared = [
             SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
