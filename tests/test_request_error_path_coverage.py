@@ -120,8 +120,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
     def test_buffer_memory_requirements_precedence_and_device_loss_contract(self):
         memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
         errors = self.errors
-        section = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("\\n## ", 1)[0]
-        error_section = errors.split("- `GetBufferMemoryRequirements`:", 1)[1].split("\\n- `AllocateMemory`:", 1)[0]
+        section = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("\n## ", 1)[0]
+        error_section = errors.split("- `GetBufferMemoryRequirements`:", 1)[1].split("\n- `AllocateMemory`:", 1)[0]
         memory_phases = (
             "exact 16-byte request length",
             "resolve `device_xid`, then `buffer_xid` in wire order",
