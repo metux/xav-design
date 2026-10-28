@@ -116,14 +116,14 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
         self.gh = self.root / "gh"
         self.created_marker = self.root / "created"
         self.gh.write_text(
-            "#!/usr/bin/env bash\\n"
-            "set -eu\\n"
-            "if [[ \\"$1 $2\\" == \\"issue list\\" ]]; then\\n"
-            "  printf '%s' \\"$MOCK_ISSUES\\"\\n"
-            "elif [[ \\"$1 $2\\" == \\"issue create\\" ]]; then\\n"
-            "  printf created > \\"$CREATED_MARKER\\"\\n"
-            "  printf '%s\\n' 'https://github.com/metux/xav-design/issues/123'\\n"
-            "else exit 90; fi\\n",
+            '#!/usr/bin/env bash\n'
+            'set -eu\n'
+            'if [ "$1 $2" = "issue list" ]; then\n'
+            '  printf "%s" "$MOCK_ISSUES"\n'
+            'elif [ "$1 $2" = "issue create" ]; then\n'
+            '  printf created > "$CREATED_MARKER"\n'
+            '  printf "%s\\n" "https://github.com/metux/xav-design/issues/123"\n'
+            'else exit 90; fi\n',
             encoding="utf-8",
         )
         self.gh.chmod(0o755)
