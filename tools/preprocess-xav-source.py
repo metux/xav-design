@@ -124,11 +124,27 @@ def main():
     # including macros established by preceding includes.
     if not requested.lower().endswith((".h", ".hh", ".hpp", ".hxx")):
         return 2
+    # A header may be included by several translation units with different
+    # -D/-U options. Keep every distinct preprocessing context; returning the
+    # first match makes the discovery result depend on compile-database order
+    # and can silently hide handlers enabled only in another translation unit.
+    outputs = []
+    seen_contexts = set()
     for entry, directory, source in candidates:
         output = run_preprocessor(entry, directory, source)
-        if output is not None and mentions_file(output, requested):
+        if output is None or not mentions_file(output, requested):
+            continue
+        # Avoid repeating identical compiler contexts from duplicate database
+        # entries while preserving contexts with different defines/include paths.
+        context = (source, tuple(entry.get("arguments") or shlex.split(entry.get("command", ""))))
+        if context in seen_contexts:
+            continue
+        seen_contexts.add(context)
+        outputs.append(output)
+    if outputs:
+        for output in outputs:
             sys.stdout.buffer.write(output)
-            return 0
+        return 0
     return 2
 
 
