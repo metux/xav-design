@@ -198,6 +198,24 @@ def finish_present_wait(
             [BinarySignalState.UNSIGNALED]
             * (semaphore_index + 1 - len(state.binary_signal_states))
         )
+    # A callback can be the first Present-side observation after device loss.
+    # Reconcile every shared semaphore mirror before applying this callback;
+    # otherwise an earlier, already-retired wait can remain locally READY or
+    # SIGNAL_PENDING even though its canonical payload is now UNTRUSTED.
+    for index, canonical in enumerate(state.shared_semaphores):
+        if canonical.signal_state is not BinarySignalState.UNTRUSTED:
+            continue
+        if index >= len(state.binary_signal_states):
+            state.binary_signal_states.extend(
+                [BinarySignalState.UNSIGNALED]
+                * (index + 1 - len(state.binary_signal_states))
+            )
+        if index >= len(state.wait_states):
+            state.wait_states.extend(
+                [WaitState.READY] * (index + 1 - len(state.wait_states))
+            )
+        state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+        state.wait_states[index] = WaitState.UNTRUSTED
     if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
         # UNTRUSTED is a terminal knowledge state: a late successful-looking
         # present callback cannot downgrade uncertainty to UNSIGNALED.
