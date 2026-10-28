@@ -3362,6 +3362,44 @@ class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
 
 
 
+    def test_disconnected_signal_callback_quarantines_local_wait_state_after_device_loss(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = self._shared_signal_submission(shared, 204)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=204, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_reservation, ("submit", 204))
+
+        observer = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        # Disconnect removes the submission model from loss fan-out, but does
+        # not cancel the accepted backend operation or release its local refs.
+        _unregister_semaphore_owner(submit)
+        self.assertNotIn(submit, [owner_ref() for owner_ref in shared.owners])
+        self.assertEqual(mark_present_device_lost(observer), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(submit.wait_states, [WaitState.READY])
+
+        # The late signal callback must drain its token exactly once while
+        # reconciling the disconnected model's local wait eligibility. It may
+        # not restore canonical semaphore state after loss retired its owner.
+        self.assertEqual(finish_submission(submit, 204, success=True), "SUCCESS")
+        self.assertEqual(submit.pending_submissions, [])
+        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNTRUSTED])
+        self.assertEqual(submit.wait_states, [WaitState.UNTRUSTED])
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        after_first = copy.deepcopy((submit, observer, shared))
+        self.assertEqual(finish_submission(submit, 204, success=False), "BadValue")
+        self.assertEqual((submit, observer, shared), after_first)
+
+
     def _shared_signal_submission(self, shared: SharedBinarySemaphore, token: int) -> SubmissionModel:
         return SubmissionModel(
             command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
