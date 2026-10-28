@@ -79,7 +79,7 @@ sort -u "$projects" -o "$projects"
 is_excluded() {
     case "$1" in
       */.git/*|*/build/*|*/build-*/*|*/out/*|*/target/*|*/node_modules/*|*/vendor/*|*/third_party/*|*/third-party/*|*/external/*|*/generated/*|*/autogen/*|*/auto-generated/*|*/gen/*|*/dist/*|*/coverage/*|*/.cache/*|*/.venv/*|*/venv/*|*/.zig-cache/*|*/zig-out/*|*/CMakeFiles/*|*/meson-private/*|*/meson-logs/*|*/_build/*|*/bazel-*/*|*/test/*|*/tests/*|*/testing/*|*/spec/*|*/specs/*|*/docs/*|*/doc/*|*/documentation/*|*/audit/*|*/wip/*|*/fixtures/*|*/golden/*|*/reference-model/*|*/reference_model/*|*/benchmark/*|*/benchmarks/*|*/examples/*|*/samples/*) return 0 ;;
-      *.md|*.rst|*.txt|*.adoc|*.json|*.yaml|*.yml|*.toml|*.xml|*.svg|*.lock|*.map|*.min.js|*.min.css|*.pb.go|*.generated.go|*.designer.cs|*.g.cs|*.gen.cs|*.freezed.dart|*.g.dart|*.moc.cpp|moc_*.cpp|qrc_*.cpp|ui_*.h|*_pb2.py|*_generated.*|*.generated.*|*.gen.*|*.autogen.*|*.freezed.*|*.gr.dart|*test*.c|*test*.h|*test*.cc|*test*.cpp|*test*.hpp|*test*.rs|*test*.zig|*test*.go|*_test.*|*_spec.*|*.spec.*|*.tests.*|*_mock.*|*_stub.*|mock_*.c|mock_*.cpp|stub_*.c|stub_*.cpp) return 0 ;;
+      *.md|*.rst|*.txt|*.adoc|*.json|*.yaml|*.yml|*.toml|*.xml|*.svg|*.lock|*.map|*.min.js|*.min.css|*.pb.go|*.generated.go|*.designer.cs|*.g.cs|*.gen.cs|*.freezed.dart|*.g.dart|*.moc.cpp|moc_*.cpp|qrc_*.cpp|ui_*.h|*_pb2.py|*_generated.*|*.generated.*|*.gen.*|*.autogen.*|*.freezed.*|*.gr.dart|test*.c|test*.h|test*.cc|test*.cpp|test*.hpp|test*.rs|test*.zig|test*.go|*_test.*|*_spec.*|*.spec.*|*.tests.*|*_mock.*|*_stub.*|mock_*.c|mock_*.cpp|stub_*.c|stub_*.cpp) return 0 ;;
       *state_model*|*wire_layout*|*protocol_spec*|*golden_wire*|*mock*|*stub*) return 0 ;;
       *) return 1 ;;
     esac
@@ -115,13 +115,13 @@ scan_project() {
         b=$(rg -n 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(rg -n '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(rg -n -i 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(rg -n -v '^\s*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null || :)
+        code=$(rg -n -v '^\\s*(//|/\\*|\\*|\\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       else
         a=$(grep -n -i -E 'XAverius|Xaverius|xav_[[:alnum:]_]*|XAV_[[:alnum:]_]*' "$full" 2>/dev/null || :)
         b=$(grep -n -E 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(grep -n -E '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(grep -n -i -E 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(grep -n -E -v '^[[:space:]]*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null || :)
+        code=$(grep -n -E -v '^[[:space:]]*(//|/\\*|\\*|\\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       fi
       if [ -n "$a" ]; then xav=$((xav+1)); printf '  XA: %s\n%s\n' "$f" "$a" >>"$matches"; fi
       if [ -n "$b" ]; then x11=$((x11+1)); printf '  X11: %s\n%s\n' "$f" "$b" >>"$matches"; fi
