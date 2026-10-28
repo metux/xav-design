@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Preprocess one C source using its build-system compile_commands.json entry."""
+"""Preprocess a C source/header using its translation unit's build flags."""
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -30,20 +31,18 @@ def databases(root):
             yield os.path.join(current, "compile_commands.json")
 
 
-def entry_for(root, source):
-    source = os.path.realpath(source)
+def entries(root):
     for database in databases(root):
         try:
             with open(database, encoding="utf-8") as stream:
-                entries = json.load(stream)
+                commands = json.load(stream)
         except (OSError, ValueError):
             continue
-        for entry in entries:
+        for entry in commands:
             directory = entry.get("directory") or os.path.dirname(database)
             filename = entry.get("file")
-            if filename and canonical(filename, directory) == source:
-                return entry, directory
-    return None, None
+            if filename:
+                yield entry, directory, canonical(filename, directory)
 
 
 def compiler_args(entry, directory, source):
@@ -77,27 +76,60 @@ def compiler_args(entry, directory, source):
     return [compiler, *result, "-E", source]
 
 
-def main():
-    if len(sys.argv) != 3:
-        return 2
-    root, source = sys.argv[1:]
-    entry, directory = entry_for(root, source)
-    if entry is None:
-        return 2
-    command = compiler_args(entry, directory, os.path.realpath(source))
+def run_preprocessor(entry, directory, translation_unit):
+    command = compiler_args(entry, directory, translation_unit)
     if command is None:
-        return 2
+        return None
     try:
         completed = subprocess.run(
             command, cwd=directory, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, check=False,
         )
     except OSError:
+        return None
+    return completed.stdout if completed.returncode == 0 else None
+
+
+def mentions_file(output, target):
+    # GCC/Clang line markers quote the resolved path; compare canonicalized
+    # markers so relative build directories and symlinked roots both work.
+    for marker in re.findall(rb'^#[ \\t]*[0-9]+[ \\t]+"([^"]+)"',
+                             output, flags=re.MULTILINE):
+        try:
+            path = marker.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        if os.path.realpath(path) == target:
+            return True
+    return False
+
+
+def main():
+    if len(sys.argv) != 3:
         return 2
-    if completed.returncode:
+    root, requested = sys.argv[1:]
+    requested = os.path.realpath(requested)
+    candidates = list(entries(root))
+    for entry, directory, source in candidates:
+        if source == requested:
+            output = run_preprocessor(entry, directory, source)
+            if output is not None:
+                sys.stdout.buffer.write(output)
+                return 0
+            return 2
+
+    # Headers normally have no compile_commands.json entry. Preprocess actual
+    # translation units and select one whose expanded include graph contains
+    # this header. That preserves the TU's -D/-I/-include and language flags,
+    # including macros established by preceding includes.
+    if not requested.lower().endswith((".h", ".hh", ".hpp", ".hxx")):
         return 2
-    sys.stdout.buffer.write(completed.stdout)
-    return 0
+    for entry, directory, source in candidates:
+        output = run_preprocessor(entry, directory, source)
+        if output is not None and mentions_file(output, requested):
+            sys.stdout.buffer.write(output)
+            return 0
+    return 2
 
 
 if __name__ == "__main__":
