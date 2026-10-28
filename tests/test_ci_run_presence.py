@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Regression tests for missing GitHub Actions run detection."""
 import importlib.util
+import io
+import os
+import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -68,6 +71,36 @@ class MissingCiRunTests(unittest.TestCase):
         with patch.object(MONITOR, "api_get", side_effect=RuntimeError("API unavailable")):
             with self.assertRaisesRegex(RuntimeError, "API unavailable"):
                 MONITOR.check_presence(now=NOW)
+
+
+class VisibleAlertTests(unittest.TestCase):
+    def test_missing_result_is_exported_for_workflow_notification_step(self):
+        with tempfile.NamedTemporaryFile(mode="r+", encoding="utf-8") as output:
+            with patch.dict(os.environ, {"GITHUB_OUTPUT": output.name}):
+                with patch.object(MONITOR, "check_presence", return_value=(1, "Missing CI run: test")):
+                    with patch("sys.stderr", new_callable=io.StringIO):
+                        code = MONITOR.main()
+            output.seek(0)
+            self.assertEqual(code, 1)
+            self.assertEqual(output.read(), "result=missing\\n")
+
+    def test_api_error_is_not_classified_as_missing_run(self):
+        with tempfile.NamedTemporaryFile(mode="r+", encoding="utf-8") as output:
+            with patch.dict(os.environ, {"GITHUB_OUTPUT": output.name}):
+                with patch.object(MONITOR, "check_presence", side_effect=RuntimeError("API unavailable")):
+                    with patch("sys.stderr", new_callable=io.StringIO):
+                        code = MONITOR.main()
+            output.seek(0)
+            self.assertEqual(code, 2)
+            self.assertEqual(output.read(), "result=error\\n")
+
+    def test_workflow_has_visible_issue_notification_and_required_permission(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
+        self.assertIn("  issues: write", workflow)
+        self.assertIn("if: steps.monitor.outputs.result == 'missing'", workflow)
+        self.assertIn("gh issue create", workflow)
+        self.assertIn("gh issue list --state open", workflow)
+        self.assertIn("continue-on-error: true", workflow)
 
 
 if __name__ == "__main__":
