@@ -3437,6 +3437,41 @@ class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
         self.assertEqual(shared.wait_reservation, ("present", 321))
         self.assertNotIn(322, submit.accepted_tokens)
 
+
+
+    def test_duplicate_old_present_wait_callback_cannot_mutate_reused_submit_signal(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        old_present = self._shared_present(shared, 401)
+        self.assertTrue(
+            queue_present(
+                old_present, PresentRequest(token=401, wait_indices=(0,))
+            ).accepted
+        )
+        self.assertEqual(
+            finish_present_wait(old_present, 401, 0, consumed=True), "SUCCESS"
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.wait_reservation)
+
+        new_submit = self._shared_signal_submission(shared, 402)
+        self.assertEqual(
+            queue_submit(
+                new_submit,
+                SubmitRequest(token=402, signal_indices=(0,), signal_values=(0,)),
+            ),
+            "SUCCESS",
+        )
+        before = copy.deepcopy((shared, new_submit, old_present))
+
+        # A duplicated callback from the previous wait generation must not
+        # clear the new submit's signal reservation or rewrite its payload.
+        self.assertEqual(
+            finish_present_wait(old_present, 401, 0, consumed=False), "BadValue"
+        )
+        self.assertEqual((shared, new_submit, old_present), before)
+        self.assertEqual(shared.signal_reservation, ("submit", 402))
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+
 class BinaryDeviceLossReservationTests(unittest.TestCase):
     def test_device_loss_quarantines_uncertain_binary_signal_and_releases_reservation_once(self) -> None:
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
