@@ -43,7 +43,7 @@ def normalize_args(value):
 def normalize_return(value):
     value = compact(value)
     while True:
-        stripped = re.sub(r"^(static|extern|inline|register|const)\\s+", "", value)
+        stripped = re.sub(r"^(static|extern|inline|register|const)\s+", "", value)
         if stripped == value:
             return value
         value = stripped
