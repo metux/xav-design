@@ -120,10 +120,6 @@ int ProcPastedMacroReq(ClientPtr client)
 {
     return Success;
 }
-int ProcDisabledMacroReq(ClientPtr client)
-{
-    return Success;
-}
 int ProcMacroTableReq(ClientPtr client)
 {
     return Success;
