@@ -69,6 +69,28 @@ def main():
         if result.returncode != 1 or "CONFLICT: ProcTableReq" not in result.stdout:
             raise SystemExit("incompatible dispatch function-pointer type was not detected:\n" + result.stdout + result.stderr)
 
+        nested_a = root / "nested_a.c"
+        nested_b = root / "nested_b.c"
+        nested_a.write_text(
+            "int ProcNestedReq(void (*callback)(int, int)) { return Success; }\n",
+            encoding="utf-8",
+        )
+        nested_b.write_text(
+            "int ProcNestedReq(void (*other_callback)(int, int)) { return Success; }\n",
+            encoding="utf-8",
+        )
+        result = run([nested_a, nested_b])
+        if result.returncode != 0:
+            raise SystemExit("equivalent nested callback types incorrectly rejected:\n" + result.stdout + result.stderr)
+
+        nested_b.write_text(
+            "int ProcNestedReq(void (*other_callback)(int, long)) { return Success; }\n",
+            encoding="utf-8",
+        )
+        result = run([nested_a, nested_b])
+        if result.returncode != 1 or "CONFLICT: ProcNestedReq" not in result.stdout:
+            raise SystemExit("nested callback parameter conflict was not detected:\n" + result.stdout + result.stderr)
+
     print("handler signature regression tests: PASS")
 
 
