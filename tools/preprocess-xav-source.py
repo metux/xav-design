@@ -90,18 +90,45 @@ def run_preprocessor(entry, directory, translation_unit):
     return completed.stdout if completed.returncode == 0 else None
 
 
+def marker_path(line):
+    match = re.match(rb'^#[ \\t]*[0-9]+[ \\t]+"([^"]+)"', line)
+    if not match:
+        return None
+    try:
+        return os.path.realpath(match.group(1).decode("utf-8"))
+    except UnicodeDecodeError:
+        return None
+
+
 def mentions_file(output, target):
     # GCC/Clang line markers quote the resolved path; compare canonicalized
     # markers so relative build directories and symlinked roots both work.
-    for marker in re.findall(rb'^#[ \\t]*[0-9]+[ \\t]+"([^"]+)"',
-                             output, flags=re.MULTILINE):
-        try:
-            path = marker.decode("utf-8")
-        except UnicodeDecodeError:
+    return any(marker_path(line) == target for line in output.splitlines())
+
+
+def header_projection(output, target):
+    """Return only lines originating in target, preserving target line markers."""
+    projected = []
+    active = False
+    for line in output.splitlines(keepends=True):
+        path = marker_path(line)
+        if path is not None:
+            active = path == target
+            if active:
+                projected.append(line)
             continue
-        if os.path.realpath(path) == target:
-            return True
-    return False
+        if active:
+            projected.append(line)
+    return b"".join(projected)
+
+
+def projection_key(projection):
+    # Ignore line-marker numbers/flags: identical header text can be reached
+    # from TUs whose include stacks give it different marker metadata.
+    return tuple(
+        line for line in projection.splitlines()
+        if marker_path(line) is None
+    )
 
 
 def main():
@@ -128,22 +155,34 @@ def main():
     # -D/-U options. Keep every distinct preprocessing context; returning the
     # first match makes the discovery result depend on compile-database order
     # and can silently hide handlers enabled only in another translation unit.
-    outputs = []
+    projections = []
+    seen_projections = set()
     seen_contexts = set()
     for entry, directory, source in candidates:
         output = run_preprocessor(entry, directory, source)
         if output is None or not mentions_file(output, requested):
             continue
-        # Avoid repeating identical compiler contexts from duplicate database
-        # entries while preserving contexts with different defines/include paths.
-        context = (source, tuple(entry.get("arguments") or shlex.split(entry.get("command", ""))))
+        # Avoid duplicate compile-database entries, then retain only the
+        # requested header's active lines. Full TU output would repeat source
+        # and unrelated include content, creating duplicate or misleading hits.
+        args = entry.get("arguments")
+        if args is None:
+            args = shlex.split(entry.get("command", ""))
+        context = (source, tuple(args))
         if context in seen_contexts:
             continue
         seen_contexts.add(context)
-        outputs.append(output)
-    if outputs:
-        for output in outputs:
-            sys.stdout.buffer.write(output)
+        projection = header_projection(output, requested)
+        if not projection:
+            continue
+        key = projection_key(projection)
+        if key in seen_projections:
+            continue
+        seen_projections.add(key)
+        projections.append(projection)
+    if projections:
+        for projection in projections:
+            sys.stdout.buffer.write(projection)
         return 0
     return 2
 
