@@ -86,7 +86,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Only after all validation succeeds may backend creation begin",
         ]
         device_section = devices.split("### Normative validation precedence", 1)[1].split("\n\nBefore creation", 1)[0]
-        error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n### Request-specific", 1)[0]
+        error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n## Request-spezifische Fehlerzuordnung", 1)[0]
         for phrase in device_order:
             self.assertIn(phrase, device_section)
         for phrase in errors_order:
