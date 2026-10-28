@@ -7,9 +7,6 @@ on:
   push:
     branches:
       - docs/restructure-2026-10-21
-    paths:
-      - ".github/workflows/ci-run-monitor.yml"
-      - "tools/check-ci-run-presence.py"
 
 permissions:
   contents: read
