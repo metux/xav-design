@@ -5056,6 +5056,39 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
 
 
 class DisconnectCallbackCleanupTests(unittest.TestCase):
+    def test_late_submission_callback_cannot_target_recreated_device_identity(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        old_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", old_device)
+        submission = AsyncSubmissionIdentity(
+            token=299,
+            connection_identity="client-A",
+            device_identity="device-A",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(submission), "SUCCESS")
+        self.assertEqual(
+            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            "SUCCESS",
+        )
+        self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
+
+        # Reuse both the logical identity and public XID before the old
+        # backend callback arrives. The new device's event mask must not make
+        # the old callback appear to belong to the new device generation.
+        new_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", new_device)
+        self.assertEqual(
+            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            "SUCCESS",
+        )
+        self.assertEqual(registry.terminal_callback("client-A", 299, "COMPLETE"), "SUCCESS")
+        self.assertEqual(submission.terminal, "COMPLETE")
+        self.assertEqual(registry.emitted_events, [])
+        self.assertNotIn(("client-A", 299), registry.submissions)
+
+
     def test_disconnect_detaches_client_callback_links_but_keeps_backend_work(self) -> None:
         registry = AsyncSubmissionEventRegistry(live_connections={"client-a", "client-b"})
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
