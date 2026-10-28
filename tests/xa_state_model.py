@@ -1107,21 +1107,31 @@ def finish_submission(
         # callback made the semaphore untrusted, a later Submit callback must
         # not overwrite that knowledge with a local stale snapshot.
         if shared is not None and (
-            shared.signal_state is BinarySignalState.UNTRUSTED
-            or (shared.device_lost and not consumed)
+            shared.signal_state is BinarySignalState.UNTRUSTED or shared.device_lost
         ):
-            # A loss observed by a competing queue/model is device-wide. A
-            # stale "payload unchanged" callback cannot restore an old mirror.
-            current = BinarySignalState.UNTRUSTED
-            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+            # Device loss quarantines the canonical payload regardless of a
+            # stale local "consumed" bit. Preserve a canonical known-empty
+            # state when one was established before loss; otherwise never
+            # let this callback make its local mirror more trusted.
+            current = shared.signal_state
+            state.binary_signal_states[index] = current
             if index < len(state.wait_states):
-                state.wait_states[index] = WaitState.UNTRUSTED
+                state.wait_states[index] = (
+                    WaitState.UNTRUSTED
+                    if current is BinarySignalState.UNTRUSTED
+                    else WaitState.READY
+                )
         if current is BinarySignalState.UNTRUSTED:
             # An unknown cross-API payload outcome is stronger than a stale
             # local "unchanged" report from the Submit callback.
             state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
             if index < len(state.wait_states):
                 state.wait_states[index] = WaitState.UNTRUSTED
+        elif shared is not None and shared.device_lost:
+            # The canonical state is authoritative after loss, including
+            # confirmed-empty payloads. Do not reinterpret a stale per-token
+            # consumed flag as a fresh state transition.
+            pass
         elif not effective_success:
             # A cross-API wait callback may already have proved that this
             # pending signal was consumed. Device Loss invalidates an
