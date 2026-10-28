@@ -77,21 +77,21 @@ The following error precedence applies to `CreateDevice` and refines the general
 
 A later phase MUST NOT override an error from an earlier phase. In particular, malformed wire fields take precedence over XID errors; target-XID validation precedes physical-device lookup; resource type/ownership checks precede XGE negotiation; and XGE negotiation precedes device availability. All feature and extension records must be validated before creation, and every failure leaves `device_xid` unallocated with no partial Device or Queue objects.
 
-## Request-spezifische Fehlerzuordnung
+## Request-specific error mapping
 
 ### `WriteBuffer`
 
-Normative Präzedenz: (1) count-/overflow-sichere Gesamtlänge und X11-Request-Limit (`BadLength`); (2) positive `data_length` und Null-Padding (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_DST` und Bereich (`BadMatch`); (7) Transfer-/Synchronisationsarbeit.
+Normative precedence: (1) total length with checked count/overflow arithmetic and the X11 request limit (`BadLength`); (2) positive `data_length` and zero padding (`BadValue`); (3) `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (`BadMatch`); (5) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer binding, `TRANSFER_DST`, and range (`BadMatch`); (7) transfer/synchronization work.
 
 - Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
-- Falsche Request-Länge: `BadLength`
-- Länge null, nicht-null Padding oder ungültige reservierte Felder: `BadValue`
-- Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
-- Synchroner Transferfehler: `TRANSFER_FAILED`
-- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
-- Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`
+- Incorrect request length: `BadLength`
+- Zero length, nonzero padding, or invalid reserved fields: `BadValue`
+- Unknown/non-live XAverius XID: `BadValue`
+- Wrong type, wrong Device, unbound Buffer, missing `TRANSFER_DST`, or range outside the Buffer: `BadMatch`
+- Unavailable/lost Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- Synchronous transfer failure: `TRANSFER_FAILED`
+- Staging allocation failure: `ALLOCATION_FAILED`
+- Detected dependency cycle while waiting for earlier GPU work: `DEPENDENCY_FAILED`
 
 ### `ReadBuffer`
 
@@ -116,7 +116,7 @@ Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `dat
 - Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
 - Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
 
-### Device-Discovery und Device-Erstellung
+### Device discovery and Device creation
 
 - `EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden; wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig.
 - `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültiges Atom `BadAtom`; unbekannte/nicht-live Device-XID `BadValue`; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
@@ -167,7 +167,7 @@ Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `dat
 
 ### Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` (provisional command entry)
 
-Diese Regeln gelten nur im presentation-capable Profil; `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` ist mit Command-Entry-ID 5 in der zentralen Registry zugewiesen. Die Fehlerpräzedenz ist: (1) Command-Entry-Struktur, exakte Entry-Länge, `entry_length` und reservierte Felder; (2) entry-lokale Feldsyntax, insbesondere Vierbyte-Ausrichtung von `buffer_offset` und die Regel, dass `row_length`/`image_height` entweder null oder positive Werte sein müssen; (3) Buffer-XID und danach Swapchain-XID auflösen (`BadValue` für unbekannte/nicht-live XIDs); (4) Typ, Client-/Device-Ownership und Cross-Device-Zugehörigkeit (`BadMatch`); (5) ressourcenabhängige Werte prüfen: `image_index` außerhalb der Swapchain, effektive Zeilenlänge/-höhe kleiner als die Swapchain-Ausdehnung oder ein Quellbereich außerhalb des Buffers ergeben `BadValue`; (6) Nutzungsflags prüfen: Buffer ohne `TRANSFER_SRC` oder Swapchain ohne `TRANSFER_DST` ergibt `BadMatch`; (7) Device-/Submission-Zustand und Image-State prüfen. Diese Reihenfolge verhindert, dass XID-abhängige Prüfungen ohne aufgelöste Ressource ausgeführt werden, während entry-lokale Syntaxfehler nicht durch einen ungültigen XID verdeckt werden. Die Image-State-Prüfung erfolgt atomar bei Submission-Annahme: ist das Image dann nicht `ACQUIRED` oder konkurriert der Submit mit einer Present-Transition, ergibt sich `INVALID_SYNCHRONIZATION_STATE`. Die Prüfung berücksichtigt alle zuvor in X11-Request-Reihenfolge angenommenen Zustandsübergänge: ein Copy-Submit nach einer bereits angenommenen `QueuePresent`-Transition auf `PRESENT_PENDING` wird abgewiesen; ein zuvor angenommener Submit bleibt dagegen gültig und behält seine internen Referenzen. Die Request-Reihenfolge ersetzt keine GPU-Synchronisation. Die Ablehnung darf weder den Command-Buffer teilweise annehmen noch Image-, Referenz- oder Semaphore-Zustände verändern. Ein Swapchain-Destroy bleibt abgewiesen, solange ein Recording-Command-Buffer darauf referenziert; nach erfolgreichem Destroy wird ein nicht-pending ausführbarer Command-Buffer mit dieser Referenz invalidiert.
+These rules apply only to the presentation-capable profile; `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` is assigned command-entry ID 5 in the central registry. Error precedence is: (1) Command-Entry-Struktur, exakte Entry-Länge, `entry_length` und reservierte Felder; (2) entry-lokale Feldsyntax, insbesondere Vierbyte-Ausrichtung von `buffer_offset` und die Regel, dass `row_length`/`image_height` entweder null oder positive Werte sein müssen; (3) Buffer-XID und danach Swapchain-XID auflösen (`BadValue` für unbekannte/nicht-live XIDs); (4) Typ, Client-/Device-Ownership und Cross-Device-Zugehörigkeit (`BadMatch`); (5) ressourcenabhängige Werte prüfen: `image_index` außerhalb der Swapchain, effektive Zeilenlänge/-höhe kleiner als die Swapchain-Ausdehnung oder ein Quellbereich außerhalb des Buffers ergeben `BadValue`; (6) Nutzungsflags prüfen: Buffer ohne `TRANSFER_SRC` oder Swapchain ohne `TRANSFER_DST` ergibt `BadMatch`; (7) Device-/Submission-Zustand und Image-State prüfen. Diese Reihenfolge verhindert, dass XID-abhängige Prüfungen ohne aufgelöste Ressource ausgeführt werden, während entry-lokale Syntaxfehler nicht durch einen ungültigen XID verdeckt werden. Die Image-State-Prüfung erfolgt atomar bei Submission-Annahme: ist das Image dann nicht `ACQUIRED` oder konkurriert der Submit mit einer Present-Transition, ergibt sich `INVALID_SYNCHRONIZATION_STATE`. Die Prüfung berücksichtigt alle zuvor in X11-Request-Reihenfolge angenommenen Zustandsübergänge: ein Copy-Submit nach einer bereits angenommenen `QueuePresent`-Transition auf `PRESENT_PENDING` wird abgewiesen; ein zuvor angenommener Submit bleibt dagegen gültig und behält seine internen Referenzen. Die Request-Reihenfolge ersetzt keine GPU-Synchronisation. Die Ablehnung darf weder den Command-Buffer teilweise annehmen noch Image-, Referenz- oder Semaphore-Zustände verändern. Ein Swapchain-Destroy bleibt abgewiesen, solange ein Recording-Command-Buffer darauf referenziert; nach erfolgreichem Destroy wird ein nicht-pending ausführbarer Command-Buffer mit dieser Referenz invalidiert.
 
 ### Einheitliche XID- und Zustandszuordnung für ausgewählte Requests
 
@@ -261,12 +261,12 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `CreatePipelineLayout`: Wire-Länge `BadLength`; feldlokale Stage-/Range-/Reserved-Fehler `BadValue`; Ziel-XID `BadIDChoice`; Device-/Set-Layout-XIDs `BadValue`; falsche live Typen/Ownership/Cross-Device `BadMatch`; Device-Zustand `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; danach geräteabhängige Limits/Kompatibilität und Backend-Allokation. Kein Pipeline Layout bleibt bei Ablehnung live.
 - `CreateComputePipeline`: Wire-Länge `BadLength`; Entry-Point-/Padding-/Reserved-Feldfehler `BadValue`; Ziel-XID `BadIDChoice`; Device-/Layout-/Shader-XIDs `BadValue`; falsche live Typen/Ownership/Cross-Device `BadMatch`; Device-Zustand `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; danach Backend-Erstellung/Allokation. Kein Pipeline-Objekt bleibt bei Ablehnung live.
 
-### Command-Pool-Requests
+### Command Pool requests
 
 - `CreateCommandPool`: falsche Länge `BadLength`; unbekannte Flags oder nicht-null reservierte Felder `BadValue`; ungültige/belegte Pool-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`; Queue-Family-Index außerhalb des Device-Profils oder ohne Command-Buffer-Unterstützung `BadValue`.
 - `DestroyCommandPool`: falsche Länge `BadLength`; unbekannte/nicht-live XID `BadValue`; falscher Typ oder Cross-Device-Ownership `BadMatch`; mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`. Device Loss allein ist kein Ablehnungsgrund; sobald betroffene Submissions terminalisiert und ihre Command Buffer nicht mehr pending sind, bleibt die logische Pool-Bereinigung zulässig. Ablehnung ist atomar.
 
-### Synchronisations-Requests
+### Synchronization requests
 
 - `CreateSemaphore` und `CreateFence`: falsche Länge `BadLength`; ungültige Typen, Werte, Flags oder reservierte Felder `BadValue`; ungültige/belegte Create-XID `BadIDChoice`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler `ALLOCATION_FAILED`; bei Ablehnung bleibt die jeweilige Ziel-XID unangelegt.
 - `GetSemaphoreCounterValue`: falsche Länge `BadLength`; unbekannte/nicht-live Device- oder Semaphore-XIDs `BadValue`; falscher live Ressourcentyp, fremde Ownership oder Cross-Device-Verwendung `BadMatch`; nur für Timeline-Semaphoren; bei Device Loss `DEVICE_LOST` statt eines Counter-Reply.
@@ -278,7 +278,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 - `DestroySemaphore`: falsche Länge `BadLength`; unbekannte/nicht-live Device- oder Semaphore-XID `BadValue`; falscher live Typ, fremde Client-Ownership oder Cross-Device-Verwendung `BadMatch`; `INVALID_SYNCHRONIZATION_STATE`, solange ein angenommener Queue-Wait, Queue-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende Host-Operation die Semaphore verwendet. Eine bereits terminal festgestellte Wait-Registrierung blockiert die Zerstörung nicht, auch wenn der Reply noch nicht gesendet wurde. Jede Ablehnung lässt XID und Synchronisationszustand unverändert. Device Loss allein invalidiert keine öffentlichen XIDs; wenn anschließend `DestroyDevice` verarbeitet wird, darf dessen Kaskadeninvalidierung diese normalen Ablehnungen umgehen.
 - Die verbindliche XID-Zuordnung steht im Abschnitt „Verbindliche XID-Fehlerregel“: unbekannte/nicht-live XAverius-XIDs ergeben `BadValue`, falsche live Ressourcentypen `BadMatch`, ungültige Atoms `BadAtom`.
 
-### Memory-Allokation und Bindung
+### Memory allocation and binding
 
 - `GetBufferMemoryRequirements`: falsche Request-Länge `BadLength`; unbekannte/nicht-live Device- oder Buffer-XID `BadValue`; falscher live Ressourcentyp oder Buffer eines anderen Devices `BadMatch`.
 - `AllocateMemory`: falsche Request-Länge `BadLength`; nicht-positive Allokationsgröße, reserviertes Feld ungleich null oder nicht existierender Memory-Type-Index `BadValue`; unbekannte/nicht-live Device-XID `BadValue`; falscher live Ressourcentyp `BadMatch`; nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; Backend-Allokationsfehler `ALLOCATION_FAILED`. Bei jedem Fehler bleibt die angeforderte `memory_xid` unangelegt.
@@ -287,11 +287,11 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 
 ### `BindBufferMemory`
 
-Die vollständige XID-, Ownership-, Feldwert- und Device-Fehlerzuordnung steht in der einheitlichen Tabelle oben. Cross-Device-Nutzung, bereits gebundener Buffer, ungültiges Alignment, zu kleine Allokation oder inkompatibler Memory-Type ergeben `BadMatch`.
+The complete XID, ownership, field-value, and Device error mapping is defined in the unified table above. Cross-Device use, an already-bound Buffer, invalid alignment, insufficient allocation size, or an incompatible memory type results in `BadMatch`.
 
 ### `UpdateDescriptorSets`
 
-Die vollständige XID-, Ownership-, Feldwert- und Device-Fehlerzuordnung steht in der einheitlichen Tabelle oben. Der Request bleibt bei jedem Fehler atomar.
+The complete XID, ownership, field-value, and Device error mapping is defined in the unified table above. The request is atomic on every error.
 
 Jeder Request muss vor Implementierungsfreigabe eine vollständige, konkrete Fehlerzuordnung besitzen.
 
@@ -328,6 +328,6 @@ For `QueuePresent`, status replies (`OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`
 
 ## Synchronous versus Asynchronous Errors
 
-Ein Fehler vor Annahme wird durch einen X11-Fehler oder den ausdrücklich definierten normalen Fehler-Reply signalisiert. Der Request darf keinen Teilzustand hinterlassen.
+An error before acceptance is reported by an X11 error or the explicitly defined normal error reply. The request MUST NOT leave partial state.
 
-Ein Fehler nach Annahme wird durch XAverius-Events und Synchronisationszustände signalisiert. Ein später X11-Fehler für einen bereits angenommenen Request ist unzulässig.
+An error after acceptance is reported through XAverius events and synchronization state. A delayed X11 error for an already accepted request is prohibited.
