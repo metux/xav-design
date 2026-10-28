@@ -663,7 +663,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Detected dependency cycle while waiting for earlier GPU work: `DEPENDENCY_FAILED`", errors)
-        self.assertIn("Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`", errors)
+        self.assertIn("Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Quarantäne gehalten", lifetime)
 
 
