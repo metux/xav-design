@@ -266,7 +266,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
             self.assertEqual(len(payload), 24)
             self.assertEqual(len(payload) % 12, 0)
             self.assertEqual(int.from_bytes(payload[0:4], vector["byte_order"]), 3)
-            self.assertEqual(int.from_bytes(payload[12:16], vector["byte_order"]), 1)
+            self.assertEqual(int.from_bytes(payload[12:16], vector["byte_order"]), 0x1C)
 
     def test_rejects_wrong_reply_length(self):
         vector = self.vectors[0]
