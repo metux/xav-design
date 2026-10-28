@@ -1548,6 +1548,53 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertFalse(shared.signal_consumed)
 
+    def test_present_consumption_after_submit_completion_survives_later_device_loss(self) -> None:
+        shared = SharedBinarySemaphore()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(producer, SubmitRequest(
+                token=307, signal_indices=(0,), signal_values=(0,),
+            )),
+            "SUCCESS",
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=308, wait_indices=(0,))
+        ).accepted)
+
+        # The Submit callback can publish and retire its reservation before
+        # the independent Present wait callback confirms consumption.
+        self.assertEqual(finish_submission(producer, 307, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(finish_present_wait(
+            present, 308, 0, consumed=True
+        ), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertTrue(shared.signal_consumption_confirmed)
+
+        # Later device loss must preserve the positively confirmed empty
+        # payload rather than quarantining it just because the Submit token
+        # no longer owns a transient reservation.
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertTrue(shared.device_lost)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertTrue(shared.signal_consumption_confirmed)
+        self.assertEqual(present.binary_signal_states[0], BinarySignalState.UNSIGNALED)
+
     def test_failed_wait_unchanged_report_does_not_restore_stale_pending_signal(self) -> None:
         shared = SharedBinarySemaphore()
         producer = SubmissionModel(
