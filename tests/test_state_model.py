@@ -3676,6 +3676,41 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
 
 
 
+    def test_submit_signal_completion_before_nonconsuming_present_callback_syncs_mirror(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=605, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=705, wait_indices=(0,))).accepted)
+
+        # The submit callback wins the race and confirms the signal. Present
+        # then reports that its wait did not consume the payload; its stale
+        # local SIGNAL_PENDING snapshot must be reconciled with shared state.
+        self.assertEqual(finish_submission(submit, 605, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(present.binary_signal_states, [BinarySignalState.SIGNAL_PENDING])
+        self.assertEqual(finish_present_wait(present, 705, 0, consumed=False), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(present.binary_signal_states, [BinarySignalState.SIGNALED])
+        self.assertEqual(present.wait_states, [WaitState.READY])
+        self.assertIsNone(shared.wait_reservation)
+
+
 class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
     """Out-of-order wait completions must retire only their own reservations."""
 
