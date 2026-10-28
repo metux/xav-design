@@ -8,7 +8,7 @@ trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 fixture="$tmp/fixtures with spaces"
 cmake="$fixture/cmake-project"
 meson="$fixture/meson-project"
-mkdir -p "$cmake/src" "$cmake/tests" "$cmake/generated" "$meson/src" "$meson/target"
+mkdir -p "$cmake/src" "$cmake/tests" "$cmake/generated" "$cmake/config/include" "$cmake/build" "$meson/src" "$meson/target"
 cat >"$cmake/CMakeLists.txt" <<'EOF'
 cmake_minimum_required(VERSION 3.16)
 project(fake_xav_backend C)
@@ -30,6 +30,43 @@ int submit_latest(void) {
     return 0;
 }
 EOF
+cat >"$cmake/config/include/xav_build_config.h" <<'EOF'
+#if defined(XAV_ENABLE_CONFIGURED)
+#define XAV_CONFIGURED_HANDLER 1
+#endif
+EOF
+cat >"$cmake/src/configured_dispatch.c" <<'EOF'
+#include <xav_build_config.h>
+#ifdef XAV_CONFIGURED_HANDLER
+static int (*ProcVector[])(ClientPtr) = {
+    ProcConfiguredBuildReq,
+};
+int ProcConfiguredBuildReq(ClientPtr client)
+{
+    return Success;
+}
+#endif
+EOF
+# Model the compile database emitted by CMake or Meson: its -D and -I
+# options are essential to expose the real conditional dispatch table.
+python3 - "$cmake" <<'PY'
+import json
+import os
+import sys
+root = os.path.realpath(sys.argv[1])
+entry = {
+    "directory": root,
+    "file": os.path.join(root, "src", "configured_dispatch.c"),
+    "arguments": [
+        "cc", "-DXAV_ENABLE_CONFIGURED=1", "-I",
+        os.path.join(root, "config", "include"), "-c",
+        os.path.join(root, "src", "configured_dispatch.c"), "-o",
+        os.path.join(root, "build", "configured_dispatch.o")
+    ]
+}
+with open(os.path.join(root, "build", "compile_commands.json"), "w", encoding="utf-8") as f:
+    json.dump([entry], f)
+PY
 cat >"$cmake/src/inline_comment.rs" <<'EOF'
 let marker = 0; // vkQueueSubmit(device, 1, &submit, fence);
 EOF
@@ -244,6 +281,7 @@ printf '%s\n' "$output" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: Meson project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/configured_dispatch.c' >/dev/null || { echo "FAIL: compile database -D/-I options were not used for handler discovery" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
     echo "FAIL: handler defined only in an included header was attributed to the including source" >&2
