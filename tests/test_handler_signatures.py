@@ -105,6 +105,28 @@ def main():
         if result.returncode != 1 or "CONFLICT: ProcConstReq" not in result.stdout:
             raise SystemExit("const-qualified return type conflict was not detected:\n" + result.stdout + result.stderr)
 
+        typedef_ok = root / "typedef_ok.c"
+        typedef_ok.write_text(
+            "typedef int (*HandlerProc)(ClientPtr);\n"
+            "int ProcTypedefReq(ClientPtr client) { return Success; }\n"
+            "static HandlerProc RequestVector[] = { ProcTypedefReq };\n",
+            encoding="utf-8",
+        )
+        result = run([typedef_ok])
+        if result.returncode != 0:
+            raise SystemExit("compatible typedef-based dispatch type incorrectly rejected:\n" + result.stdout + result.stderr)
+
+        typedef_bad = root / "typedef_bad.c"
+        typedef_bad.write_text(
+            "typedef long (*HandlerProc)(ClientPtr);\n"
+            "int ProcTypedefReq(ClientPtr client) { return Success; }\n"
+            "static HandlerProc RequestVector[] = { ProcTypedefReq };\n",
+            encoding="utf-8",
+        )
+        result = run([typedef_bad])
+        if result.returncode != 1 or "CONFLICT: ProcTypedefReq" not in result.stdout:
+            raise SystemExit("typedef-based dispatch return-type conflict was not detected:\n" + result.stdout + result.stderr)
+
     print("handler signature regression tests: PASS")
 
 
