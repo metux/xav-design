@@ -313,7 +313,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
         ])
         known_mask = 0
         for _bit, mask, _symbol in entries:
-            known_mask |= mask
+            known_mask |= int(mask, 16)
         self.assertEqual(known_mask, 0x1F)
         validator = (ROOT / "tests/test_reply_vectors.py").read_text(encoding="utf-8")
         self.assertIn("if flags & ~0x1F", validator)
