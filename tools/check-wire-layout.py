@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -1657,32 +1658,76 @@ def check_request_limit_contract(c: Check) -> None:
                   f"request limit: missing conformance case {phrase!r}")
 
 
+def _github_heading_slug(heading: str) -> str:
+    """Approximate GitHub's heading slug rules using only the standard library."""
+    heading = re.sub(r"!?(\[([^\]]*)\])\([^)]*\)", r"\2", heading)
+    heading = re.sub(r"<[^>]+>", "", heading)
+    heading = re.sub(r"[\x60*_~]", "", heading).casefold()
+    chars = []
+    for char in heading:
+        category = unicodedata.category(char)
+        if char.isspace():
+            chars.append("-")
+        elif char == "-" or category[0] in ("L", "N"):
+            chars.append(char)
+    slug = re.sub(r"-+", "-", "".join(chars)).strip("-")
+    return slug
+
+
 def check_local_markdown_links(c: Check) -> None:
-    """Reject broken relative links in repository Markdown documents."""
+    """Reject broken relative Markdown paths and heading fragments."""
     link_pattern = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+    heading_pattern = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$", re.M)
+    explicit_id_pattern = re.compile(r"<(?:a|[^>]+)\b[^>]*\bid=[\"']([^\"']+)[\"']", re.I)
     documents = sorted(
         path for path in ROOT.rglob("*.md")
         if ".git" not in path.parts and "node_modules" not in path.parts
     )
+    root = ROOT.resolve()
     for source in documents:
         text = source.read_text(encoding="utf-8")
+        anchors: set[str] = set(explicit_id_pattern.findall(text))
+        slug_counts: dict[str, int] = {}
+        for heading in heading_pattern.findall(text):
+            base = _github_heading_slug(heading)
+            if not base:
+                continue
+            count = slug_counts.get(base, 0)
+            anchors.add(base if count == 0 else f"{base}-{count}")
+            slug_counts[base] = count + 1
         for match in link_pattern.finditer(text):
             target = match.group(1)
             parsed = urlsplit(target)
-            if parsed.scheme or parsed.netloc or not parsed.path:
+            if parsed.scheme or parsed.netloc:
                 continue
             decoded_path = unquote(parsed.path)
-            candidate = (source.parent / decoded_path).resolve()
+            candidate = (source.parent / decoded_path).resolve() if decoded_path else source.resolve()
+            line = text.count("\n", 0, match.start()) + 1
             try:
-                candidate.relative_to(ROOT.resolve())
+                candidate.relative_to(root)
             except ValueError:
                 c.require(False, f"markdown link escapes repository: {source.relative_to(ROOT)} -> {target}")
                 continue
-            line = text.count("\n", 0, match.start()) + 1
             c.require(
                 candidate.exists(),
                 f"broken local Markdown link: {source.relative_to(ROOT)}:{line} -> {target}",
             )
+            if candidate.exists() and parsed.fragment and candidate.suffix.lower() == ".md":
+                target_text = candidate.read_text(encoding="utf-8")
+                target_anchors: set[str] = set(explicit_id_pattern.findall(target_text))
+                target_slug_counts: dict[str, int] = {}
+                for heading in heading_pattern.findall(target_text):
+                    base = _github_heading_slug(heading)
+                    if not base:
+                        continue
+                    count = target_slug_counts.get(base, 0)
+                    target_anchors.add(base if count == 0 else f"{base}-{count}")
+                    target_slug_counts[base] = count + 1
+                fragment = unquote(parsed.fragment)
+                c.require(
+                    fragment in target_anchors,
+                    f"broken Markdown anchor: {source.relative_to(ROOT)}:{line} -> {target}",
+                )
 
 
 def check_reply_matrix(c: Check) -> None:
