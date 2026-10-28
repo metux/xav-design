@@ -247,7 +247,7 @@ scan_project() {
               for (i=1; i<=NR; i++) {
                 if (lines[i] ~ ("(^|[^[:alnum:]_])" name "[[:space:]]*\\(")) {
                   for (j=i; j<=NR && j<i+8; j++) {
-                    if (lines[j] ~ /\\{/) { defined[name]=i; break }
+                    if (lines[j] ~ /\{/) { defined[name]=i; break }
                     if (lines[j] ~ /;/) break
                   }
                   if (name in defined) break
