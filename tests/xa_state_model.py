@@ -115,7 +115,11 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
                     else BinarySignalState.UNTRUSTED
                 )
             if index < len(state.wait_states):
-                state.wait_states[index] = WaitState.UNTRUSTED
+                state.wait_states[index] = (
+                    WaitState.READY
+                    if known_empty and isinstance(state, SubmissionModel)
+                    else WaitState.UNTRUSTED
+                )
 
 
 @dataclass
