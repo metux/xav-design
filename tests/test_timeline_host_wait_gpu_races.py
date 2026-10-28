@@ -222,6 +222,29 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
                 self.assertEqual(timeline.finish_gpu_signal(token, success=success), "BadValue")
                 self.assertEqual(timeline, terminal)
 
+    def test_timeout_of_one_wait_is_independent_of_other_waits_and_later_signals(self) -> None:
+        timeline = Timeline(counter=2)
+        self.assertEqual(timeline.begin_host_wait(201, 5), "PENDING")
+        self.assertEqual(timeline.begin_host_wait(202, 9), "PENDING")
+
+        self.assertEqual(timeline.reserve_gpu_signal(50, 5), "SUCCESS")
+        self.assertEqual(timeline.finish_gpu_signal(50, success=True), "SUCCESS")
+        self.assertEqual(timeline.terminal_waits, {201: "SUCCESS"})
+        self.assertEqual(timeline.pending_host_waits, {202: 9})
+
+        # Timing out one registration is local to that wait; it must neither
+        # alter the counter nor cancel another wait on the same semaphore.
+        self.assertEqual(timeline.finish_host_wait(202, "TIMEOUT"), "SUCCESS")
+        self.assertEqual(timeline.counter, 5)
+        self.assertEqual(timeline.terminal_waits, {201: "SUCCESS", 202: "TIMEOUT"})
+        self.assertEqual(timeline.pending_host_waits, {})
+
+        self.assertEqual(timeline.reserve_gpu_signal(51, 9), "SUCCESS")
+        self.assertEqual(timeline.finish_gpu_signal(51, success=True), "SUCCESS")
+        self.assertEqual(timeline.counter, 9)
+        self.assertEqual(timeline.terminal_waits, {201: "SUCCESS", 202: "TIMEOUT"})
+        self.assertEqual(timeline.pending_host_waits, {})
+
     def test_successfully_signaled_wait_stays_successful_across_terminal_device_transitions(self) -> None:
         # A condition observed as satisfied before the device transition owns
         # the terminal result; teardown must not retroactively fail the wait.
