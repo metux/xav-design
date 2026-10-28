@@ -69,6 +69,27 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         self.assertEqual(resource.callback_count, 1)
         self.assertEqual(registry.emitted_events, [])
 
+    def test_callback_cannot_pair_resource_with_another_devices_identity(self):
+        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        device_a = AsyncDeviceIdentity("device-A", 7)
+        device_b = AsyncDeviceIdentity("device-B", 8)
+        resource_a = AsyncResourceIdentity("resource-A", 42, device_a.identity)
+        registry.register_device(device_a)
+        registry.register_device(device_b)
+        registry.register_resource(resource_a)
+
+        # The captured reference still retires exactly once, but a mismatched
+        # device/resource pair must never emit an event for the wrong device.
+        self.assertEqual(
+            registry.complete_backend_callback(
+                resource_a, device_b, "client-A", token="cross-device",
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(resource_a.backend_refs, 0)
+        self.assertEqual(resource_a.callback_count, 1)
+        self.assertEqual(registry.emitted_events, [])
+
     def test_duplicate_callback_cannot_release_internal_reference_twice(self):
         registry = AsyncCallbackRegistry(connections_live={"client-A"})
         device = AsyncDeviceIdentity("device-generation-1", 7)
