@@ -194,10 +194,18 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
 
     def test_parallel_helper_invocations_create_only_one_alert(self):
         import json
+        import time
         self.env["MOCK_ISSUES"] = json.dumps([])
-        self.env["MOCK_CREATE_DELAY"] = "0.2"
+        self.env["MOCK_CREATE_DELAY"] = "0.5"
         command = ["bash", str(ROOT / "tools" / "ensure-ci-alert-issue.sh")]
         first = subprocess.Popen(command, env=self.env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Ensure the first process owns the simulated distributed lock before
+        # starting the contender; otherwise a slow CI runner can serialize the
+        # two launches and fail to exercise the contention path at all.
+        deadline = time.monotonic() + 5
+        while not self.remote_lock.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertTrue(self.remote_lock.exists(), "first invocation did not acquire the lock")
         second = subprocess.Popen(command, env=self.env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         first_out, first_err = first.communicate(timeout=10)
         second_out, second_err = second.communicate(timeout=10)
