@@ -15,19 +15,13 @@ RETURN = r"(?:(?:[A-Za-z_][A-Za-z0-9_]*\s+)*[A-Za-z_][A-Za-z0-9_]*\s*\*\s*|[A-Za
 FUNCTION = re.compile(
     rf"(?P<ret>{RETURN})\s*(?P<name>{NAME})\s*\((?P<args>[^;{{}}]*)\)\s*(?=[{{;])"
 )
-TABLE = re.compile(
+TABLE_PREFIX = re.compile(
     r"(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)\(\s*\*\s*"
-    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^]]*\])?\s*\)"
-    r"\s*\((?P<args>[^()]*)\)\s*=\s*\{(?P<body>[^}]*)\}",
-    re.S,
+    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^]]*\])?\s*\)\s*"
 )
-# Simple typedef'd function pointers are common in dispatch tables. Keep this
-# deliberately narrow: nested declarators still belong to the C compiler.
-TYPEDEF = re.compile(
+TYPEDEF_PREFIX = re.compile(
     r"\btypedef\s+(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)"
-    r"\(\s*\*\s*(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*\)"
-    r"\s*\((?P<args>[^()]*)\)\s*;",
-    re.S,
+    r"\(\s*\*\s*(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*\)\s*"
 )
 ALIASED_TABLE = re.compile(
     r"\b(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+"
@@ -40,6 +34,34 @@ HANDLER_REF = re.compile(rf"\b{NAME}\b")
 
 def compact(value):
     return re.sub(r"\s+", " ", value.strip())
+
+
+def matching_delimiter(source, start, opening="(", closing=")"):
+    """Return the matching delimiter index, handling nested C declarators."""
+    if start >= len(source) or source[start] != opening:
+        return None
+    depth = 0
+    quote = None
+    escaped = False
+    for index in range(start, len(source)):
+        char = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in ("'", '"'):
+            quote = char
+        elif char == opening:
+            depth += 1
+        elif char == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
 
 
 def split_top_level(value):
@@ -82,6 +104,34 @@ def normalize_return(value):
         value = stripped
 
 
+def iter_function_pointer_typedefs(source):
+    for match in TYPEDEF_PREFIX.finditer(source):
+        opening = match.end()
+        while opening < len(source) and source[opening].isspace():
+            opening += 1
+        end = matching_delimiter(source, opening)
+        if end is None:
+            continue
+        tail = re.match(r"\s*;", source[end + 1:])
+        if not tail:
+            continue
+        yield match.group("alias"), match.group("ret"), source[opening + 1:end]
+
+
+def iter_dispatch_tables(source):
+    for match in TABLE_PREFIX.finditer(source):
+        opening = match.end()
+        while opening < len(source) and source[opening].isspace():
+            opening += 1
+        end = matching_delimiter(source, opening)
+        if end is None:
+            continue
+        tail = re.match(r"\s*=\s*\{(?P<body>[^}]*)\}", source[end + 1:], re.S)
+        if not tail:
+            continue
+        yield match.group("table"), match.group("ret"), source[opening + 1:end], tail.group("body")
+
+
 def scan(path):
     source = Path(path).read_text(encoding="utf-8", errors="replace")
     source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
@@ -95,15 +145,13 @@ def scan(path):
         origins[name].add(str(path))
 
     typedefs = {}
-    for match in TYPEDEF.finditer(source):
-        typedefs[match.group("alias")] = (
-            f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
-        )
-    for match in TABLE.finditer(source):
-        pointer_type = f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
-        for name in HANDLER_REF.findall(match.group("body")):
+    for alias, ret, args in iter_function_pointer_typedefs(source):
+        typedefs[alias] = f"{normalize_return(ret)} (*)({normalize_args(args)})"
+    for table, ret, args, body in iter_dispatch_tables(source):
+        pointer_type = f"{normalize_return(ret)} (*)({normalize_args(args)})"
+        for name in HANDLER_REF.findall(body):
             signatures[name].add(pointer_type)
-            origins[name].add(f"{path} [{match.group('table')}]")
+            origins[name].add(f"{path} [{table}]")
     for match in ALIASED_TABLE.finditer(source):
         pointer_type = typedefs.get(match.group("alias"))
         if pointer_type is None:
