@@ -28,13 +28,33 @@ def compact(value):
     return re.sub(r"\s+", " ", value.strip())
 
 
+def split_top_level(value):
+    """Split a parameter list without treating nested commas as separators."""
+    parts = []
+    start = 0
+    depth = 0
+    for index, char in enumerate(value):
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(value[start:index])
+            start = index + 1
+    parts.append(value[start:])
+    return parts
+
+
 def normalize_args(value):
     value = compact(value)
     if value in ("", "void", "..."):
         return value
     parts = []
-    for item in value.split(","):
+    for item in split_top_level(value):
         item = compact(item)
+        # Parameter names inside function-pointer declarators are not types.
+        item = re.sub(r"\(\s*\*\s*[A-Za-z_][A-Za-z0-9_]*\s*\)", "(*)", item)
+        # Remove an ordinary trailing parameter name, not a pointer star.
         item = re.sub(r"\s+[A-Za-z_][A-Za-z0-9_]*$", "", item)
         parts.append(item)
     return ", ".join(parts)
@@ -47,7 +67,6 @@ def normalize_return(value):
         if stripped == value:
             return value
         value = stripped
-
 
 
 def scan(path):
