@@ -60,6 +60,35 @@ EOF
 cat >"$cmake/src/request_prototype.c" <<'EOF'
 int ProcXavFakeReq(ClientPtr client);
 EOF
+cat >"$cmake/src/macro_request.c" <<'EOF'
+#define DISPATCH_PROC(func) int func(ClientPtr client)
+DISPATCH_PROC(ProcMacroGeneratedReq)
+{
+    REQUEST(xReq);
+    return Success;
+}
+EOF
+cat >"$cmake/src/tables.c" <<'EOF'
+/* Mirrors the checked-in Xorg dix/tables.c request vector pattern. */
+int (*ProcVector[2]) (ClientPtr) = {
+    ProcRealOneReq,
+    ProcRealTwoReq,
+};
+int ProcRealOneReq(ClientPtr client)
+{
+    return Success;
+}
+int ProcRealTwoReq(ClientPtr client)
+{
+    return Success;
+}
+EOF
+cat >"$cmake/src/protocol_generated.c" <<'EOF'
+int ProcNotRealSourceReq(ClientPtr client)
+{
+    return Success;
+}
+EOF
 cat >"$cmake/src/xtest_request.c" <<'EOF'
 static int ProcXTestGetVersion(ClientPtr client)
 {
@@ -148,6 +177,11 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { e
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null || { echo "FAIL: switch-dispatched Xorg handlers not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c' >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c' >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
+if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/protocol_generated.c' >/dev/null; then
+    echo "FAIL: generated request artifact was treated as a real source handler" >&2; exit 1
+fi
 printf '%s\n' "$output" | grep -F 'X11-DISPATCH-ASSIGNMENT: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: indirect dispatch assignments not reported" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-WRAPPER-CALL: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: wrapper forwarding calls not reported separately" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -E 'X11-HANDLER: src/present_request.c.*dispatch|X11-HANDLER: src/request_prototype' >/dev/null; then
