@@ -6,6 +6,7 @@ table entries across the supplied translation-unit sources. It complements,
 but does not replace, the compiler's C type checker.
 """
 import re
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -74,7 +75,7 @@ def split_top_level(value):
     start = 0
     depth = 0
     for index, char in enumerate(value):
-        if char in "([": 
+        if char in "([":
             depth += 1
         elif char in ")]":
             depth -= 1
@@ -108,10 +109,13 @@ def normalize_return(value):
         value = stripped
 
 
-def clean_source(path):
-    source = Path(path).read_text(encoding="utf-8", errors="replace")
+def clean_text(source):
     source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
-    return re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", source)
+    return re.sub(r'"(?:\\.|[^"\\])*|\'(?:\\.|[^\'\\])*\'', " ", source)
+
+
+def clean_source(path):
+    return clean_text(Path(path).read_text(encoding="utf-8", errors="replace"))
 
 
 def iter_function_pointer_typedefs(source):
@@ -204,20 +208,57 @@ def scan(path, source, aliases):
     return signatures, origins
 
 
-def main(paths):
+def preprocess(path, root):
+    helper = Path(__file__).with_name("preprocess-xav-source.py")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(helper), str(root), str(path)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+    except OSError as error:
+        print(f"handler signature check: cannot run preprocessor helper: {error}", file=sys.stderr)
+        return None
+    if result.returncode:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        print(f"handler signature check: preprocessing failed for {path}" +
+              (f": {detail}" if detail else ""), file=sys.stderr)
+        return None
+    return result.stdout.decode("utf-8", errors="replace")
+
+
+def main(argv):
+    compile_root = None
+    if len(argv) >= 2 and argv[0] == "--compile-db-root":
+        compile_root = Path(argv[1]).resolve()
+        argv = argv[2:]
+    paths = argv
     if not paths:
-        print(f"usage: {Path(sys.argv[0]).name} source.c [...]", file=sys.stderr)
+        print(f"usage: {Path(sys.argv[0]).name} [--compile-db-root ROOT] source.c [...]", file=sys.stderr)
         return 2
+
     resolved_paths = [Path(path).resolve() for path in paths]
-    sources = {Path(path).resolve(): clean_source(path) for path in paths}
+    sources = {}
+    for original, resolved in zip(paths, resolved_paths):
+        source = preprocess(resolved, compile_root) if compile_root else Path(resolved).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        if source is None:
+            return 2
+        sources[resolved] = clean_text(source)
+
+    # Preprocessed translation units already contain their active header
+    # definitions. Raw-source mode retains explicit quoted-include traversal.
     includes = {
-        Path(path).resolve(): INCLUDE.findall(Path(path).read_text(encoding="utf-8", errors="replace"))
-        for path in paths
+        resolved: ([] if compile_root else INCLUDE.findall(
+            Path(resolved).read_text(encoding="utf-8", errors="replace")
+        ))
+        for resolved in resolved_paths
     }
     signatures = defaultdict(set)
     origins = defaultdict(set)
-    for path, resolved in zip(paths, resolved_paths):
-        found, locations = scan(path, sources[resolved], aliases_visible_from(resolved, sources, includes))
+    for original, resolved in zip(paths, resolved_paths):
+        found, locations = scan(original, sources[resolved],
+                                aliases_visible_from(resolved, sources, includes))
         for name, types in found.items():
             signatures[name].update(types)
             origins[name].update(locations[name])
