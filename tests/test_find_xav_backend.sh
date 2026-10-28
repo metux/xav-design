@@ -107,6 +107,9 @@ static const struct {
 {
     XORG_HANDLER(ProcMacroTableReq),
     XORG_PASTE(Proc, PastedMacroReq),
+#if 0
+    XORG_PASTE(Proc, DisabledMacroReq),
+#endif
     XORG_HANDLER_GROUP(
         ProcNestedFirstReq,
         ProcNestedSecondReq
@@ -114,6 +117,10 @@ static const struct {
     ProcGenericDispatch,
 };
 int ProcPastedMacroReq(ClientPtr client)
+{
+    return Success;
+}
+int ProcDisabledMacroReq(ClientPtr client)
 {
     return Success;
 }
@@ -236,6 +243,10 @@ for handler in ProcPastedMacroReq ProcMacroTableReq ProcNestedFirstReq ProcNeste
         echo "FAIL: multiline/macro dispatch handler $handler not recognized" >&2; exit 1;
     }
 done
+if printf '%s\\n' "$output" | grep -F 'ProcDisabledMacroReq' >/dev/null; then
+    echo "FAIL: disabled preprocessor branch was classified as a handler" >&2
+    exit 1
+fi
 if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' -A8 | grep -F 'ProcGenericDispatch' >/dev/null; then
     echo "FAIL: generic dispatcher in macro table classified as concrete request handler" >&2; exit 1
 fi >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
@@ -256,6 +267,11 @@ if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|tar
 fi
 
 # Exercise multiple independent roots and the portable grep fallback.
+# Without a usable C compiler, source-text detection must remain usable.
+fallback_cc=$(CC=missing-xav-cc MAX_DEPTH=8 sh "$SCRIPT" "$cmake" 2>&1)
+printf '%s\\n' "$fallback_cc" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: compiler-free fallback failed" >&2; exit 1; }
+printf '%s\\n' "$fallback_cc" | grep -F 'ProcMacroTableReq' >/dev/null || { echo "FAIL: compiler-free fallback lost literal handlers" >&2; exit 1; }
+
 fallback=$(USE_GREP=1 MAX_DEPTH=8 sh "$SCRIPT" "$cmake" "$meson" 2>&1)
 printf '%s\n' "$fallback" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: first explicit root with spaces not discovered" >&2; exit 1; }
 printf '%s\n' "$fallback" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: second explicit root not discovered by grep fallback" >&2; exit 1; }
