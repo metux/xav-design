@@ -140,6 +140,29 @@ def main():
         require_conflict([mismatch_tu, mismatch_header], "ProcHeaderAliasReq",
                          "incompatible typedef chain from a separate header was missed")
 
+        # The same alias spelling can legally mean different types in separate
+        # translation units. Resolve each table against its own included header.
+        int_header = root / "int_handler.h"
+        int_header.write_text("typedef int (*HandlerAlias)(ClientPtr);\n", encoding="utf-8")
+        long_header = root / "long_handler.h"
+        long_header.write_text("typedef long (*HandlerAlias)(ClientPtr);\n", encoding="utf-8")
+        int_tu = root / "int_tu.c"
+        int_tu.write_text(
+            '#include "int_handler.h"\n'
+            "int ProcScopedAliasReq(ClientPtr client) { return Success; }\n"
+            "static HandlerAlias IntVector[] = { ProcScopedAliasReq };\n",
+            encoding="utf-8",
+        )
+        long_tu = root / "long_tu.c"
+        long_tu.write_text(
+            '#include "long_handler.h"\n'
+            "int ProcScopedAliasReq(ClientPtr client) { return Success; }\n"
+            "static HandlerAlias LongVector[] = { ProcScopedAliasReq };\n",
+            encoding="utf-8",
+        )
+        require_conflict([int_tu, int_header, long_tu, long_header], "ProcScopedAliasReq",
+                         "translation-unit-specific typedef conflict was missed")
+
         typedef_ok = root / "typedef_ok.c"
         typedef_ok.write_text(
             "typedef int (*HandlerProc)(ClientPtr);\n"
