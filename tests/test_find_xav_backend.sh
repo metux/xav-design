@@ -60,6 +60,27 @@ EOF
 cat >"$cmake/src/request_prototype.c" <<'EOF'
 int ProcXavFakeReq(ClientPtr client);
 EOF
+cat >"$cmake/src/present_request.c" <<'EOF'
+static int
+proc_present_pixmap(ClientPtr client)
+{
+    return Success;
+}
+static int
+proc_present_dispatch(ClientPtr client)
+{
+    return (*proc_present_vector[0])(client);
+}
+static int
+proc_present_query_version(ClientPtr client)
+{
+    return Success;
+}
+static int (*proc_present_vector[2]) (ClientPtr) = {
+    proc_present_query_version,
+    proc_present_pixmap,
+};
+EOF
 cat >"$cmake/tests/backend_test.rs" <<'EOF'
 unsafe { vkQueueSubmit(device, 1, &submit, fence) };
 EOF
@@ -82,6 +103,11 @@ printf '%s\n' "$output" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: Meson project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
+if printf '%s\n' "$output" | grep -E 'X11-HANDLER: src/present_request.c.*dispatch|X11-HANDLER: src/request_prototype' >/dev/null; then
+    echo "FAIL: generic dispatcher or prototype was classified as a concrete handler" >&2
+    exit 1
+fi
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/bare_call.c' >/dev/null || { echo "FAIL: ordinary C Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'WRAPPER-CALL: src/backend.zig' >/dev/null || { echo "FAIL: Zig wrapper not classified separately" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|target/build_output|X11-HANDLER: src/request_prototype|VK-CALL: src/(comments|inline_comment|string_literal|block_comment|declarations)|VK-CALL: src/backend.zig' >/dev/null; then
