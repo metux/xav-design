@@ -4018,6 +4018,53 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
         self.assertEqual(shared, final_snapshot)
 
+    def test_device_loss_propagates_across_partially_overlapping_semaphore_sets(self):
+        shared_ab = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_bc = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_c = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+
+        def make_model(shared):
+            return SubmissionModel(
+                command_buffers=[
+                    CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                ],
+                wait_states=[WaitState.READY for _ in shared],
+                binary_signal_states=[BinarySignalState.UNSIGNALED for _ in shared],
+                signal_slots=[None for _ in shared],
+                semaphore_kinds=[SemaphoreKind.BINARY for _ in shared],
+                shared_semaphores=shared,
+            )
+
+        model_a = make_model([shared_ab])
+        model_b = make_model([shared_ab, shared_bc])
+        model_c = make_model([shared_bc, shared_c])
+        self.assertEqual(
+            queue_submit(model_c, SubmitRequest(token=972, signal_indices=(1,), signal_values=(0,))),
+            "SUCCESS",
+        )
+
+        self.assertEqual(mark_device_lost(model_a), "SUCCESS")
+        # A -> B -> C is connected transitively, despite no model owning the
+        # complete semaphore set. Every model and every canonical payload is
+        # marked lost/quarantined immediately.
+        self.assertTrue(model_a.device_lost)
+        self.assertTrue(model_b.device_lost)
+        self.assertTrue(model_c.device_lost)
+        self.assertTrue(all(s.device_lost for s in (shared_ab, shared_bc, shared_c)))
+        self.assertEqual(
+            [s.signal_state for s in (shared_ab, shared_bc, shared_c)],
+            [BinarySignalState.UNTRUSTED] * 3,
+        )
+        self.assertEqual(model_c.pending_submissions, [])
+        self.assertEqual(model_c.pending_binary_signals, [])
+        self.assertEqual(
+            model_c.binary_signal_states,
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        # A late success cannot resurrect the signal on the far end of the set.
+        self.assertEqual(finish_submission(model_c, 972, success=True), "BadValue")
+        self.assertEqual(shared_c.signal_state, BinarySignalState.UNTRUSTED)
+
     def test_submit_device_loss_preserves_confirmed_empty_shared_payload(self):
         shared = SharedBinarySemaphore(
             signal_state=BinarySignalState.UNSIGNALED,
