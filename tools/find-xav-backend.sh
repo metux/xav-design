@@ -282,7 +282,7 @@ scan_project() {
           }' 2>/dev/null || :)
         # Macro-generated handler signatures are invisible to the ordinary
         # function-definition heuristic. Require a local declaration macro.
-        macroclassic=$(printf '%s\n' "$code" | awk -v has_dispatch_macro="$(grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+DISPATCH_PROC([[:space:]]|\()|^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"]dixstruct\.h[>"]' "$full" 2>/dev/null || :)" '
+        macroclassic=$(printf '%s\n' "$code" | awk -v has_dispatch_macro="$(grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+DISPATCH_PROC([[:space:]]|\()|^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"][^>"]+\.h[>"]' "$full" 2>/dev/null || :)" '
           /DISPATCH_PROC[[:space:]]*\([[:space:]]*(Proc|SProc)[A-Za-z0-9_]*(Req|Request)?[[:space:]]*\)/ {
             if (has_dispatch_macro == "") next
             line=$0
