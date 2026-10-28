@@ -131,6 +131,44 @@ class ReplySpecCoverageTests(unittest.TestCase):
         checker = (ROOT / "tools/check-wire-layout.py").read_text(encoding="utf-8")
         self.assertIn("physical-device property registry missing exact value/reply contract", checker)
 
+
+    def test_every_registered_property_has_a_matching_success_wire_shape(self):
+        registry = (ROOT / "registries/physical-device-properties.md").read_text(encoding="utf-8")
+        rows = re.findall(
+            r"^\|\s*`(XAverius\.[A-Za-z.]+)`\s*\|\s*`([A-Z0-9_]+)`\s*\((\d+)\)\s*\|\s*([^|]+?)\s*\|",
+            registry, re.M,
+        )
+        expected = {
+            "XAverius.deviceUUID": ("BYTE_ARRAY", 5, 16),
+            "XAverius.driverUUID": ("BYTE_ARRAY", 5, 16),
+            "XAverius.compute.maxWorkGroupInvocations": ("CARD32", 1, 4),
+            "XAverius.compute.maxWorkGroupSize": ("CARD32_ARRAY", 6, 12),
+        }
+        self.assertEqual(
+            {name: (wire_type, int(type_id), 16 if name.endswith("UUID") else 4 if wire_type == "CARD32" else 12)
+             for name, wire_type, type_id, _representation in rows},
+            expected,
+            "registry entries must define every canonical property's exact wire type and byte length",
+        )
+        event_for_shape = {
+            (5, 16): "GetPhysicalDeviceProperty-success-byte-array-16",
+            (1, 4): "GetPhysicalDeviceProperty-success",
+            (6, 12): "GetPhysicalDeviceProperty-success-card32-array-3",
+        }
+        for name, (wire_type, type_id, size) in expected.items():
+            event = event_for_shape[(type_id, size)]
+            for order in ("little", "big"):
+                matches = [v for v in self.vectors
+                           if v["event"] == event and v["byte_order"] == order]
+                self.assertTrue(matches, f"{name} has no {order}-endian positive shape fixture")
+                for vector in matches:
+                    wire = bytes.fromhex(vector["wire_hex"])
+                    self.assertEqual(int.from_bytes(wire[8:12], order), 0)
+                    self.assertEqual(int.from_bytes(wire[12:16], order), type_id)
+                    self.assertEqual(int.from_bytes(wire[16:20], order), size)
+                    self.assertEqual(int.from_bytes(wire[4:8], order), (size + 3) // 4)
+                    self.assertEqual(len(wire), 32 + ((size + 3) & ~3))
+
     def test_buffer_memory_requirements_mask_contract(self):
         body = section(self.memory, "GetBufferMemoryRequirements")
         self.assertIn("Size and alignment MUST be positive", body)
