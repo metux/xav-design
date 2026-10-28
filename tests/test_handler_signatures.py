@@ -268,17 +268,17 @@ def main():
             flags_header.parent.mkdir()
             flags_header.write_text(
                 "#if defined(HANDLER_KIND) && HANDLER_KIND == 2\n"
-                "typedef long FlagResult;\n"
+                "typedef long (*HandlerType)(ClientPtr);\n"
                 "#else\n"
-                "typedef int FlagResult;\n"
+                "typedef int (*HandlerType)(ClientPtr);\n"
                 "#endif\n",
                 encoding="utf-8",
             )
             flags_tu = root / "flags_tu.c"
             flags_tu.write_text(
                 '#include "handler_flags.h"\n'
-                "FlagResult ProcFlagsReq(ClientPtr client) { return 0; }\n"
-                "static FlagResult (*FlagsVector[])(ClientPtr) = { ProcFlagsReq };\n",
+                "int ProcFlagsReq(ClientPtr client) { return 0; }\n"
+                "static HandlerType FlagsVector[] = { ProcFlagsReq };\n",
                 encoding="utf-8",
             )
             forced = root / "forced.h"
@@ -291,8 +291,8 @@ def main():
                 [sys.executable, str(CHECKER), "--compile-db-root", str(root), str(flags_tu)],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
             )
-            if result.returncode != 0:
-                raise SystemExit("command-form compile flags or forced include were ignored:\\n" + result.stdout + result.stderr)
+            if result.returncode != 1 or "CONFLICT: ProcFlagsReq" not in result.stdout:
+                raise SystemExit("command-form compile flags, -U, -I or forced include were ignored:\\n" + result.stdout + result.stderr)
 
             result = subprocess.run(
                 [sys.executable, str(CHECKER), "--compile-db-root", str(root),
