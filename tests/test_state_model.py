@@ -4688,6 +4688,78 @@ class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
         self.assertEqual(finish_submission(state, 453, success=True), "BadValue")
         self.assertEqual(state, terminal)
 
+class DisconnectWaitDeviceLossInterleavingTests(unittest.TestCase):
+    """Disconnect and device loss must not steal callback-owned reservations."""
+
+    def _make_pending_pair(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=990, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=991, wait_indices=(0,))
+        ).accepted)
+        return shared, submit, present
+
+    def test_disconnect_then_device_loss_then_late_wait_releases_once(self):
+        shared, submit, present = self._make_pending_pair()
+        _unregister_semaphore_owner(present)
+        self.assertNotIn(present, [owner() for owner in shared.owners])
+        self.assertEqual(shared.signal_reservation, ("submit", 990))
+        self.assertEqual(shared.wait_reservation, ("present", 991))
+
+        self.assertEqual(mark_device_lost(submit), "SUCCESS")
+        self.assertTrue(shared.device_lost)
+        self.assertIsNone(shared.signal_reservation)
+        # The disconnected Present callback still owns its wait reservation.
+        self.assertEqual(shared.wait_reservation, ("present", 991))
+        self.assertEqual(
+            finish_present_wait(present, 991, 0, consumed=True), "SUCCESS"
+        )
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(present.pending_present_waits, [])
+        snapshot = copy.deepcopy((shared, submit, present))
+        self.assertEqual(
+            finish_present_wait(present, 991, 0, consumed=False), "BadValue"
+        )
+        self.assertEqual(finish_submission(submit, 990, success=True), "BadValue")
+        self.assertEqual((shared, submit, present), snapshot)
+
+    def test_wait_completion_then_disconnect_then_device_loss_does_not_double_release(self):
+        shared, submit, present = self._make_pending_pair()
+        self.assertEqual(
+            finish_present_wait(present, 991, 0, consumed=False), "SUCCESS"
+        )
+        self.assertIsNone(shared.wait_reservation)
+        _unregister_semaphore_owner(present)
+        self.assertEqual(mark_device_lost(submit), "SUCCESS")
+        self.assertIsNone(shared.signal_reservation)
+        self.assertIsNone(shared.wait_reservation)
+        snapshot = copy.deepcopy((shared, submit, present))
+        self.assertEqual(
+            finish_present_wait(present, 991, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual(finish_submission(submit, 990, success=False), "BadValue")
+        self.assertEqual((shared, submit, present), snapshot)
+
+
 class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
     """Every accepted Present wait must retire independently across Device Loss."""
 
