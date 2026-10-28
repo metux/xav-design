@@ -3235,3 +3235,91 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
                         self.assertEqual(state.retired_recordings[0].backend_holds, holds)
                     else:
                         self.assertEqual(state.retired_recordings, [])
+
+
+class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
+    """Cross-API wait reservations are exclusive and callbacks are token-owned."""
+
+    def _submit_state(self, shared):
+        return SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[shared.signal_state],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+
+    def _present_state(self, shared):
+        return PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[shared.signal_state],
+            shared_semaphores=[shared],
+        )
+
+    def test_submit_wait_reservation_blocks_present_without_mutation(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        submit = self._submit_state(shared)
+        self.assertEqual(queue_submit(submit, SubmitRequest(token=601, wait_indices=(0,))), "SUCCESS")
+        self.assertEqual(shared.wait_reservation, ("submit", 601))
+        present = self._present_state(shared)
+        before_present, before_shared = copy.deepcopy(present), copy.deepcopy(shared)
+        result = queue_present(present, PresentRequest(token=701, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted), ("INVALID_SYNCHRONIZATION_STATE", False))
+        self.assertEqual(present, before_present)
+        self.assertEqual(shared, before_shared)
+
+    def test_present_wait_reservation_blocks_submit_without_mutation(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = self._present_state(shared)
+        result = queue_present(present, PresentRequest(token=702, wait_indices=(0,)))
+        self.assertEqual((result.result, result.accepted), ("SUCCESS", True))
+        self.assertEqual(shared.wait_reservation, ("present", 702))
+        submit = self._submit_state(shared)
+        before_submit, before_shared = copy.deepcopy(submit), copy.deepcopy(shared)
+        self.assertEqual(queue_submit(submit, SubmitRequest(token=602, wait_indices=(0,))),
+                         "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(submit, before_submit)
+        self.assertEqual(shared, before_shared)
+
+    def test_submit_signal_then_present_consumption_retires_signal_once(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        signaler = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(signaler, SubmitRequest(
+            token=603, signal_indices=(0,), signal_values=(0,))), "SUCCESS")
+        self.assertEqual(finish_submission(signaler, 603, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+
+        present = self._present_state(shared)
+        self.assertEqual(queue_present(present, PresentRequest(token=703, wait_indices=(0,))).result,
+                         "SUCCESS")
+        self.assertEqual(finish_present_wait(present, 703, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        after = (copy.deepcopy(signaler), copy.deepcopy(present), copy.deepcopy(shared))
+        self.assertEqual(finish_submission(signaler, 603, success=True), "BadValue")
+        self.assertEqual((signaler, present, shared), after)
+
+    def test_unknown_present_consumption_cannot_be_overridden_by_stale_submit_mirror(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = self._present_state(shared)
+        self.assertEqual(queue_present(present, PresentRequest(token=704, wait_indices=(0,))).result,
+                         "SUCCESS")
+        self.assertEqual(finish_present_wait(present, 704, 0, consumed=None), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        submit = self._submit_state(shared)
+        submit.binary_signal_states[0] = BinarySignalState.SIGNALED
+        submit.wait_states[0] = WaitState.READY
+        before = copy.deepcopy(submit)
+        self.assertEqual(queue_submit(submit, SubmitRequest(token=604, wait_indices=(0,))),
+                         "DEPENDENCY_FAILED")
+        self.assertEqual(submit, before)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
