@@ -101,7 +101,6 @@ class VisibleAlertTests(unittest.TestCase):
         self.assertIn("gh issue create", workflow)
         self.assertIn("created_url=\"$(gh issue create", workflow)
         self.assertIn("body=\"$(printf", workflow)
-        self.assertIn("created_url=\"$(gh issue create", workflow)
         self.assertIn("gh issue list --state open", workflow)
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
