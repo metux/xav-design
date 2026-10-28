@@ -899,6 +899,71 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertIsNone(shared.wait_reservation)
 
+    def test_failed_submit_callback_first_then_present_consumption_stays_untrusted(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=198, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=199, wait_indices=(0,))).accepted)
+
+        # A failed submit cannot prove whether its signal reached the backend.
+        self.assertEqual(finish_submission(submit, 198, success=False), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(finish_present_wait(present, 199, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=200, signal_indices=(0,), signal_values=(0,))),
+            "DEPENDENCY_FAILED",
+        )
+
+    def test_present_consumption_before_failed_submit_callback_preserves_known_consumption(self) -> None:
+        shared = SharedBinarySemaphore()
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=201, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=202, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 202, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+
+        # Confirmed consumption is stronger than the later failed signal callback.
+        self.assertEqual(finish_submission(submit, 201, success=False), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertFalse(shared.signal_consumed)
+
     def test_device_loss_submit_callback_first_then_unknown_present_callback(self) -> None:
         shared = SharedBinarySemaphore()
         submit = SubmissionModel(
