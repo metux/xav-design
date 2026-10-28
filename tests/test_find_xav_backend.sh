@@ -61,7 +61,7 @@ cat >"$cmake/src/request_prototype.c" <<'EOF'
 int ProcXavFakeReq(ClientPtr client);
 EOF
 cat >"$cmake/src/macro_request.c" <<'EOF'
-#define DISPATCH_PROC(func) int func(ClientPtr client)
+#include "dixstruct.h"
 DISPATCH_PROC(ProcMacroGeneratedReq)
 {
     REQUEST(xReq);
