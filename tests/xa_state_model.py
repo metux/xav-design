@@ -38,6 +38,7 @@ class BinarySignalState(str, Enum):
 @dataclass
 class SharedBinarySemaphore:
     """Canonical semaphore state shared by submission and presentation models."""
+    device_lost: bool = False
     signal_state: BinarySignalState = BinarySignalState.UNSIGNALED
     wait_reservation: tuple[str, int] | None = None
     signal_reservation: tuple[str, int] | None = None
@@ -124,7 +125,8 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         return PresentResult("BadMatch", False)
 
     # Stage 5: Device availability precedes queue/image/lifecycle state.
-    if state.device_lost:
+    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+        state.device_lost = True
         return PresentResult("DEVICE_LOST", False)
 
     # Stage 6: immutable queue/index constraints.
@@ -204,6 +206,7 @@ def mark_present_device_lost(state: PresentState) -> str:
     for token in list(state.pending_present_tokens):
         finish_present_terminal(state, token, "DEVICE_LOST")
     for index, shared in enumerate(state.shared_semaphores):
+        shared.device_lost = True
         shared.signal_state = BinarySignalState.UNTRUSTED
         shared.signal_reservation = None
         shared.signal_consumed = False
@@ -699,7 +702,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # not unknown-XID failures; both precede Device Loss.
     if not state.queue_xid_valid or not state.types_and_ownership_valid:
         return "BadMatch"
-    if state.device_lost:
+    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+        state.device_lost = True
         return "DEVICE_LOST"
     # Normative mutable-state order: optional Fence, Command Buffers, waits,
     # then signals. The Fence is not attached until the acceptance commit.
@@ -907,6 +911,8 @@ def finish_submission(
     state.pending_submissions.remove(token)
     # A backend may race a Device-Loss notification and later report success.
     # Once loss has been observed, that callback must not publish signal values.
+    if any(shared.device_lost for shared in state.shared_semaphores):
+        state.device_lost = True
     effective_success = success and not state.device_lost
     for submission_token, index, value in list(state.pending_timeline_signals):
         if submission_token != token:
@@ -1067,6 +1073,11 @@ def finish_submission(
 def mark_device_lost(state: SubmissionModel) -> str:
     """Atomically terminalize every accepted non-terminal submission on loss."""
     state.device_lost = True
+    for shared in state.shared_semaphores:
+        shared.device_lost = True
+        shared.signal_state = BinarySignalState.UNTRUSTED
+        shared.signal_reservation = None
+        shared.signal_consumed = False
     # Snapshot tokens because finish_submission removes each token and its
     # owned reservations. Backend quiescence is modeled separately by holds.
     for token in list(state.pending_submissions):
