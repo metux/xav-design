@@ -15,26 +15,63 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out working branch
+        id: checkout
         uses: actions/checkout@v4
       - name: Set up Python
+        id: setup_python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Syntax-check shell discovery tool
+        id: shell_syntax
         run: sh -n tools/find-xav-backend.sh tests/test_find_xav_backend.sh
       - name: Test backend discovery and exclusions
+        id: backend_tests
         run: sh tests/test_find_xav_backend.sh
       - name: Test cross-translation-unit handler types and compiler flags
+        id: handler_signatures
         run: python tests/test_handler_signatures.py
       - name: Require handler audit for native XAverius sources
+        id: handler_gate
         run: python tools/check-handler-ci-gate.py .
       - name: Test mandatory handler audit gate
+        id: handler_gate_tests
         run: python tests/test_handler_ci_gate.py
       - name: Syntax-check checker and wire tests
+        id: py_compile
         run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tools/preprocess-xav-source.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_wire_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
       - name: Validate request/reply matrix and XGE event layouts
+        id: wire_layout
         run: python tools/check-wire-layout.py
       - name: Run Timeline semaphore regressions
+        id: timeline
         run: python tests/run_timeline_regressions.py
       - name: Run complete Python test suite
+        id: python_suite
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Verify every required CI check ran successfully
+        id: required_check_audit
+        if: always()
+        env:
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+          SETUP_PYTHON_OUTCOME: ${{ steps.setup_python.outcome }}
+          SHELL_SYNTAX_OUTCOME: ${{ steps.shell_syntax.outcome }}
+          BACKEND_TESTS_OUTCOME: ${{ steps.backend_tests.outcome }}
+          HANDLER_SIGNATURES_OUTCOME: ${{ steps.handler_signatures.outcome }}
+          HANDLER_GATE_OUTCOME: ${{ steps.handler_gate.outcome }}
+          HANDLER_GATE_TESTS_OUTCOME: ${{ steps.handler_gate_tests.outcome }}
+          PY_COMPILE_OUTCOME: ${{ steps.py_compile.outcome }}
+          WIRE_LAYOUT_OUTCOME: ${{ steps.wire_layout.outcome }}
+          TIMELINE_OUTCOME: ${{ steps.timeline.outcome }}
+          PYTHON_SUITE_OUTCOME: ${{ steps.python_suite.outcome }}
+        run: |
+          set -eu
+          failed=0
+          for check in CHECKOUT SETUP_PYTHON SHELL_SYNTAX BACKEND_TESTS HANDLER_SIGNATURES HANDLER_GATE HANDLER_GATE_TESTS PY_COMPILE WIRE_LAYOUT TIMELINE PYTHON_SUITE; do
+            eval "outcome=\$"${check}_OUTCOME
+            if [ "$outcome" != success ]; then
+              echo "::error::Required CI check $check did not succeed (outcome: $outcome)"
+              failed=1
+            fi
+          done
+          exit "$failed"
