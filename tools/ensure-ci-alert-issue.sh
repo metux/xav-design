@@ -37,11 +37,6 @@ release_lock() {
 }
 trap release_lock EXIT
 
-# Keep a local lock too, as a cheap same-host serialization layer.
-lock_key="$(printf '%s' "$GH_REPO" | sha256sum | cut -d ' ' -f 1)"
-exec 9>"/tmp/xav-ci-alert-${lock_key}.lock"
-flock -x 9
-
 export ALERT_TITLE="$title"
 existing="$(
   gh issue list --state open --limit 1000 --json number,title |
