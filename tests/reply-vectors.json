@@ -771,6 +771,50 @@
       "payload_hex": "00000000000000000000000000000000",
       "total_bytes": 48,
       "wire_hex": "010012340000000400000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "ReadBuffer-1-bytes-little",
+      "event": "ReadBuffer-1-bytes",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "01000000",
+      "total_bytes": 36,
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000001000000"
+    },
+    {
+      "name": "ReadBuffer-4-bytes-little",
+      "event": "ReadBuffer-4-bytes",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "01020304",
+      "total_bytes": 36,
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000001020304"
+    },
+    {
+      "name": "ReadBuffer-1-bytes-big",
+      "event": "ReadBuffer-1-bytes",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "01000000",
+      "total_bytes": 36,
+      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000001000000"
+    },
+    {
+      "name": "ReadBuffer-4-bytes-big",
+      "event": "ReadBuffer-4-bytes",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "01020304",
+      "total_bytes": 36,
+      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000001020304"
     }
   ]
 }
