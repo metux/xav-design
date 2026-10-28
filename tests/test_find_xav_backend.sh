@@ -336,7 +336,7 @@ printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handl
 printf '%s\\n' "$output" | grep -F 'ProcConfiguredHeaderReq' >/dev/null || { echo "FAIL: first configured header variant was missed" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'ProcAlternateHeaderReq' >/dev/null || { echo "FAIL: alternate header handler enabled only in a second translation unit was missed" >&2; exit 1; }
 header_handlers=$(printf '%s\\n' "$output" | awk '
-    /X11-HANDLER: config\\/include\\/configured_handlers.h/ { in_header=1; next }
+    index($0, "X11-HANDLER: config/include/configured_handlers.h") { in_header=1; next }
     /^  [A-Z][A-Z0-9_-]*: / { in_header=0 }
     in_header { print }
 ')
