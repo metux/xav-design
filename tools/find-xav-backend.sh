@@ -132,7 +132,7 @@ scan_project() {
             if (block) { if (ch=="*" && nx=="/") { block=0; i++ }; out=out " "; continue }
             if (quote!="") {
               if (esc) esc=0
-              else if (ch=="\\\\") esc=1
+              else if (ch=="\\") esc=1
               else if (ch==quote) quote=""
               out=out " "; continue
             }
@@ -151,7 +151,7 @@ scan_project() {
         # Count direct Vulkan API invocations only; project wrapper methods
         # are reported separately and never boost the backend score.
         call=$(printf '%s\n' "$code" | grep -E '(^|[^[:alnum:]_])vk[A-Z][A-Za-z0-9_]*[[:space:]]*\(' 2>/dev/null || :)
-        call=$(printf '%s\n' "$call" | grep -E -v '^[[:space:]]*(pub[[:space:]]+)?(unsafe[[:space:]]+)?(extern[[:space:]]+)?(static[[:space:]]+)?(VkResult|void|int|uint32_t|Vk[A-Za-z0-9_]+)[[:space:]]+vk[A-Z][A-Za-z0-9_]*[[:space:]]*\(' 2>/dev/null || :)
+        call=$(printf '%s\n' "$call" | grep -E -v '^[0-9]+:[[:space:]]*(pub[[:space:]]+)?(unsafe[[:space:]]+)?(extern[[:space:]]+)?(static[[:space:]]+)?(VkResult|void|int|uint32_t|Vk[A-Za-z0-9_]+)[[:space:]]+vk[A-Z][A-Za-z0-9_]*[[:space:]]*\(' 2>/dev/null || :)
         if [ -n "$call" ]; then calls=$((calls+1)); printf '  VK-CALL: %s\n%s\n' "$f" "$call" >>"$matches"; fi
         wrappers=$(printf '%s\n' "$code" | grep -E '(queue_submit(_2)?|queueSubmit(_2)?|queue_present|queuePresent|wait_semaphores|waitSemaphores|signal_semaphore|signalSemaphore|cmd_dispatch|dispatch_workgroups|create_device|createDevice|create_instance|createInstance)[[:space:]]*\(' 2>/dev/null || :)
         wrappers=$(printf '%s\n' "$wrappers" | grep -E '(=|return[[:space:]]|try!?[[:space:]]*\(|\.)' 2>/dev/null || :)
