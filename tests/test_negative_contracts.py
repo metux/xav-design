@@ -416,9 +416,9 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         positions = [section.find(phrase) for phrase in phrases]
         self.assertTrue(all(p >= 0 for p in positions))
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("ungültige/belegte `device_xid` `BadIDChoice`", errors)
-        self.assertIn("fehlende XGE-Aushandlung `BadMatch`", errors)
-        self.assertIn("kein geeignetes Gerät `DEVICE_UNAVAILABLE`", errors)
+        self.assertIn("invalid/occupied `device_xid` returns `BadIDChoice`", errors)
+        self.assertIn("missing XGE negotiation returns `BadMatch`", errors)
+        self.assertIn("no suitable device returns `DEVICE_UNAVAILABLE`", errors)
 
     def test_signal_semaphore_keeps_xid_checks_before_value_reservation_checks(self):
         sync = read("spec/synchronization.md")
