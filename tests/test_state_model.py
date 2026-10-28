@@ -1873,6 +1873,76 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.signal_slots, [None])
 
 
+
+    def test_lower_timeline_callback_failure_first_preserves_higher_reservation(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[2],
+            signal_slots=[None],
+        )
+        self.assertEqual(queue_submit(state, SubmitRequest(
+            token=435, command_buffer_indices=(0,),
+            signal_indices=(0,), signal_values=(7,),
+        )), "SUCCESS")
+        self.assertEqual(queue_submit(state, SubmitRequest(
+            token=436, command_buffer_indices=(1,),
+            signal_indices=(0,), signal_values=(12,),
+        )), "SUCCESS")
+
+        # Lower callback arrives first and fails: only its own reservation is
+        # retired; the higher value remains the public pending reservation.
+        self.assertEqual(finish_submission(state, 435, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [2])
+        self.assertEqual(state.pending_timeline_signals, [(436, 0, 12)])
+        self.assertEqual(state.signal_slots, [12])
+
+        self.assertEqual(finish_submission(state, 436, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [12])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 435, success=True), "BadValue")
+        self.assertEqual(state, before)
+
+    def test_lower_timeline_callback_success_then_higher_failure_keeps_observed_counter(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[2],
+            signal_slots=[None],
+        )
+        self.assertEqual(queue_submit(state, SubmitRequest(
+            token=437, command_buffer_indices=(0,),
+            signal_indices=(0,), signal_values=(7,),
+        )), "SUCCESS")
+        self.assertEqual(queue_submit(state, SubmitRequest(
+            token=438, command_buffer_indices=(1,),
+            signal_indices=(0,), signal_values=(12,),
+        )), "SUCCESS")
+
+        # The lower value becomes observable first while the higher reservation
+        # remains outstanding. Its later failure must not roll back the counter
+        # or leave a stale signal slot.
+        self.assertEqual(finish_submission(state, 437, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [7])
+        self.assertEqual(state.pending_timeline_signals, [(438, 0, 12)])
+        self.assertEqual(state.signal_slots, [12])
+        self.assertEqual(finish_submission(state, 438, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [7])
+        self.assertEqual(state.pending_timeline_signals, [])
+        self.assertEqual(state.signal_slots, [None])
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 438, success=True), "BadValue")
+        self.assertEqual(state, before)
+
+
     def test_device_loss_callbacks_in_reverse_order_do_not_publish_timeline_values(self) -> None:
         state = self.state(
             command_buffers=[
