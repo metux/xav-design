@@ -25,22 +25,18 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         --all) ALL=1; shift ;;
         -h|--help) usage; exit 0 ;;
-        --) shift; while [ "$#" -gt 0 ]; do ROOTS="$ROOTS
-$1"; shift; done ;;
+        --) shift; while [ "$#" -gt 0 ]; do ROOTS="${ROOTS}${NL}$1"; shift; done ;;
         -*) echo "$PROGRAM: unknown option: $1" >&2; usage >&2; exit 2 ;;
-        *) ROOTS="$ROOTS
-$1"; shift ;;
+        *) ROOTS="${ROOTS}${NL}$1"; shift ;;
     esac
 done
 if [ -z "$ROOTS" ]; then
     for d in "$HOME/src" "$HOME/dev" "$HOME/git" "$HOME/projects" "$HOME/work" /media; do
-        [ ! -d "$d" ] || ROOTS="$ROOTS
-$d"
+        [ ! -d "$d" ] || ROOTS="${ROOTS}${NL}$d"
     done
     if [ "$ALL" -eq 1 ]; then
         for d in /opt /srv /workspace /workspaces; do
-            [ ! -d "$d" ] || ROOTS="$ROOTS
-$d"
+            [ ! -d "$d" ] || ROOTS="${ROOTS}${NL}$d"
         done
     fi
 fi
@@ -116,13 +112,13 @@ scan_project() {
       if [ "$SEARCHER" = rg ]; then
         a=$(rg -n -i 'XAverius|Xaverius|xav_[[:alnum:]_]*|XAV_[[:alnum:]_]*' "$full" 2>/dev/null || :)
         b=$(rg -n 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
-        c=$(rg -n '\b(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)\b' "$full" 2>/dev/null || :)
+        c=$(rg -n '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(rg -n -i 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
         code=$(rg -n -v '^\s*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null || :)
       else
         a=$(grep -n -i -E 'XAverius|Xaverius|xav_[[:alnum:]_]*|XAV_[[:alnum:]_]*' "$full" 2>/dev/null || :)
         b=$(grep -n -E 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
-        c=$(grep -n -E '\b(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)\b' "$full" 2>/dev/null || :)
+        c=$(grep -n -E '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(grep -n -i -E 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
         code=$(grep -n -E -v '^[[:space:]]*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null || :)
       fi
