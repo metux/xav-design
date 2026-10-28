@@ -206,7 +206,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
 
     # Stage 5: Device availability precedes queue/image/lifecycle state.
     if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
-        state.device_lost = True
+        _propagate_device_loss(state)
         return PresentResult("DEVICE_LOST", False)
 
     # Stage 6: immutable queue/index constraints.
@@ -781,7 +781,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if not state.queue_xid_valid or not state.types_and_ownership_valid:
         return "BadMatch"
     if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
-        state.device_lost = True
+        _propagate_device_loss(state)
         return "DEVICE_LOST"
     # Normative mutable-state order: optional Fence, Command Buffers, waits,
     # then signals. The Fence is not attached until the acceptance commit.
@@ -954,9 +954,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
 def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: int) -> str:
     """Model SignalSemaphore's counter/reservation validation and atomic update."""
     if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
-        # Device loss is device-wide even when first observed through another
-        # queue/model that shares this semaphore object.
-        state.device_lost = True
+        # An observing API call must fan loss out to the rest of the connected
+        # semaphore graph, not just update this model's device flag.
+        _propagate_device_loss(state)
         return "DEVICE_LOST"
     if semaphore_index < 0 or semaphore_index >= len(state.signal_counters):
         return "BadValue"
