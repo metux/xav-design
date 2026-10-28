@@ -165,7 +165,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 84)
+        self.assertEqual(len(self.vectors), 88)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -447,6 +447,23 @@ class GoldenReplyVectorTests(unittest.TestCase):
             for i in range(16):
                 entry = payload[heaps_start+i*16:heaps_start+(i+1)*16]
                 self.assertEqual(int.from_bytes(entry[12:16], order), 0)
+
+    def test_enumerated_device_name_padding_boundaries_in_both_orders(self):
+        for size, expected_padding in ((2, 2), (3, 1)):
+            for order in ("little", "big"):
+                with self.subTest(size=size, order=order):
+                    matches = [v for v in self.vectors
+                               if v["event"] == "EnumeratePhysicalDevices"
+                               and f"name-{size}-bytes" in v["name"]
+                               and v["byte_order"] == order]
+                    self.assertEqual(len(matches), 1)
+                    wire = bytes.fromhex(matches[0]["wire_hex"])
+                    self.assertEqual(len(wire), 68)
+                    self.assertEqual(int.from_bytes(wire[4:8], order), 9)
+                    record = wire[32:]
+                    self.assertEqual(int.from_bytes(record[28:30], order), size)
+                    self.assertEqual(record[32:32 + size], bytes(range(0x41, 0x41 + size)))
+                    self.assertEqual(record[32 + size:], bytes(expected_padding))
 
     def test_property_byte_array_padding_boundaries_in_both_orders(self):
         expected_lengths = {1: 3, 2: 2, 3: 1, 4: 0, 5: 3, 8: 0, 16: 0}
