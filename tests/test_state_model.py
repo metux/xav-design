@@ -3519,6 +3519,26 @@ class BinaryWaitReservationFailureTests(unittest.TestCase):
             shared_semaphores=[shared],
         )
 
+    def test_late_submit_wait_callback_cannot_overwrite_new_shared_reservation(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        state = self.make_submit(shared)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=300, wait_indices=(0,))),
+            "SUCCESS",
+        )
+        # Model a lifecycle path that retires the old reservation and lets a
+        # newer presentation own the canonical semaphore before the old
+        # backend callback is delivered.
+        shared.wait_reservation = ("present", 301)
+        shared.signal_state = BinarySignalState.SIGNALED
+        before_local = list(state.binary_signal_states)
+
+        self.assertEqual(finish_submission(state, 300, success=True), "SUCCESS")
+        self.assertEqual(shared.wait_reservation, ("present", 301))
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertNotEqual(state.binary_signal_states, before_local)
+
     def test_failed_wait_with_unchanged_payload_releases_only_wait_reservation(self) -> None:
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         state = self.make_submit(shared)
