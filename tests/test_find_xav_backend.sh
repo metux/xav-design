@@ -69,6 +69,13 @@ int alternate_translation_unit(void)
     return Success;
 }
 EOF
+cat >"$cmake/src/configured_dispatch_duplicate.c" <<'EOF'
+#include <configured_handlers.h>
+int duplicate_translation_unit(void)
+{
+    return Success;
+}
+EOF
 # Model the compile database emitted by CMake or Meson: its -D and -I
 # options are essential to expose the real conditional dispatch table.
 python3 - "$cmake" <<'PY'
@@ -95,6 +102,16 @@ entries = [
             os.path.join(root, "config", "include"), "-c",
             os.path.join(root, "src", "configured_dispatch_alt.c"), "-o",
             os.path.join(root, "build", "configured_dispatch_alt.o")
+        ]
+    },
+    {
+        "directory": root,
+        "file": os.path.join(root, "src", "configured_dispatch_duplicate.c"),
+        "arguments": [
+            "cc", "-DXAV_ENABLE_CONFIGURED=1", "-I",
+            os.path.join(root, "config", "include"), "-c",
+            os.path.join(root, "src", "configured_dispatch_duplicate.c"), "-o",
+            os.path.join(root, "build", "configured_dispatch_duplicate.o")
         ]
     }
 ]
@@ -318,6 +335,10 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { e
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handlers.h' >/dev/null || { echo "FAIL: header without a compile database entry was not evaluated with its including translation unit's -D/-I flags" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'ProcConfiguredHeaderReq' >/dev/null || { echo "FAIL: first configured header variant was missed" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'ProcAlternateHeaderReq' >/dev/null || { echo "FAIL: alternate header handler enabled only in a second translation unit was missed" >&2; exit 1; }
+configured_count=$(printf '%s\\n' "$output" | grep -o 'ProcConfiguredHeaderReq' | wc -l)
+[ "$configured_count" -eq 1 ] || { echo "FAIL: identical header handler was reported $configured_count times across equivalent translation units" >&2; exit 1; }
+alternate_count=$(printf '%s\\n' "$output" | grep -o 'ProcAlternateHeaderReq' | wc -l)
+[ "$alternate_count" -eq 1 ] || { echo "FAIL: alternate header handler was reported $alternate_count times" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
     echo "FAIL: handler defined only in an included header was attributed to the including source" >&2
