@@ -4917,3 +4917,32 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
         self.assertIsNone(shared.wait_reservation)
 
+
+
+class DisconnectCallbackCleanupTests(unittest.TestCase):
+    def test_disconnect_detaches_client_callback_links_but_keeps_backend_work(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-a", "client-b"})
+        device = AsyncDeviceIdentity(identity="device-a", xid=71)
+        registry.register_device("client-a", device)
+        submission = AsyncSubmissionIdentity(
+            connection_identity="client-a",
+            token=301,
+            device_identity="device-a",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(submission), "SUCCESS")
+        registry.select_queue_events("client-a", "device-a", (0, 0), 1)
+
+        registry.disconnect("client-a")
+        self.assertNotIn(("client-a", 301), registry.submissions)
+        self.assertIs(registry.detached_submissions[("client-a", 301)], submission)
+        self.assertFalse(any(key[0] == "client-a" for key in registry.queue_masks))
+
+        # The backend's actual terminal result is still recorded, but it can
+        # neither emit an event on the closed connection nor retain its link.
+        self.assertEqual(registry.terminal_callback("client-a", 301, "COMPLETE"), "SUCCESS")
+        self.assertEqual(submission.terminal, "COMPLETE")
+        self.assertNotIn(("client-a", 301), registry.detached_submissions)
+        self.assertEqual(registry.emitted_events, [])
+        self.assertEqual(registry.terminal_callback("client-a", 301, "FAILED"), "BadValue")
