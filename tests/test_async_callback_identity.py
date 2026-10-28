@@ -93,7 +93,9 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
     def test_duplicate_callback_cannot_release_internal_reference_twice(self):
         registry = AsyncCallbackRegistry(connections_live={"client-A"})
         device = AsyncDeviceIdentity("device-generation-1", 7)
-        resource = AsyncResourceIdentity("resource-generation-1", 42, device.identity)
+        resource = AsyncResourceIdentity(
+            "resource-generation-1", 42, device.identity, backend_refs=2,
+        )
         registry.register_device(device)
         registry.register_resource(resource)
         self.assertEqual(
@@ -109,6 +111,7 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
             (resource.backend_refs, resource.callback_count, registry.emitted_events),
             snapshot,
         )
+        self.assertEqual(resource.backend_refs, 1)
 
 
 if __name__ == "__main__":
