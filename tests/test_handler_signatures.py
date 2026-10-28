@@ -262,6 +262,14 @@ def main():
                 {"directory": str(root), "file": str(conditional_b),
                  "arguments": ["cc", "-DHANDLER_KIND=1", "-c", str(conditional_b), "-o", "b.o"]},
             ]), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(CHECKER), "--compile-db-root", str(root),
+                 str(conditional_a), str(conditional_b)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 1 or "CONFLICT: ProcDefineReq" not in result.stdout:
+                raise SystemExit("different compile definitions did not expose handler conflict:\n" + result.stdout + result.stderr)
+
             # Also cover the shell-command form of compile_commands.json,
             # -U, forced includes, and a header selected through -I.
             flags_header = root / "flags" / "handler_flags.h"
@@ -293,14 +301,6 @@ def main():
             )
             if result.returncode != 1 or "CONFLICT: ProcFlagsReq" not in result.stdout:
                 raise SystemExit("command-form compile flags, -U, -I or forced include were ignored:\\n" + result.stdout + result.stderr)
-
-            result = subprocess.run(
-                [sys.executable, str(CHECKER), "--compile-db-root", str(root),
-                 str(conditional_a), str(conditional_b)],
-                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-            )
-            if result.returncode != 1 or "CONFLICT: ProcDefineReq" not in result.stdout:
-                raise SystemExit("different compile definitions did not expose handler conflict:\n" + result.stdout + result.stderr)
 
     print("handler signature regression tests: PASS")
 
