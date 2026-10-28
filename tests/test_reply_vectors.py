@@ -359,7 +359,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
             payload = wire[32:]
             self.assertEqual(len(payload), 40)
             self.assertEqual([int.from_bytes(payload[i:i+4], order) for i in (0, 4, 8, 12)], [1, 1, 0, 0])
-            self.assertEqual(int.from_bytes(payload[16:20], order), 3)
+            self.assertEqual(int.from_bytes(payload[16:20], order), 0x3F)
             self.assertEqual(int.from_bytes(payload[20:24], order), 0)
             self.assertEqual(int.from_bytes(payload[24:32], order), 0x0102030405060708)
             self.assertEqual(int.from_bytes(payload[32:36], order), 1)
@@ -443,9 +443,16 @@ class GoldenReplyVectorTests(unittest.TestCase):
             heaps_start = 16 + 32 * 8
             for i in range(32):
                 entry = payload[16+i*8:24+i*8]
+                flags = int.from_bytes(entry[0:4], order)
                 self.assertEqual(int.from_bytes(entry[4:8], order), i % 16)
+                if i == 31:
+                    self.assertEqual(flags, 0x3F)  # includes PROTECTED (bit 5)
+                else:
+                    self.assertEqual(flags, i)
             for i in range(16):
                 entry = payload[heaps_start+i*16:heaps_start+(i+1)*16]
+                self.assertEqual(int.from_bytes(entry[0:8], order), 0x100000000 + i)
+                self.assertEqual(int.from_bytes(entry[8:12], order), 1)
                 self.assertEqual(int.from_bytes(entry[12:16], order), 0)
 
     def test_enumerated_device_name_padding_boundaries_in_both_orders(self):
