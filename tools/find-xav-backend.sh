@@ -169,7 +169,7 @@ scan_project() {
             [ -z "$preprocessed" ] || dispatch_code=$preprocessed
           fi ;;
         esac
-        req=$(printf '%s\n' "$code" | awk '
+        req=$(printf '%s\n' "$dispatch_code" | awk '
           {
             line[NR]=$0
             low=tolower($0)
