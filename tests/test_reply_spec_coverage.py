@@ -197,20 +197,34 @@ class ReplySpecCoverageTests(unittest.TestCase):
         fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
         required_rules = {
-            "standard-header", "fixed-reply-size", "fence-status", "wait-status", "wait-status-match", "wait-for-fence-status", "property-success-status", "property-failure-status",
-            "property-failure-zero", "property-padding-zero", "queue-record-reserved",
+            "standard-header", "fixed-reply-size", "fence-status", "wait-status",
+            "wait-status-match", "wait-for-fence-status", "wait-for-fence-status-match",
+            "property-success-status", "property-failure-status", "property-failure-zero",
+            "property-type-length", "property-padding-zero", "property-card32-wrong-length",
+            "queue-record-reserved", "queue-record-length", "queue-flags-reserved",
             "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
-            "device-name-padding-zero", "device-record-length", "memory-type-heap-index-range",
-            "queue-record-length", "queue-flags-reserved", "read-buffer-padding-zero",
-            "device-record-reserved", "memory-payload-length", "memory-reserved-zero",
-            "memory-type-flags-range", "memory-heap-flags-range", "memory-properties-flags-zero",
-            "read-buffer-payload-length", "reserved-zero", "buffer-requirements-size-positive", "buffer-requirements-alignment-positive",
+            "memory-payload-length", "memory-type-heap-index-range", "memory-type-flags-range",
+            "memory-heap-flags-range", "memory-properties-flags-zero", "memory-reserved-zero",
+            "device-name-padding-zero", "device-record-length", "device-record-reserved",
+            "device-type-range", "device-name-utf8", "device-name-no-nul", "device-xid-nonzero",
+            "read-buffer-padding-zero", "read-buffer-payload-length", "reserved-zero",
+            "buffer-requirements-size-positive", "buffer-requirements-alignment-positive",
             "buffer-requirements-memory-type-bits-nonzero",
         }
         for rule in sorted(required_rules):
             for order in ("little", "big"):
                 self.assertTrue(any(v["violates"] == rule and v["byte_order"] == order for v in vectors),
                                 f"negative fixture for {rule} missing in {order}-endian")
+
+        # Every rule present in the fixture corpus must remain represented in
+        # both byte orders, even when a new rule is added to the required set.
+        all_rules = {v["violates"] for v in vectors}
+        for rule in sorted(all_rules):
+            for order in ("little", "big"):
+                self.assertTrue(any(v["violates"] == rule and v["byte_order"] == order for v in vectors),
+                                f"fixture rule {rule} has no {order}-endian case")
+        names = [v["name"] for v in vectors]
+        self.assertEqual(len(names), len(set(names)), "negative vector names must be unique")
 
         sync = section(self.sync, "GetFenceStatus")
         fence_statuses = assignments(sync, {"UNSIGNALED", "PENDING", "SIGNALED", "FAILED"})
