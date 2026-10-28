@@ -21,6 +21,20 @@ TABLE = re.compile(
     r"\s*\((?P<args>[^()]*)\)\s*=\s*\{(?P<body>[^}]*)\}",
     re.S,
 )
+# Simple typedef'd function pointers are common in dispatch tables. Keep this
+# deliberately narrow: nested declarators still belong to the C compiler.
+TYPEDEF = re.compile(
+    r"\btypedef\s+(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)"
+    r"\(\s*\*\s*(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s*\)"
+    r"\s*\((?P<args>[^()]*)\)\s*;",
+    re.S,
+)
+ALIASED_TABLE = re.compile(
+    r"\b(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+"
+    r"(?P<table>[A-Za-z_][A-Za-z0-9_]*)\s*"
+    r"(?:\[[^]]*\])?\s*=\s*\{(?P<body>[^}]*)\}",
+    re.S,
+)
 HANDLER_REF = re.compile(rf"\b{NAME}\b")
 
 
@@ -34,7 +48,7 @@ def split_top_level(value):
     start = 0
     depth = 0
     for index, char in enumerate(value):
-        if char in "([":
+        if char in "([": 
             depth += 1
         elif char in ")]":
             depth -= 1
@@ -79,11 +93,24 @@ def scan(path):
         signature = f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
         signatures[name].add(signature)
         origins[name].add(str(path))
+
+    typedefs = {}
+    for match in TYPEDEF.finditer(source):
+        typedefs[match.group("alias")] = (
+            f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
+        )
     for match in TABLE.finditer(source):
         pointer_type = f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
         for name in HANDLER_REF.findall(match.group("body")):
             signatures[name].add(pointer_type)
             origins[name].add(f"{path} [{match.group('table')}]")
+    for match in ALIASED_TABLE.finditer(source):
+        pointer_type = typedefs.get(match.group("alias"))
+        if pointer_type is None:
+            continue
+        for name in HANDLER_REF.findall(match.group("body")):
+            signatures[name].add(pointer_type)
+            origins[name].add(f"{path} [{match.group('table')}: {match.group('alias')}]")
     return signatures, origins
 
 
