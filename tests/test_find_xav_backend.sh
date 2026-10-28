@@ -82,6 +82,26 @@ static int ProcXTestDispatch(ClientPtr client)
     }
 }
 EOF
+cat >"$cmake/src/indirect_dispatch.c" <<'EOF'
+static int ProcIndirectQuery(ClientPtr client)
+{
+    return Success;
+}
+static int ProcIndirectInput(ClientPtr client)
+{
+    return Success;
+}
+static int ProcIndirectWrapper(ClientPtr client)
+{
+    return ProcIndirectInput(client);
+}
+static int (*requestVector[2])(ClientPtr);
+void RegisterIndirect(void)
+{
+    requestVector[0] = ProcIndirectQuery;
+    requestVector[1] = ProcIndirectInput;
+}
+EOF
 cat >"$cmake/src/present_request.c" <<'EOF'
 static int
 proc_present_pixmap(ClientPtr client)
@@ -127,6 +147,9 @@ printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null || { echo "FAIL: switch-dispatched Xorg handlers not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-DISPATCH-ASSIGNMENT: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: indirect dispatch assignments not reported" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-WRAPPER-CALL: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: wrapper forwarding calls not reported separately" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -E 'X11-HANDLER: src/present_request.c.*dispatch|X11-HANDLER: src/request_prototype' >/dev/null; then
     echo "FAIL: generic dispatcher or prototype was classified as a concrete handler" >&2
     exit 1
