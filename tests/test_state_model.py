@@ -3711,6 +3711,52 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertIsNone(shared.wait_reservation)
 
 
+    def test_consumed_pending_signal_cannot_be_reserved_by_second_submit_or_present_wait(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        signaler = self._submit_state(shared)
+        self.assertEqual(
+            queue_submit(signaler, SubmitRequest(token=606, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+
+        first_present = self._present_state(shared)
+        self.assertTrue(
+            queue_present(first_present, PresentRequest(token=706, wait_indices=(0,))).accepted
+        )
+        # The wait consumes the pending payload, but the signal owner's
+        # terminal callback has not run yet, so its reservation is still live.
+        self.assertEqual(finish_present_wait(first_present, 706, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(shared.signal_reservation, ("submit", 606))
+        self.assertTrue(shared.signal_consumed)
+
+        second_present = self._present_state(shared)
+        before_present, before_shared = copy.deepcopy(second_present), copy.deepcopy(shared)
+        result = queue_present(second_present, PresentRequest(token=707, wait_indices=(0,)))
+        self.assertEqual(
+            (result.result, result.accepted),
+            ("INVALID_SYNCHRONIZATION_STATE", False),
+        )
+        self.assertEqual(second_present, before_present)
+        self.assertEqual(shared, before_shared)
+
+        second_submit = self._submit_state(shared)
+        before_submit = copy.deepcopy(second_submit)
+        self.assertEqual(
+            queue_submit(second_submit, SubmitRequest(token=607, wait_indices=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(second_submit, before_submit)
+        self.assertEqual(shared, before_shared)
+
+        # The original signal callback retires its own reservation exactly
+        # once and leaves the known-empty payload reusable.
+        self.assertEqual(finish_submission(signaler, 606, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+
+
 class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
     """Out-of-order wait completions must retire only their own reservations."""
 
