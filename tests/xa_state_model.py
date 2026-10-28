@@ -1609,6 +1609,9 @@ class AsyncSubmissionEventRegistry:
     live_devices: dict[str, AsyncDeviceIdentity] = field(default_factory=dict)
     queue_masks: dict[tuple[str, tuple[int, int]], int] = field(default_factory=dict)
     submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    # Disconnect detaches client/event links immediately, but accepted backend
+    # work remains indexed here until its real terminal callback arrives.
+    detached_submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
     emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
 
     def register_device(self, connection: str, device: AsyncDeviceIdentity) -> None:
@@ -1650,10 +1653,20 @@ class AsyncSubmissionEventRegistry:
         self.live_connections.discard(connection)
         for key in [key for key in self.queue_masks if key[0] == connection]:
             del self.queue_masks[key]
+        # Remove client-facing callback links now. The detached table models
+        # the independent backend completion ownership for accepted work.
+        for key, submission in list(self.submissions.items()):
+            if key[0] == connection:
+                self.detached_submissions[key] = submission
+                del self.submissions[key]
 
     def terminal_callback(self, connection: str, token: int, result: str) -> str:
         key = (connection, token)
         submission = self.submissions.get(key)
+        detached = False
+        if submission is None:
+            submission = self.detached_submissions.get(key)
+            detached = submission is not None
         if submission is None or submission.terminal is not None:
             return "BadValue"
         if result not in ("COMPLETE", "FAILED"):
@@ -1661,9 +1674,10 @@ class AsyncSubmissionEventRegistry:
         # Terminal state is committed exactly once regardless of event delivery.
         submission.terminal = result
         device = self.live_devices.get(submission.device_identity)
-        if (connection not in self.live_connections or device is None
+        if (detached or connection not in self.live_connections or device is None
                 or not device.live or device.xid != submission.device_xid):
             self.submissions.pop(key, None)
+            self.detached_submissions.pop(key, None)
             return "SUCCESS"
         queue_code = submission.queue_key[0] * 65536 + submission.queue_key[1]
         mask = self.queue_masks.get((connection, (submission.device_xid, queue_code)), 0)
