@@ -27,6 +27,7 @@ TYPEDEF_PREFIX = re.compile(
 TYPEDEF_ALIAS = re.compile(
     rf"\btypedef\s+(?P<base>{IDENT})\s+(?P<alias>{IDENT})\s*;"
 )
+INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
 ALIASED_TABLE = re.compile(
     rf"\b(?P<alias>{IDENT})\s+(?P<table>{IDENT})\s*"
     r"(?:\[[^]]*\])?\s*=\s*\{(?P<body>[^}]*)\}",
@@ -119,9 +120,7 @@ def iter_function_pointer_typedefs(source):
         while opening < len(source) and source[opening].isspace():
             opening += 1
         end = matching_delimiter(source, opening)
-        if end is None:
-            continue
-        if re.match(r"\s*;", source[end + 1:]):
+        if end is not None and re.match(r"\s*;", source[end + 1:]):
             yield match.group("alias"), (
                 f"{normalize_return(match.group('ret'))} (*)({normalize_args(source[opening + 1:end])})"
             )
@@ -160,6 +159,28 @@ def resolve_alias(alias, aliases, seen=None):
     return None
 
 
+def aliases_visible_from(path, sources):
+    """Collect typedefs in one translation unit and its supplied quoted headers."""
+    aliases = defaultdict(set)
+    visited = set()
+
+    def visit(current):
+        current = Path(current).resolve()
+        if current in visited or current not in sources:
+            return
+        visited.add(current)
+        source = sources[current]
+        for alias, target in iter_function_pointer_typedefs(source):
+            aliases[alias].add(target)
+        for include in INCLUDE.findall(source):
+            candidate = (current.parent / include).resolve()
+            if candidate in sources:
+                visit(candidate)
+
+    visit(path)
+    return aliases
+
+
 def scan(path, source, aliases):
     signatures = defaultdict(set)
     origins = defaultdict(set)
@@ -187,16 +208,12 @@ def main(paths):
     if not paths:
         print(f"usage: {Path(sys.argv[0]).name} source.c [...]", file=sys.stderr)
         return 2
-    sources = [(path, clean_source(path)) for path in paths]
-    aliases = defaultdict(set)
-    for _, source in sources:
-        for alias, target in iter_function_pointer_typedefs(source):
-            aliases[alias].add(target)
-
+    sources = {Path(path).resolve(): clean_source(path) for path in paths}
     signatures = defaultdict(set)
     origins = defaultdict(set)
-    for path, source in sources:
-        found, locations = scan(path, source, aliases)
+    for path in paths:
+        resolved = Path(path).resolve()
+        found, locations = scan(path, sources[resolved], aliases_visible_from(resolved, sources))
         for name, types in found.items():
             signatures[name].update(types)
             origins[name].update(locations[name])
