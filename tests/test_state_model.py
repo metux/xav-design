@@ -3804,6 +3804,100 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertFalse(shared.signal_consumed)
 
 
+
+    def test_device_loss_quarantines_multiple_cross_queue_submit_present_callbacks(self):
+        def make_race():
+            shared = [
+                SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+                SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+            ]
+
+            def submit_state():
+                return SubmissionModel(
+                    command_buffers=[
+                        CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                    ],
+                    wait_states=[WaitState.READY, WaitState.READY],
+                    binary_signal_states=[
+                        BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED
+                    ],
+                    signal_slots=[None, None],
+                    semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+                    shared_semaphores=shared,
+                )
+
+            first, second = submit_state(), submit_state()
+            self.assertEqual(queue_submit(first, SubmitRequest(
+                token=920, signal_indices=(0,), signal_values=(0,)
+            )), "SUCCESS")
+            self.assertEqual(queue_submit(second, SubmitRequest(
+                token=921, signal_indices=(1,), signal_values=(0,)
+            )), "SUCCESS")
+
+            presents = []
+            for token, index in ((930, 0), (931, 1)):
+                present = PresentState(
+                    valid_wait_xids=(True, True),
+                    wait_states=[WaitState.READY, WaitState.READY],
+                    binary_signal_states=[
+                        BinarySignalState.SIGNAL_PENDING,
+                        BinarySignalState.SIGNAL_PENDING,
+                    ],
+                    shared_semaphores=shared,
+                )
+                self.assertTrue(queue_present(
+                    present, PresentRequest(token=token, wait_indices=(index,))
+                ).accepted)
+                presents.append((present, token, index))
+            return shared, first, second, presents
+
+        # The same pending operations are finalized in different orders after
+        # Submit observes device loss. The second queue's late callback claims
+        # its signal payload was unchanged, which must not restore a stale
+        # UNSIGNALED snapshot or contradict a Present callback.
+        orders = (
+            ("submit1", "present1"),
+            ("present1", "submit1"),
+            ("present0", "submit1", "present1"),
+        )
+        finals = []
+        for order in orders:
+            shared, first, second, presents = make_race()
+            self.assertEqual(mark_device_lost(first), "SUCCESS")
+            for event in order:
+                if event == "submit1":
+                    self.assertEqual(finish_submission(
+                        second, 921, success=True,
+                        binary_payload_unchanged={("signal", 1)},
+                    ), "SUCCESS")
+                else:
+                    present, token, index = presents[int(event[-1])]
+                    self.assertEqual(finish_present_wait(
+                        present, token, index, consumed=(event == "present0")
+                    ), "SUCCESS")
+
+            # All semaphores are device-scoped: callbacks cannot re-trust the
+            # signal owned by the other queue, regardless of arrival order.
+            self.assertTrue(all(item.device_lost for item in shared))
+            self.assertEqual(shared[1].signal_state, BinarySignalState.UNTRUSTED)
+            self.assertEqual(second.binary_signal_states[1], BinarySignalState.UNTRUSTED)
+            if "present1" in order:
+                self.assertEqual(presents[1][0].binary_signal_states[1],
+                                 BinarySignalState.UNTRUSTED)
+                self.assertEqual(presents[1][0].wait_states[1], WaitState.UNTRUSTED)
+                self.assertIsNone(shared[1].wait_reservation)
+            finals.append((shared, first, second, presents))
+
+        # Compare canonical shared payload state and the signal owner's mirror;
+        # each order may legitimately differ in which wait reservations drained.
+        for shared, first, second, presents in finals:
+            self.assertEqual(shared[0].signal_state, BinarySignalState.UNTRUSTED)
+            self.assertEqual(shared[1].signal_state, BinarySignalState.UNTRUSTED)
+            self.assertIsNone(shared[0].signal_reservation)
+            self.assertIsNone(shared[1].signal_reservation)
+            self.assertFalse(shared[1].signal_consumed)
+            self.assertEqual(second.pending_submissions, [])
+
     def test_present_device_loss_quarantines_late_submit_signal_callback(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
         submit = SubmissionModel(
