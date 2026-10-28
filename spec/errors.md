@@ -83,8 +83,8 @@ A later phase MUST NOT override an error from an earlier phase. In particular, m
 
 Normative precedence: (1) total length with checked count/overflow arithmetic and the X11 request limit (BadLength); (2) positive data_length and zero padding (BadValue); (3) device_xid, then buffer_xid in wire order (BadValue for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (BadMatch); (5) Device state (DEVICE_UNAVAILABLE / DEVICE_LOST); (6) Buffer binding, TRANSFER_DST, and range (BadMatch); (7) transfer/synchronization work.
 
-- Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
-- Falsche Request-Länge: `BadLength`
+- Total request length with arithmetic overflow or exceeding the connection's X11 limit: BadLength
+- Incorrect request length: BadLength
 - Zero length, nonzero padding, or invalid reserved fields: BadValue
 - Unknown/non-live XAverius XID: BadValue
 - Wrong type, wrong Device, unbound Buffer, missing TRANSFER_DST, or range outside the Buffer: BadMatch
