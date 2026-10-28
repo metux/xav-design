@@ -6,8 +6,9 @@ title="[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"
 : "${GH_REPO:?GH_REPO must identify owner/repository}"
 : "${RUN_URL:?RUN_URL must identify the monitor run}"
 
+export ALERT_TITLE="$title"
 existing="$(
-  ALERT_TITLE="$title" gh issue list --state open --limit 100 --json number,title |
+  gh issue list --state open --limit 100 --json number,title |
     python3 -c 'import json, os, sys; title = os.environ["ALERT_TITLE"]; print(next((str(issue["number"]) for issue in json.load(sys.stdin) if issue.get("title") == title), ""))'
 )"
 
