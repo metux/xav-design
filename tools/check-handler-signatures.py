@@ -52,18 +52,17 @@ def normalize_args(value):
     parts = []
     for item in split_top_level(value):
         item = compact(item)
-        # Parameter names inside function-pointer declarators are not types.
         item = re.sub(r"\(\s*\*\s*[A-Za-z_][A-Za-z0-9_]*\s*\)", "(*)", item)
-        # Remove an ordinary trailing parameter name, not a pointer star.
         item = re.sub(r"\s+[A-Za-z_][A-Za-z0-9_]*$", "", item)
         parts.append(item)
     return ", ".join(parts)
 
 
 def normalize_return(value):
+    """Remove storage/function specifiers without erasing type qualifiers."""
     value = compact(value)
     while True:
-        stripped = re.sub(r"^(static|extern|inline|register|const)\s+", "", value)
+        stripped = re.sub(r"^(static|extern|inline|register)\s+", "", value)
         if stripped == value:
             return value
         value = stripped
