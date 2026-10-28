@@ -262,6 +262,38 @@ def main():
                 {"directory": str(root), "file": str(conditional_b),
                  "arguments": ["cc", "-DHANDLER_KIND=1", "-c", str(conditional_b), "-o", "b.o"]},
             ]), encoding="utf-8")
+            # Also cover the shell-command form of compile_commands.json,
+            # -U, forced includes, and a header selected through -I.
+            flags_header = root / "flags" / "handler_flags.h"
+            flags_header.parent.mkdir()
+            flags_header.write_text(
+                "#if defined(HANDLER_KIND) && HANDLER_KIND == 2\n"
+                "typedef long FlagResult;\n"
+                "#else\n"
+                "typedef int FlagResult;\n"
+                "#endif\n",
+                encoding="utf-8",
+            )
+            flags_tu = root / "flags_tu.c"
+            flags_tu.write_text(
+                '#include "handler_flags.h"\n'
+                "FlagResult ProcFlagsReq(ClientPtr client) { return 0; }\n"
+                "static FlagResult (*FlagsVector[])(ClientPtr) = { ProcFlagsReq };\n",
+                encoding="utf-8",
+            )
+            forced = root / "forced.h"
+            forced.write_text("#define HANDLER_KIND 2\n", encoding="utf-8")
+            compile_db.write_text(json.dumps([
+                {"directory": str(root), "file": str(flags_tu),
+                 "command": f"cc -I{root / 'flags'} -UHANDLER_KIND -include {forced} -c {flags_tu} -o flags.o"},
+            ]), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(CHECKER), "--compile-db-root", str(root), str(flags_tu)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 0:
+                raise SystemExit("command-form compile flags or forced include were ignored:\\n" + result.stdout + result.stderr)
+
             result = subprocess.run(
                 [sys.executable, str(CHECKER), "--compile-db-root", str(root),
                  str(conditional_a), str(conditional_b)],
