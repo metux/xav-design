@@ -39,10 +39,11 @@ jobs:
           CI_MONITOR_GRACE_MINUTES: "20"
         run: python tools/check-ci-run-presence.py
       - name: Force the alert path for an explicit end-to-end test commit
+        id: force_test_alert
         if: contains(github.event.head_commit.message || '', '[test-ci-alert]')
         run: echo "result=missing" >> "$GITHUB_OUTPUT"
       - name: Create a visible GitHub issue for a missing CI run
-        if: steps.monitor.outputs.result == 'missing'
+        if: steps.monitor.outputs.result == 'missing' || steps.force_test_alert.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
