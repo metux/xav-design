@@ -49,6 +49,10 @@ from xa_state_model import (
     free_memory_lifetime,
     drop_buffer_internal_ref,
     descriptor_contents_submit_valid,
+    AsyncSubmissionEventRegistry,
+    AsyncSubmissionIdentity,
+    AsyncDeviceIdentity,
+    _unregister_semaphore_owner,
 )
 
 
@@ -3124,6 +3128,23 @@ class SemaphoreOwnerReferenceTests(unittest.TestCase):
         self.assertEqual({id(item) for item in registered if item is not None},
                          {id(owner), id(newcomer)})
         self.assertTrue(all(item is not None for item in registered))
+
+
+    def test_disconnect_unregisters_only_the_disconnected_semaphore_owner(self) -> None:
+        shared = SharedBinarySemaphore()
+        disconnected = SubmissionModel(shared_semaphores=[shared, shared])
+        surviving = PresentState(shared_semaphores=[shared])
+        self.assertEqual(
+            {id(owner_ref()) for owner_ref in shared.owners if owner_ref() is not None},
+            {id(disconnected), id(surviving)},
+        )
+
+        _unregister_semaphore_owner(disconnected)
+        remaining = [owner_ref() for owner_ref in shared.owners]
+        self.assertEqual(remaining, [surviving])
+        # Keep the disconnected model's local references for late callback
+        # cleanup; unregistering must not destroy shared synchronization state.
+        self.assertEqual(disconnected.shared_semaphores, [shared, shared])
 
 
     def test_device_loss_traversal_prunes_dead_and_duplicate_owner_references(self) -> None:
