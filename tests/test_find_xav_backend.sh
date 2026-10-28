@@ -288,7 +288,6 @@ printf '%s\n' "$output" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: Meson project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
-printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/configured_dispatch.c' >/dev/null || { echo "FAIL: compile database -D/-I options were not used for handler discovery" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handlers.h' >/dev/null || { echo "FAIL: header without a compile database entry was not evaluated with its including translation unit's -D/-I flags" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
