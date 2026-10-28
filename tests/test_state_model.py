@@ -3613,7 +3613,12 @@ class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
         self.assertTrue(shared.signal_consumed)
         self.assertEqual(shared.signal_reservation, ("submit", 811))
-        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        # Device-loss observation through Present updates the canonical
+        # semaphore, not another SubmissionModel's local mirror. That mirror
+        # remains SIGNAL_PENDING until its owner callback reconciles it.
+        self.assertEqual(
+            submit.binary_signal_states, [BinarySignalState.SIGNAL_PENDING]
+        )
 
         # The owning Submit callback retires its reservation exactly once;
         # device loss must not resurrect a signal known to have been consumed.
