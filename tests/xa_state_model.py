@@ -1114,10 +1114,14 @@ def finish_submission(
             # stale "payload unchanged" callback cannot restore an old mirror.
             current = BinarySignalState.UNTRUSTED
             state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+            if index < len(state.wait_states):
+                state.wait_states[index] = WaitState.UNTRUSTED
         if current is BinarySignalState.UNTRUSTED:
             # An unknown cross-API payload outcome is stronger than a stale
             # local "unchanged" report from the Submit callback.
             state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+            if index < len(state.wait_states):
+                state.wait_states[index] = WaitState.UNTRUSTED
         elif not effective_success:
             # A cross-API wait callback may already have proved that this
             # pending signal was consumed. Device Loss invalidates an
