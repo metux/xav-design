@@ -107,6 +107,39 @@ def main():
         require_conflict([return_a, return_b], "ProcConstReq",
                          "const-qualified return type conflict was not detected")
 
+        typedef_header = root / "handler_types.h"
+        typedef_header.write_text(
+            "typedef int (*BaseHandler)(ClientPtr);\n"
+            "typedef BaseHandler HandlerAlias;\n",
+            encoding="utf-8",
+        )
+        typedef_tu = root / "typedef_tu.c"
+        typedef_tu.write_text(
+            '#include "handler_types.h"\n'
+            "int ProcHeaderAliasReq(ClientPtr client) { return Success; }\n"
+            "static HandlerAlias RequestVector[] = { ProcHeaderAliasReq };\n",
+            encoding="utf-8",
+        )
+        result = run([typedef_tu, typedef_header])
+        if result.returncode != 0:
+            raise SystemExit("header typedef chain was not resolved across input files:\n" + result.stdout + result.stderr)
+
+        mismatch_header = root / "mismatch_types.h"
+        mismatch_header.write_text(
+            "typedef long (*BaseHandler)(ClientPtr);\n"
+            "typedef BaseHandler HandlerAlias;\n",
+            encoding="utf-8",
+        )
+        mismatch_tu = root / "mismatch_tu.c"
+        mismatch_tu.write_text(
+            '#include "mismatch_types.h"\n'
+            "int ProcHeaderAliasReq(ClientPtr client) { return Success; }\n"
+            "static HandlerAlias RequestVector[] = { ProcHeaderAliasReq };\n",
+            encoding="utf-8",
+        )
+        require_conflict([mismatch_tu, mismatch_header], "ProcHeaderAliasReq",
+                         "incompatible typedef chain from a separate header was missed")
+
         typedef_ok = root / "typedef_ok.c"
         typedef_ok.write_text(
             "typedef int (*HandlerProc)(ClientPtr);\n"
