@@ -1588,7 +1588,8 @@ class AsyncCallbackRegistry:
         resource.callback_count += 1
         # A stale resource/device or dead connection suppresses delivery. In
         # particular, never look up resource.xid in resources_by_xid here.
-        if (device.live and self.devices_by_xid.get(device.xid) is device
+        if (resource.device_identity == device.identity
+                and device.live and self.devices_by_xid.get(device.xid) is device
                 and connection_identity in self.connections_live):
             resource_xid = (
                 resource.xid if resource.live
