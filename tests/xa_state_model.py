@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from weakref import ReferenceType, ref
 
 
 class ImageState(str, Enum):
@@ -46,6 +47,75 @@ class SharedBinarySemaphore:
     # Durable evidence that a Submit signal was consumed, even after its
     # owner callback retires the transient reservation.
     signal_consumption_confirmed: bool = False
+    # Weak references let device loss fan out across partially overlapping
+    # semaphore sets without keeping otherwise-dead models alive.
+    owners: list[ReferenceType] = field(default_factory=list, repr=False, compare=False)
+
+
+def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
+    for shared in state.shared_semaphores:
+        live_owners = [owner for owner in shared.owners if owner() is not None]
+        if not any(owner() is state for owner in live_owners):
+            live_owners.append(ref(state))
+        shared.owners[:] = live_owners
+
+
+def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
+    """Propagate loss through the transitive closure of overlapping semaphore sets."""
+    pending = [origin]
+    seen_models: set[int] = set()
+    models: list[PresentState | SubmissionModel] = []
+    shared_seen: set[int] = set()
+    semaphores: list[SharedBinarySemaphore] = []
+    while pending:
+        state = pending.pop()
+        if id(state) in seen_models:
+            continue
+        seen_models.add(id(state))
+        models.append(state)
+        for shared in state.shared_semaphores:
+            if id(shared) not in shared_seen:
+                shared_seen.add(id(shared))
+                semaphores.append(shared)
+            for owner_ref in list(shared.owners):
+                owner = owner_ref()
+                if owner is not None and id(owner) not in seen_models:
+                    pending.append(owner)
+    for state in models:
+        state.device_lost = True
+    for shared in semaphores:
+        shared.device_lost = True
+    # Drain each connected model's accepted work before quarantining canonical
+    # payloads. Late callbacks then cannot resurrect any partially shared set.
+    for state in models:
+        if isinstance(state, SubmissionModel):
+            for token in list(state.pending_submissions):
+                finish_submission(state, token, success=False)
+        else:
+            for token in list(state.pending_present_tokens):
+                finish_present_terminal(state, token, "DEVICE_LOST")
+    for shared in semaphores:
+        known_empty = (
+            shared.signal_state is BinarySignalState.UNSIGNALED
+            and shared.signal_consumption_confirmed
+        )
+        if not known_empty:
+            shared.signal_state = BinarySignalState.UNTRUSTED
+            shared.signal_reservation = None
+            shared.signal_consumed = False
+    for state in models:
+        for index, shared in enumerate(state.shared_semaphores):
+            known_empty = (
+                shared.signal_state is BinarySignalState.UNSIGNALED
+                and shared.signal_consumption_confirmed
+            )
+            if index < len(state.binary_signal_states):
+                state.binary_signal_states[index] = (
+                    BinarySignalState.UNSIGNALED if known_empty
+                    else BinarySignalState.UNTRUSTED
+                )
+            if index < len(state.wait_states):
+                state.wait_states[index] = WaitState.UNTRUSTED
 
 
 @dataclass
@@ -69,6 +139,9 @@ class PresentState:
     pending_present_tokens: set[int] = field(default_factory=set)
     terminal_present_status: dict[int, str] = field(default_factory=dict)
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _register_semaphore_owner(self)
 
 
 @dataclass(frozen=True)
@@ -204,30 +277,8 @@ def finish_present_terminal(state: PresentState, token: int, status: str) -> str
 
 
 def mark_present_device_lost(state: PresentState) -> str:
-    """Device loss wins only for presentations not already terminalized."""
-    state.device_lost = True
-    for token in list(state.pending_present_tokens):
-        finish_present_terminal(state, token, "DEVICE_LOST")
-    for index, shared in enumerate(state.shared_semaphores):
-        shared.device_lost = True
-        # Preserve a consumed Submit payload even after its owner callback has
-        # retired the transient reservation. Merely UNSIGNALED semaphores are
-        # not enough: another accepted Present wait may still be unresolved.
-        known_empty = (
-            shared.signal_state is BinarySignalState.UNSIGNALED
-            and shared.signal_consumption_confirmed
-        )
-        if not known_empty:
-            shared.signal_state = BinarySignalState.UNTRUSTED
-            shared.signal_reservation = None
-            shared.signal_consumed = False
-        if index < len(state.binary_signal_states):
-            state.binary_signal_states[index] = (
-                BinarySignalState.UNSIGNALED if known_empty
-                else BinarySignalState.UNTRUSTED
-            )
-        if index < len(state.wait_states):
-            state.wait_states[index] = WaitState.UNTRUSTED
+    """Propagate device loss to all models connected by shared semaphores."""
+    _propagate_device_loss(state)
     return "SUCCESS"
 
 
@@ -679,6 +730,9 @@ class SubmissionModel:
     accepted_descriptor_set_refs: dict[int, list[DescriptorSetLifetime]] = field(default_factory=dict)
     accepted_buffer_refs: dict[int, list[BufferMemoryLifetime]] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _register_semaphore_owner(self)
+
 
 @dataclass(frozen=True)
 class SubmitRequest:
@@ -1100,38 +1154,8 @@ def finish_submission(
 
 
 def mark_device_lost(state: SubmissionModel) -> str:
-    """Atomically terminalize every accepted non-terminal submission on loss."""
-    state.device_lost = True
-    for shared in state.shared_semaphores:
-        # Publish device-wide loss first, but let each owning callback retire
-        # its reservation before deciding whether a payload was consumed.
-        shared.device_lost = True
-    # Snapshot tokens because finish_submission removes each token and its
-    # owned reservations. Backend quiescence is modeled separately by holds.
-    for token in list(state.pending_submissions):
-        finish_submission(state, token, success=False)
-    # A model may observe device loss while other queues still own shared
-    # semaphore reservations. Quarantine those canonical payloads immediately
-    # instead of waiting for the foreign owners' callbacks. Preserve only
-    # durable proof that a Submit payload was consumed and is already empty.
-    for index, shared in enumerate(state.shared_semaphores):
-        known_empty = (
-            shared.signal_state is BinarySignalState.UNSIGNALED
-            and shared.signal_consumption_confirmed
-        )
-        if not known_empty:
-            shared.signal_state = BinarySignalState.UNTRUSTED
-            shared.signal_reservation = None
-            shared.signal_consumed = False
-        if index < len(state.binary_signal_states):
-            state.binary_signal_states[index] = (
-                BinarySignalState.UNSIGNALED if known_empty
-                else BinarySignalState.UNTRUSTED
-            )
-        if index < len(state.wait_states):
-            state.wait_states[index] = (
-                WaitState.READY if known_empty else WaitState.UNTRUSTED
-            )
+    """Atomically terminalize work and propagate loss across shared sets."""
+    _propagate_device_loss(state)
     return "SUCCESS"
 
 
