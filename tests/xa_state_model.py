@@ -1074,10 +1074,9 @@ def mark_device_lost(state: SubmissionModel) -> str:
     """Atomically terminalize every accepted non-terminal submission on loss."""
     state.device_lost = True
     for shared in state.shared_semaphores:
+        # Publish device-wide loss first, but let each owning callback retire
+        # its reservation before deciding whether a payload was consumed.
         shared.device_lost = True
-        shared.signal_state = BinarySignalState.UNTRUSTED
-        shared.signal_reservation = None
-        shared.signal_consumed = False
     # Snapshot tokens because finish_submission removes each token and its
     # owned reservations. Backend quiescence is modeled separately by holds.
     for token in list(state.pending_submissions):
