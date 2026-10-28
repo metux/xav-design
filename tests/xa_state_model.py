@@ -80,17 +80,24 @@ def _unregister_semaphore_owner(state: PresentState | SubmissionModel) -> None:
     """Detach a disconnected model from shared-semaphore owner indexes.
 
     Keep the model's semaphore list intact: already accepted backend callbacks
-    still need those objects to retire their own reservations safely.
+    still need those objects to retire their own reservations safely. Normalize
+    each surviving index as well, so stale or duplicated owner links do not
+    accumulate when disconnect cleanup is retried.
     """
     seen_shared_ids: set[int] = set()
     for shared in state.shared_semaphores:
         if id(shared) in seen_shared_ids:
             continue
         seen_shared_ids.add(id(shared))
-        shared.owners[:] = [
-            owner_ref for owner_ref in shared.owners
-            if owner_ref() is not None and owner_ref() is not state
-        ]
+        live_owners: list[ReferenceType] = []
+        seen_owner_ids: set[int] = set()
+        for owner_ref in shared.owners:
+            owner = owner_ref()
+            if owner is None or owner is state or id(owner) in seen_owner_ids:
+                continue
+            seen_owner_ids.add(id(owner))
+            live_owners.append(owner_ref)
+        shared.owners[:] = live_owners
 
 
 def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
