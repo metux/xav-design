@@ -1662,7 +1662,7 @@ def _github_heading_slug(heading: str) -> str:
     """Approximate GitHub's heading slug rules using only the standard library."""
     heading = re.sub(r"!?(\[([^\]]*)\])\([^)]*\)", r"\2", heading)
     heading = re.sub(r"<[^>]+>", "", heading)
-    heading = re.sub(r"[\x60*_~]", "", heading).casefold()
+    heading = re.sub(r"[\x60*~]", "", heading).casefold()
     chars = []
     for char in heading:
         category = unicodedata.category(char)
