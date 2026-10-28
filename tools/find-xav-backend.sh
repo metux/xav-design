@@ -280,10 +280,29 @@ scan_project() {
               }
             }
           }' 2>/dev/null || :)
-        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ] || [ -n "$indirect_handlers" ]; then
+        # Macro-generated handler signatures are invisible to the ordinary
+        # function-definition heuristic. Require a local declaration macro.
+        macroclassic=$(printf '%s\n' "$code" | awk -v has_dispatch_macro="$(grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+DISPATCH_PROC([[:space:]]|\()' "$full" 2>/dev/null || :)" '
+          /DISPATCH_PROC[[:space:]]*\([[:space:]]*(Proc|SProc)[A-Za-z0-9_]*(Req|Request)?[[:space:]]*\)/ {
+            if (has_dispatch_macro == "") next
+            line=$0
+            if (match(line, /(Proc|SProc)[A-Za-z0-9_]*(Req|Request)?/)) {
+              name=substr(line,RSTART,RLENGTH)
+              if (name !~ /(Req|Request)$/) name=name "Req"
+              pending=NR
+              wait_body=1
+            }
+          }
+          wait_body {
+            if ($0 ~ /\{/) { print pending ":" name; wait_body=0 }
+            else if ($0 ~ /;/) wait_body=0
+          }
+        ' 2>/dev/null || :)
+        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ] || [ -n "$indirect_handlers" ] || [ -n "$macroclassic" ]; then
           dispatch=$((dispatch+1))
           [ -z "$req" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"
           [ -z "$classic" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$classic" >>"$matches"
+          [ -z "$macroclassic" ] || printf '  X11-HANDLER-MACRO: %s\n%s\n' "$f" "$macroclassic" >>"$matches"
           [ -z "$switchreq" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$switchreq" >>"$matches"
           [ -z "$indirect_handlers" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$indirect_handlers" >>"$matches"
           [ -z "$indirect_assignments" ] || printf '  X11-DISPATCH-ASSIGNMENT: %s\n%s\n' "$f" "$indirect_assignments" >>"$matches"
