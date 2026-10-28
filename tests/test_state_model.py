@@ -14,6 +14,8 @@ from xa_state_model import (
     SemaphoreKind,
     queue_present,
     finish_present_wait,
+    finish_present_terminal,
+    mark_present_device_lost,
     CommandBufferLifecycle,
     CommandBufferChunk,
     CommandBufferModel,
@@ -3976,6 +3978,53 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         )
         self.assertEqual(finish_submission(submit, 901, success=True), "BadValue")
         self.assertEqual((submit, present, shared), terminal)
+
+    def test_device_loss_terminalizes_pending_present_once_and_late_success_is_ignored(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=904, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.INVALID)
+        self.assertEqual(present.terminal_present_status, {904: "DEVICE_LOST"})
+        self.assertEqual(present.pending_present_tokens, set())
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        terminal = copy.deepcopy(present)
+        self.assertEqual(finish_present_terminal(present, 904, "SUCCESS"), "BadValue")
+        self.assertEqual(finish_present_terminal(present, 904, "DEVICE_LOST"), "BadValue")
+        self.assertEqual(present, terminal, "late terminal callbacks mutated device-loss state")
+
+        # Wait cleanup is a separate callback lifecycle: it can drain its
+        # reservation, but must not revive the image or semaphore payload.
+        self.assertEqual(finish_present_wait(present, 904, 0, consumed=True), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.INVALID)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(present.terminal_present_status, {904: "DEVICE_LOST"})
+        terminal = copy.deepcopy(present)
+        self.assertEqual(finish_present_wait(present, 904, 0, consumed=False), "BadValue")
+        self.assertEqual(present, terminal)
+
+    def test_late_device_loss_does_not_rewrite_already_terminal_present_success(self):
+        present = self.present_state()
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=905)
+        ).accepted)
+        self.assertEqual(finish_present_terminal(present, 905, "SUCCESS"), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.AVAILABLE)
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(present.terminal_present_status, {905: "SUCCESS"})
+        self.assertEqual(present.image_state, ImageState.AVAILABLE)
+        self.assertEqual(finish_present_terminal(present, 905, "DEVICE_LOST"), "BadValue")
+        self.assertEqual(present.pending_present_tokens, set())
+
 
     def test_stale_present_mirror_cannot_accept_wait_after_device_loss(self):
         shared = SharedBinarySemaphore(
