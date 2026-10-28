@@ -47,6 +47,9 @@ class SharedBinarySemaphore:
     # Durable evidence that a Submit signal was consumed, even after its
     # owner callback retires the transient reservation.
     signal_consumption_confirmed: bool = False
+    # Provenance survives the producer callback retiring its reservation, so
+    # a later Present wait can record confirmed consumption of that payload.
+    signal_from_submit: bool = False
     # Weak references let device loss fan out across partially overlapping
     # semaphore sets without keeping otherwise-dead models alive.
     owners: list[ReferenceType] = field(default_factory=list, repr=False, compare=False)
@@ -110,6 +113,7 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
             shared.signal_state = BinarySignalState.UNTRUSTED
             shared.signal_reservation = None
             shared.signal_consumed = False
+        shared.signal_from_submit = False
     for state in models:
         for index, shared in enumerate(state.shared_semaphores):
             known_empty = (
@@ -358,10 +362,13 @@ def finish_present_wait(
             shared.signal_state = BinarySignalState.UNSIGNALED
             if shared.signal_reservation is not None:
                 shared.signal_consumed = True
-            # The Present wait itself confirms that the binary payload is
-            # consumed, even if the originating Submit callback already
-            # retired its transient signal reservation.
-            shared.signal_consumption_confirmed = True
+            # Only a payload known to originate from Submit can establish
+            # durable Submit-consumption evidence. Provenance remains after
+            # the producer callback retires its transient reservation.
+            if (shared.signal_reservation is not None
+                    and shared.signal_reservation[0] == "submit") or shared.signal_from_submit:
+                shared.signal_consumption_confirmed = True
+            shared.signal_from_submit = False
     else:
         # A known non-consumed payload retains the canonical shared state.
         # The present model's local mirror may predate a competing Submit
@@ -956,6 +963,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 state.shared_semaphores[index].signal_reservation = ("submit", request.token)
                 state.shared_semaphores[index].signal_consumed = False
                 state.shared_semaphores[index].signal_consumption_confirmed = False
+                state.shared_semaphores[index].signal_from_submit = True
     if request.attach_fence:
         state.fence_attached = True
         state.fence_state_valid = False
@@ -1123,6 +1131,9 @@ def finish_submission(
                 # or that owner's later terminal callback could resurrect it.
                 if shared is not None and shared.signal_reservation is not None:
                     shared.signal_consumed = True
+                    if shared.signal_reservation[0] == "submit":
+                        shared.signal_consumption_confirmed = True
+                        shared.signal_from_submit = False
             state.binary_signal_states[index] = BinarySignalState.UNSIGNALED
             state.wait_states[index] = WaitState.READY
         else:
