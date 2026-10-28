@@ -29,8 +29,8 @@ jobs:
       - name: Audit handlers with repository compile databases when available
         shell: bash
         run: |
-          mapfile -t compile_databases < <(find . -type d \\\n            \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o \\\n            -name compile_commands.json -type f -print)
-          mapfile -t c_sources < <(find . -type d \\\n            \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o \\\n            -type f \\( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \\) -print)
+          mapfile -t compile_databases < <(find . -type d \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o -name compile_commands.json -type f -print)
+          mapfile -t c_sources < <(find . -type d \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) -print)
           if ((${#compile_databases[@]} > 0 && ${#c_sources[@]} > 0)); then
             python tools/check-handler-signatures.py --compile-db-root . "${c_sources[@]}"
           else
