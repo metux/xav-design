@@ -1536,6 +1536,7 @@ class AsyncResourceIdentity:
     live: bool = True
     backend_refs: int = 1
     callback_count: int = 0
+    completed_callback_tokens: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -1582,8 +1583,11 @@ class AsyncCallbackRegistry:
         connection_identity: str, *, token: str,
     ) -> str:
         """Finish captured work; event targets come from captured identities only."""
-        if resource.backend_refs <= 0:
+        # One operation token owns one backend reference. A duplicate
+        # completion must not consume a different operation's outstanding ref.
+        if (resource.backend_refs <= 0 or token in resource.completed_callback_tokens):
             return "BadValue"
+        resource.completed_callback_tokens.add(token)
         resource.backend_refs -= 1
         resource.callback_count += 1
         # A stale resource/device or dead connection suppresses delivery. In
