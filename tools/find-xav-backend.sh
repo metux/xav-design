@@ -8,6 +8,8 @@ PROGRAM=${0##*/}
 MAX_DEPTH=${MAX_DEPTH:-8}
 ALL=0
 ROOTS=""
+NL='
+'
 usage() {
     cat <<EOF
 Usage: $PROGRAM [--all] [search-root ...]
@@ -44,7 +46,7 @@ $d"
 fi
 [ -n "$ROOTS" ] || { echo "$PROGRAM: pass at least one search root" >&2; exit 2; }
 SEARCHER=grep
-command -v rg >/dev/null 2>&1 && SEARCHER=rg
+if [ "${USE_GREP:-0}" != 1 ] && command -v rg >/dev/null 2>&1; then SEARCHER=rg; fi
 tmp=${TMPDIR:-/tmp}/find-xav-backend.$$
 (umask 077 && mkdir "$tmp") || { echo "$PROGRAM: cannot create temporary directory" >&2; exit 2; }
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
