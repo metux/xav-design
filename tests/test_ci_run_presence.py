@@ -98,6 +98,7 @@ class VisibleAlertTests(unittest.TestCase):
     def test_workflow_has_visible_issue_notification_and_required_permission(self):
         workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
         self.assertIn("  issues: write", workflow)
+        self.assertRegex(workflow, r"(?ms)^concurrency:\n  group: xav-ci-run-monitor\n  cancel-in-progress: false\n.*?^jobs:")
         self.assertIn("if: steps.monitor.outputs.result == 'missing'", workflow)
         self.assertIn("bash tools/ensure-ci-alert-issue.sh", workflow)
         helper = (ROOT / "tools" / "ensure-ci-alert-issue.sh").read_text(encoding="utf-8")
@@ -142,6 +143,15 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
             ["bash", str(ROOT / "tools" / "ensure-ci-alert-issue.sh")],
             env=self.env, text=True, capture_output=True, check=False,
         )
+
+
+    def test_workflow_serializes_parallel_monitor_runs_before_issue_check(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
+        concurrency = workflow.split("jobs:", 1)[0]
+        self.assertIn("concurrency:", concurrency)
+        self.assertIn("group: xav-ci-run-monitor", concurrency)
+        self.assertIn("cancel-in-progress: false", concurrency)
+        self.assertLess(concurrency.index("concurrency:"), workflow.index("jobs:"))
 
     def test_existing_exact_title_open_issue_prevents_duplicate(self):
         title = "[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"
