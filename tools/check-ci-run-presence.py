@@ -53,7 +53,7 @@ def check_presence(now=None):
         )
 
     workflow_path = urllib.parse.quote(WORKFLOW, safe="")
-    query = urllib.parse.urlencode({"branch": BRANCH, "per_page": 100})
+    query = urllib.parse.urlencode({"branch": BRANCH, "event": "push", "per_page": 100})
     result = api_get(f"/repos/{repo_path}/actions/workflows/{workflow_path}/runs?{query}")
     runs = result.get("workflow_runs", [])
     matches = [run for run in runs if run.get("head_sha") == head_sha]
