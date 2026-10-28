@@ -62,6 +62,8 @@ class PresentState:
     pending_binary_waits: list[tuple[int, int]] = field(default_factory=list)
     accepted_tokens: set[int] = field(default_factory=set)
     pending_present_waits: list[tuple[int, int]] = field(default_factory=list)
+    pending_present_tokens: set[int] = field(default_factory=set)
+    terminal_present_status: dict[int, str] = field(default_factory=dict)
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
 
 
@@ -168,6 +170,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
 
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
+    state.pending_present_tokens.add(request.token)
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
         state.pending_present_waits.append((request.token, index))
@@ -175,6 +178,40 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
             state.shared_semaphores[index].wait_reservation = ("present", request.token)
     state.image_state = ImageState.PRESENT_PENDING
     return PresentResult("SUCCESS", True)
+
+
+def finish_present_terminal(state: PresentState, token: int, status: str) -> str:
+    """Commit one terminal outcome for an accepted QueuePresent exactly once."""
+    if token not in state.pending_present_tokens:
+        return "BadValue"
+    if status not in {
+        "SUCCESS", "OUT_OF_DATE", "SURFACE_LOST", "DEVICE_LOST",
+        "PRESENTATION_FAILED",
+    }:
+        return "BadValue"
+    state.pending_present_tokens.remove(token)
+    state.terminal_present_status[token] = status
+    if status == "SUCCESS":
+        state.image_state = ImageState.AVAILABLE
+    else:
+        state.image_state = ImageState.INVALID
+    return "SUCCESS"
+
+
+def mark_present_device_lost(state: PresentState) -> str:
+    """Device loss wins only for presentations not already terminalized."""
+    state.device_lost = True
+    for token in list(state.pending_present_tokens):
+        finish_present_terminal(state, token, "DEVICE_LOST")
+    for index, shared in enumerate(state.shared_semaphores):
+        shared.signal_state = BinarySignalState.UNTRUSTED
+        shared.signal_reservation = None
+        shared.signal_consumed = False
+        if index < len(state.binary_signal_states):
+            state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
+        if index < len(state.wait_states):
+            state.wait_states[index] = WaitState.UNTRUSTED
+    return "SUCCESS"
 
 
 def finish_present_wait(
