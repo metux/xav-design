@@ -16,6 +16,12 @@ def run(files):
     )
 
 
+def require_conflict(files, name, message):
+    result = run(files)
+    if result.returncode != 1 or f"CONFLICT: {name}" not in result.stdout:
+        raise SystemExit(message + ":\n" + result.stdout + result.stderr)
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="xav-handler-types-") as directory:
         root = Path(directory)
@@ -47,9 +53,9 @@ def main():
             "static int (*ProcVectorB[])(int) = { ProcSharedReq };\n",
             encoding="utf-8",
         )
+        require_conflict([conflict_a, conflict_b], "ProcSharedReq",
+                         "incompatible cross-TU handler signature was not detected")
         result = run([conflict_a, conflict_b])
-        if result.returncode != 1 or "CONFLICT: ProcSharedReq" not in result.stdout:
-            raise SystemExit("incompatible cross-TU handler signature was not detected:\n" + result.stdout + result.stderr)
         if "ClientPtr" not in result.stdout or "int" not in result.stdout:
             raise SystemExit("conflict report omitted the incompatible types:\n" + result.stdout)
 
@@ -65,9 +71,8 @@ def main():
             "static long (*RequestVectorB[])(ClientPtr) = { ProcTableReq };\n",
             encoding="utf-8",
         )
-        result = run([table_a, table_b])
-        if result.returncode != 1 or "CONFLICT: ProcTableReq" not in result.stdout:
-            raise SystemExit("incompatible dispatch function-pointer type was not detected:\n" + result.stdout + result.stderr)
+        require_conflict([table_a, table_b], "ProcTableReq",
+                         "incompatible dispatch function-pointer type was not detected")
 
         nested_a = root / "nested_a.c"
         nested_b = root / "nested_b.c"
@@ -82,14 +87,12 @@ def main():
         result = run([nested_a, nested_b])
         if result.returncode != 0:
             raise SystemExit("equivalent nested callback types incorrectly rejected:\n" + result.stdout + result.stderr)
-
         nested_b.write_text(
             "int ProcNestedReq(void (*other_callback)(int, long)) { return Success; }\n",
             encoding="utf-8",
         )
-        result = run([nested_a, nested_b])
-        if result.returncode != 1 or "CONFLICT: ProcNestedReq" not in result.stdout:
-            raise SystemExit("nested callback parameter conflict was not detected:\n" + result.stdout + result.stderr)
+        require_conflict([nested_a, nested_b], "ProcNestedReq",
+                         "nested callback parameter conflict was not detected")
 
         return_a = root / "return_a.c"
         return_b = root / "return_b.c"
@@ -101,9 +104,8 @@ def main():
             "char *ProcConstReq(ClientPtr client) { return 0; }\n",
             encoding="utf-8",
         )
-        result = run([return_a, return_b])
-        if result.returncode != 1 or "CONFLICT: ProcConstReq" not in result.stdout:
-            raise SystemExit("const-qualified return type conflict was not detected:\n" + result.stdout + result.stderr)
+        require_conflict([return_a, return_b], "ProcConstReq",
+                         "const-qualified return type conflict was not detected")
 
         typedef_ok = root / "typedef_ok.c"
         typedef_ok.write_text(
@@ -123,9 +125,38 @@ def main():
             "static HandlerProc RequestVector[] = { ProcTypedefReq };\n",
             encoding="utf-8",
         )
-        result = run([typedef_bad])
-        if result.returncode != 1 or "CONFLICT: ProcTypedefReq" not in result.stdout:
-            raise SystemExit("typedef-based dispatch return-type conflict was not detected:\n" + result.stdout + result.stderr)
+        require_conflict([typedef_bad], "ProcTypedefReq",
+                         "typedef-based dispatch return-type conflict was not detected")
+
+        nested_table = root / "nested_table.c"
+        nested_table.write_text(
+            "int ProcDeepReq(void (*callback)(int, int)) { return Success; }\n"
+            "static int (*DeepVector[])(void (*callback)(int, long)) = { ProcDeepReq };\n",
+            encoding="utf-8",
+        )
+        require_conflict([nested_table], "ProcDeepReq",
+                         "nested function-pointer dispatch type conflict was not detected")
+
+        nested_typedef = root / "nested_typedef.c"
+        nested_typedef.write_text(
+            "typedef int (*DeepHandler)(void (*callback)(int, long));\n"
+            "int ProcDeepTypedefReq(void (*callback)(int, int)) { return Success; }\n"
+            "static DeepHandler DeepVector[] = { ProcDeepTypedefReq };\n",
+            encoding="utf-8",
+        )
+        require_conflict([nested_typedef], "ProcDeepTypedefReq",
+                         "nested function-pointer typedef conflict was not detected")
+
+        compatible_nested = root / "compatible_nested.c"
+        compatible_nested.write_text(
+            "typedef int (*DeepHandler)(void (*callback)(int, int));\n"
+            "int ProcDeepCompatibleReq(void (*other)(int, int)) { return Success; }\n"
+            "static DeepHandler DeepVector[] = { ProcDeepCompatibleReq };\n",
+            encoding="utf-8",
+        )
+        result = run([compatible_nested])
+        if result.returncode != 0:
+            raise SystemExit("compatible nested function-pointer typedef rejected:\n" + result.stdout + result.stderr)
 
     print("handler signature regression tests: PASS")
 
