@@ -26,18 +26,10 @@ jobs:
         run: sh tests/test_find_xav_backend.sh
       - name: Test cross-translation-unit handler types and compiler flags
         run: python tests/test_handler_signatures.py
-      - name: Audit handlers with repository compile databases when available
-        shell: bash
-        run: |
-          mapfile -t compile_databases < <(find . -type d \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o -name compile_commands.json -type f -print)
-          mapfile -t c_sources < <(find . -type d \( -name .git -o -name node_modules -o -name vendor -o -name third_party -o -name generated -o -name target -o -name .cache -o -name .venv -o -name venv -o -name 'build-*' \) -prune -o -type f \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' \) -print)
-          if ((${#compile_databases[@]} > 0 && ${#c_sources[@]} > 0)); then
-            python tools/check-handler-signatures.py --compile-db-root . "${c_sources[@]}"
-          else
-            echo "No repository compile database/native C translation units found; synthetic compiler-flag regression tests remain authoritative for this checkout."
-          fi
+      - name: Require handler audit for native XAverius sources
+        run: python tools/check-handler-ci-gate.py .
       - name: Syntax-check checker and wire tests
-        run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tests/test_handler_signatures.py tests/test_wire_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
+        run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_wire_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
       - name: Validate request/reply matrix and XGE event layouts
         run: python tools/check-wire-layout.py
       - name: Run Timeline semaphore regressions
