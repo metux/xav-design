@@ -82,7 +82,7 @@ class VisibleAlertTests(unittest.TestCase):
                         code = MONITOR.main()
             output.seek(0)
             self.assertEqual(code, 1)
-            self.assertEqual(output.read(), "result=missing\\n")
+            self.assertEqual(output.read(), "result=missing\n")
 
     def test_api_error_is_not_classified_as_missing_run(self):
         with tempfile.NamedTemporaryFile(mode="r+", encoding="utf-8") as output:
@@ -92,7 +92,7 @@ class VisibleAlertTests(unittest.TestCase):
                         code = MONITOR.main()
             output.seek(0)
             self.assertEqual(code, 2)
-            self.assertEqual(output.read(), "result=error\\n")
+            self.assertEqual(output.read(), "result=error\n")
 
     def test_workflow_has_visible_issue_notification_and_required_permission(self):
         workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
