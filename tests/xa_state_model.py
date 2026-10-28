@@ -85,15 +85,15 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         state.device_lost = True
     for shared in semaphores:
         shared.device_lost = True
-    # Drain each connected model's accepted work before quarantining canonical
-    # payloads. Late callbacks then cannot resurrect any partially shared set.
-    for state in models:
-        if isinstance(state, SubmissionModel):
-            for token in list(state.pending_submissions):
-                finish_submission(state, token, success=False)
-        else:
-            for token in list(state.pending_present_tokens):
-                finish_present_terminal(state, token, "DEVICE_LOST")
+    # The reporting model terminalizes its own work. Other connected models
+    # observe device loss immediately but retain their tokens so their own late
+    # callbacks can retire reservations and references exactly once.
+    if isinstance(origin, SubmissionModel):
+        for token in list(origin.pending_submissions):
+            finish_submission(origin, token, success=False)
+    else:
+        for token in list(origin.pending_present_tokens):
+            finish_present_terminal(origin, token, "DEVICE_LOST")
     for shared in semaphores:
         known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
