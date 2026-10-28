@@ -3564,6 +3564,42 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
                         self.assertEqual(state.retired_recordings, [])
 
 
+class ClientDisconnectCallbackCleanupTests(unittest.TestCase):
+    def test_disconnect_drops_event_subscriptions_and_terminal_callback_link(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        device = AsyncDeviceIdentity("device-A", 17)
+        registry.register_device("client-A", device)
+        submission = AsyncSubmissionIdentity(
+            token=91,
+            connection_identity="client-A",
+            device_identity=device.identity,
+            device_xid=device.xid,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(submission), "SUCCESS")
+        self.assertEqual(
+            registry.select_queue_events("client-A", device.identity, (0, 0), 1),
+            "SUCCESS",
+        )
+        key = ("client-A", 91)
+        self.assertIn(key, registry.submissions)
+
+        registry.disconnect("client-A")
+        self.assertNotIn("client-A", registry.live_connections)
+        self.assertFalse(any(connection == "client-A"
+                             for connection, _queue in registry.queue_masks))
+        # Accepted backend work remains linked until its terminal callback
+        # retires it, but disconnect must suppress client event delivery.
+        self.assertIn(key, registry.submissions)
+        self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "SUCCESS")
+        self.assertEqual(submission.terminal, "COMPLETE")
+        self.assertNotIn(key, registry.submissions)
+        self.assertEqual(registry.emitted_events, [])
+        snapshot = dict(registry.submissions)
+        self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "BadValue")
+        self.assertEqual(registry.submissions, snapshot)
+
+
 class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
     """Device Loss must dominate late cross-API semaphore callback mirrors."""
 
