@@ -4558,6 +4558,55 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(finish_submission(submit, 901, success=True), "BadValue")
         self.assertEqual((submit, present, shared), terminal)
 
+    def test_present_device_lost_terminal_callback_propagates_and_late_submit_retires_once(self):
+        shared_ab = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        shared_bc = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_c = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        present_a = PresentState(
+            valid_wait_xids=(True,), wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared_ab],
+        )
+        present_b = PresentState(
+            valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED, BinarySignalState.UNSIGNALED],
+            shared_semaphores=[shared_ab, shared_bc],
+        )
+        submit_c = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED],
+            signal_slots=[None, None],
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            shared_semaphores=[shared_bc, shared_c],
+        )
+        self.assertTrue(queue_present(
+            present_a, PresentRequest(token=981, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(queue_submit(
+            submit_c, SubmitRequest(token=982, signal_indices=(1,), signal_values=(0,))
+        ), "SUCCESS")
+        self.assertEqual(shared_c.signal_reservation, ("submit", 982))
+
+        # The backend's Present terminal callback is the first loss report.
+        self.assertEqual(finish_present_terminal(present_a, 981, "DEVICE_LOST"), "SUCCESS")
+        self.assertEqual(present_a.terminal_present_status, {981: "DEVICE_LOST"})
+        self.assertEqual(present_a.image_state, ImageState.INVALID)
+        self.assertTrue(all(model.device_lost for model in (present_a, present_b, submit_c)))
+        self.assertTrue(all(item.device_lost for item in (shared_ab, shared_bc, shared_c)))
+        self.assertEqual(
+            [item.signal_state for item in (shared_ab, shared_bc, shared_c)],
+            [BinarySignalState.UNTRUSTED] * 3,
+        )
+        # The foreign Submit token remains owned by its callback, but its
+        # reservation is already quarantined and cannot be resurrected.
+        self.assertEqual(submit_c.pending_submissions, [982])
+        self.assertIsNone(shared_c.signal_reservation)
+        self.assertEqual(finish_submission(submit_c, 982, success=True), "SUCCESS")
+        after_first = copy.deepcopy((submit_c, present_a, present_b, shared_ab, shared_bc, shared_c))
+        self.assertEqual(finish_submission(submit_c, 982, success=False), "BadValue")
+        self.assertEqual((submit_c, present_a, present_b, shared_ab, shared_bc, shared_c), after_first)
+
     def test_device_loss_terminalizes_pending_present_once_and_late_success_is_ignored(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         present = PresentState(
