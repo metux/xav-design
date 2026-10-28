@@ -1548,6 +1548,35 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertFalse(shared.signal_consumed)
 
+    def test_failed_submit_with_unchanged_payload_clears_signal_provenance(self) -> None:
+        shared = SharedBinarySemaphore()
+        state = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=306, signal_indices=(0,), signal_values=(0,),
+            )),
+            "SUCCESS",
+        )
+        self.assertTrue(shared.signal_from_submit)
+        self.assertEqual(
+            finish_submission(
+                state, 306, success=False,
+                binary_payload_unchanged={("signal", 0)},
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_from_submit)
+        self.assertFalse(shared.signal_consumption_confirmed)
+
     def test_present_consumption_after_submit_completion_survives_later_device_loss(self) -> None:
         shared = SharedBinarySemaphore()
         producer = SubmissionModel(
