@@ -335,9 +335,16 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { e
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handlers.h' >/dev/null || { echo "FAIL: header without a compile database entry was not evaluated with its including translation unit's -D/-I flags" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'ProcConfiguredHeaderReq' >/dev/null || { echo "FAIL: first configured header variant was missed" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'ProcAlternateHeaderReq' >/dev/null || { echo "FAIL: alternate header handler enabled only in a second translation unit was missed" >&2; exit 1; }
-configured_count=$(printf '%s\\n' "$output" | grep -o 'ProcConfiguredHeaderReq' | wc -l)
+header_handlers=$(printf '%s\\n' "$output" | awk '
+    /X11-HANDLER: config\\/include\\/configured_handlers.h/ { in_header=1; next }
+    /^  [A-Z][A-Z0-9_-]*: / { in_header=0 }
+    in_header { print }
+')
+header_count=$(printf '%s\\n' "$output" | grep -F -c 'X11-HANDLER: config/include/configured_handlers.h')
+[ "$header_count" -eq 1 ] || { echo "FAIL: shared header was reported in $header_count handler blocks" >&2; exit 1; }
+configured_count=$(printf '%s\\n' "$header_handlers" | grep -o 'ProcConfiguredHeaderReq' | wc -l)
 [ "$configured_count" -eq 1 ] || { echo "FAIL: identical header handler was reported $configured_count times across equivalent translation units" >&2; exit 1; }
-alternate_count=$(printf '%s\\n' "$output" | grep -o 'ProcAlternateHeaderReq' | wc -l)
+alternate_count=$(printf '%s\\n' "$header_handlers" | grep -o 'ProcAlternateHeaderReq' | wc -l)
 [ "$alternate_count" -eq 1 ] || { echo "FAIL: alternate header handler was reported $alternate_count times" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
