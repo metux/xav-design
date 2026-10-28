@@ -107,30 +107,3 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
         self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
         self.assertEqual(timeline.terminal_waits, {80: "DEVICE_DESTROYED"})
         self.assertEqual(timeline.begin_host_wait(81, 9), "DEVICE_DESTROYED")
-
-
-if __name__ == "__main__":
-    unittest.main()
-
-
-    def test_terminal_gpu_signal_token_cannot_be_reused_after_success(self) -> None:
-        timeline = Timeline(counter=2)
-        self.assertEqual(timeline.reserve_gpu_signal(90, 8), "SUCCESS")
-        self.assertEqual(timeline.finish_gpu_signal(90, success=True), "SUCCESS")
-        before = copy.deepcopy(timeline)
-
-        # Reusing a completed token would let a delayed duplicate callback
-        # alias a new reservation with the same identity (an ABA race).
-        self.assertEqual(timeline.reserve_gpu_signal(90, 12), "BadValue")
-        self.assertEqual(timeline.finish_gpu_signal(90, success=False), "BadValue")
-        self.assertEqual(timeline, before)
-
-    def test_terminal_gpu_signal_token_cannot_be_reused_after_failure(self) -> None:
-        timeline = Timeline(counter=2)
-        self.assertEqual(timeline.reserve_gpu_signal(91, 8), "SUCCESS")
-        self.assertEqual(timeline.finish_gpu_signal(91, success=False), "SUCCESS")
-        before = copy.deepcopy(timeline)
-
-        self.assertEqual(timeline.reserve_gpu_signal(91, 12), "BadValue")
-        self.assertEqual(timeline.finish_gpu_signal(91, success=True), "BadValue")
-        self.assertEqual(timeline, before)
