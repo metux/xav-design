@@ -226,6 +226,46 @@ scan_project() {
             }
           }
         ' 2>/dev/null || :)
+        # Function-pointer assignments are common in Xorg extension setup.
+        # Report the assignment separately, and accept a target as a concrete
+        # handler only when its definition is present in this source file.
+        indirect=$(printf '%s\n' "$code" | awk '
+          /[[:alnum:]_]*(vector|Vector|dispatch|Dispatch|handler|Handler|ProcVector)[[:alnum:]_]*[[:space:]]*\[[^]]*\][[:space:]]*=/ ||
+          /[[:alnum:]_]*(vector|Vector|dispatch|Dispatch|handler|Handler|ProcVector)[[:alnum:]_]*[[:space:]]*=[[:space:]]*\&?[[:space:]]*(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+/ {
+            line=$0
+            while (match(line, /(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+/)) {
+              name=substr(line,RSTART,RLENGTH)
+              if (name !~ /Dispatch$/ && name !~ /Wrapper$/) targets[name]=NR
+              line=substr(line,RSTART+RLENGTH)
+            }
+            assignments[NR]=$0
+          }
+          { lines[NR]=$0 }
+          END {
+            for (i in assignments) print i ":" assignments[i]
+            for (name in targets) {
+              for (i=1; i<=NR; i++) {
+                if (lines[i] ~ ("(^|[^[:alnum:]_])" name "[[:space:]]*\\\\(")) {
+                  for (j=i; j<=NR && j<i+8; j++) {
+                    if (lines[j] ~ /\\{/) { defined[name]=i; break }
+                    if (lines[j] ~ /;/) break
+                  }
+                  if (name in defined) break
+                }
+              }
+            }
+            for (name in defined) print "HANDLER:" defined[name] ":" name
+          }
+        ' 2>/dev/null || :)
+        indirect_assignments=$(printf '%s\n' "$indirect" | grep -E '^[0-9]+:' 2>/dev/null || :)
+        indirect_handlers=$(printf '%s\n' "$indirect" | grep '^HANDLER:' 2>/dev/null | sed 's/^HANDLER://' || :)
+        # A forwarding helper that merely calls a Proc* routine is a wrapper,
+        # not an independently dispatched concrete request handler.
+        wrappercalls=$(printf '%s\n' "$code" | awk '
+          /(^|[^[:alnum:]_])[A-Za-z_][A-Za-z0-9_]*(wrapper|Wrapper|forward|Forward)[A-Za-z0-9_]*[[:space:]]*\(/ { wrapper=$0; active=1 }
+          active && /(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+[[:space:]]*\(/ { print NR ":" wrapper " => " $0 }
+          active && /}/ { active=0 }
+        ' 2>/dev/null || :)
         # Classic core handlers use ProcFooReq/SProcFooReq names even when
         # no local vector initializer is visible in this translation unit.
         classic=$(printf '%s\n' "$code" | awk '
@@ -240,11 +280,14 @@ scan_project() {
               }
             }
           }' 2>/dev/null || :)
-        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ]; then
+        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ] || [ -n "$indirect_handlers" ]; then
           dispatch=$((dispatch+1))
           [ -z "$req" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"
           [ -z "$classic" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$classic" >>"$matches"
           [ -z "$switchreq" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$switchreq" >>"$matches"
+          [ -z "$indirect_handlers" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$indirect_handlers" >>"$matches"
+          [ -z "$indirect_assignments" ] || printf '  X11-DISPATCH-ASSIGNMENT: %s\n%s\n' "$f" "$indirect_assignments" >>"$matches"
+          [ -z "$wrappercalls" ] || printf '  X11-WRAPPER-CALL: %s\n%s\n' "$f" "$wrappercalls" >>"$matches"
         fi
         generic=$(printf '%s\n' "$code" | grep -E '(^|[^[:alnum:]_])[A-Za-z_][A-Za-z0-9_]*(dispatch|Dispatch)[A-Za-z0-9_]*[[:space:]]*\\(' 2>/dev/null || :)
         if [ -n "$generic" ]; then printf '  X11-GENERIC-DISPATCH: %s\n%s\n' "$f" "$generic" >>"$matches"; fi
