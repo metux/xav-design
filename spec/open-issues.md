@@ -6,7 +6,7 @@ This file separates specification design gaps from implementation acceptance tes
 
 The request and event registries currently define 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation requests and event types remain profile-gated; their assignment does not imply support in the initial compute-only implementation.
 
-The remaining work before declaring the written contract frozen is to complete and record the normative cross-chapter audit and automated evidence gates in the freeze checklist. Do not treat the existence of registry values or a passing static checker alone as proof that every semantic contract has been reviewed. The checklist is the authoritative definition of the freeze evidence required.
+The repository-local Markdown link and heading-anchor audit is now automated in `tools/check-wire-layout.py`; it caught and corrected two stale fragments. The latest verified code commit for this check, `be14180755b17423577bc249f01713ab983ad594`, passed 4,575 wire-layout/documentation assertions and all 549 Python tests. The remaining normative freeze work is to finish and record the cross-chapter semantic audit, confirm that the required checks are present and non-skipped on the exact freeze candidate, and reconcile the final status/audit records. A passing static checker is evidence of internal consistency, not proof that every semantic contract has been reviewed or that runtime interoperability works. The checklist remains the authoritative definition of freeze evidence.
 
 ## Implementation acceptance work (not a missing wire assignment)
 
