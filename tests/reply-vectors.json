@@ -928,7 +928,7 @@
     },
     {
       "name": "EnumeratePhysicalDevices-name-2-bytes-little",
-      "event": "EnumeratePhysicalDevices-name-2-bytes",
+      "event": "EnumeratePhysicalDevices",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -939,7 +939,7 @@
     },
     {
       "name": "EnumeratePhysicalDevices-name-3-bytes-little",
-      "event": "EnumeratePhysicalDevices-name-3-bytes",
+      "event": "EnumeratePhysicalDevices",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -950,7 +950,7 @@
     },
     {
       "name": "EnumeratePhysicalDevices-name-2-bytes-big",
-      "event": "EnumeratePhysicalDevices-name-2-bytes",
+      "event": "EnumeratePhysicalDevices",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
@@ -961,7 +961,7 @@
     },
     {
       "name": "EnumeratePhysicalDevices-name-3-bytes-big",
-      "event": "EnumeratePhysicalDevices-name-3-bytes",
+      "event": "EnumeratePhysicalDevices",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
