@@ -95,10 +95,11 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         # Terminalize directly here: finish_present_terminal("DEVICE_LOST")
         # also initiates propagation when Device Loss is first reported by a
         # backend callback, so calling it recursively would re-enter this walk.
-        for token in list(origin.pending_present_tokens):
+        pending_present = list(origin.pending_present_tokens)
+        for token in pending_present:
             origin.pending_present_tokens.remove(token)
             origin.terminal_present_status[token] = "DEVICE_LOST"
-        if origin.pending_present_tokens or origin.terminal_present_status:
+        if pending_present:
             origin.image_state = ImageState.INVALID
     for shared in semaphores:
         known_empty = (
