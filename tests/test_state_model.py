@@ -3673,3 +3673,86 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
                          "DEPENDENCY_FAILED")
         self.assertEqual(submit, before)
         self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+
+
+class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
+    """Out-of-order wait completions must retire only their own reservations."""
+
+    def test_failed_lower_wait_callback_does_not_disturb_completed_higher_wait(self):
+        state = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=451, command_buffer_indices=(0,),
+                wait_indices=(0,), wait_values=(7,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=452, command_buffer_indices=(1,),
+                wait_indices=(0,), wait_values=(11,),
+            )),
+            "SUCCESS",
+        )
+
+        # A higher-target wait may finish first. Its callback must neither
+        # publish the waited value as the semaphore counter nor retire token
+        # 451's lower-target wait.
+        self.assertEqual(finish_submission(state, 452, success=True), "SUCCESS")
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(state.pending_timeline_waits, [(451, 0, 7)])
+        self.assertEqual(state.pending_submissions, [451])
+
+        # Failure of the remaining callback only drains its own wait. It must
+        # not rewrite the already-terminal higher submission or counter.
+        self.assertEqual(finish_submission(state, 451, success=False), "SUCCESS")
+        self.assertEqual(state.signal_counters, [3])
+        self.assertEqual(state.pending_timeline_waits, [])
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(
+            [buffer.lifecycle for buffer in state.command_buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.EXECUTABLE],
+        )
+        terminal = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 451, success=True), "BadValue")
+        self.assertEqual(finish_submission(state, 452, success=False), "BadValue")
+        self.assertEqual(state, terminal)
+
+    def test_duplicate_wait_values_owned_by_one_token_are_drained_together(self):
+        state = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.TIMELINE, SemaphoreKind.TIMELINE],
+            signal_counters=[2, 4],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=453, command_buffer_indices=(0,),
+                wait_indices=(0, 1), wait_values=(8, 13),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            state.pending_timeline_waits, [(453, 0, 8), (453, 1, 13)]
+        )
+        self.assertEqual(finish_submission(state, 453, success=False), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [])
+        self.assertEqual(state.signal_counters, [2, 4])
+        terminal = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 453, success=True), "BadValue")
+        self.assertEqual(state, terminal)
