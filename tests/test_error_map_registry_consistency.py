@@ -126,6 +126,35 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             self.assertIn(encoder, presentation_tests)
         self.assertIn('("little", "big")', presentation_tests)
 
+    def test_create_default_device_precedence_matches_normative_chapter(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        section = devices.split("## `CreateDefaultDevice`", 1)[1].split(
+            "## `DestroyDevice`", 1
+        )[0]
+        error_map = self.errors.split(
+            "- `CreateDefaultDevice`:", 1
+        )[1].split("- Beide Requests sind Void-Requests", 1)[0]
+        phases = (
+            "exact/formula-based request length",
+            "`queue_count`",
+            "target `device_xid`",
+            "XGE-1.0",
+            "suitable physical device",
+        )
+        for phase in phases:
+            with self.subTest(phase=phase):
+                self.assertIn(phase, section)
+                self.assertIn(phase, error_map)
+        self.assertLess(section.index("request length"), section.index("`queue_count`"))
+        self.assertLess(section.index("`queue_count`"), section.index("target `device_xid`"))
+        self.assertLess(section.index("target `device_xid`"), section.index("XGE 1.0-or-later"))
+        self.assertLess(section.index("XGE 1.0-or-later"), section.index("suitable physical device"))
+        self.assertLess(error_map.index("Request-Länge"), error_map.index("`queue_count`"))
+        self.assertLess(error_map.index("`queue_count`"), error_map.index("Ziel-XID"))
+        self.assertLess(error_map.index("Ziel-XID"), error_map.index("XGE-1.0"))
+        self.assertLess(error_map.index("XGE-1.0"), error_map.index("Auswahl eines geeigneten Physical Device"))
+        self.assertIn("bei jedem Fehler bleibt die Ziel-XID unbelegt", error_map)
+
     def test_conformance_keeps_profile_dispatch_boundary_explicit(self):
         self.assertIn(
             "requests 41–47 with core X11 `BadRequest` before parsing presentation payloads or resolving their XIDs",
