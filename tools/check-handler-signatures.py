@@ -36,11 +36,11 @@ def scan(path):
     origins = defaultdict(set)
     for match in FUNCTION.finditer(source):
         name = match.group("name")
-        signature = f"{compact(match.group('ret'))} ({compact(match.group('args'))})"
+        signature = f"{normalize_return(match.group('ret'))} ({normalize_args(match.group('args'))})"
         signatures[name].add(signature)
         origins[name].add(str(path))
     for match in TABLE.finditer(source):
-        pointer_type = f"{compact(match.group('ret'))} (*)({compact(match.group('args'))})"
+        pointer_type = f"{normalize_return(match.group('ret'))} (*)({normalize_args(match.group('args'))})"
         for name in HANDLER_REF.findall(match.group("body")):
             signatures[name].add(pointer_type)
             origins[name].add(f"{path} [{match.group('table')}]")
