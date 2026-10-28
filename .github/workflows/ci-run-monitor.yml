@@ -54,3 +54,8 @@ jobs:
           else
             gh issue create --title "$title" --body "The scheduled CI monitor found that branch tip docs/restructure-2026-10-21 has no matching push-triggered run of wire-layout.yml after the 20-minute grace period.\n\nMonitor run: $RUN_URL\n\nCheck workflow triggers, branch filters, and GitHub Actions availability. Close this issue after the missing run has been investigated and corrected."
           fi
+      - name: Fail visibly if the monitor itself could not complete
+        if: steps.monitor.outputs.result == 'error'
+        run: |
+          echo "::error title=CI monitor unavailable::The monitor could not query GitHub Actions. See the detection step logs."
+          exit 1
