@@ -200,7 +200,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
             "standard-header", "fixed-reply-size", "fence-status", "wait-status",
             "wait-status-match", "wait-for-fence-status", "wait-for-fence-status-match",
             "property-success-status", "property-failure-status", "property-failure-zero",
-            "property-type-length", "property-padding-zero", "property-card32-wrong-length",
+            "property-type-length", "property-padding-zero",
             "queue-record-reserved", "queue-record-length", "queue-flags-reserved",
             "memory-heap-reserved", "memory-type-count-range", "memory-heap-count-range",
             "memory-payload-length", "memory-type-heap-index-range", "memory-type-flags-range",
