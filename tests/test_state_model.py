@@ -3151,15 +3151,27 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         self.assertEqual(queue_submit(state, SubmitRequest(token=811, command_buffer_indices=(0,))), "SUCCESS")
         self.assertEqual(queue_submit(state, SubmitRequest(token=812, command_buffer_indices=(1,))), "SUCCESS")
         self.assertEqual(old.accepted_uses, 2)
+        before = copy.deepcopy((descriptor_set, old, new, cbs))
+        self.assertEqual(update_descriptor_sets(
+            [descriptor_set], (DescriptorWrite(0, 0, new.identity),), cbs,
+            buffers=[old, new],
+        ), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((descriptor_set, old, new, cbs), before)
+        self.assertEqual((old.accepted_uses, new.accepted_uses), (2, 0))
+        self.assertEqual(finish_submission(state, 812, True), "SUCCESS")
+        self.assertEqual((old.accepted_uses, new.accepted_uses), (1, 0))
+        self.assertEqual(update_descriptor_sets(
+            [descriptor_set], (DescriptorWrite(0, 0, new.identity),), cbs,
+            buffers=[old, new],
+        ), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(finish_submission(state, 811, False), "SUCCESS")
+        self.assertEqual((old.accepted_uses, new.accepted_uses), (0, 0))
         self.assertEqual(update_descriptor_sets(
             [descriptor_set], (DescriptorWrite(0, 0, new.identity),), cbs,
             buffers=[old, new],
         ), "SUCCESS")
-        self.assertEqual((old.accepted_uses, new.accepted_uses), (2, 0))
-        self.assertEqual(finish_submission(state, 812, True), "SUCCESS")
-        self.assertEqual((old.accepted_uses, new.accepted_uses), (1, 0))
-        self.assertEqual(finish_submission(state, 811, False), "SUCCESS")
-        self.assertEqual((old.accepted_uses, new.accepted_uses), (0, 0))
+        self.assertEqual(descriptor_set.slots, {0: new.identity})
+        self.assertEqual((old.descriptor_slot_refs, new.descriptor_slot_refs), (0, 1))
 
     def test_destroyed_buffer_waits_for_all_submissions_and_backend_access(self) -> None:
         state, descriptor_set, buffer = self.shared_state()
