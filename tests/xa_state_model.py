@@ -92,8 +92,14 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         for token in list(origin.pending_submissions):
             finish_submission(origin, token, success=False)
     else:
+        # Terminalize directly here: finish_present_terminal("DEVICE_LOST")
+        # also initiates propagation when Device Loss is first reported by a
+        # backend callback, so calling it recursively would re-enter this walk.
         for token in list(origin.pending_present_tokens):
-            finish_present_terminal(origin, token, "DEVICE_LOST")
+            origin.pending_present_tokens.remove(token)
+            origin.terminal_present_status[token] = "DEVICE_LOST"
+        if origin.pending_present_tokens or origin.terminal_present_status:
+            origin.image_state = ImageState.INVALID
     for shared in semaphores:
         known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
@@ -277,6 +283,11 @@ def finish_present_terminal(state: PresentState, token: int, status: str) -> str
         state.image_state = ImageState.AVAILABLE
     else:
         state.image_state = ImageState.INVALID
+    if status == "DEVICE_LOST":
+        # A backend terminal callback may be the first observer of Device Loss.
+        # Propagate it across shared semaphore owners just like the explicit
+        # device-loss notification path; this terminal token is already retired.
+        _propagate_device_loss(state)
     return "SUCCESS"
 
 
