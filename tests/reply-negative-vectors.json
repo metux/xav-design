@@ -734,21 +734,21 @@
       "name": "property-card64-wrong-length-little",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "little",
-      "wire_hex": "0100341203000000000000000000000000000000000000000000000000000000000000000200000004000000",
+      "wire_hex": "010034120100000000000000020000000400000000000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
       "name": "property-card32-array-nonmultiple-length-little",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "little",
-      "wire_hex": "0100341203000000000000000000000000000000000000000000000000000000000000000600000006000000",
+      "wire_hex": "01003412020000000000000006000000060000000000000000000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
       "name": "property-card64-array-nonmultiple-length-little",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "little",
-      "wire_hex": "010034120300000000000000000000000000000000000000000000000000000000000000070000000c000000",
+      "wire_hex": "010034120300000000000000070000000c000000000000000000000000000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
@@ -769,21 +769,21 @@
       "name": "property-card64-wrong-length-big",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "big",
-      "wire_hex": "0100123400000003000000000000000000000000000000000000000000000000000000000000000200000004",
+      "wire_hex": "010012340000000100000000000000020000000400000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
       "name": "property-card32-array-nonmultiple-length-big",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "big",
-      "wire_hex": "0100123400000003000000000000000000000000000000000000000000000000000000000000000600000006",
+      "wire_hex": "01001234000000020000000000000006000000060000000000000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
       "name": "property-card64-array-nonmultiple-length-big",
       "kind": "GetPhysicalDeviceProperty-success",
       "byte_order": "big",
-      "wire_hex": "010012340000000300000000000000000000000000000000000000000000000000000000000000070000000c",
+      "wire_hex": "010012340000000300000000000000070000000c000000000000000000000000000000000000000000000000",
       "violates": "property-type-length"
     },
     {
