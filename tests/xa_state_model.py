@@ -1687,9 +1687,15 @@ class AsyncSubmissionEventRegistry:
         )
         return "SUCCESS"
 
-    def finish_wait(self, connection: str, token: int) -> str:
-        key = (connection, token)
-        if key not in self.wait_registrations:
+    def finish_wait(self, registration: AsyncWaitIdentity) -> str:
+        """Retire only the exact wait captured by its callback.
+
+        Connection/token pairs can be reused after disconnect. Resolving a
+        delayed callback by that pair alone could otherwise cancel a newer
+        wait registered under the same pair.
+        """
+        key = (registration.connection_identity, registration.token)
+        if self.wait_registrations.get(key) is not registration:
             return "BadValue"
         del self.wait_registrations[key]
         return "SUCCESS"
