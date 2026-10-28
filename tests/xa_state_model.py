@@ -1749,11 +1749,14 @@ class AsyncSubmissionEventRegistry:
         self.submissions.pop(key, None)
         return "SUCCESS"
 
-    def async_error(self, connection: str, device_identity: str, token: int) -> str:
-        """ASYNC_ERROR is unmasked but still bound to its original connection/device."""
-        device = self.live_devices.get(device_identity)
-        if connection in self.live_connections and device is not None and device.live:
-            self.emitted_events.append(("ASYNC_ERROR", connection, device.xid, token))
+    def async_error(
+        self, connection: str, captured_device: AsyncDeviceIdentity, token: int,
+    ) -> str:
+        """Deliver only if the callback's captured device generation is still live."""
+        device = self.live_devices.get(captured_device.identity)
+        if (connection in self.live_connections and captured_device.live
+                and device is captured_device):
+            self.emitted_events.append(("ASYNC_ERROR", connection, captured_device.xid, token))
         return "SUCCESS"
 
 @dataclass
