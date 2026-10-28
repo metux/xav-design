@@ -42,6 +42,49 @@ class NegativeContractRegressionTests(unittest.TestCase):
             with self.subTest(contract=phrase):
                 self.assertIn(phrase, joined)
 
+    def test_synchronization_request_precedence_matches_normative_phase_order(self) -> None:
+        sync = read("spec/synchronization.md")
+        queue = read("spec/queue-submission.md")
+        errors = self.errors
+        cases = (
+            ("SignalSemaphore", sync.split("## `SignalSemaphore`", 1)[1].split("\\n## ", 1)[0],
+             errors.split("- `SignalSemaphore`:", 1)[1].split("\\n- `WaitSemaphores`:", 1)[0],
+             ("exact 24-byte request length", "resolve the Device XID, then the Semaphore XID",
+              "validate resource type, ownership, and cross-device association",
+              "check Device state", "validate Timeline type and signal-value/reservation rules")),
+            ("WaitSemaphores", sync.split("## `WaitSemaphores`", 1)[1].split("\\n## ", 1)[0],
+             errors.split("- `WaitSemaphores`:", 1)[1].split("\\n- `GetFenceStatus`:", 1)[0],
+             ("length and checked arithmetic", "`semaphore_count != 0`", "resolve the device XID and then semaphore XIDs in array order",
+              "check resource type, client/device ownership, and cross-device association",
+              "check device state", "verify that all semaphores are timeline semaphores")),
+        )
+        for name, normative, mapped, phases in cases:
+            with self.subTest(request=name):
+                positions = [normative.find(phrase) for phrase in phases]
+                self.assertTrue(all(position >= 0 for position in positions), positions)
+                self.assertEqual(positions, sorted(positions))
+                self.assertIn("Device loss", normative)
+                self.assertIn("Device loss", mapped)
+
+        queue_phases = (
+            "incorrect total length",
+            "syntactic fields are checked",
+            "required XIDs are resolved in wire order",
+            "resource type, client/device ownership, and queue association",
+            "unavailable or lost device takes precedence over mutable submission state",
+            "first the optional fence state",
+            "command buffers in array order",
+            "wait entries in array order",
+            "finally signal entries in array order",
+        )
+        queue_section = queue.split("Error precedence (the first applicable phase wins):", 1)[1].split("\\n\\n", 1)[0]
+        positions = [queue_section.find(phrase) for phrase in queue_phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("QueueSubmit", errors)
+        self.assertIn("DEVICE_LOST", queue_section)
+        self.assertIn("rejected request is atomic", queue_section)
+
     def test_write_buffer_length_precedes_scalar_and_resource_errors(self) -> None:
         memory = read("spec/memory-buffers.md")
         write_spec = memory.split("## 5.7 `WriteBuffer`", 1)[1].split(
