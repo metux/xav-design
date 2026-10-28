@@ -2072,6 +2072,56 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.pending_timeline_waits, [])
 
 
+    def test_device_loss_drains_competing_timeline_waits_after_reverse_callback(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                for _ in range(2)
+            ],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[2],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=441, command_buffer_indices=(0,),
+                wait_indices=(0,), wait_values=(8,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(
+                token=442, command_buffer_indices=(1,),
+                wait_indices=(0,), wait_values=(12,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            state.pending_timeline_waits, [(441, 0, 8), (442, 0, 12)]
+        )
+
+        # The higher-target wait callback arrives first. It retires only its
+        # own wait and must not synthesize a timeline counter update.
+        self.assertEqual(finish_submission(state, 442, success=True), "SUCCESS")
+        self.assertEqual(state.pending_timeline_waits, [(441, 0, 8)])
+        self.assertEqual(state.signal_counters, [2])
+
+        # Device loss terminalizes the remaining wait. A later callback for
+        # that token must not restore the wait or mutate terminal state.
+        self.assertEqual(mark_device_lost(state), "SUCCESS")
+        self.assertEqual(state.pending_submissions, [])
+        self.assertEqual(state.pending_timeline_waits, [])
+        self.assertEqual(state.signal_counters, [2])
+        self.assertEqual(state.pending_command_buffers, [])
+        self.assertEqual(
+            [buffer.lifecycle for buffer in state.command_buffers],
+            [CommandBufferLifecycle.INVALID, CommandBufferLifecycle.INVALID],
+        )
+        before = copy.deepcopy(state)
+        self.assertEqual(finish_submission(state, 441, success=True), "BadValue")
+        self.assertEqual(finish_submission(state, 442, success=False), "BadValue")
+        self.assertEqual(state, before, "late callbacks mutated device-loss terminal state")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
