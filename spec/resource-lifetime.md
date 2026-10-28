@@ -69,7 +69,7 @@ Other relationships are dependencies, not automatic ownership relationships:
 - Buffer ↔ Memory
 - Pipeline ↔ Pipeline Layout
 - Pipeline ↔ Shader Module during creation
-- Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
+- Pipeline Layout ↔ Descriptor Set Layout during creation
 - Command buffer ↔ resources used by recorded commands
 
 The implementation MUST NOT assume that every object whose handle was used to create another object must remain alive indefinitely. The applicable Vulkan lifetime rules determine the required lifetime.
@@ -126,19 +126,19 @@ Eligibility for the generic request does not replace type-specific lifetime chec
 
 - Buffer: the pending-use rules, command-buffer invalidation, and stale descriptor-slot rules described above apply.
 - Pipeline and pipeline layout: references from a `RECORDING` command buffer prevent destruction; pending use also prevents it. On successful destruction, non-pending `EXECUTABLE` command buffers with matching references become `INVALID`.
-- Shader Module und Descriptor Set Layout: Nach Ende ihrer erforderlichen Erstellungs-/Pipeline-Layout-Abhängigkeit gelten die jeweiligen Vulkan-Lebensdauerregeln.
+- Shader Module and Descriptor Set Layout: after their required creation/Pipeline Layout dependency has ended, the applicable Vulkan lifetime rules apply.
 
-Jede Ablehnung ist atomar und lässt die öffentliche XID, interne Lebensdauerzustände und abhängige Command-Buffer-Zustände unverändert. Bei Erfolg wird die öffentliche XID im Request sofort ungültig; interne Objekte bleiben bis zum Ende aller erforderlichen Referenzen und Backend-Zugriffe erhalten. Die Device-weite Kaskadeninvalidierung bei `DestroyDevice` oder Client-Disconnect bleibt davon unberührt. Device Loss allein invalidiert keine öffentlichen XIDs; er terminalisiert angenommene Arbeit und verändert die betroffenen Ressourcen- und Synchronisationszustände gemäß den nachfolgenden Regeln.
+Every rejection is atomic and leaves the public XID, internal lifetime states, and dependent Command Buffer states unchanged. On success, the public XID becomes invalid during the request; internal objects remain retained until all required references and backend accesses have ended. Device-wide cascading invalidation during `DestroyDevice` or client disconnect is unaffected. Device loss alone does not invalidate public XIDs; it terminalizes accepted work and changes affected resource and synchronization states according to the rules below.
 
 ## Dedicated destruction requests
 
-`DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets` und `FreeMemory` bleiben eigene Requests, weil sie eigene Ownership-, Kaskaden- oder Speicherfreigaberegeln besitzen. `DestroyFence` und `DestroySemaphore` sind ebenfalls dedizierte Requests; sie sind ausdrücklich **nicht** über `DestroyResource` aufrufbar. Das verhindert zwei Wire-Pfade mit unterschiedlichen Zustandsprüfungen für dasselbe Synchronisationsobjekt.
+`DestroyDevice`, `DestroyCommandPool`, `DestroyDescriptorPool`, `FreeDescriptorSets`, and `FreeMemory` remain separate requests because they have their own ownership, cascade, or memory-release rules. `DestroyFence` and `DestroySemaphore` are also dedicated requests; they are explicitly **not** callable through `DestroyResource`. This avoids two wire paths with different state checks for the same synchronization object.
 
-`FreeMemory` invalidiert die Memory-XID nur bei Erfolg. Gebundene Buffer führen zu `BadMatch`; angenommene GPU-Arbeit, die auf die Allokation zugreift, führt zu `INVALID_SYNCHRONIZATION_STATE`. XAverius v0.1 kennt kein Unbind/Rebind, daher müssen alle gebundenen Buffer zuerst zerstört werden.
+`FreeMemory` invalidates the Memory XID only on success. Bound Buffers result in `BadMatch`; accepted GPU work accessing the allocation results in `INVALID_SYNCHRONIZATION_STATE`. XAverius v0.1 has no unbind/rebind operation, so all bound Buffers MUST be destroyed first.
 
 ## Device Destruction and Client Disconnect
 
-Bei erfolgreichem `DestroyDevice` oder Client-Disconnect werden die öffentlichen XIDs des logischen Devices und seiner Ressourcen ungültig; danach sind sie für neue Requests nicht mehr adressierbar. Die Kaskadeninvalidierung darf nicht an normalen Pending-Use-Ablehnungen scheitern. Sie ändert aber nicht rückwirkend bereits angenommene Arbeit: Bei normalem Teardown muss diese Arbeit ihren tatsächlichen terminalen Ausgang erreichen, und interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten.
+On successful `DestroyDevice` or client disconnect, the public XIDs of the logical Device and its resources become invalid and are no longer addressable by new requests. Cascading invalidation MUST NOT be blocked by ordinary pending-use rejections. It does not retroactively change work that was already accepted: during normal teardown, that work must reach its actual terminal outcome, and internal Vulkan objects remain retained until all backend accesses have ended.
 
 ### Cross-resource teardown and backing-memory release
 
@@ -154,20 +154,20 @@ A client disconnect ends event delivery for that X11 connection only. The server
 
 Open server-side host waits belonging to a disconnected connection are cancelled and removed from wait registrations; no reply is generated because the connection is closed. Cancelling a host wait does not cancel an already accepted GPU submission and does not change its terminal outcome or Semaphore/Fence state. References used only by the cancelled wait registration are released once cancellation is established atomically; references held by active backend operations remain under the normal lifetime rules.
 
-Konkurrierende Wait-Abschlüsse werden anhand der serialisierten serverseitigen Zustandsübergänge entschieden. Für einen offenen Wait gewinnt der erste festgestellte terminale Ausgang: bereits festgestellte Erfüllung beziehungsweise ein bereits festgestellter Timeout bleibt bestehen; zuerst erkannter Device Loss beendet den Wait mit `DEVICE_LOST`; wird `DestroyDevice` verarbeitet, solange der Wait noch offen ist und Device Loss noch nicht festgestellt wurde, endet er mit `DEVICE_DESTROYED`. Der Disconnect entfernt den Wait ohne Reply. Ein späterer Übergang darf den bereits terminalen Wait nicht überschreiben.
+Competing wait completions are resolved through serialized server-side state transitions. For an open wait, the first terminal outcome established wins: an already-established satisfaction or timeout remains final; the first detected Device loss terminates the wait with `DEVICE_LOST`; if `DestroyDevice` is processed while the wait is still open and Device loss has not been detected, the wait ends with `DEVICE_DESTROYED`. Disconnect removes the wait without a reply. A later transition MUST NOT overwrite an already-terminal wait.
 
 After successful processing of `DestroyDevice`, the server MUST NOT generate or deliver new XAverius events whose `device_xid` identifies the destroyed logical Device. This includes `DEVICE_LOST`, `DEVICE_IDLE`, `DEVICE_MEMORY_PRESSURE`, `SUBMISSION_COMPLETE`, `SUBMISSION_FAILED`, and `ASYNC_ERROR`; for `ASYNC_ERROR`, the destroyed Device XID MUST NOT be emitted as `device_xid` or `resource_xid`. Events generated and queued in the X11 output stream before `DestroyDevice` was processed remain unaffected. Suppressing delivery does not change the internal terminal outcome of accepted submissions or the requirement to retain backend references until possible accesses have ended. Device and Queue event selections are removed during cascading invalidation.
 
-Die interne Bereinigung muss sicher und unabhängig von der öffentlichen XID-Verfügbarkeit erfolgen. Der Server darf nicht unbegrenzt auf einem hängenden oder verlorenen Device warten. Wenn das Device verloren ist, gelten die folgenden Device-Loss-Regeln; der Server darf erfolgreiche GPU-Completion nicht vortäuschen.
+Internal cleanup MUST be safe and independent of public XID availability. The server MUST NOT wait indefinitely for a hung or lost Device. If the Device is lost, the following Device-loss rules apply; the server MUST NOT fabricate successful GPU completion.
 
 ## Device Loss and Terminal Cleanup
 
-Wird ein logisches Device als verloren erkannt, gilt für alle darauf angenommenen, noch nicht terminalen Submissions:
+When a logical Device is detected as lost, the following rules apply to all its accepted submissions that have not yet reached a terminal state:
 
-- Jede Submission endet als fehlgeschlagen mit Status `DEVICE_LOST`; sie darf nicht als erfolgreich abgeschlossen gemeldet werden.
-- Zugehörige Fences wechseln nach `FAILED`, nicht nach `SIGNALED`.
-- Betroffene Command Buffer wechseln nach Ende ihrer Pending-Phase nach `INVALID` und sind nicht erneut einreichbar.
-- Interne Ressourcenreferenzen bleiben so lange erhalten, wie der Backend-Treiber oder die Serverbereinigung noch auf sie zugreifen kann. Ihre Freigabe darf nicht von einer GPU-Completion abhängen, die nach Device Loss nicht mehr eintreten kann.
+- Each submission terminates as failed with status `DEVICE_LOST`; it MUST NOT be reported as successfully completed.
+- Associated Fences transition to `FAILED`, not `SIGNALED`.
+- Affected Command Buffers transition to `INVALID` after leaving the pending phase and MUST NOT be submitted again.
+- Internal resource references remain retained for as long as the backend driver or server cleanup may access them. Releasing them MUST NOT depend on GPU completion that may never occur after Device loss.
 
 Individual resource-specific Destroy/Free requests are not categorically forbidden after Device loss: they may proceed when their ownership, recording, and lifetime checks are satisfied. Because affected submissions and open host waits are terminalized when Device loss is detected, they MUST NOT remain blockers solely because of their former pending state. `DestroyResource`, `DestroyFence`, `DestroySemaphore`, `DestroyCommandPool`, `DestroyDescriptorPool`, and `FreeDescriptorSets` remain logical cleanup paths under their respective rules; recording references continue to block destruction wherever the request rules require it. `FreeMemory` remains blocked while an internally live Buffer is bound or backend accesses to the allocation may still occur. A logical destroy may invalidate public XIDs but MUST NOT force premature release of internal backend objects.
 
