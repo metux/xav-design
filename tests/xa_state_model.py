@@ -827,6 +827,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             or (request.wait_stage_masks and len(request.wait_stage_masks) != len(request.wait_indices))):
         return "BadLength"
     if (not state.scalar_valid or request.token == 0
+            or len(set(request.command_buffer_indices)) != len(request.command_buffer_indices)
             or len(set(request.wait_indices)) != len(request.wait_indices)
             or len(set(request.signal_indices)) != len(request.signal_indices)
             or bool(set(request.wait_indices) & set(request.signal_indices))
