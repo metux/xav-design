@@ -2751,6 +2751,26 @@ class UpdateDescriptorSetsIndirectReferenceTests(unittest.TestCase):
         self.assertEqual(cb.lifecycle, CommandBufferLifecycle.EXECUTABLE)
         self.assertEqual(cb.entries, [b"recorded bind"])
 
+    def test_duplicate_slot_writes_are_rejected_atomically(self) -> None:
+        descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A"})
+        buffer_a = BufferMemoryLifetime(identity="buffer-A", descriptor_slot_refs=1)
+        buffer_b = BufferMemoryLifetime(identity="buffer-B")
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={"buffer-A"},
+        )
+        before = copy.deepcopy((descriptor_set, buffer_a, buffer_b, cb))
+        self.assertEqual(
+            update_descriptor_sets(
+                [descriptor_set],
+                (DescriptorWrite(0, 0, "buffer-B"), DescriptorWrite(0, 0, None)),
+                [cb], buffers=[buffer_a, buffer_b],
+            ),
+            "BadValue",
+        )
+        self.assertEqual((descriptor_set, buffer_a, buffer_b, cb), before)
+
     def test_update_batch_validation_failure_preserves_slots_and_all_cb_refs(self) -> None:
         descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A"})
         cb = CommandBufferModel(
