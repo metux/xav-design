@@ -165,7 +165,7 @@ scan_project() {
         dispatch_code=$code
         case "$f" in *.c|*.h)
           if command -v "${CC:-cc}" >/dev/null 2>&1; then
-            preprocessed=$(cd "$repo" && "${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
+            preprocessed=$("${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
             if [ -n "$preprocessed" ]; then
               # Keep macro expansions at their call sites in this translation
               # unit, but discard declarations/definitions pulled in from
