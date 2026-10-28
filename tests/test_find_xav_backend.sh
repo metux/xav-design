@@ -35,17 +35,24 @@ cat >"$cmake/config/include/xav_build_config.h" <<'EOF'
 #define XAV_CONFIGURED_HANDLER 1
 #endif
 EOF
-cat >"$cmake/src/configured_dispatch.c" <<'EOF'
+cat >"$cmake/config/include/configured_handlers.h" <<'EOF'
 #include <xav_build_config.h>
 #ifdef XAV_CONFIGURED_HANDLER
-static int (*ProcVector[])(ClientPtr) = {
-    ProcConfiguredBuildReq,
+static int (*ConfiguredProcVector[])(ClientPtr) = {
+    ProcConfiguredHeaderReq,
 };
-int ProcConfiguredBuildReq(ClientPtr client)
+static int ProcConfiguredHeaderReq(ClientPtr client)
 {
     return Success;
 }
 #endif
+EOF
+cat >"$cmake/src/configured_dispatch.c" <<'EOF'
+#include <configured_handlers.h>
+int configured_translation_unit(void)
+{
+    return Success;
+}
 EOF
 # Model the compile database emitted by CMake or Meson: its -D and -I
 # options are essential to expose the real conditional dispatch table.
@@ -282,6 +289,7 @@ printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/configured_dispatch.c' >/dev/null || { echo "FAIL: compile database -D/-I options were not used for handler discovery" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER: config/include/configured_handlers.h' >/dev/null || { echo "FAIL: header without a compile database entry was not evaluated with its including translation unit's -D/-I flags" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/present_request.c' >/dev/null || { echo "FAIL: Xorg dispatch-table handler not recognized" >&2; exit 1; }
 if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >/dev/null; then
     echo "FAIL: handler defined only in an included header was attributed to the including source" >&2
