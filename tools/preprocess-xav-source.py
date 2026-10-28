@@ -83,11 +83,15 @@ def run_preprocessor(entry, directory, translation_unit):
     try:
         completed = subprocess.run(
             command, cwd=directory, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, check=False,
+            stderr=subprocess.PIPE, check=False,
         )
     except OSError:
         return None
-    return completed.stdout if completed.returncode == 0 else None
+    if completed.returncode != 0:
+        if completed.stderr:
+            sys.stderr.buffer.write(completed.stderr)
+        return None
+    return completed.stdout
 
 
 def marker_path(line):
