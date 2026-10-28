@@ -33,11 +33,32 @@ EOF
 cat >"$cmake/src/inline_comment.rs" <<'EOF'
 let marker = 0; // vkQueueSubmit(device, 1, &submit, fence);
 EOF
+cat >"$cmake/src/string_literal.c" <<'EOF'
+const char *example = "vkQueueSubmit(device, 1, &submit, fence);";
+EOF
+cat >"$cmake/src/block_comment.c" <<'EOF'
+/*
+vkQueueSubmit(device, 1, &submit, fence);
+*/
+int unrelated(void) { return 0; }
+EOF
 cat >"$cmake/src/declarations.h" <<'EOF'
 VkResult vkQueueSubmit(VkQueue queue, uint32_t count, const VkSubmitInfo *info, VkFence fence);
+VkResult vkQueueWaitIdle(VkQueue queue)
+{
+    return VK_SUCCESS;
+}
 EOF
 cat >"$cmake/src/comments.rs" <<'EOF'
 // vkQueueSubmit(device, 1, &submit, fence);
+EOF
+cat >"$cmake/src/bare_call.c" <<'EOF'
+void submit(void) {
+    vkQueueSubmit(device, 1, &submit, fence);
+}
+EOF
+cat >"$cmake/src/request_prototype.c" <<'EOF'
+int ProcXavFakeReq(ClientPtr client);
 EOF
 cat >"$cmake/tests/backend_test.rs" <<'EOF'
 unsafe { vkQueueSubmit(device, 1, &submit, fence) };
