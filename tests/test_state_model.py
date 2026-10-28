@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import copy
+import gc
 import unittest
+from weakref import ref
 
 from xa_state_model import (
     ImageState,
@@ -3100,6 +3102,28 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         self.assertEqual(buffer.descriptor_slot_refs, 0)
         self.assertEqual(drop_buffer_internal_ref(buffer, backend_accesses=1), "SUCCESS")
         self.assertEqual(buffer.internal_state, "RELEASED")
+
+
+class SemaphoreOwnerReferenceTests(unittest.TestCase):
+    def test_registration_prunes_dead_and_duplicate_owner_references(self) -> None:
+        shared = SharedBinarySemaphore()
+        owner = SubmissionModel(shared_semaphores=[shared])
+        # Model pre-existing corruption that can arise after repeated setup or
+        # from stale test fixtures: duplicate refs to one live owner and a dead
+        # owner ref. Registering another model must normalize the whole list.
+        shared.owners.append(ref(owner))
+        stale_owner = SubmissionModel(shared_semaphores=[shared])
+        stale_ref = ref(stale_owner)
+        del stale_owner
+        gc.collect()
+        self.assertIsNone(stale_ref())
+
+        newcomer = SubmissionModel(shared_semaphores=[shared])
+        registered = [owner_ref() for owner_ref in shared.owners]
+        self.assertEqual(len(registered), 2)
+        self.assertEqual({id(item) for item in registered if item is not None},
+                         {id(owner), id(newcomer)})
+        self.assertTrue(all(item is not None for item in registered))
 
 
 class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
