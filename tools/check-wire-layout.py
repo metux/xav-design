@@ -260,10 +260,10 @@ def check_events(c: Check) -> None:
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
     c.require(
-        "`DestroyFence` und `DestroySemaphore` prüfen die feste Request-Länge vor XID-Auflösung" in conformance
+        "`DestroyFence` and `DestroySemaphore` validate exact request length before XID resolution" in conformance
         and "nicht-terminalen Submission zugeordnet" in conformance
         and "Queue-Wait/-Signal" in conformance
-        and "Nach terminal festgestelltem Wait-Ergebnis blockiert ein noch ausstehender Reply die Zerstörung nicht" in conformance,
+        and "A wait registration whose terminal result is already established does not block destruction, even if its reply has not yet been sent" in conformance,
         "conformance: specialized destroy tests must cover error precedence and terminal wait release",
     )
     c.require(re.search(r"`WriteBuffer`.*zurückgestellter `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
@@ -474,16 +474,16 @@ def check_error_registry(c: Check) -> None:
     for phrase in (
         "The first invalid XID determines the reported resource error",
         "The request remains atomic",
-        "Wire-Länge und strukturelle Integrität",
-        "Feldwerte und reservierte Felder",
-        "Auflösung jeder erforderlichen XID",
-        "Ressourcentyp und Ownership",
+        "wire length and structural integrity",
+        "field values and reserved fields",
+        "resolution of each required XID",
+        "resource type and ownership",
     ):
         c.require(phrase in error_doc,
                   f"error coverage: missing normative validation-order/atomicity rule {phrase!r}")
     c.require(
-        "request-spezifischen Zustands- und Backend-Prüfungen" in error_doc or
-        "request-spezifische Zustands- und Backend-Prüfungen" in error_doc,
+        "request-specific state and backend checks" in error_doc or
+        "request-specific state and backend checks" in error_doc,
         "error coverage: missing normative request-specific state/backend validation phase",
     )
 
@@ -967,14 +967,14 @@ def check_request_document_coverage(c: Check) -> None:
                   f"request {opcode} ({name}): missing from conformance checklist")
 
     c.require(
-        "`EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`" in errors
-        and "wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig" in errors,
+        "EnumeratePhysicalDevices: a request length other than 8 bytes returns BadLength" in errors
+        and "If no Physical Devices are available, an empty successful reply with reply.length = 0 is permitted" in errors,
         "error mapping: EnumeratePhysicalDevices must define length failure and empty-result behavior",
     )
     c.require(
-        "`CreateBuffer`: falsche feste Länge `BadLength`" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "fehlgeschlagene Backend-Erstellung wegen Speicherknappheit `ALLOCATION_FAILED`" in errors,
+        "CreateBuffer: incorrect fixed length returns BadLength" in errors
+        and "unavailable/lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "backend creation failure due to memory exhaustion `ALLOCATION_FAILED`" in errors,
         "error mapping: CreateBuffer must distinguish device state from backend allocation failure",
     )
     c.require(
@@ -986,11 +986,11 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: AllocateMemory must define device-state errors and atomic create-XID behavior",
     )
     c.require(
-        "`CreateDescriptorPool`: falsche Länge" in errors
-        and "falscher live Ressourcentyp oder fremde Device-Ownership `BadMatch`" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "bei Ablehnung bleibt die Pool-XID unangelegt" in errors
-        and "bei jedem Fehler bleibt die Pool-XID unangelegt" in read("spec/shaders-pipelines.md"),
+        "CreateDescriptorPool: incorrect length" in errors
+        and "wrong live resource type or foreign Device ownership `BadMatch`" in errors
+        and "unavailable/lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "On rejection, the Pool XID remains unallocated" in errors
+        and "On any error, the Pool XID remains unallocated" in read("spec/shaders-pipelines.md"),
         "error mapping: CreateDescriptorPool must define device-state errors and atomic create-XID behavior",
     )
     c.require(
@@ -1003,27 +1003,27 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: CreateSemaphore/CreateFence must define device-state errors and atomic XID behavior",
     )
     c.require(
-        "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
-        and "falscher live Ressourcentyp, fremde Device-Ownership oder Cross-Device-Ressource: `BadMatch`" in errors,
+        "Unavailable/lost Device: DEVICE_UNAVAILABLE / DEVICE_LOST" in errors
+        and "synchronous backend allocation failure: ALLOCATION_FAILED" in errors
+        and "wrong live resource type, foreign Device ownership, or cross-Device resource: BadMatch" in errors,
         "error mapping: CreateDescriptorSetLayout must distinguish device, ownership and allocation errors",
     )
     c.require(
         "`CreatePipelineLayout`:" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
-        and "Kein Pipeline Layout bleibt bei Ablehnung live" in errors
-        and "Bei jedem Fehler bleibt die Pipeline-Layout-XID unangelegt" in read("spec/shaders-pipelines.md")
-        and "Ziel-XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
+        and "unavailable/lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "backend allocation failure `ALLOCATION_FAILED`" in errors
+        and "No Pipeline Layout remains live on rejection" in errors
+        and "On any error, the Pipeline Layout XID remains unallocated" in read("spec/shaders-pipelines.md")
+        and "target XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
         "error mapping: CreatePipelineLayout must define device-state and atomic creation behavior",
     )
     c.require(
         "`CreateComputePipeline`:" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
-        and "Kein Pipeline-Objekt bleibt bei Ablehnung live" in errors
-        and "bei Fehlern wird kein Pipeline-Objekt öffentlich angelegt" in read("spec/shaders-pipelines.md")
-        and "Ziel-Pipeline-XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
+        and "unavailable/lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "backend allocation failure `ALLOCATION_FAILED`" in errors
+        and "No Pipeline object remains live on rejection" in errors
+        and "no Pipeline object is published on failure" in read("spec/shaders-pipelines.md")
+        and "target Pipeline XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
         "error mapping: CreateComputePipeline must define device-state and atomic creation behavior",
     )
     c.require(
@@ -1102,20 +1102,20 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "`AllocateDescriptorSets`:" in errors
-        and "nicht verfügbares/verlorenes Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "Backend-Allokationsfehler `ALLOCATION_FAILED`" in errors
-        and "keine Teilmenge bleibt live" in errors
-        and "keine Teilmenge der Sets öffentlich angelegt bleiben" in read("spec/shaders-pipelines.md")
+        and "unavailable/lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "backend allocation failure `ALLOCATION_FAILED`" in errors
+        and "no subset remains live" in errors
+        and "no subset of Sets is publicly allocated" in read("spec/shaders-pipelines.md")
         and "Ziel-Set-XID in Array-Reihenfolge" in read("spec/shaders-pipelines.md"),
         "error mapping: AllocateDescriptorSets must define device-state and atomic batch behavior",
     )
     c.require(
         "`FreeDescriptorSets`:" in errors
-        and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors
-        and "Nach Device Loss bleibt die logische Freigabe zulässig" in errors
-        and "Keine Teilfreigabe bei Ablehnung" in errors
-        and "Die Freigabe ist atomar" in read("spec/shaders-pipelines.md")
-        and "FreeDescriptorSets` ist eine logische Freigabe und bleibt nach Device Loss zulässig" in read("spec/shaders-pipelines.md"),
+        and "pending use or a RECORDING reference returns INVALID_SYNCHRONIZATION_STATE" in errors
+        and "Logical release remains permitted after Device loss" in errors
+        and "Rejection frees no subset" in errors
+        and "Release is atomic" in read("spec/shaders-pipelines.md")
+        and "FreeDescriptorSets` is a logical release and remains permitted after Device loss" in read("spec/shaders-pipelines.md"),
         "error mapping: FreeDescriptorSets must allow logical cleanup after device loss and preserve atomic batch behavior",
     )
 
@@ -1153,27 +1153,27 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         re.search(
-            r"`DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline;.*?Fence und Semaphore werden ausschließlich über `DestroyFence` beziehungsweise `DestroySemaphore` zerstört",
+            r"`DestroyResource` accepts only Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, and Pipeline; Fence and Semaphore are destroyed only through `DestroyFence` and `DestroySemaphore`",
             conformance, re.S,
         ) is not None,
         "conformance: generic and specialized destruction paths must be explicit",
     )
     c.require(
-        "Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen" in lifetime
-        and "bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden" in lifetime
-        and "interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen" in lifetime,
+        "Descriptor Sets that contain the Buffer remain live objects" in lifetime
+        and "until all affected descriptor slots are updated with valid Buffer references or the Sets are freed" in lifetime
+        and "the internal binding reference to the Memory allocation remains for this entire period" in lifetime,
         "resource lifetime: stale descriptor slots must retain Buffer and bound Memory",
     )
     c.require(
         re.search(
-            r"\|\s*`DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client\s*\|\s*`BadMatch`\s*\|",
+            r"\|\s*`DestroyResource`: resource type is not eligible for the generic request or the resource belongs to another client\s*\|\s*`BadMatch`\s*\|",
             errors,
         ) is not None,
         "error mapping: disallowed DestroyResource types and foreign ownership must map to BadMatch",
     )
     c.require(
-        "`FreeDescriptorSets`: falsche Länge `BadLength`" in errors
-        and "pending oder RECORDING-Referenz `INVALID_SYNCHRONIZATION_STATE`" in errors,
+        "FreeDescriptorSets: incorrect length returns BadLength" in errors
+        and "pending use or a RECORDING reference returns INVALID_SYNCHRONIZATION_STATE" in errors,
         "error mapping: FreeDescriptorSets must retain atomic pending/recording rejection",
     )
 
@@ -1186,9 +1186,9 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
     c.require(
-        "`DestroyCommandPool`: falsche Länge `BadLength`" in errors
-        and "mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`" in errors
-        and "Ablehnung ist atomar" in errors,
+        "DestroyCommandPool: incorrect length returns BadLength" in errors
+        and "at least one pending child Command Buffer returns INVALID_SYNCHRONIZATION_STATE" in errors
+        and "Rejection is atomic" in errors,
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
     c.require(
@@ -1215,18 +1215,18 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "`DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`" in errors
         and "`DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`" in errors
-        and "solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene" in errors
-        and "angenommener Queue-Wait/-Signal" in errors
-        and "eine andere laufende Host-Operation die Semaphore verwendet" in errors,
+        and "while the Fence is associated with a nonterminal submission or an open" in errors
+        and "accepted queue wait/signal" in errors
+        and "another running host operation uses the Semaphore" in errors,
         "error mapping: fence/semaphore destruction must preserve pending-use guards",
     )
 
     c.require(
-        "`DestroyDescriptorPool`: falsche Request-Länge `BadLength`" in errors
-        and "unbekannte/nicht-live Pool-XID `BadValue`" in errors
-        and "falscher live Ressourcentyp oder fremde Client-/Device-Ownership `BadMatch`" in errors
-        and "wenn ein Kind-Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird, `INVALID_SYNCHRONIZATION_STATE`" in errors
-        and "Pool, Sets und Referenzen bleiben unverändert" in errors,
+        "DestroyDescriptorPool: incorrect request length returns BadLength" in errors
+        and "unknown/non-live Pool XID returns BadValue" in errors
+        and "wrong live resource type or foreign client/Device ownership returns BadMatch" in errors
+        and "if a child Set is used by pending work or referenced by a RECORDING Command Buffer, return INVALID_SYNCHRONIZATION_STATE" in errors
+        and "the Pool, Sets, and references remain unchanged" in errors,
         "error mapping: DestroyDescriptorPool must define XID, ownership, pending-use, and atomicity outcomes",
     )
 
@@ -1257,17 +1257,17 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: summary must agree with specialized fence/semaphore destroy rules",
     )
     c.require(
-        "`DestroyFence`: falsche Länge `BadLength`" in errors
-        and "offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert" in errors
-        and "terminal festgestellte Wait-Registrierung blockiert die Zerstörung nicht" in errors,
+        "DestroyFence: incorrect length returns BadLength" in errors
+        and "an open WaitForFence registration references that exact internal Fence identity" in errors
+        and "a wait registration whose terminal result is already established does not block destruction" in errors,
         "error mapping: DestroyFence must cover length, open waits, and terminal wait release",
     )
     c.require(
-        "`DestroySemaphore`: falsche Länge `BadLength`" in errors
-        and "offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität" in errors
+        "DestroySemaphore: incorrect length returns BadLength" in errors
+        and "an open WaitSemaphores registration for that exact internal Semaphore identity" in errors
         and "andere laufende Host-Operation" in errors
-        and "Device Loss allein invalidiert keine öffentlichen XIDs" in errors
-        and "wenn anschließend `DestroyDevice` verarbeitet wird" in errors,
+        and "Device loss alone does not invalidate public XIDs" in errors
+        and "if DestroyDevice is processed afterward" in errors,
         "error mapping: DestroySemaphore must cover length, host waits, identity, and device-loss teardown",
     )
 
@@ -1532,7 +1532,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
     # Each tuple is an intentional request-local order, not an alternate common-header rule.
     contracts = (
         ("DestroyResource", errors.split("### `DestroyResource`", 1)[1].split("\n### ", 1)[0] if "### `DestroyResource`" in errors else "",
-         ("Falsche Request-Länge", "Ungültige oder nicht mehr live XID", "Ressourcentyp, der nicht für den generischen Request zugelassen ist", "Verstoß gegen die typabhängigen Recording-/Pending-Lebensdauerregeln", "Device Loss allein ist kein zusätzlicher Ablehnungsgrund", "Interne Objekte und Backend-Referenzen werden bis zur sicheren Quieszenz erhalten oder quarantänisiert")),
+         ("Incorrect request length", "Invalid or non-live XID", "resource type not eligible for the generic request", "violation of type-specific recording/pending lifetime rules", "Device loss alone is not an additional rejection reason", "Internal objects and backend references are retained or quarantined until safe quiescence")),
         ("FreeMemory", request_section(memory, "FreeMemory"),
          ("exact 16-byte request length", "resolve `device_xid`, then `memory_xid`", "validate live resource types, client ownership, and device association", "internally live Buffer remains bound", "accepted GPU access that has not reached a terminal outcome", "Device loss alone is not a blanket rejection", "retaining/quarantining the internal allocation")),
         ("CreateBuffer", request_section(memory, "CreateBuffer"),
@@ -1542,13 +1542,13 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
         ("CreateDescriptorSetLayout", shaders.split("## 6.2 Descriptor Set Layout", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.2 Descriptor Set Layout" in shaders else "",
          ("exact count-consistent request length", "flags, binding records, counts, unique binding numbers", "target `descriptor_set_layout_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "device-limit/descriptor support checks", "backend allocation")),
         ("CreateDescriptorPool", shaders.split("## 6.3 Descriptor Pool", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.3 Descriptor Pool" in shaders else "",
-         ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID (`BadValue` bei unbekannter/nicht-live XID)", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
+         ("exact count-consistent request length", "positive counts, duplicate pool-size types", "target Pool XID as a create-XID", "Device XID (`BadValue` for an unknown/non-live XID)", "resource type and client/Device ownership", "Device state", "backend allocation")),
         ("ShaderModuleData", shaders.split("## 6.1 Shader Modules", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.1 Shader Modules" in shaders else "",
          ("exact total length `20 + pad4(data_length)`", "request-specific flag combination", "for `CREATE`, validate `shader_module_xid` as a create-XID", "resolve `device_xid`", "resource type and client/device ownership", "logical-device state", "upload-assembly state and chunk-size/aggregate-size limits", "on `FINAL`, validate the assembled SPIR-V")), 
         ("CreatePipelineLayout", request_section(shaders, "CreatePipelineLayout"),
-         ("exakte, count-konsistente Wire-Länge", "reservierte Felder, nicht unterstützte Stage-Bits", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")), 
+         ("exact count-consistent wire length", "reserved fields, unsupported stage bits", "target XID (`BadIDChoice`)", "Device and Set Layout XIDs in wire order", "resource type, ownership, and cross-Device association", "Device state", "device-dependent limits and Vulkan compatibility", "backend creation")), 
         ("CreateComputePipeline", shaders.split("## 6.8 Compute Pipeline", 1)[1].split(chr(10) + "## ", 1)[0] if "## 6.8 Compute Pipeline" in shaders else "",
-         ("exakte Wire-Länge", "positiven Entry-Point-Count", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
+         ("exact wire length", "positive entry-point count", "target Pipeline XID (`BadIDChoice`)", "Device, Pipeline Layout, and Shader Module XIDs in wire order", "resource type, ownership, and cross-Device association", "Device state", "backend Pipeline creation")),
         ("CreateDefaultDevice", request_section(read("spec/devices.md"), "CreateDefaultDevice"),
          ("validate the exact/formula-based request length using checked arithmetic",
           "validate `queue_count`, the reserved field, and every priority",
@@ -1559,9 +1559,9 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),
         ("UpdateDescriptorSets", request_section(shaders, "UpdateDescriptorSets"),
-         ("Request-Länge/Count und strukturelle Integrität", "syntax- und feldlokale Prüfungen",
-          "Auflösung der XIDs in Wire-Reihenfolge", "Ressourcentyp, Client-/Device-Ownership",
-          "Device-Zustand")),
+         ("length/count and structural integrity", "syntax and field-local validation",
+          "resolution of XIDs in wire order", "resource type and client/Device ownership",
+          "Device state")),
         ("CommandBufferData", request_section(command, "CommandBufferData"),
          ("wire-structure errors take precedence over field errors",
           "field errors take precedence over target/pool XID errors",
@@ -2920,8 +2920,8 @@ def check_presentation_profile(c: Check) -> None:
               "presentation copy path must specify destination and source usage")
     copy_errors = read("spec/errors.md")
     c.require("Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`" in copy_errors and
-              "image_index` außerhalb der Swapchain" in copy_errors and
-              "konkurriert der Submit mit einer Present-Transition" in copy_errors,
+              "image_index outside the Swapchain" in copy_errors and
+              "the submission races a present transition" in copy_errors,
               "presentation copy command: error mapping must cover resource, bounds, and image-state validation")
     c.require("incompatible transfer usage with `BadMatch`" in read("spec/conformance.md") and
               "non-`ACQUIRED` image at submission acceptance with `INVALID_SYNCHRONIZATION_STATE`" in read("spec/conformance.md"),
@@ -3068,12 +3068,12 @@ def check_compact_request_layouts(c: Check) -> None:
         "variable byte payloads: shader chunks and WriteBuffer must specify zero-padding validation and failure behavior",
     )
     c.require(
-        re.search(r"padding-Bytes müssen null sein", shaders, re.I) is not None
+        re.search(r"padding bytes must be zero", shaders, re.I) is not None
         and "`28 + ((entry_point_length + 3) & ~3)`" in shaders
         and "`24 + 16 * binding_count`" in shaders
         and "Each binding record is 16 bytes" in shaders
         and "`20 + 36 * write_count`" in shaders
-        and "Jeder Write ist 36 Bytes groß." in shaders,
+        and "Each Write is 36 bytes." in shaders,
         "variable/count-based request contracts must keep exact formulas, entry widths, and zero-padding rules",
     )
     c.require(
@@ -3086,8 +3086,8 @@ def check_compact_request_layouts(c: Check) -> None:
     )
     c.require(
         re.search(r"(?:\|\s*24\s*\|\s*CARD16\s*\|\s*`entry_point_length`\s*\||Offset\s+24:\s*`CARD16 entry_point_length`)", shaders, re.I) is not None
-        and "Padding-Bytes müssen null sein" in shaders
-        and "Die Gesamtlänge muss exakt `28 + ((entry_point_length + 3) & ~3)` Bytes betragen" in shaders,
+        and "Padding bytes must be zero" in shaders
+        and "The total length MUST be exactly `28 + ((entry_point_length + 3) & ~3)` bytes" in shaders,
         "CreateComputePipeline: byte count, four-byte padding, and total length must agree",
     )
     c.require(
