@@ -134,16 +134,23 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         error_map = self.errors.split(
             "- `CreateDefaultDevice`:", 1
         )[1].split("- Beide Requests sind Void-Requests", 1)[0]
-        phases = (
+        for phase in (
             "exact/formula-based request length",
             "`queue_count`",
             "target `device_xid`",
-            "XGE-1.0",
+            "XGE 1.0-or-later",
             "suitable physical device",
-        )
-        for phase in phases:
-            with self.subTest(phase=phase):
+        ):
+            with self.subTest(device_phase=phase):
                 self.assertIn(phase, section)
+        for phase in (
+            "Request-Länge",
+            "`queue_count`",
+            "Ziel-XID",
+            "XGE-1.0",
+            "Auswahl eines geeigneten Physical Device",
+        ):
+            with self.subTest(error_phase=phase):
                 self.assertIn(phase, error_map)
         self.assertLess(section.index("request length"), section.index("`queue_count`"))
         self.assertLess(section.index("`queue_count`"), section.index("target `device_xid`"))
