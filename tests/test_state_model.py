@@ -4988,6 +4988,58 @@ class DisconnectWaitDeviceLossInterleavingTests(unittest.TestCase):
         self.assertEqual(finish_submission(submit, 990, success=True), "BadValue")
         self.assertEqual((shared, submit, present), snapshot)
 
+    def test_disconnected_late_signal_callback_releases_submission_refs_once(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        command_buffer = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={buffer.identity},
+        )
+        submit = SubmissionModel(
+            command_buffers=[command_buffer],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+            buffer_registry=[buffer],
+        )
+        self.assertEqual(queue_submit(
+            submit,
+            SubmitRequest(token=992, command_buffer_indices=(0,),
+                          signal_indices=(0,), signal_values=(0,)),
+        ), "SUCCESS")
+        self.assertEqual((descriptor_set.pending_submission_refs, buffer.accepted_uses), (1, 1))
+
+        observer = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        _unregister_semaphore_owner(submit)
+        self.assertEqual(mark_present_device_lost(observer), "SUCCESS")
+        # The disconnected model retains its accepted token and reference
+        # ledger; the late callback, not disconnect or the foreign loss walk,
+        # is responsible for retiring those per-submission references.
+        self.assertEqual(submit.pending_submissions, [992])
+        self.assertEqual((descriptor_set.pending_submission_refs, buffer.accepted_uses), (1, 1))
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        self.assertEqual(finish_submission(submit, 992, success=True), "SUCCESS")
+        self.assertTrue(submit.device_lost)
+        self.assertEqual(submit.pending_submissions, [])
+        self.assertEqual((descriptor_set.pending_submission_refs, buffer.accepted_uses), (0, 0))
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.INVALID)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.signal_reservation)
+        after_first = copy.deepcopy((submit, descriptor_set, buffer, command_buffer, shared))
+        self.assertEqual(finish_submission(submit, 992, success=False), "BadValue")
+        self.assertEqual((submit, descriptor_set, buffer, command_buffer, shared), after_first)
+
     def test_wait_completion_then_disconnect_then_device_loss_does_not_double_release(self):
         shared, submit, present = self._make_pending_pair()
         self.assertEqual(
