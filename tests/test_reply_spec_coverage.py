@@ -305,7 +305,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
 
     def test_queue_flag_registry_and_positive_vectors_cover_all_defined_bits(self):
         registry = (ROOT / "registries/queue-flags.md").read_text(encoding="utf-8")
-        entries = re.findall(r"^\|\s*(\d+)\s*\|\s*`(0x[0-9A-Fa-f]+)`\s*\|\s*([A-Z_]+)\s*\|", registry, re.M)
+        entries = re.findall(r"^\|\s*(\d+)\s*\|\s*`(0x[0-9A-Fa-f]+)`\s*\|\s*`?([A-Z_]+)`?\s*\|", registry, re.M)
         self.assertEqual([(int(bit), int(mask, 16), symbol) for bit, mask, symbol in entries], [
             (0, 0x01, "GRAPHICS"), (1, 0x02, "COMPUTE"),
             (2, 0x04, "TRANSFER"), (3, 0x08, "SPARSE_BINDING"),
