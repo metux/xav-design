@@ -327,10 +327,21 @@ class ReplySpecCoverageTests(unittest.TestCase):
         for order in ("little", "big"):
             cases = [v for v in vectors if v["violates"] == "property-type-length" and v["byte_order"] == order]
             self.assertTrue(cases, f"property type/length mismatch vector missing in {order}-endian")
+            covered_types = set()
             for case in cases:
                 wire = bytes.fromhex(case["wire_hex"])
-                self.assertEqual(int.from_bytes(wire[12:16], order), 1)
-                self.assertNotEqual(int.from_bytes(wire[16:20], order), 4)
+                property_type = int.from_bytes(wire[12:16], order)
+                value_length = int.from_bytes(wire[16:20], order)
+                covered_types.add(property_type)
+                fixed_widths = {1: 4, 2: 8, 3: 4}
+                invalid = (
+                    property_type in fixed_widths and value_length != fixed_widths[property_type]
+                    or property_type == 6 and value_length % 4 != 0
+                    or property_type == 7 and value_length % 8 != 0
+                )
+                self.assertTrue(invalid, f"{case['name']} does not violate its declared property's width")
+            self.assertTrue({1, 2, 6, 7}.issubset(covered_types),
+                            f"fixed-width and array property types missing in {order}-endian")
 
 
     def test_device_type_registry_rejects_unassigned_values(self):
