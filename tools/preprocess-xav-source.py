@@ -24,7 +24,7 @@ def databases(root):
     for current, dirs, files in os.walk(root):
         rel = os.path.relpath(current, root)
         depth = 0 if rel == "." else rel.count(os.sep) + 1
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith("build-")]
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         if depth >= 5:
             dirs[:] = []
         if "compile_commands.json" in files:
