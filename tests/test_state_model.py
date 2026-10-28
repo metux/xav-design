@@ -3400,6 +3400,73 @@ class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
         self.assertEqual((submit, present, shared), terminal_state)
 
 
+    def test_present_consumption_before_submit_success_callback_is_not_resurrected(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=807, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=808, wait_indices=(0,))).accepted)
+
+        # Present confirms consumption before the Submit completion callback
+        # arrives. The late Submit callback must not resurrect the payload.
+        self.assertEqual(finish_present_wait(present, 808, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(shared.signal_reservation, ("submit", 807))
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(finish_submission(submit, 807, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNSIGNALED])
+        self.assertEqual(present.binary_signal_states, [BinarySignalState.UNSIGNALED])
+
+    def test_present_consumption_before_submit_failure_callback_preserves_known_empty_payload(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(token=809, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(present, PresentRequest(token=810, wait_indices=(0,))).accepted)
+        self.assertEqual(finish_present_wait(present, 810, 0, consumed=True), "SUCCESS")
+
+        # Even a failed completion cannot turn a payload whose consumption is
+        # known into UNTRUSTED or SIGNALED.
+        self.assertEqual(finish_submission(submit, 809, success=False), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(shared.signal_reservation, None)
+        self.assertFalse(shared.signal_consumed)
+        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNSIGNALED])
+
+
 class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
     """Cross-API wait reservations are exclusive and callbacks are token-owned."""
 
