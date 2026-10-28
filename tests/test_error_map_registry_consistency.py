@@ -158,8 +158,8 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         self.assertLess(section.index("XGE 1.0-or-later"), section.index("suitable physical device"))
         self.assertLess(error_map.index("request length"), error_map.index("`queue_count`"))
         self.assertLess(error_map.index("`queue_count`"), error_map.index("target XID"))
-        self.assertLess(error_map.index("Ziel-XID"), error_map.index("XGE 1.0 negotiation"))
-        self.assertLess(error_map.index("XGE-1.0"), error_map.index("selection of a suitable Physical Device"))
+        self.assertLess(error_map.index("target XID"), error_map.index("XGE 1.0 negotiation"))
+        self.assertLess(error_map.index("XGE 1.0 negotiation"), error_map.index("selection of a suitable Physical Device"))
         self.assertIn("on any error, the target XID remains unallocated", error_map)
 
     def test_conformance_keeps_profile_dispatch_boundary_explicit(self):
