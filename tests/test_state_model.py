@@ -3588,16 +3588,60 @@ class ClientDisconnectCallbackCleanupTests(unittest.TestCase):
         self.assertNotIn("client-A", registry.live_connections)
         self.assertFalse(any(connection == "client-A"
                              for connection, _queue in registry.queue_masks))
-        # Accepted backend work remains linked until its terminal callback
-        # retires it, but disconnect must suppress client event delivery.
-        self.assertIn(key, registry.submissions)
+        # Client-facing links disappear immediately, while accepted backend
+        # work remains internally owned until its actual terminal callback.
+        self.assertNotIn(key, registry.submissions)
+        self.assertIs(registry.detached_submissions[key], submission)
         self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "SUCCESS")
         self.assertEqual(submission.terminal, "COMPLETE")
-        self.assertNotIn(key, registry.submissions)
+        self.assertNotIn(key, registry.detached_submissions)
         self.assertEqual(registry.emitted_events, [])
-        snapshot = dict(registry.submissions)
+        snapshot = dict(registry.detached_submissions)
         self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "BadValue")
-        self.assertEqual(registry.submissions, snapshot)
+        self.assertEqual(registry.detached_submissions, snapshot)
+
+
+class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
+    def test_disconnect_cancels_only_connection_waits_not_accepted_work(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A", "client-B"})
+        device = AsyncDeviceIdentity("device-A", 17)
+        registry.register_device("client-A", device)
+        submission = AsyncSubmissionIdentity(
+            token=92,
+            connection_identity="client-A",
+            device_identity=device.identity,
+            device_xid=device.xid,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(submission), "SUCCESS")
+        self.assertEqual(
+            registry.register_wait("client-A", 101, "WaitSemaphores", ("sem-A", "sem-B")),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            registry.register_wait("client-A", 102, "WaitForFence", ("fence-A",)),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            registry.register_wait("client-B", 103, "WaitForFence", ("fence-B",)),
+            "SUCCESS",
+        )
+
+        registry.disconnect("client-A")
+        self.assertNotIn(("client-A", 101), registry.wait_registrations)
+        self.assertNotIn(("client-A", 102), registry.wait_registrations)
+        self.assertIn(("client-B", 103), registry.wait_registrations)
+        self.assertNotIn(("client-A", 92), registry.submissions)
+        self.assertIs(registry.detached_submissions[("client-A", 92)], submission)
+
+        # Canceled waits cannot later complete or retain wait-only references.
+        self.assertEqual(registry.finish_wait("client-A", 101), "BadValue")
+        self.assertEqual(registry.finish_wait("client-A", 102), "BadValue")
+        self.assertEqual(registry.finish_wait("client-B", 103), "SUCCESS")
+        # Accepted work still reaches its actual terminal state.
+        self.assertEqual(registry.terminal_callback("client-A", 92, "FAILED"), "SUCCESS")
+        self.assertEqual(submission.terminal, "FAILED")
+        self.assertNotIn(("client-A", 92), registry.detached_submissions)
 
 
 class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
