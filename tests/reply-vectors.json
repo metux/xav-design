@@ -862,7 +862,7 @@
     },
     {
       "name": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap-little",
-      "event": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap",
+      "event": "GetPhysicalDeviceMemoryProperties",
       "byte_order": "little",
       "sequence": 4660,
       "data_byte": 0,
@@ -917,7 +917,7 @@
     },
     {
       "name": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap-big",
-      "event": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap",
+      "event": "GetPhysicalDeviceMemoryProperties",
       "byte_order": "big",
       "sequence": 4660,
       "data_byte": 0,
