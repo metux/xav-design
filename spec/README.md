@@ -20,6 +20,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 ## Audit records
 
 - [Request catalogue and wire-contract audit](request-audit.md) — reviewed inventory, cross-chapter consistency result, and remaining exclusions.
+- [Specification freeze checklist](freeze-checklist.md) — normative and automated evidence gates for declaring the protocol contract frozen.
 
 ## Central registries
 
