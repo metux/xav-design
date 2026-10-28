@@ -1,0 +1,40 @@
+name: Monitor missing XAverius CI runs
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/restructure-2026-10-21
+    paths:
+      - ".github/workflows/ci-run-monitor.yml"
+      - "tools/check-ci-run-presence.py"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: xav-ci-run-monitor
+  cancel-in-progress: false
+
+jobs:
+  check-branch-tip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check out monitor
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Detect missing wire-layout run for working-branch tip
+        env:
+          GH_TOKEN: \${{ github.token }}
+          GITHUB_REPOSITORY: \${{ github.repository }}
+          CI_MONITOR_BRANCH: docs/restructure-2026-10-21
+          CI_MONITOR_WORKFLOW: wire-layout.yml
+          CI_MONITOR_GRACE_MINUTES: "20"
+        run: python tools/check-ci-run-presence.py
