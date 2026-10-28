@@ -24,6 +24,15 @@ int ProcXavQueueSubmitReq(ClientPtr client) {
     return Success;
 }
 EOF
+cat >"$cmake/src/latest.c" <<'EOF'
+int submit_latest(void) {
+    vkQueueSubmit(device, 1, &submit, fence);
+    return 0;
+}
+EOF
+cat >"$cmake/src/inline_comment.rs" <<'EOF'
+let marker = 0; // vkQueueSubmit(device, 1, &submit, fence);
+EOF
 cat >"$cmake/src/declarations.h" <<'EOF'
 VkResult vkQueueSubmit(VkQueue queue, uint32_t count, const VkSubmitInfo *info, VkFence fence);
 EOF
@@ -53,7 +62,7 @@ printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: 
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-DISPATCH: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.zig' >/dev/null || { echo "FAIL: Zig wrapper call not recognized" >&2; exit 1; }
-if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|target/build_output|VK-CALL: src/comments|VK-CALL: src/declarations' >/dev/null; then
+if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|target/build_output|VK-CALL: src/comments|VK-CALL: src/inline_comment|VK-CALL: src/declarations' >/dev/null; then
     echo "FAIL: excluded/comment/declaration source was reported as a Vulkan call" >&2
     exit 1
 fi
@@ -64,4 +73,8 @@ printf '%s\n' "$fallback" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL
 printf '%s\n' "$fallback" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: second explicit root not discovered by grep fallback" >&2; exit 1; }
 printf '%s\n' "$fallback" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: grep fallback missed Vulkan symbol boundaries" >&2; exit 1; }
 
+if MAX_DEPTH=invalid sh "$SCRIPT" "$fixture" >/dev/null 2>&1; then
+    echo "FAIL: invalid MAX_DEPTH was accepted" >&2
+    exit 1
+fi
 echo "find-xav-backend regression tests: PASS"
