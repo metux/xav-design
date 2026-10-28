@@ -3,6 +3,7 @@
 import importlib.util
 import io
 import os
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -98,14 +99,70 @@ class VisibleAlertTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
         self.assertIn("  issues: write", workflow)
         self.assertIn("if: steps.monitor.outputs.result == 'missing'", workflow)
-        self.assertIn("gh issue create", workflow)
-        self.assertIn("created_url=\"$(gh issue create", workflow)
-        self.assertIn("body=\"$(printf", workflow)
-        self.assertIn("gh issue list --state open", workflow)
+        self.assertIn("bash tools/ensure-ci-alert-issue.sh", workflow)
+        helper = (ROOT / "tools" / "ensure-ci-alert-issue.sh").read_text(encoding="utf-8")
+        self.assertIn("gh issue create", helper)
+        self.assertIn("gh issue list --state open --limit 100 --json number,title", helper)
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
         self.assertIn("outputs.result", workflow)
 
+
+class AlertIssueDeduplicationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.gh = self.root / "gh"
+        self.created_marker = self.root / "created"
+        self.gh.write_text(
+            "#!/usr/bin/env bash\\n"
+            "set -eu\\n"
+            "if [[ \\"$1 $2\\" == \\"issue list\\" ]]; then\\n"
+            "  printf '%s' \\"$MOCK_ISSUES\\"\\n"
+            "elif [[ \\"$1 $2\\" == \\"issue create\\" ]]; then\\n"
+            "  printf created > \\"$CREATED_MARKER\\"\\n"
+            "  printf '%s\\n' 'https://github.com/metux/xav-design/issues/123'\\n"
+            "else exit 90; fi\\n",
+            encoding="utf-8",
+        )
+        self.gh.chmod(0o755)
+        self.env = os.environ.copy()
+        self.env.update({
+            "PATH": f"{self.root}:{self.env.get('PATH', '')}",
+            "GH_REPO": "metux/xav-design",
+            "RUN_URL": "https://github.com/metux/xav-design/actions/runs/1",
+            "CREATED_MARKER": str(self.created_marker),
+        })
+
+    def run_helper(self, issues):
+        import json
+        self.env["MOCK_ISSUES"] = json.dumps(issues)
+        return subprocess.run(
+            ["bash", str(ROOT / "tools" / "ensure-ci-alert-issue.sh")],
+            env=self.env, text=True, capture_output=True, check=False,
+        )
+
+    def test_existing_exact_title_open_issue_prevents_duplicate(self):
+        title = "[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"
+        result = self.run_helper([{"number": 42, "title": title}])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Existing alert issue #42 remains open", result.stdout)
+        self.assertFalse(self.created_marker.exists())
+
+    def test_similar_but_different_title_does_not_hide_missing_alert(self):
+        result = self.run_helper([
+            {"number": 41, "title": "[CI monitor] Missing wire-layout run"},
+            {"number": 42, "title": "[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21 (resolved)"},
+        ])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Created alert issue:", result.stdout)
+        self.assertTrue(self.created_marker.exists())
+
+    def test_empty_open_issue_list_creates_alert(self):
+        result = self.run_helper([])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.created_marker.exists())
 
 if __name__ == "__main__":
     unittest.main()
