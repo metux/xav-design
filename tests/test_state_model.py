@@ -2796,6 +2796,39 @@ class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
         self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
 
 
+class BinaryDeviceLossReservationTests(unittest.TestCase):
+    def test_device_loss_quarantines_uncertain_binary_signal_and_releases_reservation_once(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        state = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[],
+            signal_slots=[None],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=331, signal_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(shared.signal_reservation, ("submit", 331))
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+
+        self.assertEqual(mark_device_lost(state), "SUCCESS")
+        self.assertEqual(state.pending_submissions, [])
+        self.assertIsNone(shared.signal_reservation)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(state.binary_signal_states, [BinarySignalState.UNTRUSTED])
+
+        # A late backend callback cannot turn the uncertain payload into a
+        # confirmed signal or release another operation's reservation.
+        before = copy.deepcopy((state, shared))
+        self.assertEqual(finish_submission(state, 331, success=True), "BadValue")
+        self.assertEqual((state, shared), before)
+
+
 class BinaryWaitReservationFailureTests(unittest.TestCase):
     def make_submit(self, shared: SharedBinarySemaphore) -> SubmissionModel:
         return SubmissionModel(
