@@ -1790,10 +1790,10 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
         observer = SubmissionModel(shared_semaphores=[shared])
 
-        # A different model observes device loss first, setting the canonical
-        # device-wide flag while the timeline owner's local flag is still clear.
+        # Device loss must immediately reach every model attached to the
+        # shared semaphore, not wait for the timeline owner's next operation.
         self.assertEqual(mark_device_lost(observer), "SUCCESS")
-        self.assertFalse(owner.device_lost)
+        self.assertTrue(owner.device_lost)
         self.assertTrue(shared.device_lost)
         before = copy.deepcopy(owner)
 
