@@ -97,13 +97,13 @@ Normative precedence: (1) total length with checked count/overflow arithmetic an
 
 Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data_length` (`BadValue`); (3) `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (`BadMatch`); (5) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer binding, `TRANSFER_SRC`, and range (`BadMatch`); (7) snapshot/transfer work.
 
-- Falsche Request-Länge: `BadLength`
+- Incorrect request length: `BadLength`
 - Zero length or invalid reserved fields: `BadValue`
-- Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, Bereich außerhalb des Buffers: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
-- Synchroner Transferfehler: `TRANSFER_FAILED`
-- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
+- Unknown/non-live XAverius XID: `BadValue`
+- Wrong type, wrong Device, unbound Buffer, missing `TRANSFER_SRC`, or range outside the Buffer: `BadMatch`
+- Unavailable/lost Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- Synchronous transfer failure: `TRANSFER_FAILED`
+- Staging allocation failure: `ALLOCATION_FAILED`
 - Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`
 
 ### `ShaderModuleData`
@@ -120,13 +120,13 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 
 - `EnumeratePhysicalDevices`: an incorrect request length (`!= 8` bytes) results in `BadLength`; the reply payload consists only of complete `PHYSICALDEVICEINFO` records. An incomplete record MUST NOT be emitted. If no Physical Devices are available, an empty successful reply with `reply.length = 0` is permitted.
 - `GetPhysicalDeviceProperty`: incorrect request length results in `BadLength`; an invalid Atom results in `BadAtom`; an unknown/non-live Device XID results in `BadValue`; when status is not `SUCCESS`, `property_type`, `value_length`, and the reply payload MUST be zero.
-- `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; unbekannte/nicht-live Physical-Device-XID `BadValue`.
+- `GetPhysicalDeviceQueueFamilyProperties` and `GetPhysicalDeviceMemoryProperties`: request length is exactly 12 bytes; an unknown/non-live Physical-Device XID returns `BadValue`.
 - `CreateDevice`: falsche Länge `BadLength`; `queue_family_request_count = 0`, `queue_count = 0`, doppelte Queue-Family-Records, nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1, doppelte Feature-/Extension-Einträge, unbekannte Feature-ID oder formal ungültiger Extension-Name `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher live Ressourcentyp, Queue-Family-Anforderung mit nicht verfügbarer oder nicht unterstützter Queue-Anzahl, registriertes aber nicht unterstütztes Feature, unbekannte oder nicht unterstützte formal gültige Extension oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Die Prüfung ist atomar und veröffentlicht kein logisches Device bei Fehler.
-- `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; fehlende XGE-Aushandlung `BadMatch`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
+- `CreateDefaultDevice`: incorrect length returns `BadLength`; a zero count, nonzero reserved field, or invalid priority returns `BadValue`; an invalid/occupied `device_xid` returns `BadIDChoice`; missing XGE negotiation returns `BadMatch`; no suitable device returns `DEVICE_UNAVAILABLE`.
 
-  Verbindliche Präzedenz für `CreateDefaultDevice`: (1) exakte/formelbasierte Request-Länge mit geprüfter Arithmetik (`BadLength`); (2) `queue_count`, reserviertes Feld und sämtliche Prioritäten (`BadValue`); (3) Ziel-XID `device_xid` (`BadIDChoice`); (4) erfolgreiche XGE-1.0-Aushandlung (`BadMatch`); (5) Auswahl eines geeigneten Physical Device und einer Compute-Queue (`DEVICE_UNAVAILABLE`). Alle Prüfungen erfolgen vor Veröffentlichung eines logischen Devices; bei jedem Fehler bleibt die Ziel-XID unbelegt.
-- Beide Requests sind Void-Requests; Erfolg erzeugt keinen normalen Reply.
-- `DestroyDevice`: falsche Länge `BadLength`; unbekannte/nicht-live XAverius-XID `BadValue`; fremde Device-Ownership `BadMatch`.
+  Normative precedence for `CreateDefaultDevice`: (1) exact/formula-based request length using checked arithmetic (`BadLength`); (2) `queue_count`, reserved field, and all priorities (`BadValue`); (3) target XID `device_xid` (`BadIDChoice`); (4) successful XGE 1.0 negotiation (`BadMatch`); (5) selection of a suitable Physical Device and compute queue (`DEVICE_UNAVAILABLE`). All checks occur before publishing a logical Device; on any error, the target XID remains unallocated.
+- Both requests are void requests; success produces no normal reply.
+- `DestroyDevice`: incorrect length returns `BadLength`; an unknown/non-live XAverius XID returns `BadValue`; foreign Device ownership returns `BadMatch`.
 
 ### `SelectEvents`
 
