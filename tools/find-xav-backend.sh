@@ -5,6 +5,7 @@
 # MAX_DEPTH controls project discovery depth (default: 8).
 set -eu
 PROGRAM=${0##*/}
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 MAX_DEPTH=${MAX_DEPTH:-8}
 case "$MAX_DEPTH" in ""|*[!0-9]*) echo "$PROGRAM: MAX_DEPTH must be a non-negative integer" >&2; exit 2 ;; esac
 ALL=0
@@ -165,7 +166,13 @@ scan_project() {
         dispatch_code=$code
         case "$f" in *.c|*.h)
           if command -v "${CC:-cc}" >/dev/null 2>&1; then
-            preprocessed=$("${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
+            preprocessed=
+            if command -v python3 >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/preprocess-xav-source.py" ]; then
+              preprocessed=$(python3 "$SCRIPT_DIR/preprocess-xav-source.py" "$repo" "$full" 2>/dev/null || :)
+            fi
+            if [ -z "$preprocessed" ]; then
+              preprocessed=$("${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
+            fi
             if [ -n "$preprocessed" ]; then
               # Keep macro expansions at their call sites in this translation
               # unit, but discard declarations/definitions pulled in from
