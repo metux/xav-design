@@ -815,6 +815,116 @@
       "payload_hex": "01020300",
       "total_bytes": 36,
       "wire_hex": "010012340000000100000000000000000000000000000000000000000000000001020300"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-2-little",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-2",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000050000000200000000000000000000000000000001020000",
+      "total_bytes": 60,
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000050000000200000000000000000000000000000001020000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-3-little",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-3",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000050000000300000000000000000000000000000001020300",
+      "total_bytes": 60,
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000050000000300000000000000000000000000000001020300"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-4-little",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-4",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000050000000400000000000000000000000000000001020304",
+      "total_bytes": 60,
+      "wire_hex": "010034120100000000000000000000000000000000000000000000000000000000000000050000000400000000000000000000000000000001020304"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-8-little",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-8",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 2,
+      "payload_hex": "0000000005000000080000000000000000000000000000000102030405060708",
+      "total_bytes": 64,
+      "wire_hex": "01003412020000000000000000000000000000000000000000000000000000000000000005000000080000000000000000000000000000000102030405060708"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap-little",
+      "event": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap",
+      "byte_order": "little",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 8,
+      "payload_hex": "0000000001000000000000000000000000040000000000000100000000000000",
+      "total_bytes": 64,
+      "wire_hex": "01003412080000000000000000000000000000000000000000000000000000000000000001000000000000000000000000040000000000000100000000000000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-2-big",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-2",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000000000050000000200000000000000000000000001020000",
+      "total_bytes": 60,
+      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000000000000050000000200000000000000000000000001020000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-3-big",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-3",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000000000050000000300000000000000000000000001020300",
+      "total_bytes": 60,
+      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000000000000050000000300000000000000000000000001020300"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-4-big",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-4",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 1,
+      "payload_hex": "00000000000000050000000400000000000000000000000001020304",
+      "total_bytes": 60,
+      "wire_hex": "010012340000000100000000000000000000000000000000000000000000000000000000000000050000000400000000000000000000000001020304"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-byte-array-8-big",
+      "event": "GetPhysicalDeviceProperty-success-byte-array-8",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 2,
+      "payload_hex": "0000000000000005000000080000000000000000000000000102030405060708",
+      "total_bytes": 64,
+      "wire_hex": "01001234000000020000000000000000000000000000000000000000000000000000000000000005000000080000000000000000000000000102030405060708"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap-big",
+      "event": "GetPhysicalDeviceMemoryProperties-zero-types-one-heap",
+      "byte_order": "big",
+      "sequence": 4660,
+      "data_byte": 0,
+      "reply_length": 8,
+      "payload_hex": "0000000000000001000000000000000000000400000000000000000100000000",
+      "total_bytes": 64,
+      "wire_hex": "01001234000000080000000000000000000000000000000000000000000000000000000000000001000000000000000000000400000000000000000100000000"
     }
   ]
 }
