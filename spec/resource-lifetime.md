@@ -68,7 +68,7 @@ Other relationships are dependencies, not automatic ownership relationships:
 
 - Buffer ↔ Memory
 - Pipeline ↔ Pipeline Layout
-- Pipeline ↔ Shader Module während der Erstellung
+- Pipeline ↔ Shader Module during creation
 - Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
 - Command buffer ↔ resources used by recorded commands
 
