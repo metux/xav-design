@@ -2771,6 +2771,34 @@ class UpdateDescriptorSetsIndirectReferenceTests(unittest.TestCase):
         )
         self.assertEqual((descriptor_set, buffer_a, buffer_b, cb), before)
 
+    def test_update_rejects_pending_affected_set_atomically(self) -> None:
+        pending_set = DescriptorSetLifetime(
+            slots={0: "buffer-A"}, pending_use=True,
+            pending_submission_refs=1,
+        )
+        other_set = DescriptorSetLifetime(slots={0: "buffer-C"})
+        buffer_a = BufferMemoryLifetime(identity="buffer-A", descriptor_slot_refs=1)
+        buffer_b = BufferMemoryLifetime(identity="buffer-B")
+        buffer_c = BufferMemoryLifetime(identity="buffer-C", descriptor_slot_refs=1)
+        cb = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[pending_set, other_set],
+            indirect_buffer_refs={"buffer-A", "buffer-C"},
+        )
+        before = copy.deepcopy((pending_set, other_set, buffer_a, buffer_b, buffer_c, cb))
+
+        self.assertEqual(
+            update_descriptor_sets(
+                [pending_set, other_set],
+                (DescriptorWrite(0, 0, "buffer-B"), DescriptorWrite(1, 0, None)),
+                [cb], buffers=[buffer_a, buffer_b, buffer_c],
+            ),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(
+            (pending_set, other_set, buffer_a, buffer_b, buffer_c, cb), before,
+        )
+
     def test_update_batch_validation_failure_preserves_slots_and_all_cb_refs(self) -> None:
         descriptor_set = DescriptorSetLifetime(slots={0: "buffer-A"})
         cb = CommandBufferModel(
