@@ -3634,6 +3634,9 @@ class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
             "SUCCESS",
         )
 
+        old_wait_a = registry.wait_registrations[("client-A", 101)]
+        old_wait_b = registry.wait_registrations[("client-A", 102)]
+        surviving_wait = registry.wait_registrations[("client-B", 103)]
         registry.disconnect("client-A")
         self.assertNotIn(("client-A", 101), registry.wait_registrations)
         self.assertNotIn(("client-A", 102), registry.wait_registrations)
@@ -3641,10 +3644,20 @@ class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
         self.assertNotIn(("client-A", 92), registry.submissions)
         self.assertIs(registry.detached_submissions[("client-A", 92)], submission)
 
-        # Canceled waits cannot later complete or retain wait-only references.
-        self.assertEqual(registry.finish_wait("client-A", 101), "BadValue")
-        self.assertEqual(registry.finish_wait("client-A", 102), "BadValue")
-        self.assertEqual(registry.finish_wait("client-B", 103), "SUCCESS")
+        # A new wait may reuse the connection/token pair, but an old callback
+        # must be bound to its captured registration object, not the pair.
+        registry.live_connections.add("client-A")
+        self.assertEqual(
+            registry.register_wait("client-A", 101, "WaitForFence", ("fence-new",)),
+            "SUCCESS",
+        )
+        replacement_wait = registry.wait_registrations[("client-A", 101)]
+        self.assertIsNot(replacement_wait, old_wait_a)
+        self.assertEqual(registry.finish_wait(old_wait_a), "BadValue")
+        self.assertIs(registry.wait_registrations[("client-A", 101)], replacement_wait)
+        self.assertEqual(registry.finish_wait(old_wait_b), "BadValue")
+        self.assertEqual(registry.finish_wait(surviving_wait), "SUCCESS")
+        self.assertEqual(registry.finish_wait(replacement_wait), "SUCCESS")
         # Accepted work still reaches its actual terminal state.
         self.assertEqual(registry.terminal_callback("client-A", 92, "FAILED"), "SUCCESS")
         self.assertEqual(submission.terminal, "FAILED")
