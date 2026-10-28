@@ -395,7 +395,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
 
 
     def test_read_buffer_alignment_boundaries(self):
-        expected = {1: (1, 3), 4: (1, 0), 8: (2, 0)}
+        expected = {1: (1, 3), 2: (1, 2), 3: (1, 1), 4: (1, 0), 8: (2, 0)}
         for vector in self.vectors:
             if not vector["event"].startswith("ReadBuffer-") or vector["event"] == "ReadBuffer-5-bytes":
                 continue
