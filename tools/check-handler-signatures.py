@@ -35,7 +35,7 @@ def normalize_args(value):
     parts = []
     for item in value.split(","):
         item = compact(item)
-        item = re.sub(r"\\s+[A-Za-z_][A-Za-z0-9_]*$", "", item)
+        item = re.sub(r"\s+[A-Za-z_][A-Za-z0-9_]*$", "", item)
         parts.append(item)
     return ", ".join(parts)
 
