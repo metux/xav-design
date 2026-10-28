@@ -467,8 +467,8 @@ class GoldenReplyVectorTests(unittest.TestCase):
         for order in ("little", "big"):
             with self.subTest(order=order):
                 matches = [v for v in self.vectors
-                           if v["event"] == "GetPhysicalDeviceMemoryProperties-zero-types-one-heap"
-                           and v["byte_order"] == order]
+                           if v["event"] == "GetPhysicalDeviceMemoryProperties"
+                           and "zero-types-one-heap" in v["name"] and v["byte_order"] == order]
                 self.assertEqual(len(matches), 1)
                 wire = bytes.fromhex(matches[0]["wire_hex"])
                 payload = wire[32:]
