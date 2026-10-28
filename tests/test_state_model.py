@@ -2641,6 +2641,24 @@ class CommandBufferLifecycleTransitionTests(unittest.TestCase):
 
 
 class DescriptorSetLifetimeAtomicityTests(unittest.TestCase):
+    def test_duplicate_descriptor_set_free_does_not_double_release_slot_refs(self) -> None:
+        buffer = BufferMemoryLifetime(identity="buffer-shared", descriptor_slot_refs=2)
+        selected = DescriptorSetLifetime(slots={0: buffer.identity})
+        still_live = DescriptorSetLifetime(slots={0: buffer.identity})
+        before = copy.deepcopy((selected, still_live, buffer))
+
+        self.assertEqual(
+            free_descriptor_sets([selected, selected], [buffer]),
+            "BadValue",
+        )
+        self.assertEqual((selected, still_live, buffer), before)
+        self.assertEqual(buffer.descriptor_slot_refs, 2)
+
+        self.assertEqual(free_descriptor_sets([selected], [buffer]), "SUCCESS")
+        self.assertEqual(buffer.descriptor_slot_refs, 1)
+        self.assertTrue(still_live.live)
+        self.assertEqual(still_live.slots, {0: buffer.identity})
+
     def test_free_descriptor_sets_rejects_pending_set_atomically(self) -> None:
         cb = CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE, entries=[b"keep"])
         first = DescriptorSetLifetime(executable_refs=[cb])
