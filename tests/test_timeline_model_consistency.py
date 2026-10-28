@@ -134,10 +134,13 @@ class TimelineModelConsistencyTests(unittest.TestCase):
 
         self.assertEqual(host.mark_device_lost(), "SUCCESS")
         submit.device_lost = True
-        self.assertEqual(host.finish_gpu_signal(101, success=True), "SUCCESS")
+        # Device loss finalizes the host-side reservation; the backend callback
+        # is stale and must not finalize that token a second time.
+        self.assertEqual(host.finish_gpu_signal(101, success=True), "BadValue")
         self.assertEqual(finish_submission(submit, 101, success=True), "SUCCESS")
         self.assert_counters_match(host, submit)
         self.assertEqual(host.counter, 2)
+        self.assertEqual(host.terminal_gpu_signals, {101})
         self.assertEqual(host.terminal_waits, {})
         self.assertEqual(submit.pending_timeline_signals, [])
         self.assertEqual(submit.signal_slots, [None])
