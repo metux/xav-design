@@ -42,6 +42,25 @@ class NegativeContractRegressionTests(unittest.TestCase):
             with self.subTest(contract=phrase):
                 self.assertIn(phrase, joined)
 
+    def test_write_buffer_length_precedes_scalar_and_resource_errors(self) -> None:
+        memory = read("spec/memory-buffers.md")
+        write_spec = memory.split("## 5.7 `WriteBuffer`", 1)[1].split(
+            "## 5.8 `ReadBuffer`", 1
+        )[0]
+        write_errors = self.errors.split("### `WriteBuffer`", 1)[1].split(
+            "### `ReadBuffer`", 1
+        )[0]
+        for section_name, section in (("normative chapter", write_spec), ("error map", write_errors)):
+            with self.subTest(section=section_name):
+                length = section.index("BadLength")
+                scalar = section.index("BadValue")
+                xid = section.index("BadValue", scalar + 1) if section_name == "error map" else section.index("buffer MUST be bound")
+                self.assertLess(length, scalar)
+                self.assertLess(scalar, xid)
+        self.assertIn("arithmetic wider than 32 bits", write_spec)
+        self.assertIn("maximum X11 request length", write_spec)
+        self.assertIn("Request-Gesamtlänge mit Überlauf", write_errors)
+
     def test_buffer_and_descriptor_mixed_failures_are_atomic(self) -> None:
         self.assertIn("BindBufferMemory", self.conformance)
         self.assertIn("UpdateDescriptorSets", self.conformance)
