@@ -968,8 +968,8 @@ def check_request_document_coverage(c: Check) -> None:
                   f"request {opcode} ({name}): missing from conformance checklist")
 
     c.require(
-        "`EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`" in errors
-        and "wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig" in errors,
+        "`EnumeratePhysicalDevices`: an incorrect request length (`!= 8` bytes) results in `BadLength`" in errors
+        and "If no Physical Devices are available, an empty successful reply with `reply.length = 0` is permitted" in errors,
         "error mapping: EnumeratePhysicalDevices must define length failure and empty-result behavior",
     )
     c.require(
