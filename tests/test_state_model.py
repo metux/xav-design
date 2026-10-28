@@ -4068,6 +4068,55 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(model_c.pending_submissions, [])
         self.assertEqual(shared_c.signal_state, BinarySignalState.UNTRUSTED)
 
+    def test_present_device_loss_propagates_through_mixed_overlapping_models(self):
+        shared_ab = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        shared_bc = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_c = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+
+        present_a = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared_ab],
+        )
+        submit_b = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED],
+            signal_slots=[None, None],
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            shared_semaphores=[shared_ab, shared_bc],
+        )
+        present_c = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED],
+            shared_semaphores=[shared_bc, shared_c],
+        )
+        self.assertTrue(queue_present(
+            present_a, PresentRequest(token=973, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(queue_submit(
+            submit_b,
+            SubmitRequest(token=974, signal_indices=(1,), signal_values=(0,)),
+        ), "SUCCESS")
+        self.assertTrue(queue_present(
+            present_c, PresentRequest(token=975, wait_indices=(1,))
+        ).accepted is False)  # The isolated semaphore has no signal payload.
+
+        self.assertEqual(mark_present_device_lost(present_a), "SUCCESS")
+        self.assertTrue(all(state.device_lost for state in (present_a, submit_b, present_c)))
+        self.assertTrue(all(shared.device_lost for shared in (shared_ab, shared_bc, shared_c)))
+        self.assertEqual(present_a.terminal_present_status[973], "DEVICE_LOST")
+        self.assertNotIn(973, present_a.pending_present_tokens)
+        # Foreign Submit work remains owned by its callback, but every mirror
+        # in the transitively connected model is already quarantined.
+        self.assertEqual(submit_b.pending_submissions, [974])
+        self.assertEqual(submit_b.binary_signal_states,
+                         [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED])
+        self.assertEqual(finish_submission(submit_b, 974, success=True), "SUCCESS")
+        self.assertEqual(shared_c.signal_state, BinarySignalState.UNTRUSTED)
+
     def test_submit_device_loss_preserves_confirmed_empty_shared_payload(self):
         shared = SharedBinarySemaphore(
             signal_state=BinarySignalState.UNSIGNALED,
