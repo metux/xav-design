@@ -211,7 +211,11 @@ def finish_present_wait(
             if shared.signal_reservation is not None:
                 shared.signal_consumed = True
     else:
-        # A known non-consumed payload retains its confirmed signal state.
+        # A known non-consumed payload retains the canonical shared state.
+        # The present model's local mirror may predate a competing Submit
+        # signal callback, so never leave it stale after resolving this wait.
+        if shared is not None:
+            state.binary_signal_states[semaphore_index] = shared.signal_state
         state.wait_states[semaphore_index] = WaitState.READY
     if shared is not None:
         shared.wait_reservation = None
