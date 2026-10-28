@@ -3882,3 +3882,98 @@ class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
         terminal = copy.deepcopy(state)
         self.assertEqual(finish_submission(state, 453, success=True), "BadValue")
         self.assertEqual(state, terminal)
+
+class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
+    """Every accepted Present wait must retire independently across Device Loss."""
+
+    def test_device_loss_between_competing_wait_callbacks_quarantines_all_waits(self):
+        shared = [
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+        ]
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[
+                BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED,
+            ],
+            signal_slots=[None, None],
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            shared_semaphores=shared,
+        )
+        self.assertEqual(
+            queue_submit(
+                submit,
+                SubmitRequest(
+                    token=901, signal_indices=(0, 1), signal_values=(0, 0),
+                ),
+            ),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[
+                BinarySignalState.SIGNAL_PENDING, BinarySignalState.SIGNAL_PENDING,
+            ],
+            shared_semaphores=shared,
+        )
+        self.assertTrue(
+            queue_present(
+                present, PresentRequest(token=902, wait_indices=(0, 1)),
+            ).accepted
+        )
+        self.assertEqual(
+            [item.wait_reservation for item in shared],
+            [("present", 902), ("present", 902)],
+        )
+
+        # One callback resolves before loss; the other races after loss. Loss
+        # must quarantine both payloads, including the one whose wait callback
+        # already reported known non-consumption.
+        self.assertEqual(
+            finish_present_wait(present, 902, 0, consumed=False), "SUCCESS"
+        )
+        self.assertEqual(shared[0].signal_state, BinarySignalState.SIGNAL_PENDING)
+        self.assertIsNone(shared[0].wait_reservation)
+        self.assertEqual(shared[1].wait_reservation, ("present", 902))
+
+        self.assertEqual(mark_device_lost(submit), "SUCCESS")
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertEqual(
+            [item.signal_reservation for item in shared], [None, None]
+        )
+
+        # A late success-shaped callback for the second wait cannot restore
+        # trust. It must still retire its own Present reservation exactly once.
+        self.assertEqual(
+            finish_present_wait(present, 902, 1, consumed=True), "SUCCESS"
+        )
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertEqual(present.binary_signal_states, [
+            BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED,
+        ])
+        self.assertEqual(present.wait_states, [WaitState.READY, WaitState.UNTRUSTED])
+        self.assertEqual(present.pending_present_waits, [])
+        self.assertEqual(
+            [item.wait_reservation for item in shared], [None, None]
+        )
+
+        terminal = copy.deepcopy((submit, present, shared))
+        self.assertEqual(
+            finish_present_wait(present, 902, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual(
+            finish_present_wait(present, 902, 1, consumed=False), "BadValue"
+        )
+        self.assertEqual(finish_submission(submit, 901, success=True), "BadValue")
+        self.assertEqual((submit, present, shared), terminal)
+
