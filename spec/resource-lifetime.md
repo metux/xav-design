@@ -193,7 +193,7 @@ DestroyFence is rejected while the Fence is associated with a nonterminal submis
 
 A pending Command Buffer MUST NOT be modified, reset, freed, or submitted again in v0.1.
 
-Ein Descriptor Set darf nicht aktualisiert oder freigegeben werden, solange eine angenommene Submission es verwenden kann. Command buffers reference the Descriptor Set object; slot contents are read from the current set at later execution time and are not frozen during recording. A successful `UpdateDescriptorSets` therefore atomically replaces the affected slot contents and updates the derived internal Buffer references of every non-pending command buffer that references the set. An `EXECUTABLE` command buffer remains executable after the update alone; later destruction of an old resource that is no longer referenced MUST NOT invalidate it because of that removed dependency.
+A Descriptor Set MUST NOT be updated or freed while an accepted submission may use it. Command buffers reference the Descriptor Set object; slot contents are read from the current set at later execution time and are not frozen during recording. A successful UpdateDescriptorSets therefore atomically replaces the affected slot contents and updates the derived internal Buffer references of every non-pending command buffer that references the set. An EXECUTABLE command buffer remains executable after the update alone; later destruction of an old resource that is no longer referenced MUST NOT invalidate it because of that removed dependency.
 
 Update-after-bind and Update-unused-while-pending are not supported.
 
