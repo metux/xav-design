@@ -5061,6 +5061,73 @@ class DisconnectWaitDeviceLossInterleavingTests(unittest.TestCase):
 class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
     """Every accepted Present wait must retire independently across Device Loss."""
 
+    def test_disconnected_multisignal_callback_cannot_restore_stale_consumed_mirror(self):
+        shared = [
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+        ]
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[
+                BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED,
+            ],
+            signal_slots=[None, None],
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+            shared_semaphores=shared,
+        )
+        self.assertEqual(queue_submit(
+            submit,
+            SubmitRequest(token=993, signal_indices=(0, 1), signal_values=(0, 0)),
+        ), "SUCCESS")
+        # Model a per-token consumed marker left by a competing wait callback.
+        # After disconnect, the model is no longer in the owner traversal, so
+        # its local SIGNAL_PENDING mirrors intentionally remain stale.
+        submit.consumed_pending_binary_signals.add((993, 0))
+        _unregister_semaphore_owner(submit)
+        observer = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[
+                BinarySignalState.SIGNAL_PENDING, BinarySignalState.SIGNAL_PENDING,
+            ],
+            shared_semaphores=shared,
+        )
+        self.assertEqual(mark_present_device_lost(observer), "SUCCESS")
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertEqual(
+            submit.binary_signal_states,
+            [BinarySignalState.SIGNAL_PENDING, BinarySignalState.SIGNAL_PENDING],
+        )
+
+        # A late success-shaped callback retires its token but must reconcile
+        # both local mirrors from the canonical post-loss state. In particular,
+        # the stale consumed marker for index 0 cannot make it look empty.
+        self.assertEqual(finish_submission(submit, 993, success=True), "SUCCESS")
+        self.assertEqual(
+            submit.binary_signal_states,
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertEqual(
+            submit.wait_states, [WaitState.UNTRUSTED, WaitState.UNTRUSTED]
+        )
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertEqual(
+            [item.signal_reservation for item in shared], [None, None]
+        )
+        self.assertEqual(submit.pending_submissions, [])
+        snapshot = copy.deepcopy((submit, shared))
+        self.assertEqual(finish_submission(submit, 993, success=False), "BadValue")
+        self.assertEqual((submit, shared), snapshot)
+
     def test_device_loss_between_competing_wait_callbacks_quarantines_all_waits(self):
         shared = [
             SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
