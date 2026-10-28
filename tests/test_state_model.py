@@ -184,6 +184,32 @@ class QueuePresentStateModelTests(unittest.TestCase):
         self.assertEqual(state.image_state, ImageState.INVALID)
 
 
+    def test_late_present_completion_cannot_clear_shared_untrusted_state(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        state = self.state(
+            shared_semaphores=[shared],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+        )
+        self.assertEqual(
+            queue_present(state, PresentRequest(token=41, wait_indices=(0,))).result,
+            "SUCCESS",
+        )
+        self.assertEqual(shared.wait_reservation, ("present", 41))
+
+        # Another terminal path discovers uncertain payload state before this
+        # presentation callback arrives.
+        shared.signal_state = BinarySignalState.UNTRUSTED
+        self.assertEqual(finish_present_wait(state, 41, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(state.binary_signal_states[0], BinarySignalState.UNTRUSTED)
+        self.assertEqual(state.wait_states[0], WaitState.UNTRUSTED)
+        self.assertIsNone(shared.wait_reservation)
+        self.assertEqual(state.pending_present_waits, [])
+
+        after_terminal = copy.deepcopy(state)
+        self.assertEqual(finish_present_wait(state, 41, 0, consumed=True), "BadValue")
+        self.assertEqual(state, after_terminal, "duplicate terminal callback mutated state")
+
 class ShaderModuleDataModelTests(unittest.TestCase):
     def test_single_create_final_and_chunk_concatenation(self) -> None:
         single = ShaderAssemblyState()

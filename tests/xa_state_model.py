@@ -193,7 +193,12 @@ def finish_present_wait(
             [BinarySignalState.UNSIGNALED]
             * (semaphore_index + 1 - len(state.binary_signal_states))
         )
-    if consumed is None:
+    if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
+        # UNTRUSTED is a terminal knowledge state: a late successful-looking
+        # present callback cannot downgrade uncertainty to UNSIGNALED.
+        state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
+        state.wait_states[semaphore_index] = WaitState.UNTRUSTED
+    elif consumed is None:
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
         state.wait_states[semaphore_index] = WaitState.UNTRUSTED
         if shared is not None:
