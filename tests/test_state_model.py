@@ -4105,6 +4105,15 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertTrue(all(shared.device_lost for shared in (shared_ab, shared_bc, shared_c)))
         self.assertEqual(present_a.terminal_present_status[973], "DEVICE_LOST")
         self.assertNotIn(973, present_a.pending_present_tokens)
+        # Presentation terminalization and its wait callback are independent:
+        # the accepted wait retains its reservation until that callback drains.
+        self.assertEqual(present_a.pending_present_waits, [(973, 0)])
+        self.assertEqual(shared_ab.wait_reservation, ("present", 973))
+        self.assertEqual(
+            finish_present_wait(present_a, 973, 0, consumed=True), "SUCCESS"
+        )
+        self.assertIsNone(shared_ab.wait_reservation)
+        self.assertEqual(shared_ab.signal_state, BinarySignalState.UNTRUSTED)
         # Foreign Submit work remains owned by its callback, but every mirror
         # in the transitively connected model is already quarantined.
         self.assertEqual(submit_b.pending_submissions, [974])
