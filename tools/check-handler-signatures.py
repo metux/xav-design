@@ -42,7 +42,7 @@ def normalize_args(value):
 
 def normalize_return(value):
     value = compact(value)
-    return re.sub(r"^(?:(?:static|extern|inline|register|const)\\s+)+", "", value)
+    return re.sub(r"^(?:(?:static|extern|inline|register|const)\s+)+", "", value)
 
 
 def scan(path):
