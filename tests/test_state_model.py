@@ -4013,7 +4013,10 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(present, terminal)
 
     def test_late_device_loss_does_not_rewrite_already_terminal_present_success(self):
-        present = self.present_state()
+        present = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+        )
         self.assertTrue(queue_present(
             present, PresentRequest(token=905)
         ).accepted)
