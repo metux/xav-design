@@ -3977,3 +3977,26 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(finish_submission(submit, 901, success=True), "BadValue")
         self.assertEqual((submit, present, shared), terminal)
 
+    def test_stale_present_mirror_cannot_accept_wait_after_device_loss(self):
+        shared = SharedBinarySemaphore(
+            signal_state=BinarySignalState.UNTRUSTED,
+            signal_reservation=None,
+            wait_reservation=None,
+        )
+        # This PresentState is a competing queue/model whose local mirror has
+        # not yet received the callback that reconciles it after device loss.
+        stale = PresentState(
+            device_lost=False,
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        before = copy.deepcopy(stale)
+        result = queue_present(stale, PresentRequest(token=903, wait_indices=(0,)))
+        self.assertEqual(result.result, "DEPENDENCY_FAILED")
+        self.assertFalse(result.accepted)
+        self.assertEqual(stale, before)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared.wait_reservation)
+
