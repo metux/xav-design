@@ -39,7 +39,7 @@ jobs:
         run: python tests/test_handler_ci_gate.py
       - name: Syntax-check checker and wire tests
         id: py_compile
-        run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tools/preprocess-xav-source.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_ci_workflow_coverage.py tests/test_wire_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
+        run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tools/preprocess-xav-source.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_ci_workflow_coverage.py tests/test_ci_run_presence.py tools/check-ci-run-presence.py tests/test_wire_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
       - name: Validate request/reply matrix and XGE event layouts
         id: wire_layout
         run: python tools/check-wire-layout.py
