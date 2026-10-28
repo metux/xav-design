@@ -358,8 +358,10 @@ def finish_present_wait(
             shared.signal_state = BinarySignalState.UNSIGNALED
             if shared.signal_reservation is not None:
                 shared.signal_consumed = True
-                if shared.signal_reservation[0] == "submit":
-                    shared.signal_consumption_confirmed = True
+            # The Present wait itself confirms that the binary payload is
+            # consumed, even if the originating Submit callback already
+            # retired its transient signal reservation.
+            shared.signal_consumption_confirmed = True
     else:
         # A known non-consumed payload retains the canonical shared state.
         # The present model's local mirror may predate a competing Submit
