@@ -81,9 +81,10 @@ output=$(MAX_DEPTH=8 sh "$SCRIPT" "$fixture" 2>&1)
 printf '%s\n' "$output" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: CMake project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: Meson project not discovered" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: Rust Vulkan call not recognized" >&2; exit 1; }
-printf '%s\n' "$output" | grep -F 'X11-DISPATCH: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
-printf '%s\n' "$output" | grep -F 'VK-CALL: src/backend.zig' >/dev/null || { echo "FAIL: Zig wrapper call not recognized" >&2; exit 1; }
-if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|target/build_output|VK-CALL: src/comments|VK-CALL: src/inline_comment|VK-CALL: src/declarations' >/dev/null; then
+printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/request.c' >/dev/null || { echo "FAIL: X11 request handler not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'VK-CALL: src/bare_call.c' >/dev/null || { echo "FAIL: ordinary C Vulkan call not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'WRAPPER-CALL: src/backend.zig' >/dev/null || { echo "FAIL: Zig wrapper not classified separately" >&2; exit 1; }
+if printf '%s\n' "$output" | grep -E 'tests/backend_test|generated/generated|target/build_output|X11-HANDLER: src/request_prototype|VK-CALL: src/(comments|inline_comment|string_literal|block_comment|declarations)|VK-CALL: src/backend.zig' >/dev/null; then
     echo "FAIL: excluded/comment/declaration source was reported as a Vulkan call" >&2
     exit 1
 fi
