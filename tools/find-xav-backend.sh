@@ -165,8 +165,25 @@ scan_project() {
         dispatch_code=$code
         case "$f" in *.c|*.h)
           if command -v "${CC:-cc}" >/dev/null 2>&1; then
-            preprocessed=$(cd "$repo" && "${CC:-cc}" -E -P -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
-            [ -z "$preprocessed" ] || dispatch_code=$preprocessed
+            preprocessed=$(cd "$repo" && "${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
+            if [ -n "$preprocessed" ]; then
+              # Keep macro expansions at their call sites in this translation
+              # unit, but discard declarations/definitions pulled in from
+              # headers. Otherwise a header's own ProcVector and function
+              # bodies can be mistaken for handlers local to this source file.
+              dispatch_code=$(printf '%s\\n' "$preprocessed" | awk -v source_file="$full" '
+                /^#[[:space:]]*[0-9]+[[:space:]]+"/ {
+                  if (match($0, /^#[[:space:]]*[0-9]+[[:space:]]+"[^"]+"/)) {
+                    marker=substr($0, RSTART, RLENGTH)
+                    sub(/^#[[:space:]]*[0-9]+[[:space:]]+"/, "", marker)
+                    sub(/"$/, "", marker)
+                    active=(marker == source_file)
+                  }
+                  next
+                }
+                active { print }
+              ')
+            fi
           fi ;;
         esac
         req=$(printf '%s\n' "$dispatch_code" | awk '
