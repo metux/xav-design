@@ -1668,7 +1668,7 @@ def _github_heading_slug(heading: str) -> str:
         category = unicodedata.category(char)
         if char.isspace():
             chars.append("-")
-        elif char == "-" or category[0] in ("L", "N"):
+        elif char in ("-", "_") or category[0] in ("L", "N"):
             chars.append(char)
     slug = re.sub(r"-+", "-", "".join(chars)).strip("-")
     return slug
