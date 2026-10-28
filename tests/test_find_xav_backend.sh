@@ -93,6 +93,41 @@ int ProcRealTwoReq(ClientPtr client)
     return Success;
 }
 EOF
+cat >"$cmake/src/macro_table.h" <<'EOF'
+#define XORG_HANDLER(name) name
+#define XORG_HANDLER_GROUP(a, b) { a, b }
+EOF
+cat >"$cmake/src/multiline_macro_table.c" <<'EOF'
+#include "macro_table.h"
+static const struct {
+    int (*handler)(ClientPtr);
+    int opcode;
+} ProcVector[] =
+{
+    XORG_HANDLER(ProcMacroTableReq),
+    XORG_HANDLER_GROUP(
+        ProcNestedFirstReq,
+        ProcNestedSecondReq
+    ),
+    ProcGenericDispatch,
+};
+int ProcMacroTableReq(ClientPtr client)
+{
+    return Success;
+}
+int ProcNestedFirstReq(ClientPtr client)
+{
+    return Success;
+}
+int ProcNestedSecondReq(ClientPtr client)
+{
+    return Success;
+}
+int ProcGenericDispatch(ClientPtr client)
+{
+    return Success;
+}
+EOF
 cat >"$cmake/src/protocol_generated.c" <<'EOF'
 int ProcNotRealSourceReq(ClientPtr client)
 {
@@ -189,7 +224,15 @@ printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null 
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
 printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_header_request.c' >/dev/null || { echo "FAIL: handler macro from a non-dixstruct header not recognized" >&2; exit 1; } >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
-printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c' >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
+printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c'
+for handler in ProcMacroTableReq ProcNestedFirstReq ProcNestedSecondReq; do
+    printf '%s\\n' "$output" | grep -F "X11-HANDLER: src/multiline_macro_table.c" -A8 | grep -F "$handler" >/dev/null || {
+        echo "FAIL: multiline/macro dispatch handler $handler not recognized" >&2; exit 1;
+    }
+done
+if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' -A8 | grep -F 'ProcGenericDispatch' >/dev/null; then
+    echo "FAIL: generic dispatcher in macro table classified as concrete request handler" >&2; exit 1
+fi >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
 if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/protocol_generated.c' >/dev/null; then
     echo "FAIL: generated request artifact was treated as a real source handler" >&2; exit 1
 fi
