@@ -251,22 +251,22 @@ if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/header_includes_only.c' >
 fi
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/xtest_request.c' >/dev/null || { echo "FAIL: switch-dispatched Xorg handlers not recognized" >&2; exit 1; }
 printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: function-pointer assignment targets not recognized" >&2; exit 1; }
-printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
-printf '%s\\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_header_request.c' >/dev/null || { echo "FAIL: handler macro from a non-dixstruct header not recognized" >&2; exit 1; } >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
-printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/tables.c'
+printf '%s\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_request.c'
+printf '%s\n' "$output" | grep -F 'X11-HANDLER-MACRO: src/macro_header_request.c' >/dev/null || { echo "FAIL: handler macro from a non-dixstruct header not recognized" >&2; exit 1; } >/dev/null || { echo "FAIL: macro-declared Xorg request handler not recognized" >&2; exit 1; }
+printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/tables.c'
 for handler in ProcPastedMacroReq ProcMacroTableReq ProcNestedFirstReq ProcNestedSecondReq; do
-    printf '%s\\n' "$output" | grep -F "X11-HANDLER: src/multiline_macro_table.c" -A8 | grep -F "$handler" >/dev/null || {
+    printf '%s\n' "$output" | grep -F "X11-HANDLER: src/multiline_macro_table.c" -A8 | grep -F "$handler" >/dev/null || {
         echo "FAIL: multiline/macro dispatch handler $handler not recognized" >&2; exit 1;
     }
 done
-if printf '%s\\n' "$output" | grep -F 'ProcDisabledMacroReq' >/dev/null; then
+if printf '%s\n' "$output" | grep -F 'ProcDisabledMacroReq' >/dev/null; then
     echo "FAIL: disabled preprocessor branch was classified as a handler" >&2
     exit 1
 fi
-if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' -A8 | grep -F 'ProcGenericDispatch' >/dev/null; then
+if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' -A8 | grep -F 'ProcGenericDispatch' >/dev/null; then
     echo "FAIL: generic dispatcher in macro table classified as concrete request handler" >&2; exit 1
 fi >/dev/null || { echo "FAIL: checked-in Xorg ProcVector table not recognized" >&2; exit 1; }
-if printf '%s\\n' "$output" | grep -F 'X11-HANDLER: src/protocol_generated.c' >/dev/null; then
+if printf '%s\n' "$output" | grep -F 'X11-HANDLER: src/protocol_generated.c' >/dev/null; then
     echo "FAIL: generated request artifact was treated as a real source handler" >&2; exit 1
 fi
 printf '%s\n' "$output" | grep -F 'X11-DISPATCH-ASSIGNMENT: src/indirect_dispatch.c' >/dev/null || { echo "FAIL: indirect dispatch assignments not reported" >&2; exit 1; }
@@ -285,8 +285,8 @@ fi
 # Exercise multiple independent roots and the portable grep fallback.
 # Without a usable C compiler, source-text detection must remain usable.
 fallback_cc=$(CC=missing-xav-cc MAX_DEPTH=8 sh "$SCRIPT" "$cmake" 2>&1)
-printf '%s\\n' "$fallback_cc" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: compiler-free fallback failed" >&2; exit 1; }
-printf '%s\\n' "$fallback_cc" | grep -F 'ProcMacroTableReq' >/dev/null || { echo "FAIL: compiler-free fallback lost literal handlers" >&2; exit 1; }
+printf '%s\n' "$fallback_cc" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: compiler-free fallback failed" >&2; exit 1; }
+printf '%s\n' "$fallback_cc" | grep -F 'ProcMacroTableReq' >/dev/null || { echo "FAIL: compiler-free fallback lost literal handlers" >&2; exit 1; }
 
 fallback=$(USE_GREP=1 MAX_DEPTH=8 sh "$SCRIPT" "$cmake" "$meson" 2>&1)
 printf '%s\n' "$fallback" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL: first explicit root with spaces not discovered" >&2; exit 1; }
@@ -295,10 +295,10 @@ printf '%s\n' "$fallback" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { ec
 
 # Relative search roots must still preprocess source files from the caller's cwd.
 relative_output=$(cd "$tmp" && MAX_DEPTH=8 sh "$SCRIPT" "fixtures with spaces/cmake-project" 2>&1)
-printf '%s\\n' "$relative_output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' >/dev/null || {
+printf '%s\n' "$relative_output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' >/dev/null || {
     echo "FAIL: relative project root prevented C preprocessing" >&2; exit 1;
 }
-printf '%s\\n' "$relative_output" | grep -F 'ProcPastedMacroReq' >/dev/null || {
+printf '%s\n' "$relative_output" | grep -F 'ProcPastedMacroReq' >/dev/null || {
     echo "FAIL: relative project root lost token-pasted handler detection" >&2; exit 1;
 }
 
