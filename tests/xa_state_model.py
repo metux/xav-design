@@ -256,11 +256,15 @@ def finish_present_wait(
             )
         state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
         state.wait_states[index] = WaitState.UNTRUSTED
-    if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
-        # UNTRUSTED is a terminal knowledge state: a late successful-looking
-        # present callback cannot downgrade uncertainty to UNSIGNALED.
+    if shared is not None and (
+        shared.signal_state is BinarySignalState.UNTRUSTED
+        or shared.device_lost or state.device_lost
+    ):
+        # Device loss is device-wide; a late wait callback from a different
+        # queue cannot turn a quarantined payload back into a trusted one.
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
         state.wait_states[semaphore_index] = WaitState.UNTRUSTED
+        shared.signal_state = BinarySignalState.UNTRUSTED
     elif consumed is None:
         state.binary_signal_states[semaphore_index] = BinarySignalState.UNTRUSTED
         state.wait_states[semaphore_index] = WaitState.UNTRUSTED
@@ -954,7 +958,12 @@ def finish_submission(
         # QueuePresent owns the canonical cross-API payload outcome. If its
         # callback made the semaphore untrusted, a later Submit callback must
         # not overwrite that knowledge with a local stale snapshot.
-        if shared is not None and shared.signal_state is BinarySignalState.UNTRUSTED:
+        if shared is not None and (
+            shared.signal_state is BinarySignalState.UNTRUSTED
+            or (shared.device_lost and not consumed)
+        ):
+            # A loss observed by a competing queue/model is device-wide. A
+            # stale "payload unchanged" callback cannot restore an old mirror.
             current = BinarySignalState.UNTRUSTED
             state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
         if current is BinarySignalState.UNTRUSTED:
