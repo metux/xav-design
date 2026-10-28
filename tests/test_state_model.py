@@ -3805,6 +3805,86 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
 
 
 
+
+    def test_independent_device_loss_callbacks_quarantine_all_pending_semaphores(self):
+        shared = [
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+        ]
+
+        def submit(token, index):
+            state = SubmissionModel(
+                command_buffers=[
+                    CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                ],
+                wait_states=[WaitState.READY, WaitState.READY],
+                binary_signal_states=[
+                    BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED
+                ],
+                signal_slots=[None, None],
+                semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+                shared_semaphores=shared,
+            )
+            self.assertEqual(queue_submit(state, SubmitRequest(
+                token=token, signal_indices=(index,), signal_values=(0,)
+            )), "SUCCESS")
+            return state
+
+        submit0, submit1 = submit(940, 0), submit(941, 1)
+        presents = []
+        for token, index in ((950, 0), (951, 1)):
+            present = PresentState(
+                valid_wait_xids=(True, True),
+                wait_states=[WaitState.READY, WaitState.READY],
+                binary_signal_states=[
+                    BinarySignalState.SIGNAL_PENDING,
+                    BinarySignalState.SIGNAL_PENDING,
+                ],
+                shared_semaphores=shared,
+            )
+            self.assertTrue(queue_present(
+                present, PresentRequest(token=token, wait_indices=(index,))
+            ).accepted)
+            presents.append((present, token, index))
+
+        # Two independent observers report the same device-wide loss. The
+        # second notification must not resurrect reservations or alter the
+        # terminal status established by the first observer.
+        self.assertEqual(mark_device_lost(submit0), "SUCCESS")
+        snapshot = copy.deepcopy(shared)
+        self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
+        self.assertEqual(mark_present_device_lost(presents[1][0]), "SUCCESS")
+        self.assertTrue(all(item.device_lost for item in shared))
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+
+        # Late Submit and Present callbacks retire only their own outstanding
+        # work; neither callback may restore a quarantined payload.
+        self.assertEqual(finish_submission(submit1, 941, success=True), "SUCCESS")
+        for present, token, index in presents:
+            self.assertEqual(
+                finish_present_wait(present, token, index, consumed=True), "SUCCESS"
+            )
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertTrue(all(item.signal_reservation is None for item in shared))
+        self.assertTrue(all(item.wait_reservation is None for item in shared))
+        self.assertEqual(submit1.pending_submissions, [])
+        self.assertEqual(submit1.pending_binary_signals, [])
+        for present, token, _index in presents:
+            self.assertNotIn((token, _index), present.pending_present_waits)
+            self.assertEqual(present.terminal_present_status[token], "DEVICE_LOST")
+
+        # A repeated loss report after all callbacks is a no-op on semaphore
+        # knowledge and does not manufacture fresh reservations.
+        final_snapshot = copy.deepcopy(shared)
+        self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
+        self.assertEqual(shared, final_snapshot)
+
     def test_device_loss_quarantines_multiple_cross_queue_submit_present_callbacks(self):
         def make_race():
             shared = [
