@@ -3567,6 +3567,63 @@ class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
         self.assertEqual((submit, present, shared), terminal_state)
 
 
+
+    def test_confirmed_signal_consumption_survives_repeated_present_device_loss(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        submit = SubmissionModel(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+            ],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(
+                token=811, signal_indices=(0,), signal_values=(0,)
+            )),
+            "SUCCESS",
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=812, wait_indices=(0,))
+        ).accepted)
+
+        # Present confirms that it consumed the Submit signal before the
+        # Submit owner receives its terminal callback.
+        self.assertEqual(
+            finish_present_wait(present, 812, 0, consumed=True), "SUCCESS"
+        )
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(shared.signal_reservation, ("submit", 811))
+
+        # Repeated device-loss observations must preserve this positive
+        # consumption evidence, rather than treating the known-empty payload
+        # as unknown and destroying the owner's retirement token.
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(shared.signal_reservation, ("submit", 811))
+        self.assertEqual(submit.binary_signal_states, [BinarySignalState.UNSIGNALED])
+
+        # The owning Submit callback retires its reservation exactly once;
+        # device loss must not resurrect a signal known to have been consumed.
+        self.assertEqual(finish_submission(submit, 811, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+        self.assertFalse(shared.signal_consumed)
+        self.assertEqual(submit.pending_submissions, [])
+        self.assertEqual(submit.pending_binary_signals, [])
+
     def test_present_consumption_before_submit_success_callback_is_not_resurrected(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
         submit = SubmissionModel(
