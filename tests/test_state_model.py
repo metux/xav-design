@@ -2280,6 +2280,62 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state, before, "late callbacks mutated device-loss terminal state")
 
 
+
+class RecreatedDeviceSubmissionCallbackTests(unittest.TestCase):
+    def test_old_terminal_callback_cannot_emit_for_recreated_device_generation(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        old_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", old_device)
+        old_submission = AsyncSubmissionIdentity(
+            connection_identity="client-A",
+            token=1101,
+            device_identity="device-A",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(old_submission), "SUCCESS")
+        self.assertEqual(
+            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            "SUCCESS",
+        )
+
+        self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
+        new_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", new_device)
+        self.assertEqual(
+            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            "SUCCESS",
+        )
+        new_submission = AsyncSubmissionIdentity(
+            connection_identity="client-A",
+            token=1102,
+            device_identity="device-A",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(new_submission), "SUCCESS")
+
+        # The old callback has the same logical identity, XID, queue and event
+        # mask available again, but its captured device object is from the
+        # destroyed generation. It may retire its own submission only.
+        self.assertEqual(
+            registry.terminal_callback("client-A", 1101, "COMPLETE"), "SUCCESS"
+        )
+        self.assertEqual(old_submission.terminal, "COMPLETE")
+        self.assertIsNone(new_submission.terminal)
+        self.assertNotIn(("client-A", 1101), registry.submissions)
+        self.assertIs(registry.submissions[("client-A", 1102)], new_submission)
+        self.assertEqual(registry.emitted_events, [])
+
+        self.assertEqual(
+            registry.terminal_callback("client-A", 1102, "COMPLETE"), "SUCCESS"
+        )
+        self.assertEqual(new_submission.terminal, "COMPLETE")
+        self.assertEqual(
+            registry.emitted_events,
+            [("COMPLETE", "client-A", 71, 1102)],
+        )
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
