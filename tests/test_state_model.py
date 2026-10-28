@@ -4018,6 +4018,48 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
         self.assertEqual(shared, final_snapshot)
 
+    def test_submit_observing_shared_device_loss_propagates_to_other_semaphores(self):
+        shared_ab = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_bc = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+        shared_c = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
+
+        def make_model(shared):
+            return SubmissionModel(
+                command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+                wait_states=[WaitState.READY for _ in shared],
+                binary_signal_states=[BinarySignalState.UNSIGNALED for _ in shared],
+                signal_slots=[None for _ in shared],
+                semaphore_kinds=[SemaphoreKind.BINARY for _ in shared],
+                shared_semaphores=shared,
+            )
+
+        model_a = make_model([shared_ab])
+        model_b = make_model([shared_ab, shared_bc])
+        model_c = make_model([shared_bc, shared_c])
+        self.assertEqual(queue_submit(
+            model_c, SubmitRequest(token=976, signal_indices=(1,), signal_values=(0,))
+        ), "SUCCESS")
+
+        # Simulate another API/model having published the canonical device-loss
+        # flag; the first subsequent Submit on the overlapping model must fan
+        # it out instead of merely setting model_b.device_lost.
+        shared_ab.device_lost = True
+        self.assertEqual(queue_submit(model_b, SubmitRequest(token=977)), "DEVICE_LOST")
+        self.assertTrue(all(state.device_lost for state in (model_a, model_b, model_c)))
+        self.assertTrue(all(shared.device_lost for shared in (shared_ab, shared_bc, shared_c)))
+        self.assertEqual(
+            [shared.signal_state for shared in (shared_ab, shared_bc, shared_c)],
+            [BinarySignalState.UNTRUSTED] * 3,
+        )
+        self.assertEqual(
+            model_c.binary_signal_states,
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        # Foreign accepted work remains callback-owned after immediate quarantine.
+        self.assertEqual(model_c.pending_submissions, [976])
+        self.assertEqual(finish_submission(model_c, 976, success=True), "SUCCESS")
+        self.assertEqual(shared_c.signal_state, BinarySignalState.UNTRUSTED)
+
     def test_device_loss_propagates_across_partially_overlapping_semaphore_sets(self):
         shared_ab = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
         shared_bc = SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED)
