@@ -343,13 +343,22 @@ scan_project() {
             else if ($0 ~ /;/) wait_body=0
           }
         ' 2>/dev/null || :)
-        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ] || [ -n "$indirect_handlers" ] || [ -n "$macroclassic" ]; then
+        # Multiple heuristics can identify the same function (vector entry,
+        # concrete definition, switch arm, and pointer assignment). Merge the
+        # handler-name evidence into one stable, de-duplicated report per file.
+        handler_results=$(printf '%s\n' "$req" "$classic" "$switchreq" "$indirect_handlers" | awk '
+          {
+            line=$0
+            while (match(line, /(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+/)) {
+              name=substr(line,RSTART,RLENGTH)
+              if (!(name in seen)) { seen[name]=1; print name }
+              line=substr(line,RSTART+RLENGTH)
+            }
+          }')
+        if [ -n "$handler_results" ] || [ -n "$macroclassic" ]; then
           dispatch=$((dispatch+1))
-          [ -z "$req" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"
-          [ -z "$classic" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$classic" >>"$matches"
+          [ -z "$handler_results" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$handler_results" >>"$matches"
           [ -z "$macroclassic" ] || printf '  X11-HANDLER-MACRO: %s\n%s\n' "$f" "$macroclassic" >>"$matches"
-          [ -z "$switchreq" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$switchreq" >>"$matches"
-          [ -z "$indirect_handlers" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$indirect_handlers" >>"$matches"
           [ -z "$indirect_assignments" ] || printf '  X11-DISPATCH-ASSIGNMENT: %s\n%s\n' "$f" "$indirect_assignments" >>"$matches"
           [ -z "$wrappercalls" ] || printf '  X11-WRAPPER-CALL: %s\n%s\n' "$f" "$wrappercalls" >>"$matches"
         fi
