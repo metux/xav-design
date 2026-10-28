@@ -157,8 +157,13 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         )
         if signal_state is BinarySignalState.UNTRUSTED:
             return PresentResult("DEPENDENCY_FAILED", False)
-        if ((shared is not None and shared.wait_reservation is not None)
+        if ((shared is not None and (
+                    shared.wait_reservation is not None or shared.signal_consumed
+                ))
                 or any(pending_index == index for _token, pending_index in state.pending_present_waits)):
+            # A prior wait may have consumed a still-pending Submit signal
+            # before that signal's terminal callback retires its reservation.
+            # Do not accept a second waiter against that already-consumed payload.
             return PresentResult("INVALID_SYNCHRONIZATION_STATE", False)
 
     # Commit point: all acceptance-visible changes happen together.
@@ -680,9 +685,13 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             if wait_state is not WaitState.READY:
                 return ("DEPENDENCY_FAILED" if wait_state is WaitState.UNTRUSTED
                         else "INVALID_SYNCHRONIZATION_STATE")
-            if (shared is not None and shared.wait_reservation is not None) or any(
+            if ((shared is not None and (
+                    shared.wait_reservation is not None or shared.signal_consumed
+                )) or any(
                 pending_index == index for _token, pending_index in state.pending_binary_waits
-            ):
+            )):
+                # A cross-API waiter already consumed this signal even if the
+                # originating Submit callback has not yet retired its token.
                 return "INVALID_SYNCHRONIZATION_STATE"
     # Validate all signal reservations before mutating any one of them.
     # Concrete per-entry errors precede the generic dependency fallback.
