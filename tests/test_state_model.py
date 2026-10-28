@@ -3134,11 +3134,18 @@ class SemaphoreOwnerReferenceTests(unittest.TestCase):
         shared = SharedBinarySemaphore()
         disconnected = SubmissionModel(shared_semaphores=[shared, shared])
         surviving = PresentState(shared_semaphores=[shared])
-        self.assertEqual(
-            {id(owner_ref()) for owner_ref in shared.owners if owner_ref() is not None},
-            {id(disconnected), id(surviving)},
-        )
+        # Simulate repeated registration and an owner that died before its
+        # connection cleanup ran. Disconnect must remove every matching weakref,
+        # deduplicate the survivors, and prune dead entries even on shared lists
+        # containing the same semaphore more than once.
+        shared.owners.append(ref(disconnected))
+        stale_owner = SubmissionModel(shared_semaphores=[shared])
+        stale_ref = ref(stale_owner)
+        del stale_owner
+        gc.collect()
+        self.assertIsNone(stale_ref())
 
+        _unregister_semaphore_owner(disconnected)
         _unregister_semaphore_owner(disconnected)
         remaining = [owner_ref() for owner_ref in shared.owners]
         self.assertEqual(remaining, [surviving])
