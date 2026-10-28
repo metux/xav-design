@@ -5069,3 +5069,36 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
         self.assertNotIn(("client-a", 301), registry.detached_submissions)
         self.assertEqual(registry.emitted_events, [])
         self.assertEqual(registry.terminal_callback("client-a", 301, "FAILED"), "BadValue")
+
+    def test_disconnect_reserves_submission_token_until_detached_callback_retires(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-a"})
+        device = AsyncDeviceIdentity(identity="device-a", xid=71)
+        registry.register_device("client-a", device)
+        original = AsyncSubmissionIdentity(
+            connection_identity="client-a",
+            token=302,
+            device_identity="device-a",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(original), "SUCCESS")
+        registry.disconnect("client-a")
+        self.assertIs(registry.detached_submissions[("client-a", 302)], original)
+
+        # A reintroduced connection identity must not reuse a key still owned
+        # by an accepted backend callback.
+        registry.live_connections.add("client-a")
+        replacement = AsyncSubmissionIdentity(
+            connection_identity="client-a",
+            token=302,
+            device_identity="device-a",
+            device_xid=71,
+            queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(replacement), "BadValue")
+        self.assertEqual(registry.terminal_callback("client-a", 302, "COMPLETE"), "SUCCESS")
+        self.assertEqual(original.terminal, "COMPLETE")
+        self.assertIsNone(replacement.terminal)
+        self.assertNotIn(("client-a", 302), registry.detached_submissions)
+        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
+
