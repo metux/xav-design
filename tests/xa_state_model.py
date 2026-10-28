@@ -1652,7 +1652,8 @@ class AsyncSubmissionEventRegistry:
             del self.queue_masks[key]
 
     def terminal_callback(self, connection: str, token: int, result: str) -> str:
-        submission = self.submissions.get((connection, token))
+        key = (connection, token)
+        submission = self.submissions.get(key)
         if submission is None or submission.terminal is not None:
             return "BadValue"
         if result not in ("COMPLETE", "FAILED"):
@@ -1662,12 +1663,17 @@ class AsyncSubmissionEventRegistry:
         device = self.live_devices.get(submission.device_identity)
         if (connection not in self.live_connections or device is None
                 or not device.live or device.xid != submission.device_xid):
+            self.submissions.pop(key, None)
             return "SUCCESS"
         queue_code = submission.queue_key[0] * 65536 + submission.queue_key[1]
         mask = self.queue_masks.get((connection, (submission.device_xid, queue_code)), 0)
         bit = 1 if result == "COMPLETE" else 2
         if mask & bit:
             self.emitted_events.append((result, connection, submission.device_xid, token))
+        # A terminal callback has consumed this connection/token link. Keep the
+        # captured object alive only through any external backend ownership;
+        # the registry must not retain completed submissions indefinitely.
+        self.submissions.pop(key, None)
         return "SUCCESS"
 
     def async_error(self, connection: str, device_identity: str, token: int) -> str:
