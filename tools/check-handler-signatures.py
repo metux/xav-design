@@ -111,7 +111,7 @@ def normalize_return(value):
 
 def clean_text(source):
     source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
-    return re.sub(r'"(?:\\.|[^"\\])*|\'(?:\\.|[^\'\\])*\'', " ", source)
+    return source
 
 
 def clean_source(path):
