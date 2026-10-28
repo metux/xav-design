@@ -115,13 +115,13 @@ scan_project() {
         b=$(rg -n 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(rg -n '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(rg -n -i 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(rg -n -v '^\\s*(//|/\\*|\\*|\\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
+        code=$(rg -n -v '^\s*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       else
         a=$(grep -n -i -E 'XAverius|Xaverius|xav_[[:alnum:]_]*|XAV_[[:alnum:]_]*' "$full" 2>/dev/null || :)
         b=$(grep -n -E 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(grep -n -E '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(grep -n -i -E 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(grep -n -E -v '^[[:space:]]*(//|/\\*|\\*|\\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
+        code=$(grep -n -E -v '^[[:space:]]*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       fi
       if [ -n "$a" ]; then xav=$((xav+1)); printf '  XA: %s\n%s\n' "$f" "$a" >>"$matches"; fi
       if [ -n "$b" ]; then x11=$((x11+1)); printf '  X11: %s\n%s\n' "$f" "$b" >>"$matches"; fi
