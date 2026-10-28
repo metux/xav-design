@@ -93,10 +93,20 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
             if id(shared) not in shared_seen:
                 shared_seen.add(id(shared))
                 semaphores.append(shared)
-            for owner_ref in list(shared.owners):
+            # Traversal is also a cleanup opportunity: a semaphore may not be
+            # registered again after an owner dies, so registration-time
+            # pruning alone cannot guarantee that stale refs disappear.
+            live_owner_refs: list[ReferenceType] = []
+            seen_owner_ids: set[int] = set()
+            for owner_ref in shared.owners:
                 owner = owner_ref()
-                if owner is not None and id(owner) not in seen_models:
+                if owner is None or id(owner) in seen_owner_ids:
+                    continue
+                seen_owner_ids.add(id(owner))
+                live_owner_refs.append(owner_ref)
+                if id(owner) not in seen_models:
                     pending.append(owner)
+            shared.owners[:] = live_owner_refs
     for state in models:
         state.device_lost = True
     for shared in semaphores:
