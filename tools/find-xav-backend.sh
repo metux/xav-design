@@ -197,6 +197,35 @@ scan_project() {
               print defline[name] ":" name
             }
           }' 2>/dev/null || :)
+        # Switch-based Xorg extensions call concrete handlers from case arms.
+        # Require both switch/case syntax and a local function definition.
+        switchreq=$(printf '%s\n' "$code" | awk '
+          /switch[[:space:]]*\(/ { has_switch=1 }
+          /case[[:space:]].*:/ { has_case=1 }
+          /return[[:space:]]+Proc[A-Za-z0-9_]+[[:space:]]*\(/ {
+            line=$0
+            while (match(line, /Proc[A-Za-z0-9_]+[[:space:]]*\(/)) {
+              name=substr(line,RSTART,RLENGTH); sub(/[[:space:]]*\($/, "", name)
+              if (name !~ /Dispatch$/) targets[name]=1
+              line=substr(line,RSTART+RLENGTH)
+            }
+          }
+          { lines[NR]=$0 }
+          END {
+            if (!has_switch || !has_case) exit
+            for (name in targets) {
+              for (i=1; i<=NR; i++) {
+                if (lines[i] ~ ("(^|[^[:alnum:]_])" name "[[:space:]]*\\(")) {
+                  for (j=i; j<=NR && j<i+8; j++) {
+                    if (lines[j] ~ /\{/) { print i ":" name; break }
+                    if (lines[j] ~ /;/) break
+                  }
+                  break
+                }
+              }
+            }
+          }
+        ' 2>/dev/null || :)
         # Classic core handlers use ProcFooReq/SProcFooReq names even when
         # no local vector initializer is visible in this translation unit.
         classic=$(printf '%s\n' "$code" | awk '
@@ -211,10 +240,11 @@ scan_project() {
               }
             }
           }' 2>/dev/null || :)
-        if [ -n "$req" ] || [ -n "$classic" ]; then
+        if [ -n "$req" ] || [ -n "$classic" ] || [ -n "$switchreq" ]; then
           dispatch=$((dispatch+1))
           [ -z "$req" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"
           [ -z "$classic" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$classic" >>"$matches"
+          [ -z "$switchreq" ] || printf '  X11-HANDLER: %s\n%s\n' "$f" "$switchreq" >>"$matches"
         fi
         generic=$(printf '%s\n' "$code" | grep -E '(^|[^[:alnum:]_])[A-Za-z_][A-Za-z0-9_]*(dispatch|Dispatch)[A-Za-z0-9_]*[[:space:]]*\\(' 2>/dev/null || :)
         if [ -n "$generic" ]; then printf '  X11-GENERIC-DISPATCH: %s\n%s\n' "$f" "$generic" >>"$matches"; fi
