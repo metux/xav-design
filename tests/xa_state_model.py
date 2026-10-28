@@ -1110,6 +1110,28 @@ def mark_device_lost(state: SubmissionModel) -> str:
     # owned reservations. Backend quiescence is modeled separately by holds.
     for token in list(state.pending_submissions):
         finish_submission(state, token, success=False)
+    # A model may observe device loss while other queues still own shared
+    # semaphore reservations. Quarantine those canonical payloads immediately
+    # instead of waiting for the foreign owners' callbacks. Preserve only
+    # durable proof that a Submit payload was consumed and is already empty.
+    for index, shared in enumerate(state.shared_semaphores):
+        known_empty = (
+            shared.signal_state is BinarySignalState.UNSIGNALED
+            and shared.signal_consumption_confirmed
+        )
+        if not known_empty:
+            shared.signal_state = BinarySignalState.UNTRUSTED
+            shared.signal_reservation = None
+            shared.signal_consumed = False
+        if index < len(state.binary_signal_states):
+            state.binary_signal_states[index] = (
+                BinarySignalState.UNSIGNALED if known_empty
+                else BinarySignalState.UNTRUSTED
+            )
+        if index < len(state.wait_states):
+            state.wait_states[index] = (
+                WaitState.READY if known_empty else WaitState.UNTRUSTED
+            )
     return "SUCCESS"
 
 
