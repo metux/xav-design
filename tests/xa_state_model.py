@@ -1639,7 +1639,12 @@ class AsyncSubmissionEventRegistry:
 
     def accept_submission(self, submission: AsyncSubmissionIdentity) -> str:
         key = (submission.connection_identity, submission.token)
-        if submission.token == 0 or key in self.submissions:
+        # A disconnected submission may still be owned by a backend callback.
+        # Its key remains reserved until that callback retires the detached link;
+        # reusing it would make terminal_callback ambiguous and could leak the
+        # old detached submission indefinitely.
+        if (submission.token == 0 or key in self.submissions
+                or key in self.detached_submissions):
             return "BadValue"
         if submission.connection_identity not in self.live_connections:
             return "BadValue"
