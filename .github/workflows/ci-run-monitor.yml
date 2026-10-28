@@ -29,8 +29,8 @@ jobs:
           python-version: "3.12"
       - name: Detect missing wire-layout run for working-branch tip
         env:
-          GH_TOKEN: \${{ github.token }}
-          GITHUB_REPOSITORY: \${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           CI_MONITOR_BRANCH: docs/restructure-2026-10-21
           CI_MONITOR_WORKFLOW: wire-layout.yml
           CI_MONITOR_GRACE_MINUTES: "20"
