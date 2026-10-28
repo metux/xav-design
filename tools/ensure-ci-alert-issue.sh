@@ -31,7 +31,7 @@ if (( lock_acquired == 0 )); then
   exit 1
 fi
 release_lock() {
-  gh api --method DELETE "repos/$GH_REPO/git/ref/$lock_api_ref" >/dev/null 2>&1 || {
+  gh api --method DELETE "repos/$GH_REPO/git/refs/$lock_api_ref" >/dev/null 2>&1 || {
     echo "Warning: could not release CI alert lock ref $lock_ref" >&2
   }
 }
