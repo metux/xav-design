@@ -1607,6 +1607,8 @@ class AsyncSubmissionIdentity:
     device_xid: int
     queue_key: tuple[int, int]
     terminal: str | None = None
+    # Capture the actual device generation; identity strings and XIDs may be reused.
+    captured_device: AsyncDeviceIdentity | None = None
 
 
 @dataclass(frozen=True)
@@ -1651,6 +1653,7 @@ class AsyncSubmissionEventRegistry:
         device = self.live_devices.get(submission.device_identity)
         if device is None or not device.live or device.xid != submission.device_xid:
             return "BadValue"
+        submission.captured_device = device
         self.submissions[key] = submission
         return "SUCCESS"
 
@@ -1730,7 +1733,8 @@ class AsyncSubmissionEventRegistry:
         submission.terminal = result
         device = self.live_devices.get(submission.device_identity)
         if (detached or connection not in self.live_connections or device is None
-                or not device.live or device.xid != submission.device_xid):
+                or not device.live or device.xid != submission.device_xid
+                or submission.captured_device is not device):
             self.submissions.pop(key, None)
             self.detached_submissions.pop(key, None)
             return "SUCCESS"
