@@ -138,7 +138,7 @@ scan_project() {
             }
             if (ch=="/" && nx=="*") { block=1; i++; out=out " "; continue }
             if (ch=="/" && nx=="/") { while (i<=length(line)) { out=out " "; i++ }; break }
-            if (ch=="\\"" || ch==sq) { quote=ch; out=out " "; continue }
+            if (ch==sprintf("%c",34) || ch==sq) { quote=ch; out=out " "; continue }
             out=out ch
           }
           print out
