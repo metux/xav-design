@@ -104,7 +104,9 @@ class VisibleAlertTests(unittest.TestCase):
         helper = (ROOT / "tools" / "ensure-ci-alert-issue.sh").read_text(encoding="utf-8")
         self.assertIn("gh issue create", helper)
         self.assertIn("gh issue list --state open --limit 1000 --json number,title", helper)
-        self.assertIn("git/refs", helper)\n        self.assertIn("git/ref/heads/xav-ci-alert-issue-lock", helper)\n        self.assertIn("method DELETE", helper)
+        self.assertIn("git/refs", helper)
+        self.assertIn("git/ref/heads/xav-ci-alert-issue-lock", helper)
+        self.assertIn("method DELETE", helper)
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
         self.assertIn("outputs.result", workflow)
@@ -118,27 +120,26 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
         self.gh = self.root / "gh"
         self.created_marker = self.root / "created"
         self.remote_lock = self.root / "remote-lock"
-        self.remote_lock = self.root / "remote-lock"
         self.gh.write_text(
-            '#!/usr/bin/env bash\\n'
-            'set -eu\\n'
-            'if [ "${1:-}" = "api" ]; then\\n'
-            '  shift\\n'
-            '  if [ "${1:-}" = "--method" ] && [ "${2:-}" = "POST" ]; then\\n'
-            '    if mkdir "$REMOTE_LOCK_DIR" 2>/dev/null; then printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\'; else exit 1; fi\\n'
-            '  elif [ "${1:-}" = "--method" ] && [ "${2:-}" = "DELETE" ]; then rmdir "$REMOTE_LOCK_DIR"; printf "{}\\n"\\n'
-            '  elif [[ "${1:-}" == repos/*/git/ref/heads/docs/restructure-2026-10-21* ]]; then printf \'{"object":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}\\n\'\\n'
-            '  elif [[ "${1:-}" == repos/*/git/ref/heads/xav-ci-alert-issue-lock* ]]; then [ -d "$REMOTE_LOCK_DIR" ] && printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\' || exit 1\\n'
-            '  else echo "unexpected gh api: $*" >&2; exit 91; fi\\n'
-            'elif [ "$1 $2" = "issue list" ]; then\\n'
-            '  if [ -f "$CREATED_MARKER" ]; then\\n'
-            '    printf \'%s\' \'[{"number":123,"title":"[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"}]\'\\n'
-            '  else printf "%s" "$MOCK_ISSUES"; fi\\n'
-            'elif [ "$1 $2" = "issue create" ]; then\\n'
-            '  sleep "${MOCK_CREATE_DELAY:-0}"\\n'
-            '  printf created > "$CREATED_MARKER"\\n'
-            '  printf "%s\\\\n" "https://github.com/metux/xav-design/issues/123"\\n'
-            'else echo "unexpected gh command: $*" >&2; exit 90; fi\\n',
+            '#!/usr/bin/env bash\n'
+            'set -eu\n'
+            'if [ "${1:-}" = "api" ]; then\n'
+            '  shift\n'
+            '  if [ "${1:-}" = "--method" ] && [ "${2:-}" = "POST" ]; then\n'
+            '    if mkdir "$REMOTE_LOCK_DIR" 2>/dev/null; then printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\n\'; else exit 1; fi\n'
+            '  elif [ "${1:-}" = "--method" ] && [ "${2:-}" = "DELETE" ]; then rmdir "$REMOTE_LOCK_DIR"; printf "{}\n"\n'
+            '  elif [[ "${1:-}" == repos/*/git/ref/heads/docs/restructure-2026-10-21* ]]; then printf \'{"object":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}\n\'\n'
+            '  elif [[ "${1:-}" == repos/*/git/ref/heads/xav-ci-alert-issue-lock* ]]; then [ -d "$REMOTE_LOCK_DIR" ] && printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\n\' || exit 1\n'
+            '  else echo "unexpected gh api: $*" >&2; exit 91; fi\n'
+            'elif [ "$1 $2" = "issue list" ]; then\n'
+            '  if [ -f "$CREATED_MARKER" ]; then\n'
+            '    printf \'%s\' \'[{"number":123,"title":"[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"}]\'\n'
+            '  else printf "%s" "$MOCK_ISSUES"; fi\n'
+            'elif [ "$1 $2" = "issue create" ]; then\n'
+            '  sleep "${MOCK_CREATE_DELAY:-0}"\n'
+            '  printf created > "$CREATED_MARKER"\n'
+            '  printf "%s\\\n" "https://github.com/metux/xav-design/issues/123"\n'
+            'else echo "unexpected gh command: $*" >&2; exit 90; fi\n',
             encoding="utf-8",
         )
         self.gh.chmod(0o755)
