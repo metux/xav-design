@@ -222,3 +222,27 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
                 self.assertEqual(timeline.finish_gpu_signal(token, success=success), "BadValue")
                 self.assertEqual(timeline, terminal)
 
+    def test_successfully_signaled_wait_stays_successful_across_terminal_device_transitions(self) -> None:
+        # A condition observed as satisfied before the device transition owns
+        # the terminal result; teardown must not retroactively fail the wait.
+        for transition, expected_lifecycle in (
+            ("mark_device_lost", "DEVICE_LOST"),
+            ("destroy_device", "DEVICE_DESTROYED"),
+        ):
+            with self.subTest(transition=transition):
+                timeline = Timeline(counter=2)
+                self.assertEqual(timeline.begin_host_wait(103, 8), "PENDING")
+                self.assertEqual(timeline.reserve_gpu_signal(104, 8), "SUCCESS")
+                self.assertEqual(timeline.finish_gpu_signal(104, success=True), "SUCCESS")
+                self.assertEqual(timeline.counter, 8)
+                self.assertEqual(timeline.terminal_waits, {103: "SUCCESS"})
+                self.assertEqual(getattr(timeline, transition)(), "SUCCESS")
+                self.assertEqual(timeline.lifecycle, expected_lifecycle)
+                terminal = copy.deepcopy(timeline)
+
+                self.assertEqual(timeline.finish_host_wait(103, "TIMEOUT"), "BadValue")
+                self.assertEqual(timeline.finish_gpu_signal(104, success=True), "BadValue")
+                self.assertEqual(timeline.finish_gpu_signal(104, success=False), "BadValue")
+                self.assertEqual(timeline, terminal)
+                self.assertEqual(timeline.counter, 8)
+                self.assertEqual(timeline.terminal_waits, {103: "SUCCESS"})
