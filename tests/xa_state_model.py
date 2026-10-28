@@ -1092,6 +1092,13 @@ def finish_submission(
             if shared.signal_reservation == ("submit", token):
                 shared.signal_reservation = None
                 shared.signal_consumed = False
+                # Provenance is retained only when the Submit actually
+                # published a signal. A failed callback with a confirmed
+                # unchanged payload must not let a later wait claim that a
+                # signal from this failed submission was consumed.
+                if not effective_success and not consumed:
+                    shared.signal_from_submit = False
+                    shared.signal_consumption_confirmed = False
                 shared.signal_state = state.binary_signal_states[index]
     for reservation in list(state.pending_binary_waits):
         wait_token, index = reservation
