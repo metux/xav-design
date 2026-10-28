@@ -1770,27 +1770,43 @@ class AsyncFenceIdentity:
     generation: int = 0
     pending_token: int | None = None
     completed_tokens: set[int] = field(default_factory=set)
+    device_generation: int = 0
 
 
 @dataclass
 class AsyncFenceCallbackModel:
-    """Oracle ensuring delayed fence callbacks cannot signal a reused XID."""
+    """Oracle ensuring delayed fence callbacks cannot signal across device generations."""
     fences: dict[int, AsyncFenceIdentity] = field(default_factory=dict)
     devices: dict[str, bool] = field(default_factory=dict)
+    device_generations: dict[str, int] = field(default_factory=dict)
 
     def register_device(self, identity: str) -> None:
+        self.device_generations[identity] = self.device_generations.get(identity, 0) + 1
         self.devices[identity] = True
+
+    def mark_device_lost(self, identity: str) -> str:
+        if not self.devices.get(identity, False):
+            return "DEVICE_LOST"
+        self.devices[identity] = False
+        return "SUCCESS"
+
+    def _device_is_current(self, fence: AsyncFenceIdentity) -> bool:
+        return (
+            self.devices.get(fence.device_identity, False)
+            and self.device_generations.get(fence.device_identity, 0) == fence.device_generation
+        )
 
     def register_fence(self, fence: AsyncFenceIdentity) -> str:
         if fence.xid in self.fences and self.fences[fence.xid].live:
             return "BadIDChoice"
         if not self.devices.get(fence.device_identity, False):
             return "BadValue"
+        fence.device_generation = self.device_generations[fence.device_identity]
         self.fences[fence.xid] = fence
         return "SUCCESS"
 
     def accept(self, fence: AsyncFenceIdentity, token: int) -> str:
-        if not self.devices.get(fence.device_identity, False):
+        if not self._device_is_current(fence):
             return "DEVICE_LOST"
         if (not fence.live or self.fences.get(fence.xid) is not fence
                 or fence.status != "UNSIGNALED" or fence.pending_token is not None
@@ -1810,7 +1826,7 @@ class AsyncFenceCallbackModel:
         return "SUCCESS"
 
     def reset(self, fence: AsyncFenceIdentity) -> str:
-        if not self.devices.get(fence.device_identity, False):
+        if not self._device_is_current(fence):
             return "DEVICE_LOST"
         if not fence.live or self.fences.get(fence.xid) is not fence:
             return "BadValue"
@@ -1829,7 +1845,7 @@ class AsyncFenceCallbackModel:
             # A backend success arriving after Device Loss is not a successful
             # fence signal from the protocol's point of view.
             captured_fence.status = (
-                "SIGNALED" if success and self.devices.get(captured_fence.device_identity, False)
+                "SIGNALED" if success and self._device_is_current(captured_fence)
                 else "FAILED"
             )
         return "SUCCESS"
