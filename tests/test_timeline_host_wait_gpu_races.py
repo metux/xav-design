@@ -161,3 +161,64 @@ class HostWaitGpuSignalRaceTests(unittest.TestCase):
         for success in (True, False, True):
             self.assertEqual(timeline.finish_gpu_signal(94, success=success), "BadValue")
             self.assertEqual(timeline, before)
+
+    def test_terminal_device_loss_state_is_immutable_under_repeated_transitions_and_late_callbacks(self) -> None:
+        timeline = Timeline(counter=2)
+        self.assertEqual(timeline.begin_host_wait(95, 10), "PENDING")
+        self.assertEqual(timeline.reserve_gpu_signal(96, 10), "SUCCESS")
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.lifecycle, "DEVICE_LOST")
+        self.assertEqual(timeline.terminal_waits, {95: "DEVICE_LOST"})
+        self.assertEqual(timeline.terminal_gpu_signals, {96})
+        self.assertEqual(timeline.pending_host_waits, {})
+        self.assertEqual(timeline.pending_gpu_signals, {})
+        terminal = copy.deepcopy(timeline)
+
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.destroy_device(), "SUCCESS")
+        self.assertEqual(timeline.finish_host_wait(95, "SUCCESS"), "BadValue")
+        self.assertEqual(timeline.finish_gpu_signal(96, success=True), "BadValue")
+        self.assertEqual(timeline.finish_gpu_signal(96, success=False), "BadValue")
+        self.assertEqual(timeline.signal_host(11), "DEVICE_LOST")
+        self.assertEqual(timeline.reserve_gpu_signal(97, 11), "DEVICE_LOST")
+        self.assertEqual(timeline, terminal)
+
+    def test_terminal_destroyed_state_is_immutable_under_late_callbacks(self) -> None:
+        timeline = Timeline(counter=3)
+        self.assertEqual(timeline.begin_host_wait(98, 11), "PENDING")
+        self.assertEqual(timeline.reserve_gpu_signal(99, 11), "SUCCESS")
+        self.assertEqual(timeline.destroy_device(), "SUCCESS")
+        self.assertEqual(timeline.lifecycle, "DEVICE_DESTROYED")
+        self.assertEqual(timeline.terminal_waits, {98: "DEVICE_DESTROYED"})
+        self.assertEqual(timeline.terminal_gpu_signals, {99})
+        self.assertEqual(timeline.pending_host_waits, {})
+        self.assertEqual(timeline.pending_gpu_signals, {})
+        terminal = copy.deepcopy(timeline)
+
+        self.assertEqual(timeline.destroy_device(), "SUCCESS")
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.finish_host_wait(98, "TIMEOUT"), "BadValue")
+        self.assertEqual(timeline.finish_gpu_signal(99, success=True), "BadValue")
+        self.assertEqual(timeline.finish_gpu_signal(99, success=False), "BadValue")
+        self.assertEqual(timeline.signal_host(12), "DEVICE_DESTROYED")
+        self.assertEqual(timeline.reserve_gpu_signal(100, 12), "DEVICE_DESTROYED")
+        self.assertEqual(timeline, terminal)
+
+    def test_terminal_signal_tokens_remain_disjoint_from_pending_after_lifecycle_races(self) -> None:
+        timeline = Timeline(counter=1)
+        self.assertEqual(timeline.reserve_gpu_signal(101, 4), "SUCCESS")
+        self.assertEqual(timeline.reserve_gpu_signal(102, 7), "SUCCESS")
+        self.assertEqual(timeline.finish_gpu_signal(101, success=False), "SUCCESS")
+        self.assertEqual(timeline.mark_device_lost(), "SUCCESS")
+        self.assertEqual(timeline.terminal_gpu_signals, {101, 102})
+        self.assertEqual(timeline.pending_gpu_signals, {})
+        self.assertTrue(timeline.terminal_gpu_signals.isdisjoint(timeline.pending_gpu_signals))
+        terminal = copy.deepcopy(timeline)
+
+        # Every duplicate callback is rejected, and none may mutate terminal
+        # token history or recreate an in-flight reservation.
+        for token in (101, 102):
+            for success in (True, False):
+                self.assertEqual(timeline.finish_gpu_signal(token, success=success), "BadValue")
+                self.assertEqual(timeline, terminal)
+
