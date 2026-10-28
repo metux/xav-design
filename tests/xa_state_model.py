@@ -43,6 +43,9 @@ class SharedBinarySemaphore:
     wait_reservation: tuple[str, int] | None = None
     signal_reservation: tuple[str, int] | None = None
     signal_consumed: bool = False
+    # Durable evidence that a Submit signal was consumed, even after its
+    # owner callback retires the transient reservation.
+    signal_consumption_confirmed: bool = False
 
 
 @dataclass
@@ -207,13 +210,12 @@ def mark_present_device_lost(state: PresentState) -> str:
         finish_present_terminal(state, token, "DEVICE_LOST")
     for index, shared in enumerate(state.shared_semaphores):
         shared.device_lost = True
-        # A known-empty payload remains empty even if Device Loss is observed
-        # after the Submit owner has already retired its reservation. A live
-        # signal reservation without consumption evidence is still pending,
-        # despite the canonical state initially being UNSIGNALED.
+        # Preserve a consumed Submit payload even after its owner callback has
+        # retired the transient reservation. Merely UNSIGNALED semaphores are
+        # not enough: another accepted Present wait may still be unresolved.
         known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
-            and (shared.signal_consumed or shared.signal_reservation is None)
+            and shared.signal_consumption_confirmed
         )
         if not known_empty:
             shared.signal_state = BinarySignalState.UNTRUSTED
@@ -289,6 +291,8 @@ def finish_present_wait(
             shared.signal_state = BinarySignalState.UNSIGNALED
             if shared.signal_reservation is not None:
                 shared.signal_consumed = True
+                if shared.signal_reservation[0] == "submit":
+                    shared.signal_consumption_confirmed = True
     else:
         # A known non-consumed payload retains the canonical shared state.
         # The present model's local mirror may predate a competing Submit
@@ -879,6 +883,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 state.shared_semaphores[index].signal_state = BinarySignalState.SIGNAL_PENDING
                 state.shared_semaphores[index].signal_reservation = ("submit", request.token)
                 state.shared_semaphores[index].signal_consumed = False
+                state.shared_semaphores[index].signal_consumption_confirmed = False
     if request.attach_fence:
         state.fence_attached = True
         state.fence_state_valid = False
