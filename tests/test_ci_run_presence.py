@@ -103,6 +103,9 @@ class VisibleAlertTests(unittest.TestCase):
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("Fail visibly if the monitor itself could not complete", workflow)
         self.assertIn("outputs.result", workflow)
+        self.assertIn("[test-ci-alert]", workflow)
+        self.assertIn("gh issue close", workflow)
+        self.assertIn("body=\"$(printf", workflow)
 
 
 if __name__ == "__main__":
