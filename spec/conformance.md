@@ -2,11 +2,11 @@
 
 All request validation follows a deterministic stage order: framing before scalar syntax, scalar syntax before XID resolution, and XID/type/ownership checks before lifecycle status.
 
-Ziel-Workload:
+Target workload:
 
 `C[i] = A[i] + B[i]`
 
-Typischer Ablauf:
+Typical sequence:
 
 1. Enumerate physical devices or create the default device.
 2. Query memory properties and create a logical device with a compute queue.
@@ -24,15 +24,15 @@ Typischer Ablauf:
 14. Record `Dispatch` and finalize the command buffer.
 15. Create fences/semaphores if required.
 16. Execute `QueueSubmit`.
-17. Completion mit Fence oder Semaphore abwarten.
-18. C über `ReadBuffer` zurücklesen.
+17. Wait for completion using a Fence or Semaphore.
+18. Read C back using `ReadBuffer`.
 19. Ressourcen nach den Lebenszyklusregeln zerstören.
 
-Der Server muss sicherstellen, dass die Descriptoren zum Shader passen, statisch verwendete Ressourcen vorhanden sind und Dispatch-Limits eingehalten werden.
+The server MUST ensure that descriptors match the shader, statically used resources are present, and dispatch limits are respected.
 
-# Konformität und Tests
+# Conformance and tests
 
-Eine Implementierung sollte mindestens folgende Fälle testen:
+An implementation SHOULD test at least the following cases:
 
 - Exakte Request-Längen, Counts und Padding
 - `ReadBuffer` wartet auf frühere angenommene Schreibzugriffe desselben logischen Devices auf den angeforderten Bereich, einschließlich anderer Queues; ein früherer Submission-Fehler verhindert den Read nicht allein, garantiert aber keine vom fehlgeschlagenen Schreibzugriff erwarteten Daten; bei Device Loss muss `ReadBuffer` mit `DEVICE_LOST` fehlschlagen und darf keinen erfolgreichen Daten-Reply senden
@@ -51,11 +51,11 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - `CreateSemaphore` hat exakt 28 Bytes und akzeptiert nur `BINARY = 0` oder `TIMELINE = 1`; bei Binary muss `initial_value = 0` sein. Ungültige Felder ergeben `BadValue`, Ziel-XID-Kollision `BadIDChoice`, Backend-Allokationsfehler `ALLOCATION_FAILED`. Unbekannte Device-XIDs ergeben `BadValue`, falsche live Typen/fremde Ownership `BadMatch`, nicht verfügbare/verlorene Devices `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; bei Ablehnung bleibt die Ziel-XID unangelegt.
 - `SignalSemaphore` has an exact length of 24 bytes and validates in this order: length, Device XID, Semaphore XID, type/ownership/cross-device association, Device state, then Timeline type and counter/reservation relation. In mixed-error cases, the earlier phase wins; in particular, `DEVICE_LOST` after valid resource resolution takes precedence over a Binary-semaphore type error. A synchronous rejection changes neither the counter nor signal reservations.
 - Timeline host signals must exceed the observable counter and remain below every pending GPU signal value; a signal that jumps across a reserved GPU signal value is atomically rejected with `INVALID_SYNCHRONIZATION_STATE`, without changing the counter or reservations. Timeline queue waits may request a value not yet reached (wait-before-signal); acceptance registers the specific target value, waits asynchronously for it to be reached, and does not consume an exclusive Binary semaphore slot. Multiple accepted Timeline waits may share the same Semaphore XID and target value. New GPU signal reservations must remain strictly greater than the counter and every existing pending signal reservation. A signal value not greater than the observable counter results in `BadValue`, while a value that exceeds the counter but conflicts with an existing pending GPU signal reservation is rejected before acceptance with `INVALID_SYNCHRONIZATION_STATE`. Neither case may leave a partial reservation.
-- Ein Host-Signal auf einen Wert unterhalb einer höheren pending GPU-Signalreservierung darf einen darauf wartenden Queue-Wait freigeben; der GPU-Signalwert bleibt reserviert und kann danach erfolgreich signalisiert werden.
+- A host signal to a value below a higher pending GPU-signal reservation MAY release a queue wait for that value; the GPU signal value remains reserved and can subsequently be signaled successfully.
 - Timeline-Signalreservierungen werden pro angenommener Submission terminalisiert, nicht in Callback-Reihenfolge: ein Callback entfernt nur Reservierungen seines eigenen Tokens; `signal_slots` (falls intern als Kompatibilitätsspiegel geführt) entspricht danach dem höchsten noch pending Wert. Erfolgreiche Callbacks dürfen den beobachtbaren Counter nur monoton erhöhen. Kommen Callbacks in umgekehrter Reihenfolge, darf ein späterer Erfolg für einen niedrigeren Wert den bereits erreichten höheren Counter nicht zurücksetzen. Nach Device Loss dürfen auch verspätete Backend-Erfolge keinen reservierten Wert mehr veröffentlichen; sie müssen ihre eigenen Reservierungen dennoch freigeben, ohne fremde pending Reservierungen zu entfernen.
 - `WaitForFence` prüft exakt 24 Bytes und löst Device-/Fence-XIDs vor der Wait-Registrierung auf; unbekannte XIDs ergeben `BadValue`, falsche live Typen/Ownership/Cross-Device `BadMatch`; Timeout, Ausführungsfehler, Device Loss und `DestroyDevice` werden über die festgelegten normalen Reply-Statuswerte zurückgegeben
 - `WaitSemaphores` has an exact length of `28 + 12 * semaphore_count` bytes and validates in this order: length/overflow, count/mode/duplicates, Device and Semaphore XIDs in wire order, type/ownership/cross-device association, Device state, then Timeline type. In mixed-error cases, the earlier phase wins; in particular, `DEVICE_LOST` after valid XIDs and ownership takes precedence over a Semaphore type error. All synchronous rejections occur without registering a wait or changing state. Device loss and `DestroyDevice` terminalize already-open waits with `DEVICE_LOST` and `DEVICE_DESTROYED`, respectively, without overwriting an already serialized result.
-- `WaitSemaphores` blockiert den X11-Dispatcher nicht: ein späteres `SignalSemaphore` oder `QueueSubmit` derselben Verbindung kann den Wait erfüllen; die Timeout-Frist läuft ab Übernahme des Wait-Requests weiter.
+- `WaitSemaphores` MUST NOT block the X11 dispatcher: a later `SignalSemaphore` or `QueueSubmit` on the same connection may satisfy the wait; the timeout deadline continues to run from acceptance of the wait request.
 - `WaitSemaphores` auf einen bislang nicht reservierten Timeline-Wert ist zulässig; bei endlichem Timeout endet er mit `TIMEOUT`, bei unbegrenztem Timeout bleibt er offen, bis der Wert erreicht oder das Device verloren wird. Der Server garantiert keinen Fortschritt, wenn kein späteres Signal eingereiht wird.
 - Wenn `WriteBuffer` auf frühere Submissions wartet und ein zurückgestellter `QueueSubmit` einen Timeline-Wait einer früheren nicht-terminalen Submission erfüllen würde, ohne dass ein bereits angenommener Signalvorgang diesen Wait erfüllen kann, endet `WriteBuffer` mit `DEPENDENCY_FAILED`; der zurückgestellte Submit wird anschließend normal verarbeitet und nicht vor einem erfolgreichen Upload angenommen.
 - `CreateFence` hat exakt 24 Bytes, `create_flags = 0` und `reserved = 0`; der Anfangszustand ist `UNSIGNALED`. Ungültige Felder ergeben `BadValue`, Ziel-XID-Kollision `BadIDChoice`, Backend-Allokationsfehler `ALLOCATION_FAILED`. Unbekannte Device-XIDs ergeben `BadValue`, falsche live Typen/fremde Ownership `BadMatch`, nicht verfügbare/verlorene Devices `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; bei Ablehnung bleibt die Ziel-XID unangelegt.
@@ -71,7 +71,7 @@ Eine Implementierung sollte mindestens folgende Fälle testen:
 - For each accepted submission, at most one of `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` is queued as the terminal event; `ASYNC_ERROR` is supplementary diagnostic information, not a second terminal outcome.
 - After successful processing of `DestroyDevice`, no new events using its destroyed `device_xid` are generated or delivered; events already queued in the X11 output stream remain unaffected. Internal terminal processing of accepted submissions and backend references remains independent of this event suppression.
 - After client disconnect, no new XAverius events are queued for the closed connection or delivered through other connections; event selections and public XID mappings are removed from the active connection state. Accepted work still reaches its actual internal terminal outcome without inventing completion or releasing backend resources prematurely; disconnect does not force indefinite waiting.
-- Client-Disconnect bricht offene serverseitige `WaitSemaphores`-/`WaitForFence`-Registrierungen ohne Reply ab, gibt nur die ausschließlich von diesen Waits gehaltenen Referenzen frei und verändert keine bereits angenommene GPU-Arbeit oder deren Synchronisationszustände.
+- Client disconnect cancels open server-side `WaitSemaphores`/`WaitForFence` registrations without a reply, releases only references held exclusively by those waits, and does not alter accepted GPU work or its synchronization state.
 - Konkurrierende Wait-Endbedingungen haben genau einen terminalen Ausgang: bereits festgestellte Erfüllung bleibt erfolgreich; andernfalls gewinnt der zuerst serialisiert festgestellte Timeout, Device Loss oder `DestroyDevice`-Übergang. Device Loss vor `DestroyDevice` ergibt `DEVICE_LOST`; ein noch offener Wait bei verarbeitetem `DestroyDevice` ergibt `DEVICE_DESTROYED`; spätere Übergänge überschreiben das Ergebnis nicht.
 - `CreateBuffer` weist `usage_flags = 0` und unbekannte Usage-Bits mit `BadValue` ab
 - `CreateBuffer` unterscheidet unbekannte/nicht-live Device-XIDs (`BadValue`), falsche live Ressourcentypen (`BadMatch`), nicht verfügbare/verlorene Devices (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`) und Backend-Speicherknappheit (`ALLOCATION_FAILED`); bei jedem Fehler bleibt die Ziel-XID unangelegt
@@ -537,9 +537,9 @@ The dependency-free oracle in `tests/xa_state_model.py` now models three additio
 
 These are deliberately small reference models with injected validation outcomes, not a Vulkan backend and not proof of server conformance. When a server exists, replay the same vectors against its wire interface.
 
-## Abgleich des ausführbaren Zustandsmodells
+## Reconciliation of the executable state model
 
-Die Referenztests in `tests/test_state_model.py` spiegeln die in diesem Dokument und in `spec/errors.md` normierten Präzedenzregeln wider:
+The reference tests in `tests/test_state_model.py` reflect the precedence rules specified in this document and `spec/errors.md`:
 
 - `ShaderModuleData`: Request-/Payload-Länge, Padding, Flag-Kombinationen und leere Datenchunks werden vor XID-/Device-Zustand geprüft. ABORT erfordert ein existierendes Assembly; Device Loss beendet das Assembly und ein späterer ABORT darf es nicht wiederbeleben. CREATE reserviert die Ziel-XID, sodass ein zweites CREATE mit `BadIDChoice` scheitert.
 - `CommandBufferData`: Wire-Struktur und Entry-Längen werden vor XID-Auflösung geprüft; danach folgen Ziel-XID und Pool-XID in Feldreihenfolge, Typ/Ownership, semantische Entry-Werte sowie Device-/Buffer-Zustand. Das entspricht der normativen Regel, dass strukturelle Längenfehler vor XID-Prüfung stehen, semantische Entry-Fehler aber nicht die Ziel-XID-Prüfung verdecken. ABORT prüft ebenfalls den exakten Eltern-Pool und bleibt nach Device Loss nur für einen live `RECORDING`-Buffer zulässig.
