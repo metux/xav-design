@@ -16,6 +16,7 @@ permissions:
 concurrency:
   group: xav-ci-run-monitor
   cancel-in-progress: false
+  queue: max
 
 jobs:
   check-branch-tip:
