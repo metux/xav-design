@@ -11,9 +11,9 @@ from collections import defaultdict
 from pathlib import Path
 
 NAME = r"(?:Proc|SProc|proc_|sproc_)[A-Za-z0-9_]*(?:Req|Request)?"
+RETURN = r"(?:(?:[A-Za-z_][A-Za-z0-9_]*\s+)*[A-Za-z_][A-Za-z0-9_]*\s*\*\s*|[A-Za-z_][A-Za-z0-9_ \t]*?)"
 FUNCTION = re.compile(
-    rf"(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)\s+"
-    rf"(?P<name>{NAME})\s*\((?P<args>[^;{{}}]*)\)\s*(?=[{{;])"
+    rf"(?P<ret>{RETURN})\s*(?P<name>{NAME})\s*\((?P<args>[^;{{}}]*)\)\s*(?=[{{;])"
 )
 TABLE = re.compile(
     r"(?P<ret>[A-Za-z_][A-Za-z0-9_ \t\*]*?)\(\s*\*\s*"
