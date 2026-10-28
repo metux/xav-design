@@ -167,8 +167,12 @@ scan_project() {
         case "$f" in *.c|*.h)
           if command -v "${CC:-cc}" >/dev/null 2>&1; then
             preprocessed=
+            dispatch_source=$full
             if command -v python3 >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/preprocess-xav-source.py" ]; then
               preprocessed=$(python3 "$SCRIPT_DIR/preprocess-xav-source.py" "$repo" "$full" 2>/dev/null || :)
+              if [ -n "$preprocessed" ]; then
+                dispatch_source=$(CDPATH= cd -- "$(dirname "$full")" && pwd)/$(basename "$full")
+              fi
             fi
             if [ -z "$preprocessed" ]; then
               preprocessed=$("${CC:-cc}" -E -I "$repo" -I "$(dirname "$full")" "$full" 2>/dev/null || :)
@@ -178,7 +182,7 @@ scan_project() {
               # unit, but discard declarations/definitions pulled in from
               # headers. Otherwise a header's own ProcVector and function
               # bodies can be mistaken for handlers local to this source file.
-              dispatch_code=$(printf '%s\n' "$preprocessed" | awk -v source_file="$full" '
+              dispatch_code=$(printf '%s\n' "$preprocessed" | awk -v source_file="$dispatch_source" '
                 /^#[[:space:]]*[0-9]+[[:space:]]+"/ {
                   if (match($0, /^#[[:space:]]*[0-9]+[[:space:]]+"[^"]+"/)) {
                     marker=substr($0, RSTART, RLENGTH)
