@@ -1304,6 +1304,11 @@ def free_descriptor_sets(
     buffers: list[BufferMemoryLifetime] | None = None,
 ) -> str:
     """Validate all selected sets first, then invalidate and release their slots."""
+    # Duplicate entries are invalid at the request boundary. Counting the
+    # same set twice would otherwise retire its descriptor-slot edges twice
+    # while leaving the set's single live slot graph intact until commit.
+    if len({id(descriptor_set) for descriptor_set in sets}) != len(sets):
+        return "BadValue"
     if any(not descriptor_set.live for descriptor_set in sets):
         return "BadValue"
     if any(descriptor_set.pending_use or descriptor_set.pending_submission_refs or descriptor_set.recording_refs
