@@ -214,6 +214,24 @@ class ReplySpecCoverageTests(unittest.TestCase):
             self.assertEqual(len(wire), 32 + expected_words * 4)
 
 
+    def test_memory_flag_reserved_bit_boundaries_in_both_orders(self):
+        fixture = json.loads((ROOT / "tests/reply-negative-vectors.json").read_text(encoding="utf-8"))
+        expected = {
+            "memory-type-flags-bit6": (48, 0x40, "memory-type-flags-range"),
+            "memory-type-flags-high-bit": (48, 0x80000000, "memory-type-flags-range"),
+            "memory-heap-flags-bit1": (64, 0x2, "memory-heap-flags-range"),
+            "memory-heap-flags-high-bit": (64, 0x80000000, "memory-heap-flags-range"),
+        }
+        for stem, (offset, flag, rule) in expected.items():
+            for order in ("little", "big"):
+                matches = [v for v in fixture["vectors"]
+                           if v["name"] == f"{stem}-{order}"]
+                self.assertEqual(len(matches), 1, f"{stem} fixture missing for {order}-endian")
+                vector = matches[0]
+                self.assertEqual(vector["violates"], rule)
+                wire = bytes.fromhex(vector["wire_hex"])
+                self.assertEqual(int.from_bytes(wire[offset:offset + 4], order), flag)
+                self.assertEqual(reply_contract_errors(vector["kind"], wire, order), [rule])
     def test_zero_memory_counts_allow_header_only_record_payload(self):
         body = section(self.memory, "GetPhysicalDeviceMemoryProperties")
         self.assertIn("If the number of memory types or memory heaps is zero, no corresponding records may follow", body)

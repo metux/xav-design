@@ -361,7 +361,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
             self.assertEqual([int.from_bytes(payload[i:i+4], order) for i in (0, 4, 8, 12)], [1, 1, 0, 0])
             self.assertEqual(int.from_bytes(payload[16:20], order), 0x3F)
             self.assertEqual(int.from_bytes(payload[20:24], order), 0)
-            self.assertEqual(int.from_bytes(payload[24:32], order), 0x0102030405060708)
+            self.assertEqual(int.from_bytes(payload[24:32], order), 0xFEDCBA9876543210)
             self.assertEqual(int.from_bytes(payload[32:36], order), 1)
             self.assertEqual(payload[36:40], bytes(4))
 
