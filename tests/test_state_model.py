@@ -4018,6 +4018,51 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(mark_present_device_lost(presents[0][0]), "SUCCESS")
         self.assertEqual(shared, final_snapshot)
 
+    def test_submit_device_loss_immediately_quarantines_foreign_shared_signal(self):
+        shared = [
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+            SharedBinarySemaphore(signal_state=BinarySignalState.UNSIGNALED),
+        ]
+
+        def make_submit(token, index):
+            state = SubmissionModel(
+                command_buffers=[
+                    CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                ],
+                wait_states=[WaitState.READY, WaitState.READY],
+                binary_signal_states=[
+                    BinarySignalState.UNSIGNALED, BinarySignalState.UNSIGNALED,
+                ],
+                signal_slots=[None, None],
+                semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+                shared_semaphores=shared,
+            )
+            self.assertEqual(queue_submit(
+                state, SubmitRequest(token=token, signal_indices=(index,), signal_values=(0,))
+            ), "SUCCESS")
+            return state
+
+        # The second queue owns a pending signal the observer cannot retire.
+        foreign_owner = make_submit(962, 1)
+        observer = make_submit(960, 0)
+        self.assertEqual(mark_device_lost(observer), "SUCCESS")
+        self.assertTrue(all(item.device_lost for item in shared))
+        self.assertEqual(
+            [item.signal_state for item in shared],
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        self.assertIsNone(shared[1].signal_reservation)
+        self.assertEqual(
+            observer.binary_signal_states,
+            [BinarySignalState.UNTRUSTED, BinarySignalState.UNTRUSTED],
+        )
+        # The foreign owner's late callback can drain its token but cannot
+        # republish the old signal payload or restore its local mirror.
+        self.assertEqual(finish_submission(foreign_owner, 962, success=True), "SUCCESS")
+        self.assertEqual(shared[1].signal_state, BinarySignalState.UNTRUSTED)
+        self.assertEqual(foreign_owner.binary_signal_states[1], BinarySignalState.UNTRUSTED)
+        self.assertIsNone(shared[1].signal_reservation)
+
     def test_device_loss_quarantines_multiple_cross_queue_submit_present_callbacks(self):
         def make_race():
             shared = [
