@@ -293,6 +293,15 @@ printf '%s\n' "$fallback" | grep -F "PROJECT: $cmake" >/dev/null || { echo "FAIL
 printf '%s\n' "$fallback" | grep -F "PROJECT: $meson" >/dev/null || { echo "FAIL: second explicit root not discovered by grep fallback" >&2; exit 1; }
 printf '%s\n' "$fallback" | grep -F 'VK-CALL: src/backend.rs' >/dev/null || { echo "FAIL: grep fallback missed Vulkan symbol boundaries" >&2; exit 1; }
 
+# Relative search roots must still preprocess source files from the caller's cwd.
+relative_output=$(cd "$tmp" && MAX_DEPTH=8 sh "$SCRIPT" "fixtures with spaces/cmake-project" 2>&1)
+printf '%s\\n' "$relative_output" | grep -F 'X11-HANDLER: src/multiline_macro_table.c' >/dev/null || {
+    echo "FAIL: relative project root prevented C preprocessing" >&2; exit 1;
+}
+printf '%s\\n' "$relative_output" | grep -F 'ProcPastedMacroReq' >/dev/null || {
+    echo "FAIL: relative project root lost token-pasted handler detection" >&2; exit 1;
+}
+
 if MAX_DEPTH=invalid sh "$SCRIPT" "$fixture" >/dev/null 2>&1; then
     echo "FAIL: invalid MAX_DEPTH was accepted" >&2
     exit 1
