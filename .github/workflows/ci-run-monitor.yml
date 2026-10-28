@@ -38,6 +38,9 @@ jobs:
           CI_MONITOR_WORKFLOW: wire-layout.yml
           CI_MONITOR_GRACE_MINUTES: "20"
         run: python tools/check-ci-run-presence.py
+      - name: Force the alert path for an explicit end-to-end test commit
+        if: contains(github.event.head_commit.message || '', '[test-ci-alert]')
+        run: echo "result=missing" >> "$GITHUB_OUTPUT"
       - name: Create a visible GitHub issue for a missing CI run
         if: steps.monitor.outputs.result == 'missing'
         env:
@@ -47,12 +50,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          title="[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"
+          test_alert="false"
+          if [[ "${{ github.event.head_commit.message || '' }}" == *"[test-ci-alert]"* ]]; then
+            test_alert="true"
+            title="[CI monitor TEST] End-to-end issue creation verification"
+          else
+            title="[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"
+          fi
           existing="$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')"
           if [ -n "$existing" ]; then
             echo "Existing alert issue #$existing remains open: $GH_REPO/issues/$existing"
           else
-            gh issue create --title "$title" --body "The scheduled CI monitor found that branch tip docs/restructure-2026-10-21 has no matching push-triggered run of wire-layout.yml after the 20-minute grace period.\n\nMonitor run: $RUN_URL\n\nCheck workflow triggers, branch filters, and GitHub Actions availability. Close this issue after the missing run has been investigated and corrected."
+            body="$(printf 'The CI monitor found that branch tip docs/restructure-2026-10-21 has no matching push-triggered run of wire-layout.yml after the 20-minute grace period.\n\nMonitor run: %s\n\nCheck workflow triggers, branch filters, and GitHub Actions availability.' "$RUN_URL")"
+            created="$(gh issue create --title "$title" --body "$body" --json number,url)"
+            echo "$created"
+            if [[ "$test_alert" == "true" ]]; then
+              number="$(printf '%s' "$created" | jq -r .number)"
+              gh issue close "$number" --comment "Automatically closed after end-to-end CI alert test."
+            fi
           fi
       - name: Fail visibly if the monitor itself could not complete
         if: steps.monitor.outputs.result == 'error'
