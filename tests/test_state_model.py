@@ -5089,6 +5089,30 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
         self.assertNotIn(("client-A", 299), registry.submissions)
 
 
+    def test_late_device_loss_error_cannot_target_recreated_device(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        old_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", old_device)
+        self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
+
+        new_device = AsyncDeviceIdentity("device-A", 71)
+        registry.register_device("client-A", new_device)
+
+        # A delayed Device-Loss/ASYNC_ERROR callback still carries the old
+        # device object. It must neither emit against the replacement's XID
+        # nor mark the replacement device dead.
+        self.assertEqual(registry.async_error("client-A", old_device, 999), "SUCCESS")
+        self.assertEqual(registry.emitted_events, [])
+        self.assertTrue(new_device.live)
+        self.assertIs(registry.live_devices["device-A"], new_device)
+
+        # A callback captured from the current generation remains deliverable.
+        self.assertEqual(registry.async_error("client-A", new_device, 1000), "SUCCESS")
+        self.assertEqual(registry.emitted_events, [
+            ("ASYNC_ERROR", "client-A", 71, 1000),
+        ])
+
+
     def test_disconnect_detaches_client_callback_links_but_keeps_backend_work(self) -> None:
         registry = AsyncSubmissionEventRegistry(live_connections={"client-a", "client-b"})
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
