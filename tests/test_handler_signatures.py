@@ -214,6 +214,62 @@ def main():
         if result.returncode != 0:
             raise SystemExit("compatible nested function-pointer typedef rejected:\n" + result.stdout + result.stderr)
 
+
+        # Preprocessor-aware mode must ignore inactive declarations and honor
+        # the exact -D flags recorded for each translation unit.
+        import json
+        import shutil
+        if shutil.which("cc"):
+            conditional = root / "conditional.c"
+            conditional.write_text(
+                "#if HANDLER_KIND\n"
+                "long ProcConditionalReq(ClientPtr client) { return 0; }\n"
+                "static long (*ConditionalVector[])(ClientPtr) = { ProcConditionalReq };\n"
+                "#else\n"
+                "int ProcConditionalReq(ClientPtr client) { return 0; }\n"
+                "static int (*ConditionalVector[])(ClientPtr) = { ProcConditionalReq };\n"
+                "#endif\n",
+                encoding="utf-8",
+            )
+            compile_db = root / "compile_commands.json"
+            compile_db.write_text(json.dumps([
+                {"directory": str(root), "file": str(conditional),
+                 "arguments": ["cc", "-DHANDLER_KIND=0", "-c", str(conditional), "-o", "conditional.o"]},
+            ]), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(CHECKER), "--compile-db-root", str(root), str(conditional)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 0:
+                raise SystemExit("inactive conditional handler branch caused a false conflict:\n" + result.stdout + result.stderr)
+
+            conditional_a = root / "conditional_a.c"
+            conditional_b = root / "conditional_b.c"
+            for path in (conditional_a, conditional_b):
+                path.write_text(
+                    "#if HANDLER_KIND\n"
+                    "long ProcDefineReq(ClientPtr client) { return 0; }\n"
+                    "static long (*DefineVector[])(ClientPtr) = { ProcDefineReq };\n"
+                    "#else\n"
+                    "int ProcDefineReq(ClientPtr client) { return 0; }\n"
+                    "static int (*DefineVector[])(ClientPtr) = { ProcDefineReq };\n"
+                    "#endif\n",
+                    encoding="utf-8",
+                )
+            compile_db.write_text(json.dumps([
+                {"directory": str(root), "file": str(conditional_a),
+                 "arguments": ["cc", "-DHANDLER_KIND=0", "-c", str(conditional_a), "-o", "a.o"]},
+                {"directory": str(root), "file": str(conditional_b),
+                 "arguments": ["cc", "-DHANDLER_KIND=1", "-c", str(conditional_b), "-o", "b.o"]},
+            ]), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(CHECKER), "--compile-db-root", str(root),
+                 str(conditional_a), str(conditional_b)],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 1 or "CONFLICT: ProcDefineReq" not in result.stdout:
+                raise SystemExit("different compile definitions did not expose handler conflict:\n" + result.stdout + result.stderr)
+
     print("handler signature regression tests: PASS")
 
 
