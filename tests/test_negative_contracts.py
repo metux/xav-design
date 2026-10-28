@@ -47,13 +47,13 @@ class NegativeContractRegressionTests(unittest.TestCase):
         queue = read("spec/queue-submission.md")
         errors = self.errors
         cases = (
-            ("SignalSemaphore", sync.split("## `SignalSemaphore`", 1)[1].split("\\n## ", 1)[0],
-             errors.split("- `SignalSemaphore`:", 1)[1].split("\\n- `WaitSemaphores`:", 1)[0],
-             ("exact 24-byte request length", "resolve the Device XID, then the Semaphore XID",
-              "validate resource type, ownership, and cross-device association",
-              "check Device state", "validate Timeline type and signal-value/reservation rules")),
-            ("WaitSemaphores", sync.split("## `WaitSemaphores`", 1)[1].split("\\n## ", 1)[0],
-             errors.split("- `WaitSemaphores`:", 1)[1].split("\\n- `GetFenceStatus`:", 1)[0],
+            ("SignalSemaphore", sync.split("## `SignalSemaphore`", 1)[1].split("\n## ", 1)[0],
+             errors.split("- `SignalSemaphore`:", 1)[1].split("\n- `WaitSemaphores`:", 1)[0],
+             ("exact total length of 24 bytes", "resolve the device XID, then the semaphore XID",
+              "check resource type, client/device ownership, and cross-device association",
+              "check device state", "check timeline type and signal-value/reservation consistency")),
+            ("WaitSemaphores", sync.split("## `WaitSemaphores`", 1)[1].split("\n## ", 1)[0],
+             errors.split("- `WaitSemaphores`:", 1)[1].split("\n- `GetFenceStatus`:", 1)[0],
              ("length and checked arithmetic", "`semaphore_count != 0`", "resolve the device XID and then semaphore XIDs in array order",
               "check resource type, client/device ownership, and cross-device association",
               "check device state", "verify that all semaphores are timeline semaphores")),
@@ -63,8 +63,8 @@ class NegativeContractRegressionTests(unittest.TestCase):
                 positions = [normative.find(phrase) for phrase in phases]
                 self.assertTrue(all(position >= 0 for position in positions), positions)
                 self.assertEqual(positions, sorted(positions))
-                self.assertIn("Device loss", normative)
-                self.assertIn("Device loss", mapped)
+                self.assertIn("device loss", normative.lower())
+                self.assertIn("DEVICE_LOST", mapped)
 
         queue_phases = (
             "incorrect total length",
@@ -77,7 +77,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
             "wait entries in array order",
             "finally signal entries in array order",
         )
-        queue_section = queue.split("Error precedence (the first applicable phase wins):", 1)[1].split("\\n\\n", 1)[0]
+        queue_section = queue.split("Error precedence (the first applicable phase wins):", 1)[1].split("\n\n", 1)[0]
         positions = [queue_section.find(phrase) for phrase in queue_phases]
         self.assertTrue(all(position >= 0 for position in positions), positions)
         self.assertEqual(positions, sorted(positions))
