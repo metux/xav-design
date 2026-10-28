@@ -28,6 +28,23 @@ def compact(value):
     return re.sub(r"\s+", " ", value.strip())
 
 
+def normalize_args(value):
+    value = compact(value)
+    if value in ("", "void", "..."):
+        return value
+    parts = []
+    for item in value.split(","):
+        item = compact(item)
+        item = re.sub(r"\\s+[A-Za-z_][A-Za-z0-9_]*$", "", item)
+        parts.append(item)
+    return ", ".join(parts)
+
+
+def normalize_return(value):
+    value = compact(value)
+    return re.sub(r"^(?:(?:static|extern|inline|register|const)\\s+)+", "", value)
+
+
 def scan(path):
     source = Path(path).read_text(encoding="utf-8", errors="replace")
     source = re.sub(r"/\*.*?\*/|//[^\n]*", " ", source, flags=re.S)
