@@ -118,19 +118,18 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
         self.gh = self.root / "gh"
         self.created_marker = self.root / "created"
         self.remote_lock = self.root / "remote-lock"
+        self.remote_lock = self.root / "remote-lock"
         self.gh.write_text(
             '#!/usr/bin/env bash\\n'
             'set -eu\\n'
-            'if [ "$1" = "api" ]; then\\n'
+            'if [ "${1:-}" = "api" ]; then\\n'
             '  shift\\n'
-            '  case "$*" in\\n'
-            '    *"--method POST"*"git/refs"*)\\n'
-            '      if mkdir "$REMOTE_LOCK_DIR" 2>/dev/null; then printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\'; else exit 1; fi ;;\\n'
-            '    *"--method DELETE"*"git/ref/heads/xav-ci-alert-issue-lock"*) rmdir "$REMOTE_LOCK_DIR"; printf "{}\\n" ;;\\n'
-            '    *"git/ref/heads/docs/restructure-2026-10-21"*) printf \'{"object":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}\\n\' ;;\\n'
-            '    *"git/ref/heads/xav-ci-alert-issue-lock"*) [ -d "$REMOTE_LOCK_DIR" ] && printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\' || exit 1 ;;\\n'
-            '    *) exit 91 ;;\\n'
-            '  esac\\n'
+            '  if [ "${1:-}" = "--method" ] && [ "${2:-}" = "POST" ]; then\\n'
+            '    if mkdir "$REMOTE_LOCK_DIR" 2>/dev/null; then printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\'; else exit 1; fi\\n'
+            '  elif [ "${1:-}" = "--method" ] && [ "${2:-}" = "DELETE" ]; then rmdir "$REMOTE_LOCK_DIR"; printf "{}\\n"\\n'
+            '  elif [[ "${1:-}" == repos/*/git/ref/heads/docs/restructure-2026-10-21* ]]; then printf \'{"object":{"sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}\\n\'\\n'
+            '  elif [[ "${1:-}" == repos/*/git/ref/heads/xav-ci-alert-issue-lock* ]]; then [ -d "$REMOTE_LOCK_DIR" ] && printf \'{"ref":"refs/heads/xav-ci-alert-issue-lock"}\\n\' || exit 1\\n'
+            '  else echo "unexpected gh api: $*" >&2; exit 91; fi\\n'
             'elif [ "$1 $2" = "issue list" ]; then\\n'
             '  if [ -f "$CREATED_MARKER" ]; then\\n'
             '    printf \'%s\' \'[{"number":123,"title":"[CI monitor] Missing wire-layout run on docs/restructure-2026-10-21"}]\'\\n'
@@ -139,7 +138,7 @@ class AlertIssueDeduplicationTests(unittest.TestCase):
             '  sleep "${MOCK_CREATE_DELAY:-0}"\\n'
             '  printf created > "$CREATED_MARKER"\\n'
             '  printf "%s\\\\n" "https://github.com/metux/xav-design/issues/123"\\n'
-            'else exit 90; fi\\n',
+            'else echo "unexpected gh command: $*" >&2; exit 90; fi\\n',
             encoding="utf-8",
         )
         self.gh.chmod(0o755)
