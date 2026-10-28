@@ -3126,6 +3126,22 @@ class SemaphoreOwnerReferenceTests(unittest.TestCase):
         self.assertTrue(all(item is not None for item in registered))
 
 
+    def test_device_loss_traversal_prunes_dead_and_duplicate_owner_references(self) -> None:
+        shared = SharedBinarySemaphore()
+        owner = SubmissionModel(shared_semaphores=[shared])
+        shared.owners.append(ref(owner))
+        stale_owner = PresentState(shared_semaphores=[shared])
+        stale_ref = ref(stale_owner)
+        del stale_owner
+        gc.collect()
+        self.assertIsNone(stale_ref())
+
+        self.assertEqual(mark_device_lost(owner), "SUCCESS")
+        registered = [owner_ref() for owner_ref in shared.owners]
+        self.assertEqual(registered, [owner])
+        self.assertEqual(len(registered), 1)
+
+
 class BinarySemaphoreStaleCallbackTests(unittest.TestCase):
     def test_duplicate_old_signal_callback_cannot_mutate_reused_semaphore_cycle(self) -> None:
         shared = SharedBinarySemaphore()
