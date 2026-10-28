@@ -895,7 +895,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
 
 def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: int) -> str:
     """Model SignalSemaphore's counter/reservation validation and atomic update."""
-    if state.device_lost:
+    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+        # Device loss is device-wide even when first observed through another
+        # queue/model that shares this semaphore object.
+        state.device_lost = True
         return "DEVICE_LOST"
     if semaphore_index < 0 or semaphore_index >= len(state.signal_counters):
         return "BadValue"
