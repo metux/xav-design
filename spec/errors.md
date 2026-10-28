@@ -95,31 +95,31 @@ Normative precedence: (1) total length with checked count/overflow arithmetic an
 
 ### `ReadBuffer`
 
-Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `data_length` (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_SRC` und Bereich (`BadMatch`); (7) Snapshot-/Transferarbeit.
+Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data_length` (`BadValue`); (3) `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (`BadMatch`); (5) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer binding, `TRANSFER_SRC`, and range (`BadMatch`); (7) snapshot/transfer work.
 
 - Falsche Request-Länge: `BadLength`
-- Länge null oder ungültige reservierte Felder: `BadValue`
+- Zero length or invalid reserved fields: `BadValue`
 - Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, Bereich außerhalb des Buffers: `BadMatch`
 - Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchroner Transferfehler: `TRANSFER_FAILED`
 - Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
-- Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`
+- Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`
 
 ### `ShaderModuleData`
 
-- Falsche Request-Länge oder unpassender Payload-Umfang: `BadLength`
-- Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
-- Ungültige/nicht-live `device_xid`: `BadValue`; falscher live Device-Typ: `BadMatch`. Bei `CREATE` ergibt eine ungültige/belegte `shader_module_xid` `BadIDChoice`. Ohne `CREATE` erfordert der Request ein passendes Upload-Assembly; fehlt es, ergibt sich `INVALID_SYNCHRONIZATION_STATE`.
-- `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
-- Ungültiges SPIR-V oder ein SPIR-V-Modul, das die v0.1-Validierungsregeln nicht erfüllt: `BadValue`; kein Shader Module bleibt live und das Assembly wird verworfen
-- Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
-- Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
+- Incorrect request length or mismatched payload size: `BadLength`
+- Zero `data_length` for a data chunk, nonzero `data_length` for ABORT, nonzero padding, or an invalid flag combination: `BadValue`
+- Invalid/non-live `device_xid`: `BadValue`; a live resource of the wrong Device type: `BadMatch`. With `CREATE`, an invalid/occupied `shader_module_xid` results in `BadIDChoice`. Without `CREATE`, the request requires a matching upload assembly; if none exists, the result is `INVALID_SYNCHRONIZATION_STATE`.
+- `ABORT` without a matching active upload assembly: `INVALID_SYNCHRONIZATION_STATE`
+- Invalid SPIR-V or a SPIR-V module that does not satisfy the v0.1 validation rules: `BadValue`; no Shader Module remains live, and the assembly is discarded
+- Vulkan creation failure: the specific backend error, such as `DEVICE_LOST`, `ALLOCATION_FAILED`, or `INTERNAL_SERVER_ERROR`; no Shader Module remains live, and the assembly is discarded
+- A malformed chunk discards the entire associated assembly. The X11 error for that chunk is synchronous and leaves no partial Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
 
 ### Device discovery and Device creation
 
-- `EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden; wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig.
-- `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültiges Atom `BadAtom`; unbekannte/nicht-live Device-XID `BadValue`; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
+- `EnumeratePhysicalDevices`: an incorrect request length (`!= 8` bytes) results in `BadLength`; the reply payload consists only of complete `PHYSICALDEVICEINFO` records. An incomplete record MUST NOT be emitted. If no Physical Devices are available, an empty successful reply with `reply.length = 0` is permitted.
+- `GetPhysicalDeviceProperty`: incorrect request length results in `BadLength`; an invalid Atom results in `BadAtom`; an unknown/non-live Device XID results in `BadValue`; when status is not `SUCCESS`, `property_type`, `value_length`, and the reply payload MUST be zero.
 - `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; unbekannte/nicht-live Physical-Device-XID `BadValue`.
 - `CreateDevice`: falsche Länge `BadLength`; `queue_family_request_count = 0`, `queue_count = 0`, doppelte Queue-Family-Records, nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1, doppelte Feature-/Extension-Einträge, unbekannte Feature-ID oder formal ungültiger Extension-Name `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher live Ressourcentyp, Queue-Family-Anforderung mit nicht verfügbarer oder nicht unterstützter Queue-Anzahl, registriertes aber nicht unterstütztes Feature, unbekannte oder nicht unterstützte formal gültige Extension oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Die Prüfung ist atomar und veröffentlicht kein logisches Device bei Fehler.
 - `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; fehlende XGE-Aushandlung `BadMatch`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
