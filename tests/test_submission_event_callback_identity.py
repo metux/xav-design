@@ -56,16 +56,16 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(registry.select_queue_events("client-old", device.identity, (0, 0), 3), "SUCCESS")
         registry.disconnect("client-old")
         self.assertEqual(registry.terminal_callback("client-old", 99, "FAILED"), "SUCCESS")
-        self.assertEqual(registry.async_error("client-old", device.identity, 99), "SUCCESS")
+        self.assertEqual(registry.async_error("client-old", device, 99), "SUCCESS")
         self.assertEqual(registry.emitted_events, [])
         self.assertNotIn(("client-old", 99), registry.submissions)
 
     def test_async_error_ignores_select_events_mask_but_not_destroyed_device(self):
         registry, device, _ = self.setup_registry()
-        self.assertEqual(registry.async_error("client-old", device.identity, 99), "SUCCESS")
+        self.assertEqual(registry.async_error("client-old", device, 99), "SUCCESS")
         self.assertEqual(registry.emitted_events, [("ASYNC_ERROR", "client-old", 7, 99)])
         self.assertEqual(registry.destroy_device(device.identity), "SUCCESS")
-        self.assertEqual(registry.async_error("client-old", device.identity, 99), "SUCCESS")
+        self.assertEqual(registry.async_error("client-old", device, 99), "SUCCESS")
         self.assertEqual(len(registry.emitted_events), 1)
 
 
