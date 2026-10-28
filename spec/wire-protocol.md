@@ -89,7 +89,7 @@ The XGE `length` field counts four-byte units after the initial 32-byte header. 
 | `CARD32` | Unsigned 32-bit |
 | `CARD64` | Unsigned 64-bit |
 | `FLOAT32` | IEEE-754 binary32 |
-| `BYTE[n]` | Bytefolge mit expliziter Länge |
+| `BYTE[n]` | Byte sequence with an explicit length |
 | `XID` | 32-bit X11 Resource ID |
 | `ATOM` | X11 Atom-ID |
 
