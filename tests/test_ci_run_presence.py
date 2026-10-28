@@ -98,6 +98,7 @@ class VisibleAlertTests(unittest.TestCase):
     def test_workflow_has_visible_issue_notification_and_required_permission(self):
         workflow = (ROOT / ".github" / "workflows" / "ci-run-monitor.yml").read_text(encoding="utf-8")
         self.assertIn("  issues: write", workflow)
+        self.assertIn("  contents: write", workflow)
         self.assertRegex(workflow, r"(?ms)^concurrency:\n  group: xav-ci-run-monitor\n  cancel-in-progress: false\n  queue: max\n.*?^jobs:")
         self.assertIn("if: steps.monitor.outputs.result == 'missing'", workflow)
         self.assertIn("bash tools/ensure-ci-alert-issue.sh", workflow)
