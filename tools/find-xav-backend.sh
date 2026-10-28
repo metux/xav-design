@@ -115,24 +115,54 @@ scan_project() {
         b=$(rg -n 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(rg -n '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(rg -n -i 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(rg -n -v '^\s*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       else
         a=$(grep -n -i -E 'XAverius|Xaverius|xav_[[:alnum:]_]*|XAV_[[:alnum:]_]*' "$full" 2>/dev/null || :)
         b=$(grep -n -E 'AddExtension|CreateExtension|ProcVector|SProcVector|Dispatch.*Request|dixLookupResource|Xvfb' "$full" 2>/dev/null || :)
         c=$(grep -n -E '(^|[^[:alnum:]_])(vk[A-Z][A-Za-z0-9_]*|VK_[A-Z0-9_]+)([^[:alnum:]_]|$)' "$full" 2>/dev/null || :)
         d=$(grep -n -i -E 'semaphore|queue.?submit|queue.?present|device.?lost|device.?loss|wait_semaphores|signal_semaphore|cmd_dispatch|dispatch_workgroups|create_device|create_instance' "$full" 2>/dev/null || :)
-        code=$(grep -n -E -v '^[[:space:]]*(//|/\*|\*|\*/|#|--|;)' "$full" 2>/dev/null | sed 's,//.*$,,' || :)
       fi
+      # Mask comments and quoted literals before syntax classification. This
+      # preserves line numbers; it is a lightweight lexer, not a full parser.
+      code=$(awk '
+        BEGIN { block=0; quote=""; esc=0; sq=sprintf("%c",39) }
+        {
+          line=$0; out=""
+          for (i=1; i<=length(line); i++) {
+            ch=substr(line,i,1); nx=substr(line,i+1,1)
+            if (block) { if (ch=="*" && nx=="/") { block=0; i++ }; out=out " "; continue }
+            if (quote!="") {
+              if (esc) esc=0
+              else if (ch=="\\\\") esc=1
+              else if (ch==quote) quote=""
+              out=out " "; continue
+            }
+            if (ch=="/" && nx=="*") { block=1; i++; out=out " "; continue }
+            if (ch=="/" && nx=="/") { while (i<=length(line)) { out=out " "; i++ }; break }
+            if (ch=="\\"" || ch==sq) { quote=ch; out=out " "; continue }
+            out=out ch
+          }
+          print out
+        }' "$full" | grep -n -E -v '^[[:space:]]*(#|--|;)' || :)
       if [ -n "$a" ]; then xav=$((xav+1)); printf '  XA: %s\n%s\n' "$f" "$a" >>"$matches"; fi
       if [ -n "$b" ]; then x11=$((x11+1)); printf '  X11: %s\n%s\n' "$f" "$b" >>"$matches"; fi
       if [ -n "$c" ]; then vk=$((vk+1)); printf '  VK: %s\n%s\n' "$f" "$c" >>"$matches"; fi
       if [ -n "$d" ]; then sync=$((sync+1)); printf '  SYNC: %s\n%s\n' "$f" "$d" >>"$matches"; fi
       if [ -n "$code" ]; then
-        call=$(printf '%s\n' "$code" | grep -E '(vk[A-Z][A-Za-z0-9_]*|queue_submit(_2)?|queueSubmit(_2)?|queue_present|queuePresent|wait_semaphores|waitSemaphores|signal_semaphore|signalSemaphore|cmd_dispatch|dispatch_workgroups|create_device|createDevice|create_instance|createInstance)[[:space:]]*\(' 2>/dev/null || :)
-        call=$(printf '%s\n' "$call" | grep -E '(=|return[[:space:]]|\{|\}|unsafe[[:space:]]*\{|try!?[[:space:]]*\(|\.)' 2>/dev/null || :)
+        # Count direct Vulkan API invocations only; project wrapper methods
+        # are reported separately and never boost the backend score.
+        call=$(printf '%s\n' "$code" | grep -E '(^|[^[:alnum:]_])vk[A-Z][A-Za-z0-9_]*[[:space:]]*\(' 2>/dev/null || :)
+        call=$(printf '%s\n' "$call" | grep -E -v '^[[:space:]]*(pub[[:space:]]+)?(unsafe[[:space:]]+)?(extern[[:space:]]+)?(static[[:space:]]+)?(VkResult|void|int|uint32_t|Vk[A-Za-z0-9_]+)[[:space:]]+vk[A-Z][A-Za-z0-9_]*[[:space:]]*\(' 2>/dev/null || :)
         if [ -n "$call" ]; then calls=$((calls+1)); printf '  VK-CALL: %s\n%s\n' "$f" "$call" >>"$matches"; fi
-        req=$(printf '%s\n' "$code" | grep -E '(Proc|SProc)[A-Za-z0-9_]*(Req|Request)|REQUEST_(SIZE|HEADER|DATA|FIXED_SIZE)|REQUEST_AT_LEAST_SIZE|REQUEST_FIXED_SIZE|REQUEST_SIZE_MATCH|dispatch.*request|request.*dispatch|proc_vector|sproc_vector|ProcVector|SProcVector' 2>/dev/null || :)
-        if [ -n "$req" ]; then dispatch=$((dispatch+1)); printf '  X11-DISPATCH: %s\n%s\n' "$f" "$req" >>"$matches"; fi
+        wrappers=$(printf '%s\n' "$code" | grep -E '(queue_submit(_2)?|queueSubmit(_2)?|queue_present|queuePresent|wait_semaphores|waitSemaphores|signal_semaphore|signalSemaphore|cmd_dispatch|dispatch_workgroups|create_device|createDevice|create_instance|createInstance)[[:space:]]*\(' 2>/dev/null || :)
+        wrappers=$(printf '%s\n' "$wrappers" | grep -E '(=|return[[:space:]]|try!?[[:space:]]*\(|\.)' 2>/dev/null || :)
+        if [ -n "$wrappers" ]; then printf '  WRAPPER-CALL: %s\n%s\n' "$f" "$wrappers" >>"$matches"; fi
+        # A request-size macro/prototype alone is not a handler. Require a
+        # Proc*/SProc*Req function signature whose body opens before ';'.
+        req=$(printf '%s\n' "$code" | awk '
+          /(^|[^[:alnum:]_])(Proc|SProc)[A-Za-z0-9_]*(Req|Request)[[:space:]]*\(/ { active=1; sig=$0 }
+          active { if ($0 ~ /\{/) { print sig; active=0 } else if ($0 ~ /;/) active=0 }
+        ' 2>/dev/null || :)
+        if [ -n "$req" ]; then dispatch=$((dispatch+1)); printf '  X11-HANDLER: %s\n%s\n' "$f" "$req" >>"$matches"; fi
       fi
     done <"$files"
     [ "$xav" -eq 0 ] || score=$((score+3))
@@ -144,7 +174,7 @@ scan_project() {
     [ "$xav" -eq 0 ] || [ "$dispatch" -eq 0 ] || score=$((score+4))
     [ "$xav" -eq 0 ] || [ "$calls" -eq 0 ] || score=$((score+5))
     [ "$dispatch" -eq 0 ] || [ "$calls" -eq 0 ] || score=$((score+5))
-    printf 'Signals: XAverius-files=%s X11-files=%s X11-dispatch-files=%s Vulkan-symbol-files=%s Vulkan-call-files=%s sync-files=%s SCORE=%s\n' "$xav" "$x11" "$dispatch" "$vk" "$calls" "$sync" "$score"
+    printf 'Signals: XAverius-files=%s X11-files=%s X11-handler-files=%s Vulkan-symbol-files=%s Vulkan-call-files=%s sync-files=%s SCORE=%s\n' "$xav" "$x11" "$dispatch" "$vk" "$calls" "$sync" "$score"
     [ "$score" -eq 0 ] || cat "$matches"
 }
 while IFS= read -r p; do [ -z "$p" ] || scan_project "$p"; done <"$projects"
