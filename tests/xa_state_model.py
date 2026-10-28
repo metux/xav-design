@@ -1390,6 +1390,16 @@ def update_descriptor_sets(
         for w in writes
     ):
         return "BadValue"
+    # The spec places the pending-use check after XID/ownership/device and
+    # descriptor compatibility validation. The model's writes_valid fixture
+    # represents those request-specific checks; only then may pending sets
+    # reject the whole batch before candidate slots or refs are changed.
+    affected_set_indices = {w.set_index for w in writes}
+    if any(
+        sets[index].pending_use or sets[index].pending_submission_refs
+        for index in affected_set_indices
+    ):
+        return "INVALID_SYNCHRONIZATION_STATE"
     candidate = [dict(descriptor_set.slots) for descriptor_set in sets]
     for w in writes:
         if w.buffer_identity is None:
