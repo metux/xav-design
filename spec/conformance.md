@@ -159,52 +159,52 @@ An implementation SHOULD test at least the following cases:
 - Queue flags are translated and returned according to the central registry; bits 5–31 are zero/reserved.
 - PHYSICALDEVICEINFO.device_type contains only registered values 0–4; unknown native categories are mapped to OTHER = 0.
 - Byteordnung und feste Wire-Feldbreiten
-- Reservierte Felder und unbekannte Flags
-- Ungültige XIDs, Ressourcentypen und Ownership
+- Reserved fields and unknown flags
+- Invalid XIDs, resource types, and ownership
 - Cross-Device-Verwendung
 - Atomare Create-, Update- und Submit-Operationen
 - Überlauf- und Grenzfälle bei Buffer-Bereichen
-- `BindBufferMemory`: ungültige XIDs, falscher Typ/Ownership, bereits gebundener Buffer, Alignment, Memory-Type und Bounds werden jeweils dem festgelegten Fehlerpfad zugeordnet; bei Ablehnung bleibt der Buffer ungebunden
-- `UpdateDescriptorSets`: Count null, doppelte Writes desselben Slots, `descriptor_type = 0` und nicht zugewiesene Descriptor-Typ-Werte ergeben `BadValue`; Payload-Längenfehler `BadLength`; registrierter, aber zum Binding inkompatibler Descriptor-Typ sowie inkompatible Ressourcen ergeben `BadMatch`; Pending-Use ergibt `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung keine Teiländerung
-- Erfolgreiches `UpdateDescriptorSets` aktualisiert atomar die Descriptor-Slots und indirekten Buffer-Referenzen aller nicht-pending Command Buffer, die die betroffenen Sets referenzieren; ein `EXECUTABLE`-Command-Buffer verwendet bei späterer Submission die aktuellen Set-Inhalte und wird durch das Update allein nicht invalidiert.
-- Wird ein alter Buffer nach erfolgreichem Descriptor-Update zerstört, darf ein Command Buffer nicht allein wegen der durch das Update entfernten indirekten Referenz invalidiert werden; bleibt ein Descriptor-Slot auf einen zerstörten Buffer gerichtet, bleibt das Set nicht submitbar, bis der Slot korrigiert oder das Set freigegeben wurde.
-- `ResetFence` prüft exakt 16 Bytes und Device-/Fence-XIDs vor dem Zustandscheck; unbekannte XIDs ergeben `BadValue`, falsche live Typen/Ownership/Cross-Device `BadMatch`, verlorenes Device `DEVICE_LOST`; nur `SIGNALED` und `FAILED` dürfen zurückgesetzt werden; andere Zustände ergeben `INVALID_SYNCHRONIZATION_STATE`, verlorenes Device `DEVICE_LOST`, Ablehnung erhält den Zustand
-- Unbekannte/nicht-live XAverius-XIDs ergeben `BadValue`, falsche live Ressourcentypen und Cross-Client-/Cross-Device-Ownership `BadMatch`, ungültige Atoms `BadAtom` und belegte Create-XIDs `BadIDChoice`; dies gilt auch für `DestroyResource`, `BindBufferMemory`, `UpdateDescriptorSets`, `QueueSubmit` und `ResetFence`
+- BindBufferMemory: invalid XIDs, wrong type/ownership, an already-bound Buffer, alignment, Memory Type, and bounds each follow the specified error path; on rejection, the Buffer remains unbound.
+- UpdateDescriptorSets: zero count, duplicate writes to the same slot, descriptor_type = 0, and unassigned descriptor-type values return BadValue; payload-length errors return BadLength; an assigned descriptor type incompatible with the binding and incompatible resources return BadMatch; pending use returns INVALID_SYNCHRONIZATION_STATE. Rejection leaves no partial changes.
+- Successful UpdateDescriptorSets atomically updates descriptor slots and indirect Buffer references for every non-pending Command Buffer that references the affected sets. An EXECUTABLE Command Buffer uses the current set contents when later submitted and is not invalidated by the update alone.
+- If an old Buffer is destroyed after a successful descriptor update, a Command Buffer MUST NOT be invalidated solely because the update removed its indirect reference. If a descriptor slot still points to a destroyed Buffer, the Set remains ineligible for submission until the slot is corrected or the Set is freed.
+- ResetFence validates exactly 16 bytes and resolves Device/Fence XIDs before checking state. Unknown XIDs return BadValue; live resources of the wrong type, foreign ownership, or cross-Device use return BadMatch; a lost Device returns DEVICE_LOST. Only SIGNALED and FAILED may be reset; other states return INVALID_SYNCHRONIZATION_STATE. Rejection preserves the Fence state.
+- Unknown/non-live XAverius XIDs return BadValue; live resources of the wrong type and cross-client/cross-Device ownership return BadMatch; invalid Atoms return BadAtom; occupied create XIDs return BadIDChoice. This also applies to DestroyResource, BindBufferMemory, UpdateDescriptorSets, QueueSubmit, and ResetFence.
 - Memory-Alignment und Memory-Type-Kompatibilität
 - Command-Buffer-Zustandsübergänge
-- Fence- und Semaphore-Zustände sowie Timeouts
-- Descriptor-Update/Freigabe während Pending-Use
+- Fence and Semaphore states and timeouts
+- Descriptor update/free during pending use
 - Ressourcenzerstörung bei internen Referenzen
-- `DestroyResource` akzeptiert nur Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout und Pipeline; es weist Fence, Semaphore, Device, Pools, Command Buffer, Descriptor Set und Memory mit `BadMatch` ab. Fence und Semaphore werden ausschließlich über `DestroyFence` beziehungsweise `DestroySemaphore` zerstört
-- `DestroyResource` hat exakt 12 Bytes und inferiert Device/Ownership aus der Ressource; fremde Ownership und abgewiesene Recording-/Pending-Zustände ändern keine XID oder Referenz
-- Erfolgreiches `DestroyResource` invalidiert die öffentliche XID sofort, erhält interne Objekte aber bis zum Ende notwendiger Referenzen und Backend-Zugriffe
-- Destroy einer von einem `RECORDING`-Command-Buffer referenzierten Ressource wird atomar abgewiesen.
-- Destroy einer von einem nicht-pending `EXECUTABLE`-Command-Buffer referenzierten Ressource invalidiert diesen Command Buffer.
+- DestroyResource accepts only Buffer, Shader Module, Descriptor Set Layout, Pipeline Layout, and Pipeline; it rejects Fence, Semaphore, Device, Pools, Command Buffer, Descriptor Set, and Memory with BadMatch. Fence and Semaphore are destroyed only through DestroyFence and DestroySemaphore, respectively.
+- DestroyResource is exactly 12 bytes and infers Device/ownership from the resource; foreign ownership and rejected recording/pending states change neither XIDs nor references.
+- Successful DestroyResource immediately invalidates the public XID but retains internal objects until required references and backend accesses have ended.
+- Destroying a resource referenced by a RECORDING Command Buffer is atomically rejected.
+- Destroying a resource referenced by a non-pending EXECUTABLE Command Buffer invalidates that Command Buffer.
 - `FreeDescriptorSets` atomically rejects the operation with `INVALID_SYNCHRONIZATION_STATE` if a selected Set is pending or referenced by a `RECORDING` command buffer; on success, non-pending `EXECUTABLE` command buffers that reference the Set become `INVALID`. A successful `UpdateDescriptorSets` atomically replaces affected descriptor slots and derived internal Buffer references; non-pending `EXECUTABLE` command buffers read current descriptor contents at submission and are not invalidated solely by the update.
 - `DestroyResource` on a Pipeline or Pipeline Layout atomically rejects recording references and accepted pending use; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID`.
-- `DestroyCommandPool`, `DestroyDescriptorPool` und `FreeDescriptorSets` werden bei verbotener Pending-/Recording-Referenz atomar abgewiesen; erfolgreiche Kaskaden invalidieren alle betroffenen XIDs. Device loss alone does not block `DestroyCommandPool` or `DestroyDescriptorPool`: terminalized pending work is no longer a blocker, but recording references continue to block `DestroyDescriptorPool` until the relevant Command Pool is destroyed. `FreeDescriptorSets` validates ownership but is not blocked solely by Device loss; rejection MUST NOT partially free a set.
-- `DestroyDescriptorPool` hat exakt 16 Bytes; es invalidiert Pool und Kind-Sets atomar und setzt referenzierende nicht-pending `EXECUTABLE`-Command-Buffer auf `INVALID`.
-- `DestroyResource` auf einen Buffer wird während Pending-Use abgewiesen; nach erfolgreicher Zerstörung verhindern stale Descriptor-Slots eine neue Submission, bis sie aktualisiert oder freigegeben werden.
-- `FreeMemory` ist ein eigener Void-Request mit exakt 16 Bytes; bei gebundenem Buffer ergibt er `BadMatch`; bei pending GPU-Zugriff `INVALID_SYNCHRONIZATION_STATE`; bei Ablehnung bleibt die Memory-XID live und die Allokation unverändert.
-- Device Loss macht alle angenommenen nicht-terminalen Submissions fehlgeschlagen, setzt zugehörige Fences auf `FAILED`, invalidiert betroffene Command Buffer nach der Pending-Phase und erzeugt keine erfolgreiche Completion. Device loss alone does not invalidate public Device/resource XIDs; status queries such as `GetFenceStatus` remain available under their request contracts until `DestroyDevice` or client disconnect triggers public cascading invalidation.
+- DestroyCommandPool, DestroyDescriptorPool, and FreeDescriptorSets are atomically rejected when a prohibited pending/recording reference exists; successful cascades invalidate all affected XIDs. Device loss alone does not block DestroyCommandPool or DestroyDescriptorPool: terminalized pending work is no longer a blocker, but recording references continue to block DestroyDescriptorPool until the relevant Command Pool is destroyed. FreeDescriptorSets validates ownership but is not blocked solely by Device loss; rejection MUST NOT partially free a Set.
+- DestroyDescriptorPool is exactly 16 bytes; it atomically invalidates the Pool and child Sets and changes referencing non-pending EXECUTABLE Command Buffers to INVALID.
+- DestroyResource for a Buffer is rejected during pending use; after successful destruction, stale descriptor slots prevent a new submission until they are updated or freed.
+- FreeMemory is a separate 16-byte Void request. A bound Buffer returns BadMatch; pending GPU access returns INVALID_SYNCHRONIZATION_STATE. On rejection, the Memory XID remains live and the allocation is unchanged.
+- Device loss fails all accepted nonterminal submissions, sets associated Fences to FAILED, invalidates affected Command Buffers after their pending phase, and never fabricates successful completion. Device loss alone does not invalidate public Device/resource XIDs; status queries such as GetFenceStatus remain available under their request contracts until DestroyDevice or client disconnect triggers public cascading invalidation.
 - Individual Destroy/Free requests are not categorically rejected with `DEVICE_LOST` after Device loss; their normal ownership, recording, and lifetime checks decide. Terminalized submissions and host waits do not remain blockers solely because of their former pending state. `FreeMemory` remains forbidden while an internally live Buffer is bound or backend accesses have not safely ended.
-- Wenn Backend-Quieszenz nach Device Loss nicht nachweisbar ist, werden interne Ressourcen quarantänisiert und weder freigegeben noch wiederverwendet, bis Quieszenz nachgewiesen oder der Serverprozess beendet ist.
+- If backend quiescence cannot be proven after Device loss, internal resources are quarantined and neither released nor reused until quiescence is proven or the server process exits.
 - XID-Wiederverwendung bei ausstehender Arbeit
 - Device Removal und Device Loss
 - Korrekte XGE-Längen und Event-Feldpositionen
-- Die XAverius-Major-Opcode wird pro X11-Server mit `QueryExtension` entdeckt, liegt im X11-Erweiterungsbereich 128–255 und wird sowohl als Request-`reqType` als auch als XGE-`extension` verwendet; `evtype` bleibt die statische Event-Type-ID. XGE-Headerlängen, feste Event-Gesamtlängen, reservierte Header-/Payload-Felder und registrierte Event-lokale Werte werden unabhängig validiert.
-- Keine verspäteten X11-Fehler für angenommene asynchrone Requests
-- Ein terminaler interner Submission-Ausgang auch dann, wenn das zugehörige Event nicht ausgewählt ist; bei ausgewähltem Event genau eine Zustellung des passenden Completion- oder Failure-Events
-- `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED` übernehmen den nicht-nulligen, verbindungsweit eindeutigen `submission_token` sowie exakt die Queue-Family- und Queue-Indizes der angenommenen `QueueSubmit`-Anforderung; für dieselbe Submission tritt nur ein terminaler Ausgang ein
-- Nach `DestroyDevice` werden keine neuen Events mit der zerstörten Device-XID erzeugt oder zugestellt, auch wenn `ASYNC_ERROR` und `DEVICE_LOST` sonst nicht maskierbar sind; vorher in den X11-Ausgabestrom eingereihte Events bleiben unberührt
-- Erfolgreiches `WriteBuffer` wartet auf alle zuvor angenommenen Submissions desselben logischen Devices, bevor es den Zielbereich verändert; dies gilt auch bei früherer Arbeit auf einer anderen Queue und bei überlappenden Buffer-Bereichen
-- Jede nach erfolgreichem `WriteBuffer` angenommene Submission auf jeder Queue desselben logischen Devices sieht die hochgeladenen Bytes, ohne clientseitige Semaphore oder Barrieren allein für diese Sichtbarkeit
-- Ein vorheriger fehlgeschlagener Submission-Ausgang verhindert `WriteBuffer` nicht, sofern das Device weiter verwendbar ist; der Upload erfolgt danach und spätere Submissions sehen die neuen Bytes
-- Bei Device Loss oder fehlgeschlagenem Transfer sendet `WriteBuffer` keinen erfolgreichen Reply
-- Ein früherer QueueSubmit wartet auf ein Timeline-Signal, das erst durch einen späteren `SignalSemaphore`-Request derselben Verbindung geliefert wird: `WriteBuffer` darf den Dispatcher nicht deadlocken; das Signal wird ausgeführt, die frühere Submission kann terminal werden, und spätere `QueueSubmit`-Requests passieren die Upload-Grenze erst nach erfolgreichem Reply
-- `WriteBuffer` auf einem logischen Device erzeugt keine implizite Synchronisation mit einem anderen logischen Device auf derselben physischen GPU
-- `ReadBuffer` wartet auf alle zuvor angenommenen Submissions desselben logischen Devices und auf relevante vorherige `WriteBuffer`-Transfers
-- Readback-Ergebnisse werden nicht als korrekt vorausgesetzt, wenn fehlgeschlagene frühere GPU-Arbeit den gelesenen Bereich hätte verändern können
+- The XAverius major opcode is discovered per X11 server using QueryExtension, lies in the X11 extension range 128–255, and is used as both request reqType and XGE extension; evtype remains the static event-type ID. XGE header lengths, fixed event total lengths, reserved header/payload fields, and registered event-local values are validated independently.
+- No delayed X11 errors for accepted asynchronous requests
+- An internal submission reaches a terminal outcome even when its event is not selected; when selected, exactly one matching completion or failure event is delivered.
+- SUBMISSION_COMPLETE and SUBMISSION_FAILED carry the nonzero, connection-unique submission_token and the exact queue-family and queue indices from the accepted QueueSubmit request. Only one terminal outcome occurs for a submission.
+- After DestroyDevice, no new events are generated or delivered with the destroyed Device XID, even though ASYNC_ERROR and DEVICE_LOST are otherwise unmaskable; events already queued in the X11 output stream remain unaffected.
+- Successful WriteBuffer waits for all previously accepted submissions on the same logical Device before modifying the target range; this applies to earlier work on another queue and to overlapping Buffer ranges.
+- Every submission accepted on any queue of the same logical Device after successful WriteBuffer sees the uploaded bytes, without client-side semaphores or barriers solely for this visibility.
+- An earlier failed submission does not prevent WriteBuffer if the Device remains usable; the upload occurs afterward and later submissions see the new bytes.
+- On Device loss or transfer failure, WriteBuffer does not send a successful reply.
+- An earlier QueueSubmit waits for a Timeline signal provided only by a later SignalSemaphore request on the same connection: WriteBuffer MUST NOT deadlock the dispatcher; the signal is processed, the earlier submission can become terminal, and later QueueSubmit requests cross the upload boundary only after a successful reply.
+- WriteBuffer on one logical Device does not create implicit synchronization with another logical Device on the same physical GPU.
+- ReadBuffer waits for all earlier accepted submissions on the same logical Device and relevant earlier WriteBuffer transfers.
+- Readback results MUST NOT be assumed correct if failed earlier GPU work could have modified the read range.
 - Korrekte Berechnung von `C[i] = A[i] + B[i]`
 
 - SelectEvents uses subopcode 40 and an exact total length of 32 bytes.
@@ -248,13 +248,13 @@ Every vector must assert both externally observable result (X11 error versus nor
 
 ## Queue-Reihenfolge und Fortschritt
 
-- Submissions derselben Queue werden in der Annahmereihenfolge eingereiht; unabhängige Arbeit darf sich überlappen.
-- Zwischen verschiedenen Queues besteht ohne explizite Synchronisation keine zugesicherte Reihenfolge oder Memory-Visibility.
-- Queueübergreifende Abhängigkeiten werden mit Semaphore-Signal und -Wait hergestellt. Erforderliche Memory-Dependencies werden separat nach Vulkan-Regeln geprüft.
-- Fence-Waits und Host-Semaphore-Waits beobachten Zustände, erzeugen aber selbst keine Queue-seitige Abhängigkeit.
-- Ein Host-Signal kann einen Queue-Wait auf denselben Semaphore-Wert freigeben, ordnet aber keine unverbundene GPU-Arbeit.
-- Submission-Tokens und Event-Sequence-Nummern sind keine Ordnungswerte.
-- Für unabhängige Queues sind weder Fairness noch eine feste maximale Scheduling-Latenz zugesichert.
+- Submissions on the same queue are enqueued in acceptance order; independent work may overlap.
+- Different queues have no guaranteed ordering or memory visibility without explicit synchronization.
+- Cross-queue dependencies are established with semaphore signal/wait operations. Required memory dependencies are checked separately according to Vulkan rules.
+- Fence waits and host Semaphore waits observe state but do not themselves create queue-side dependencies.
+- A host signal may release a queue wait on the same Semaphore value, but does not order unrelated GPU work.
+- Submission tokens and event sequence numbers are not ordering values.
+- No fairness or fixed maximum scheduling latency is guaranteed for independent queues.
 
 ## XGE- und Reply-ABI
 
