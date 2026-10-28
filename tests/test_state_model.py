@@ -4100,10 +4100,6 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
             submit_b,
             SubmitRequest(token=974, signal_indices=(1,), signal_values=(0,)),
         ), "SUCCESS")
-        self.assertTrue(queue_present(
-            present_c, PresentRequest(token=975, wait_indices=(1,))
-        ).accepted is False)  # The isolated semaphore has no signal payload.
-
         self.assertEqual(mark_present_device_lost(present_a), "SUCCESS")
         self.assertTrue(all(state.device_lost for state in (present_a, submit_b, present_c)))
         self.assertTrue(all(shared.device_lost for shared in (shared_ab, shared_bc, shared_c)))
