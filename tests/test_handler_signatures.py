@@ -91,6 +91,20 @@ def main():
         if result.returncode != 1 or "CONFLICT: ProcNestedReq" not in result.stdout:
             raise SystemExit("nested callback parameter conflict was not detected:\n" + result.stdout + result.stderr)
 
+        return_a = root / "return_a.c"
+        return_b = root / "return_b.c"
+        return_a.write_text(
+            "const char *ProcConstReq(ClientPtr client) { return 0; }\n",
+            encoding="utf-8",
+        )
+        return_b.write_text(
+            "char *ProcConstReq(ClientPtr client) { return 0; }\n",
+            encoding="utf-8",
+        )
+        result = run([return_a, return_b])
+        if result.returncode != 1 or "CONFLICT: ProcConstReq" not in result.stdout:
+            raise SystemExit("const-qualified return type conflict was not detected:\n" + result.stdout + result.stderr)
+
     print("handler signature regression tests: PASS")
 
 
