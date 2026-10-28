@@ -57,8 +57,21 @@ class SharedBinarySemaphore:
 
 def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
     for shared in state.shared_semaphores:
-        live_owners = [owner for owner in shared.owners if owner() is not None]
-        if not any(owner() is state for owner in live_owners):
+        # Prune dead weakrefs and deduplicate live owners by object identity.
+        # Merely checking whether this state is present leaves pre-existing
+        # duplicate refs in place indefinitely, inflating every loss traversal.
+        live_owners: list[ReferenceType] = []
+        seen_owner_ids: set[int] = set()
+        registered = False
+        for owner_ref in shared.owners:
+            owner = owner_ref()
+            if owner is None or id(owner) in seen_owner_ids:
+                continue
+            seen_owner_ids.add(id(owner))
+            live_owners.append(owner_ref)
+            if owner is state:
+                registered = True
+        if not registered:
             live_owners.append(ref(state))
         shared.owners[:] = live_owners
 
