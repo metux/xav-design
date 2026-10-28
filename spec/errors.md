@@ -81,7 +81,8 @@ A later phase MUST NOT override an error from an earlier phase. In particular, m
 
 ### `WriteBuffer`
 
-- Falsche Request-Länge oder Request-Gesamtlänge mit Überlauf bzw. oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
+- Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
+- Falsche Request-Länge: `BadLength`
 - Länge null, nicht-null Padding oder ungültige reservierte Felder: `BadValue`
 - Unbekannte/nicht-live XAverius-XID: `BadValue`
 - Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
