@@ -80,8 +80,15 @@ def main():
         code, message = check_presence()
     except (RuntimeError, KeyError, ValueError, urllib.error.URLError, TimeoutError) as error:
         print(f"CI run monitor: ERROR: {error}", file=sys.stderr)
+        if os.environ.get("GITHUB_OUTPUT"):
+            with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+                output.write("result=error\\n")
         return 2
     stream = sys.stdout if code == 0 else sys.stderr
+    if os.environ.get("GITHUB_OUTPUT"):
+        result = "missing" if code == 1 else "ok"
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+            output.write(f"result={result}\\n")
     print(message, file=stream)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
