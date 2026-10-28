@@ -165,15 +165,25 @@ scan_project() {
             low=tolower($0)
             if (!table && low ~ /vector/ && $0 ~ /=/) {
               table=1
-              if ($0 ~ /\{/) depth=1
-            } else if (table && depth==0 && $0 ~ /\{/) depth=1
-            if (table && depth>0) {
+              depth=0
+            }
+            if (table) {
+              rest=$0
+              while (match(rest, /[{}]/)) {
+                brace=substr(rest,RSTART,1)
+                if (brace=="{") depth++
+                else if (brace=="}") depth--
+                rest=substr(rest,RSTART+1)
+              }
+              # Names inside macro arguments are candidates too, but only
+              # names whose function bodies are defined locally are emitted.
               rest=$0
               while (match(rest, /(Proc|SProc|proc_|sproc_)[A-Za-z0-9_]+/)) {
-                name=substr(rest,RSTART,RLENGTH); entries[name]=1
+                name=substr(rest,RSTART,RLENGTH)
+                entries[name]=1
                 rest=substr(rest,RSTART+RLENGTH)
               }
-              if ($0 ~ /\}/) { table=0; depth=0 }
+              if (depth==0 && $0 ~ /}/) table=0
             }
           }
           END {
@@ -181,11 +191,8 @@ scan_project() {
               text=line[i]
               for (name in entries) {
                 if (text ~ ("(^|[^[:alnum:]_])" name "[[:space:]]*\\(")) {
-                  # Look forward from the function signature: a body must
-                  # open before a semicolon, so prototypes/calls are rejected.
-                  active=1
                   for (j=i; j<=NR && j<i+8; j++) {
-                    if (line[j] ~ /\{/) { defined[name]=1; defline[name]=i; break }
+                    if (line[j] ~ /\\{/) { defined[name]=1; defline[name]=i; break }
                     if (line[j] ~ /;/) break
                   }
                 }
