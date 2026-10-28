@@ -77,56 +77,56 @@ The following error precedence applies to `CreateDevice` and refines the general
 
 A later phase MUST NOT override an error from an earlier phase. In particular, malformed wire fields take precedence over XID errors; target-XID validation precedes physical-device lookup; resource type/ownership checks precede XGE negotiation; and XGE negotiation precedes device availability. All feature and extension records must be validated before creation, and every failure leaves `device_xid` unallocated with no partial Device or Queue objects.
 
-## Request-spezifische Fehlerzuordnung
+## Request-Specific Error Mapping
 
 ### `WriteBuffer`
 
-Normative Präzedenz: (1) count-/overflow-sichere Gesamtlänge und X11-Request-Limit (`BadLength`); (2) positive `data_length` und Null-Padding (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_DST` und Bereich (`BadMatch`); (7) Transfer-/Synchronisationsarbeit.
+Normative precedence: (1) total length with checked count/overflow arithmetic and the X11 request limit (BadLength); (2) positive data_length and zero padding (BadValue); (3) device_xid, then buffer_xid in wire order (BadValue for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (BadMatch); (5) Device state (DEVICE_UNAVAILABLE / DEVICE_LOST); (6) Buffer binding, TRANSFER_DST, and range (BadMatch); (7) transfer/synchronization work.
 
 - Request-Gesamtlänge mit Überlauf oder oberhalb des für die Verbindung geltenden X11-Limits: `BadLength`
 - Falsche Request-Länge: `BadLength`
-- Länge null, nicht-null Padding oder ungültige reservierte Felder: `BadValue`
-- Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_DST`, Bereich außerhalb des Buffers: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
-- Synchroner Transferfehler: `TRANSFER_FAILED`
-- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
-- Erkannter Abhängigkeitszyklus beim Warten auf frühere GPU-Arbeit: `DEPENDENCY_FAILED`
+- Zero length, nonzero padding, or invalid reserved fields: BadValue
+- Unknown/non-live XAverius XID: BadValue
+- Wrong type, wrong Device, unbound Buffer, missing TRANSFER_DST, or range outside the Buffer: BadMatch
+- Unavailable/lost Device: DEVICE_UNAVAILABLE / DEVICE_LOST
+- Synchronous transfer failure: TRANSFER_FAILED
+- Failed staging allocation: ALLOCATION_FAILED
+- Detected dependency cycle while waiting for earlier GPU work: DEPENDENCY_FAILED
 
 ### `ReadBuffer`
 
-Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `data_length` (`BadValue`); (3) `device_xid`, dann `buffer_xid` in Wire-Reihenfolge (`BadValue` bei unbekannten/nicht-live XIDs); (4) live Ressourcentyp, Client-Ownership und Device-Zuordnung (`BadMatch`); (5) Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer-Bindung, `TRANSFER_SRC` und Bereich (`BadMatch`); (7) Snapshot-/Transferarbeit.
+Normative precedence: (1) exact 28-byte length (BadLength); (2) positive data_length (BadValue); (3) device_xid, then buffer_xid in wire order (BadValue for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (BadMatch); (5) Device state (DEVICE_UNAVAILABLE / DEVICE_LOST); (6) Buffer binding, TRANSFER_SRC, and range (BadMatch); (7) snapshot/transfer work.
 
-- Falsche Request-Länge: `BadLength`
-- Länge null oder ungültige reservierte Felder: `BadValue`
-- Unbekannte/nicht-live XAverius-XID: `BadValue`
-- Falscher Typ, falsches Device, ungebundener Buffer, fehlendes `TRANSFER_SRC`, Bereich außerhalb des Buffers: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
-- Synchroner Transferfehler: `TRANSFER_FAILED`
-- Fehlgeschlagene Staging-Allokation: `ALLOCATION_FAILED`
-- Erkannter Abhängigkeitszyklus vor Erfassung des Daten-Snapshots: `DEPENDENCY_FAILED`
+- Incorrect request length: BadLength
+- Zero length or invalid reserved fields: BadValue
+- Unknown/non-live XAverius XID: BadValue
+- Wrong type, wrong Device, unbound Buffer, missing TRANSFER_SRC, or range outside the Buffer: BadMatch
+- Unavailable/lost Device: DEVICE_UNAVAILABLE / DEVICE_LOST
+- Synchronous transfer failure: TRANSFER_FAILED
+- Failed staging allocation: ALLOCATION_FAILED
+- Dependency cycle detected before the data snapshot is captured: DEPENDENCY_FAILED
 
-### `ShaderModuleData`
+### ShaderModuleData
 
-- Falsche Request-Länge oder unpassender Payload-Umfang: `BadLength`
-- Null `data_length` bei einem Datenchunk, nicht-null `data_length` bei ABORT, nicht-null Padding oder ungültige Flag-Kombination: `BadValue`
-- Ungültige/nicht-live `device_xid`: `BadValue`; falscher live Device-Typ: `BadMatch`. Bei `CREATE` ergibt eine ungültige/belegte `shader_module_xid` `BadIDChoice`. Ohne `CREATE` erfordert der Request ein passendes Upload-Assembly; fehlt es, ergibt sich `INVALID_SYNCHRONIZATION_STATE`.
-- `ABORT` ohne passendes laufendes Upload-Assembly: `INVALID_SYNCHRONIZATION_STATE`
-- Ungültiges SPIR-V oder ein SPIR-V-Modul, das die v0.1-Validierungsregeln nicht erfüllt: `BadValue`; kein Shader Module bleibt live und das Assembly wird verworfen
-- Fehler bei der Vulkan-Erstellung: konkreter Backendfehler wie `DEVICE_LOST`, `ALLOCATION_FAILED` oder `INTERNAL_SERVER_ERROR`; kein Shader Module bleibt live und das Assembly wird verworfen
-- Ein fehlerhafter Chunk verwirft das gesamte zugehörige Assembly. Ein späterer X11-Fehler für diesen Chunk ist synchron und hinterlässt kein partielles Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
+- Incorrect request length or payload size: BadLength
+- Zero data_length for a data chunk, nonzero data_length for ABORT, nonzero padding, or an invalid flag combination: BadValue
+- Invalid/non-live device_xid: BadValue; wrong live Device type: BadMatch. With CREATE, an invalid/occupied shader_module_xid returns BadIDChoice. Without CREATE, a matching upload assembly is required; if absent, return INVALID_SYNCHRONIZATION_STATE.
+- ABORT without a matching upload assembly in progress: INVALID_SYNCHRONIZATION_STATE
+- Invalid SPIR-V or a SPIR-V module that does not satisfy the v0.1 validation rules: BadValue; no Shader Module remains live and the assembly is discarded.
+- Vulkan creation failure: the specific backend error, such as DEVICE_LOST, ALLOCATION_FAILED, or INTERNAL_SERVER_ERROR; no Shader Module remains live and the assembly is discarded.
+- A malformed chunk discards its entire associated assembly. A later X11 error for that chunk is synchronous and leaves no partial Shader Module. Errors during ShaderModuleData upload MUST NOT generate ASYNC_ERROR; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
 
-### Device-Discovery und Device-Erstellung
+### Device Discovery and Device Creation
 
-- `EnumeratePhysicalDevices`: falsche Request-Länge (`!= 8` Bytes) ergibt `BadLength`; die Reply-Payload besteht ausschließlich aus vollständigen `PHYSICALDEVICEINFO`-Records. Ein unvollständiger Record darf nicht ausgegeben werden; wenn keine Physical Devices verfügbar sind, ist eine leere erfolgreiche Reply mit `reply.length = 0` zulässig.
-- `GetPhysicalDeviceProperty`: falsche Request-Länge `BadLength`; ungültiges Atom `BadAtom`; unbekannte/nicht-live Device-XID `BadValue`; bei Status ungleich `SUCCESS` müssen `property_type`, `value_length` und Reply-Payload null sein.
-- `GetPhysicalDeviceQueueFamilyProperties` und `GetPhysicalDeviceMemoryProperties`: Request-Länge exakt 12 Bytes; unbekannte/nicht-live Physical-Device-XID `BadValue`.
-- `CreateDevice`: falsche Länge `BadLength`; `queue_family_request_count = 0`, `queue_count = 0`, doppelte Queue-Family-Records, nicht-null reserviertes Feld, ungültige Priorität, `enabled` ungleich 1, doppelte Feature-/Extension-Einträge, unbekannte Feature-ID oder formal ungültiger Extension-Name `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; unbekannte/nicht-live Physical-Device-XID `BadValue`; falscher live Ressourcentyp, Queue-Family-Anforderung mit nicht verfügbarer oder nicht unterstützter Queue-Anzahl, registriertes aber nicht unterstütztes Feature, unbekannte oder nicht unterstützte formal gültige Extension oder Cross-Device-Zugriff `BadMatch`; ein nicht verfügbares Physical Device `DEVICE_UNAVAILABLE`. Die Prüfung ist atomar und veröffentlicht kein logisches Device bei Fehler.
-- `CreateDefaultDevice`: falsche Länge `BadLength`; Count null, nicht-null reserviertes Feld oder ungültige Priorität `BadValue`; ungültige/belegte `device_xid` `BadIDChoice`; fehlende XGE-Aushandlung `BadMatch`; kein geeignetes Gerät `DEVICE_UNAVAILABLE`.
+- EnumeratePhysicalDevices: a request length other than 8 bytes returns BadLength; the reply payload consists only of complete PHYSICALDEVICEINFO records. An incomplete record MUST NOT be emitted. If no Physical Devices are available, an empty successful reply with reply.length = 0 is permitted.
+- GetPhysicalDeviceProperty: incorrect request length returns BadLength; an invalid Atom returns BadAtom; an unknown/non-live Device XID returns BadValue. For any status other than SUCCESS, property_type, value_length, and the reply payload MUST be zero.
+- GetPhysicalDeviceQueueFamilyProperties and GetPhysicalDeviceMemoryProperties: exact request length is 12 bytes; an unknown/non-live Physical-Device XID returns BadValue.
+- CreateDevice: incorrect length returns BadLength; queue_family_request_count = 0, queue_count = 0, duplicate queue-family records, nonzero reserved fields, invalid priorities, enabled other than 1, duplicate feature/extension entries, unknown feature IDs, or syntactically invalid extension names return BadValue; an invalid/occupied device_xid returns BadIDChoice; an unknown/non-live Physical-Device XID returns BadValue; a live resource of the wrong type, a queue-family request with an unavailable or unsupported queue count, a registered but unsupported feature, an unknown or unsupported syntactically valid extension, or cross-Device access returns BadMatch; an unavailable Physical Device returns DEVICE_UNAVAILABLE. Validation is atomic and does not publish a logical Device on failure.
+- CreateDefaultDevice: incorrect length returns BadLength; zero count, nonzero reserved fields, or invalid priorities return BadValue; an invalid/occupied device_xid returns BadIDChoice; missing XGE negotiation returns BadMatch; no suitable Device returns DEVICE_UNAVAILABLE.
 
-  Verbindliche Präzedenz für `CreateDefaultDevice`: (1) exakte/formelbasierte Request-Länge mit geprüfter Arithmetik (`BadLength`); (2) `queue_count`, reserviertes Feld und sämtliche Prioritäten (`BadValue`); (3) Ziel-XID `device_xid` (`BadIDChoice`); (4) erfolgreiche XGE-1.0-Aushandlung (`BadMatch`); (5) Auswahl eines geeigneten Physical Device und einer Compute-Queue (`DEVICE_UNAVAILABLE`). Alle Prüfungen erfolgen vor Veröffentlichung eines logischen Devices; bei jedem Fehler bleibt die Ziel-XID unbelegt.
-- Beide Requests sind Void-Requests; Erfolg erzeugt keinen normalen Reply.
-- `DestroyDevice`: falsche Länge `BadLength`; unbekannte/nicht-live XAverius-XID `BadValue`; fremde Device-Ownership `BadMatch`.
+  Normative precedence for CreateDefaultDevice: (1) exact/formula-based request length with checked arithmetic (BadLength); (2) queue_count, reserved fields, and all priorities (BadValue); (3) target XID device_xid (BadIDChoice); (4) successful XGE 1.0 negotiation (BadMatch); (5) selection of a suitable Physical Device and compute queue (DEVICE_UNAVAILABLE). All checks occur before a logical Device is published; on any error, the target XID remains unallocated.
+- Both requests are Void requests; success produces no normal reply.
+- DestroyDevice: incorrect length returns BadLength; unknown/non-live XAverius XID returns BadValue; foreign Device ownership returns BadMatch.
 
 ### `SelectEvents`
 
@@ -138,12 +138,12 @@ Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `dat
 
 ### `CreateDescriptorSetLayout`
 
-- Falsche Request-Länge oder ein nicht zum `binding_count` passender Payload: `BadLength`
-- Nicht-null `flags`, reservierte/ungültige Feldwerte, unbekannte oder nicht unterstützte Stage-Bits, nicht unterstützter Descriptor-Typ oder ungültige Binding-Records: `BadValue`
-- Ungültige oder bereits belegte Create-XID: `BadIDChoice`
-- Unbekannte/nicht-live Device-XID: `BadValue`; falscher live Ressourcentyp, fremde Device-Ownership oder Cross-Device-Ressource: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`
-- Jeder Fehler lässt das Descriptor Set Layout unangelegt; Teilresultate sind unzulässig.
+- Incorrect request length or a payload inconsistent with binding_count: BadLength
+- Nonzero flags, reserved/invalid field values, unknown or unsupported stage bits, unsupported descriptor type, or invalid binding records: BadValue
+- Invalid or already-occupied create XID: BadIDChoice
+- Unknown/non-live Device XID: BadValue; wrong live resource type, foreign Device ownership, or cross-Device resource: BadMatch
+- Unavailable/lost Device: DEVICE_UNAVAILABLE / DEVICE_LOST; synchronous backend allocation failure: ALLOCATION_FAILED
+- Any error leaves the Descriptor Set Layout unallocated; partial results are not permitted.
 
 ### `CreateCommandPool`
 
@@ -167,47 +167,47 @@ Normative Präzedenz: (1) exakte 28-Byte-Länge (`BadLength`); (2) positive `dat
 
 ### Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` (provisional command entry)
 
-Diese Regeln gelten nur im presentation-capable Profil; `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` ist mit Command-Entry-ID 5 in der zentralen Registry zugewiesen. Die Fehlerpräzedenz ist: (1) Command-Entry-Struktur, exakte Entry-Länge, `entry_length` und reservierte Felder; (2) entry-lokale Feldsyntax, insbesondere Vierbyte-Ausrichtung von `buffer_offset` und die Regel, dass `row_length`/`image_height` entweder null oder positive Werte sein müssen; (3) Buffer-XID und danach Swapchain-XID auflösen (`BadValue` für unbekannte/nicht-live XIDs); (4) Typ, Client-/Device-Ownership und Cross-Device-Zugehörigkeit (`BadMatch`); (5) ressourcenabhängige Werte prüfen: `image_index` außerhalb der Swapchain, effektive Zeilenlänge/-höhe kleiner als die Swapchain-Ausdehnung oder ein Quellbereich außerhalb des Buffers ergeben `BadValue`; (6) Nutzungsflags prüfen: Buffer ohne `TRANSFER_SRC` oder Swapchain ohne `TRANSFER_DST` ergibt `BadMatch`; (7) Device-/Submission-Zustand und Image-State prüfen. Diese Reihenfolge verhindert, dass XID-abhängige Prüfungen ohne aufgelöste Ressource ausgeführt werden, während entry-lokale Syntaxfehler nicht durch einen ungültigen XID verdeckt werden. Die Image-State-Prüfung erfolgt atomar bei Submission-Annahme: ist das Image dann nicht `ACQUIRED` oder konkurriert der Submit mit einer Present-Transition, ergibt sich `INVALID_SYNCHRONIZATION_STATE`. Die Prüfung berücksichtigt alle zuvor in X11-Request-Reihenfolge angenommenen Zustandsübergänge: ein Copy-Submit nach einer bereits angenommenen `QueuePresent`-Transition auf `PRESENT_PENDING` wird abgewiesen; ein zuvor angenommener Submit bleibt dagegen gültig und behält seine internen Referenzen. Die Request-Reihenfolge ersetzt keine GPU-Synchronisation. Die Ablehnung darf weder den Command-Buffer teilweise annehmen noch Image-, Referenz- oder Semaphore-Zustände verändern. Ein Swapchain-Destroy bleibt abgewiesen, solange ein Recording-Command-Buffer darauf referenziert; nach erfolgreichem Destroy wird ein nicht-pending ausführbarer Command-Buffer mit dieser Referenz invalidiert.
+These rules apply only to the presentation-capable profile; CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE is assigned Command Entry ID 5 in the central registry. Error precedence is: (1) command-entry structure, exact entry length, entry_length, and reserved fields; (2) entry-local field syntax, especially four-byte alignment of buffer_offset and the requirement that row_length/image_height be zero or positive; (3) resolve Buffer XID and then Swapchain XID (BadValue for unknown/non-live XIDs); (4) type, client/Device ownership, and cross-Device association (BadMatch); (5) validate resource-dependent values: image_index outside the Swapchain, effective row length/height smaller than the Swapchain extent, or a source range outside the Buffer return BadValue; (6) validate usage flags: a Buffer without TRANSFER_SRC or a Swapchain without TRANSFER_DST returns BadMatch; (7) validate Device/submission state and image state. This order prevents XID-dependent checks before resource resolution while ensuring entry-local syntax errors are not masked by an invalid XID. Image-state validation is atomic at submission acceptance: if the image is not ACQUIRED or the submission races a present transition, return INVALID_SYNCHRONIZATION_STATE. The check accounts for all earlier state transitions accepted in X11 request order: a copy submission after an accepted QueuePresent transition to PRESENT_PENDING is rejected; an earlier accepted submission remains valid and retains its internal references. Request order does not replace GPU synchronization. Rejection MUST NOT partially accept the Command Buffer or change image, reference, or semaphore state. Swapchain destruction remains rejected while a recording Command Buffer references it; after successful destruction, a non-pending executable Command Buffer with that reference is invalidated.
 
-### Einheitliche XID- und Zustandszuordnung für ausgewählte Requests
+### Unified XID and State Mapping for Selected Requests
 
-Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integrität; Feldwerte und reservierte Felder; Auflösung jeder erforderlichen XID; Ressourcentyp und Ownership; request-spezifische Zustands- und Backend-Prüfungen. Ein Fehler beendet den Request ohne Teiländerungen. Ein als `0` definierter optionaler XID-Wert wird nicht aufgelöst.
+Validation occurs in this order: wire length and structural integrity; field values and reserved fields; resolution of each required XID; resource type and ownership; request-specific state and backend checks. An error terminates the request without partial changes. An optional XID whose defined value is 0 is not resolved.
 
 | Request / Condition | Error |
 |---|---|
-| `DestroyResource`: falsche Länge | `BadLength` |
-| `DestroyResource`: XID löst keine live Ressource auf | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `DestroyResource`: Ressourcentyp ist nicht für den generischen Request zugelassen oder Ressource gehört einem anderen Client | `BadMatch` |
-| `DestroyResource`: Ressource wird von einem `RECORDING`-Command-Buffer referenziert oder ihre typabhängige Pending-Regel verbietet die Zerstörung | `INVALID_SYNCHRONIZATION_STATE` |
-| `BindBufferMemory`: falsche Länge | `BadLength` |
-| `BindBufferMemory`: ungültige Feldwerte oder nicht-null reservierte Felder, sofern vorhanden | `BadValue` |
-| `BindBufferMemory`: Device-, Buffer- oder Memory-XID ist ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `BindBufferMemory`: falscher Ressourcentyp oder Client-/Device-Ownership passt nicht | `BadMatch` |
-| `BindBufferMemory`: Device ist nicht verfügbar/verloren, nach XID-/Typ-/Ownership-Prüfung und vor bindungsabhängigen Zustands-/Backend-Prüfungen | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
-| `BindBufferMemory`: Buffer bereits gebunden, Memory-Type nicht erlaubt, Alignment falsch oder Allocation zu klein | `BadMatch` |
-| `UpdateDescriptorSets`: falsche Gesamtlänge oder Payload passt nicht zu `write_count` | `BadLength` |
-| `UpdateDescriptorSets`: `write_count = 0`, reservierte Felder ungleich null, doppelte Writes desselben Slots, ungültige Werte/Flags oder nicht zugewiesener `descriptor_type` | `BadValue` |
-| `UpdateDescriptorSets`: ungültige/nicht-live Device-, Set- oder Buffer-XID | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `UpdateDescriptorSets`: falscher live Typ, fremde Client-/Device-Ownership, Layout/Binding/Array-Slot oder registrierter Descriptor-Typ inkompatibel, Buffer ungebunden oder Bereich/Alignment ungültig | `BadMatch` |
-| `UpdateDescriptorSets`: Device ist nicht verfügbar/verloren, nach XID-/Typ-/Ownership-Prüfung und vor Layout-/Binding-/Pending-Zustandsprüfungen | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
-| `UpdateDescriptorSets`: Layout-/Binding-/Slot-Inkompatibilität oder betroffenes Set wird von angenommener Arbeit verwendet | `BadMatch` / `INVALID_SYNCHRONIZATION_STATE` gemäß Bedingung |
-| `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
-| `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige typunabhängige Feldwerte, doppelte rohe Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
-| `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
+| DestroyResource: incorrect length | BadLength |
+| DestroyResource: XID does not resolve to a live resource | BadValue for unknown/non-live XIDs; BadMatch for a live resource of the wrong type |
+| DestroyResource: resource type is not eligible for the generic request or the resource belongs to another client | BadMatch |
+| DestroyResource: resource is referenced by a RECORDING Command Buffer or its type-specific pending-use rule prohibits destruction | INVALID_SYNCHRONIZATION_STATE |
+| BindBufferMemory: incorrect length | BadLength |
+| BindBufferMemory: invalid field values or nonzero reserved fields, where present | BadValue |
+| BindBufferMemory: Device, Buffer, or Memory XID is invalid/non-live | BadValue for unknown/non-live XIDs; BadMatch for a live resource of the wrong type |
+| BindBufferMemory: wrong resource type or mismatched client/Device ownership | BadMatch |
+| BindBufferMemory: Device unavailable/lost, after XID/type/ownership checks and before binding-dependent state/backend checks | DEVICE_UNAVAILABLE / DEVICE_LOST |
+| BindBufferMemory: Buffer already bound, disallowed Memory Type, invalid alignment, or allocation too small | BadMatch |
+| UpdateDescriptorSets: incorrect total length or payload inconsistent with write_count | BadLength |
+| UpdateDescriptorSets: write_count = 0, nonzero reserved fields, duplicate writes to the same slot, invalid values/flags, or unassigned descriptor_type | BadValue |
+| UpdateDescriptorSets: invalid/non-live Device, Set, or Buffer XID | BadValue for unknown/non-live XIDs; BadMatch for a live resource of the wrong type |
+| UpdateDescriptorSets: wrong live type, foreign client/Device ownership, incompatible layout/binding/array slot or assigned descriptor type, unbound Buffer, or invalid range/alignment | BadMatch |
+| UpdateDescriptorSets: Device unavailable/lost, after XID/type/ownership checks and before layout/binding/pending-state checks | DEVICE_UNAVAILABLE / DEVICE_LOST |
+| UpdateDescriptorSets: layout/binding/slot incompatibility or affected Set used by accepted work | BadMatch / INVALID_SYNCHRONIZATION_STATE as applicable |
+| QueueSubmit: incorrect length, inconsistent counts, or length arithmetic overflow | BadLength |
+| QueueSubmit: zero or already-used connection token; reserved fields; syntactically invalid wait-stage mask (zero or reserved bits); invalid type-independent values; duplicate raw wait/signal Semaphore XIDs; or the same Semaphore in both arrays | BadValue |
+| QueueSubmit: invalid/non-live Device, Command Buffer, Semaphore, or nonzero Fence XID | BadValue for unknown/non-live XIDs; BadMatch for a live resource of the wrong type |
+| QueueSubmit: wrong resource type, foreign client/Device ownership, or queue not created for this Device | BadMatch |
 | `QueueSubmit`: Device unavailable/lost after successful XID/type/ownership/queue validation and before mutable submission-state checks | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `QueueSubmit`: type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter, after XID, type, and Device-state checks | `BadValue` |
 | `QueueSubmit`: Timeline signal value exceeds the observable counter but conflicts with an already reserved pending GPU signal value | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: a Command Buffer is not `EXECUTABLE`, a Fence is not submit-eligible, a Semaphore state is invalid, or a syntactically valid wait-stage mask contains a stage unsupported by the addressed queue family | `INVALID_SYNCHRONIZATION_STATE` |
-| `QueueSubmit`: Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `DEPENDENCY_FAILED` |
+| QueueSubmit: dependency prevents acceptance when no more specific state rule applies | DEPENDENCY_FAILED |
 | `QueueSubmit`: synchronous error before acceptance | no state changes; the token remains unused, command buffers remain `EXECUTABLE`, Fence/Semaphore states and internal references remain unchanged; no submission event or `ASYNC_ERROR` is emitted |
-| `ResetFence`: falsche Länge | `BadLength` |
-| `ResetFence`: Device- oder Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `ResetFence`: falscher Ressourcentyp oder Fence gehört zu einem anderen Client/Device | `BadMatch` |
-| `ResetFence`: Fence ist weder `SIGNALED` noch `FAILED` | `INVALID_SYNCHRONIZATION_STATE` |
-| `ResetFence`: Device verloren | `DEVICE_LOST` |
+| ResetFence: incorrect length | BadLength |
+| ResetFence: invalid/non-live Device or Fence XID | BadValue for unknown/non-live XIDs; BadMatch for a live resource of the wrong type |
+| ResetFence: wrong resource type or Fence belongs to another client/Device | BadMatch |
+| ResetFence: Fence is neither SIGNALED nor FAILED | INVALID_SYNCHRONIZATION_STATE |
+| ResetFence: Device lost | DEVICE_LOST |
 
-Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler gemeldet; der Request darf keine Teiländerungen hinterlassen. Nach angenommener `QueueSubmit` werden Ausführungsfehler ausschließlich über die Submission-Terminalereignisse und zugehörige Zustände gemeldet, nicht als nachträglicher X11-Fehler. Ein nicht verfügbarer Zustand wird nur dann gemeldet, wenn der Request tatsächlich weitere Backend-Arbeit benötigt; rein logische Bereinigung nach Device Loss folgt den jeweiligen Lebensdauerregeln.
+For all five requests, errors before acceptance are reported synchronously as X11 errors; the request MUST NOT leave partial changes. After QueueSubmit has been accepted, execution failures are reported only through submission terminal events and associated states, not as delayed X11 errors. An unavailable state is reported only when the request actually requires further backend work; purely logical cleanup after Device loss follows the applicable lifetime rules.
 
 ### Synchronization Requests
 
