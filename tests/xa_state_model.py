@@ -42,6 +42,7 @@ class SharedBinarySemaphore:
     device_lost: bool = False
     signal_state: BinarySignalState = BinarySignalState.UNSIGNALED
     wait_reservation: tuple[str, int] | None = None
+    wait_reservation_owner: object | None = field(default=None, repr=False, compare=False)
     signal_reservation: tuple[str, int] | None = None
     signal_consumed: bool = False
     # Durable evidence that a Submit signal was consumed, even after its
@@ -321,6 +322,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         state.pending_present_waits.append((request.token, index))
         if index < len(state.shared_semaphores):
             state.shared_semaphores[index].wait_reservation = ("present", request.token)
+            state.shared_semaphores[index].wait_reservation_owner = state
     state.image_state = ImageState.PRESENT_PENDING
     return PresentResult("SUCCESS", True)
 
@@ -368,7 +370,10 @@ def finish_present_wait(
     )
     # Check the canonical reservation before even extending local mirrors:
     # stale callbacks must be mutation-free on every rejection path.
-    if shared is not None and shared.wait_reservation != ("present", token):
+    if shared is not None and (
+        shared.wait_reservation != ("present", token)
+        or shared.wait_reservation_owner is not state
+    ):
         return "BadValue"
     if semaphore_index >= len(state.binary_signal_states):
         state.binary_signal_states.extend(
@@ -430,6 +435,7 @@ def finish_present_wait(
         state.wait_states[semaphore_index] = WaitState.READY
     if shared is not None:
         shared.wait_reservation = None
+        shared.wait_reservation_owner = None
     state.pending_present_waits.remove(reservation)
     return "SUCCESS"
 
