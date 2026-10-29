@@ -308,19 +308,19 @@ class GoldenXGEEventTests(unittest.TestCase):
         document = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         for event, fields in PRESENTATION_EVENT_FIELDS.items():
             match = re.search(
-                r"^## \`" + re.escape(event) + r"\`\\s*$([\\s\\S]*?)(?=^## |\\Z)",
+                r"^## \`" + re.escape(event) + r"\`\s*$([\s\S]*?)(?=^## |\Z)",
                 document, re.M,
             )
             self.assertIsNotNone(match, f"missing normative event section {event}")
             body = match.group(1)
             actual = []
             for line in body.splitlines():
-                row = re.match(r"^\\|\\s*(\\d+)\\s*\\|\\s*(XID|CARD32|CARD64)\\s*\\|\\s*(.*?)\\s*\\|", line)
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|\s*(.*?)\s*\|", line)
                 if row:
                     actual.append((int(row.group(1)), row.group(2)))
             expected = [(offset, typ) for offset, _width, typ in fields.values()]
             self.assertEqual(actual, expected, f"{event}: field offsets, widths, or types changed")
-            self.assertRegex(body, r"Total length:\\s*64 bytes; XGE \`length = 8\`")
+            self.assertRegex(body, r"Total length:\s*64 bytes; XGE \`length = 8\`")
             owners = [0] * 64
             for field, (offset, width, _typ) in fields.items():
                 with self.subTest(event=event, field=field):
@@ -331,7 +331,7 @@ class GoldenXGEEventTests(unittest.TestCase):
                         owners[byte] += 1
             self.assertEqual(owners[:32], [0] * 32)
             self.assertEqual(owners[32:], [1] * 32, f"{event}: field gap or overlap")
-            self.assertRegex(body, r"\\|\\s*52\\s*\\|\\s*CARD32\\s*\\|\\s*\\`reserved = 0\\`")
+            self.assertRegex(body, r"\|\s*52\s*\|\s*CARD32\s*\|\s*\`reserved = 0\`")
             self.assertIn("presentation_token", body)
 
     def test_event_ids_and_vector_field_sets_match_registry(self):
