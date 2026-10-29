@@ -7,12 +7,17 @@ from xa_state_model import (
     AsyncCallbackRegistry,
     AsyncDeviceIdentity,
     AsyncResourceIdentity,
+    ConnectionInstance,
 )
+
+
+CLIENT_A = ConnectionInstance("client-A")
+CLOSED_CLIENT = ConnectionInstance("closed-client")
 
 
 class DelayedCallbackXidReuseTests(unittest.TestCase):
     def test_destroy_resource_then_reuse_xid_does_not_touch_replacement(self):
-        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        registry = AsyncCallbackRegistry(connections_live={CLIENT_A})
         device = AsyncDeviceIdentity("device-generation-1", 7)
         old = AsyncResourceIdentity("resource-generation-1", 42, device.identity)
         registry.register_device(device)
@@ -22,7 +27,7 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         replacement = AsyncResourceIdentity("resource-generation-2", 42, device.identity)
         registry.register_resource(replacement)
         self.assertEqual(
-            registry.complete_backend_callback(old, device, "client-A", token="submit-1"),
+            registry.complete_backend_callback(old, device, CLIENT_A, token="submit-1"),
             "SUCCESS",
         )
         self.assertEqual(old.callback_count, 1)
@@ -62,7 +67,7 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         registry.register_device(device)
         registry.register_resource(resource)
         self.assertEqual(
-            registry.complete_backend_callback(resource, device, "closed-client", token="submit-3"),
+            registry.complete_backend_callback(resource, device, CLOSED_CLIENT, token="submit-3"),
             "SUCCESS",
         )
         self.assertEqual(resource.backend_refs, 0)
@@ -117,7 +122,7 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
     def test_reconnect_uses_fresh_connection_handle_for_delayed_resource_callback(self):
         # The human-readable peer label is deliberately the same. The callback
         # captures an opaque handle for the old X11 connection instance.
-        old_connection = object()
+        old_connection = ConnectionInstance("same-peer")
         registry = AsyncCallbackRegistry(connections_live={old_connection})
         device = AsyncDeviceIdentity("device-generation-1", 7)
         resource = AsyncResourceIdentity("resource-generation-1", 42, device.identity)
@@ -125,7 +130,7 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         registry.register_resource(resource)
 
         registry.disconnect(old_connection)
-        new_connection = object()
+        new_connection = ConnectionInstance("same-peer")
         registry.connections_live.add(new_connection)
 
         self.assertEqual(
