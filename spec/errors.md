@@ -138,12 +138,12 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 
 ### `CreateDescriptorSetLayout`
 
-- Falsche Request-Länge oder ein nicht zum `binding_count` passender Payload: `BadLength`
-- Nicht-null `flags`, reservierte/ungültige Feldwerte, unbekannte oder nicht unterstützte Stage-Bits, nicht unterstützter Descriptor-Typ oder ungültige Binding-Records: `BadValue`
-- Ungültige oder bereits belegte Create-XID: `BadIDChoice`
-- Unbekannte/nicht-live Device-XID: `BadValue`; falscher live Ressourcentyp, fremde Device-Ownership oder Cross-Device-Ressource: `BadMatch`
-- Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`
-- Jeder Fehler lässt das Descriptor Set Layout unangelegt; Teilresultate sind unzulässig.
+- An incorrect request length or a payload inconsistent with `binding_count` returns `BadLength`.
+- Nonzero `flags`, reserved/invalid field values, unknown or unsupported stage bits, an unsupported descriptor type, or invalid binding records return `BadValue`.
+- An invalid or already allocated create XID returns `BadIDChoice`.
+- An unknown/non-live Device XID returns `BadValue`; a live resource of the wrong type, foreign Device ownership, or a cross-Device resource returns `BadMatch`.
+- An unavailable/lost Device returns `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; a synchronous backend allocation failure returns `ALLOCATION_FAILED`.
+- Every error leaves the Descriptor Set Layout uncreated; partial results are not permitted.
 
 ### `CreateCommandPool`
 
