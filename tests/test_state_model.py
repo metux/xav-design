@@ -4063,21 +4063,21 @@ class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
         self.assertNotIn((client_a, 92), registry.submissions)
         self.assertIs(registry.detached_submissions[(client_a, 92)], submission)
 
-        # A new wait may reuse the connection/token pair, but an old callback
-        # must be bound to its captured registration object, not the pair.
-        client_a = registry.connect("client-A")
+        # A reconnect receives a fresh handle. Wait tokens may be reused on
+        # that new connection without aliasing waits from the disconnected one.
+        new_client_a = registry.connect("client-A")
         self.assertEqual(
-            registry.register_wait(client_a, 101, "WaitForFence", ("fence-new",)),
+            registry.register_wait(new_client_a, 101, "WaitForFence", ("fence-new",)),
             "SUCCESS",
         )
-        replacement_wait = registry.wait_registrations[(client_a, 101)]
+        replacement_wait = registry.wait_registrations[(new_client_a, 101)]
         self.assertIsNot(replacement_wait, old_wait_a)
         self.assertEqual(registry.finish_wait(old_wait_a), "BadValue")
-        self.assertIs(registry.wait_registrations[(client_a, 101)], replacement_wait)
+        self.assertIs(registry.wait_registrations[(new_client_a, 101)], replacement_wait)
         self.assertEqual(registry.finish_wait(old_wait_b), "BadValue")
         self.assertEqual(registry.finish_wait(surviving_wait), "SUCCESS")
         self.assertEqual(registry.finish_wait(replacement_wait), "SUCCESS")
-        # Accepted work still reaches its actual terminal state.
+        # Accepted work still completes only through its original captured key.
         self.assertEqual(registry.terminal_callback(client_a, 92, "FAILED"), "SUCCESS")
         self.assertEqual(submission.terminal, "FAILED")
         self.assertNotIn((client_a, 92), registry.detached_submissions)
@@ -5857,22 +5857,22 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
         registry.disconnect(client_a)
         self.assertIs(registry.detached_submissions[(client_a, 302)], original)
 
-        # A reintroduced connection identity must not reuse a key still owned
-        # by an accepted backend callback.
-        client_a = registry.connect("client-A")
+        # A fresh connection handle may reuse the token while old backend work
+        # remains detached; the callback key includes the connection instance.
+        new_client_a = registry.connect("client-A")
         replacement = AsyncSubmissionIdentity(
-            connection_identity=client_a,
+            connection_identity=new_client_a,
             token=302,
             device_identity="device-a",
             device_xid=71,
             queue_key=(0, 0),
         )
-        self.assertEqual(registry.accept_submission(replacement), "BadValue")
+        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
         self.assertEqual(registry.terminal_callback(client_a, 302, "COMPLETE"), "SUCCESS")
         self.assertEqual(original.terminal, "COMPLETE")
         self.assertIsNone(replacement.terminal)
         self.assertNotIn((client_a, 302), registry.detached_submissions)
-        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
+        self.assertIs(registry.submissions[(new_client_a, 302)], replacement)
 
 
 
