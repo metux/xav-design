@@ -2409,11 +2409,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
 class RecreatedDeviceSubmissionCallbackTests(unittest.TestCase):
     def test_old_terminal_callback_cannot_emit_for_recreated_device_generation(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         old_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", old_device)
+        registry.register_device(client_a, old_device)
         old_submission = AsyncSubmissionIdentity(
-            connection_identity="client-A",
+            connection_identity=client_a,
             token=1101,
             device_identity="device-A",
             device_xid=71,
@@ -2421,19 +2422,19 @@ class RecreatedDeviceSubmissionCallbackTests(unittest.TestCase):
         )
         self.assertEqual(registry.accept_submission(old_submission), "SUCCESS")
         self.assertEqual(
-            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            registry.select_queue_events(client_a, "device-A", (0, 0), 1),
             "SUCCESS",
         )
 
         self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
         new_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", new_device)
+        registry.register_device(client_a, new_device)
         self.assertEqual(
-            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            registry.select_queue_events(client_a, "device-A", (0, 0), 1),
             "SUCCESS",
         )
         new_submission = AsyncSubmissionIdentity(
-            connection_identity="client-A",
+            connection_identity=client_a,
             token=1102,
             device_identity="device-A",
             device_xid=71,
@@ -2445,21 +2446,21 @@ class RecreatedDeviceSubmissionCallbackTests(unittest.TestCase):
         # mask available again, but its captured device object is from the
         # destroyed generation. It may retire its own submission only.
         self.assertEqual(
-            registry.terminal_callback("client-A", 1101, "COMPLETE"), "SUCCESS"
+            registry.terminal_callback(client_a, 1101, "COMPLETE"), "SUCCESS"
         )
         self.assertEqual(old_submission.terminal, "COMPLETE")
         self.assertIsNone(new_submission.terminal)
-        self.assertNotIn(("client-A", 1101), registry.submissions)
-        self.assertIs(registry.submissions[("client-A", 1102)], new_submission)
+        self.assertNotIn((client_a, 1101), registry.submissions)
+        self.assertIs(registry.submissions[(client_a, 1102)], new_submission)
         self.assertEqual(registry.emitted_events, [])
 
         self.assertEqual(
-            registry.terminal_callback("client-A", 1102, "COMPLETE"), "SUCCESS"
+            registry.terminal_callback(client_a, 1102, "COMPLETE"), "SUCCESS"
         )
         self.assertEqual(new_submission.terminal, "COMPLETE")
         self.assertEqual(
             registry.emitted_events,
-            [("COMPLETE", "client-A", 71, 1102)],
+            [("COMPLETE", client_a.client_label, 71, 1102)],
         )
 
 if __name__ == "__main__":
@@ -3988,95 +3989,98 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
 
 class ClientDisconnectCallbackCleanupTests(unittest.TestCase):
     def test_disconnect_drops_event_subscriptions_and_terminal_callback_link(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         device = AsyncDeviceIdentity("device-A", 17)
-        registry.register_device("client-A", device)
+        registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
             token=91,
-            connection_identity="client-A",
+            connection_identity=client_a,
             device_identity=device.identity,
             device_xid=device.xid,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(submission), "SUCCESS")
         self.assertEqual(
-            registry.select_queue_events("client-A", device.identity, (0, 0), 1),
+            registry.select_queue_events(client_a, device.identity, (0, 0), 1),
             "SUCCESS",
         )
-        key = ("client-A", 91)
+        key = (client_a, 91)
         self.assertIn(key, registry.submissions)
 
-        registry.disconnect("client-A")
-        self.assertNotIn("client-A", registry.live_connections)
-        self.assertFalse(any(connection == "client-A"
+        registry.disconnect(client_a)
+        self.assertNotIn(client_a, registry.live_connections)
+        self.assertFalse(any(connection == client_a
                              for connection, _queue in registry.queue_masks))
         # Client-facing links disappear immediately, while accepted backend
         # work remains internally owned until its actual terminal callback.
         self.assertNotIn(key, registry.submissions)
         self.assertIs(registry.detached_submissions[key], submission)
-        self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "SUCCESS")
+        self.assertEqual(registry.terminal_callback(client_a, 91, "COMPLETE"), "SUCCESS")
         self.assertEqual(submission.terminal, "COMPLETE")
         self.assertNotIn(key, registry.detached_submissions)
         self.assertEqual(registry.emitted_events, [])
         snapshot = dict(registry.detached_submissions)
-        self.assertEqual(registry.terminal_callback("client-A", 91, "COMPLETE"), "BadValue")
+        self.assertEqual(registry.terminal_callback(client_a, 91, "COMPLETE"), "BadValue")
         self.assertEqual(registry.detached_submissions, snapshot)
 
 
 class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
     def test_disconnect_cancels_only_connection_waits_not_accepted_work(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A", "client-B"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
+        client_b = registry.connect(client_b)
         device = AsyncDeviceIdentity("device-A", 17)
-        registry.register_device("client-A", device)
+        registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
             token=92,
-            connection_identity="client-A",
+            connection_identity=client_a,
             device_identity=device.identity,
             device_xid=device.xid,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(submission), "SUCCESS")
         self.assertEqual(
-            registry.register_wait("client-A", 101, "WaitSemaphores", ("sem-A", "sem-B")),
+            registry.register_wait(client_a, 101, "WaitSemaphores", ("sem-A", "sem-B")),
             "SUCCESS",
         )
         self.assertEqual(
-            registry.register_wait("client-A", 102, "WaitForFence", ("fence-A",)),
+            registry.register_wait(client_a, 102, "WaitForFence", ("fence-A",)),
             "SUCCESS",
         )
         self.assertEqual(
-            registry.register_wait("client-B", 103, "WaitForFence", ("fence-B",)),
+            registry.register_wait(client_b, 103, "WaitForFence", ("fence-B",)),
             "SUCCESS",
         )
 
-        old_wait_a = registry.wait_registrations[("client-A", 101)]
-        old_wait_b = registry.wait_registrations[("client-A", 102)]
-        surviving_wait = registry.wait_registrations[("client-B", 103)]
-        registry.disconnect("client-A")
-        self.assertNotIn(("client-A", 101), registry.wait_registrations)
-        self.assertNotIn(("client-A", 102), registry.wait_registrations)
-        self.assertIn(("client-B", 103), registry.wait_registrations)
-        self.assertNotIn(("client-A", 92), registry.submissions)
-        self.assertIs(registry.detached_submissions[("client-A", 92)], submission)
+        old_wait_a = registry.wait_registrations[(client_a, 101)]
+        old_wait_b = registry.wait_registrations[(client_a, 102)]
+        surviving_wait = registry.wait_registrations[(client_b, 103)]
+        registry.disconnect(client_a)
+        self.assertNotIn((client_a, 101), registry.wait_registrations)
+        self.assertNotIn((client_a, 102), registry.wait_registrations)
+        self.assertIn((client_b, 103), registry.wait_registrations)
+        self.assertNotIn((client_a, 92), registry.submissions)
+        self.assertIs(registry.detached_submissions[(client_a, 92)], submission)
 
         # A new wait may reuse the connection/token pair, but an old callback
         # must be bound to its captured registration object, not the pair.
-        registry.live_connections.add("client-A")
+        client_a = registry.connect("client-A")
         self.assertEqual(
-            registry.register_wait("client-A", 101, "WaitForFence", ("fence-new",)),
+            registry.register_wait(client_a, 101, "WaitForFence", ("fence-new",)),
             "SUCCESS",
         )
-        replacement_wait = registry.wait_registrations[("client-A", 101)]
+        replacement_wait = registry.wait_registrations[(client_a, 101)]
         self.assertIsNot(replacement_wait, old_wait_a)
         self.assertEqual(registry.finish_wait(old_wait_a), "BadValue")
-        self.assertIs(registry.wait_registrations[("client-A", 101)], replacement_wait)
+        self.assertIs(registry.wait_registrations[(client_a, 101)], replacement_wait)
         self.assertEqual(registry.finish_wait(old_wait_b), "BadValue")
         self.assertEqual(registry.finish_wait(surviving_wait), "SUCCESS")
         self.assertEqual(registry.finish_wait(replacement_wait), "SUCCESS")
         # Accepted work still reaches its actual terminal state.
-        self.assertEqual(registry.terminal_callback("client-A", 92, "FAILED"), "SUCCESS")
+        self.assertEqual(registry.terminal_callback(client_a, 92, "FAILED"), "SUCCESS")
         self.assertEqual(submission.terminal, "FAILED")
-        self.assertNotIn(("client-A", 92), registry.detached_submissions)
+        self.assertNotIn((client_a, 92), registry.detached_submissions)
 
 
 class SubmitPresentDeviceLossCallbackRaceTests(unittest.TestCase):
@@ -5750,19 +5754,20 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
 
 class DisconnectCallbackCleanupTests(unittest.TestCase):
     def test_late_submission_callback_cannot_target_recreated_device_identity(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         old_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", old_device)
+        registry.register_device(client_a, old_device)
         submission = AsyncSubmissionIdentity(
             token=299,
-            connection_identity="client-A",
+            connection_identity=client_a,
             device_identity="device-A",
             device_xid=71,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(submission), "SUCCESS")
         self.assertEqual(
-            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            registry.select_queue_events(client_a, "device-A", (0, 0), 1),
             "SUCCESS",
         )
         self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
@@ -5771,98 +5776,102 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
         # backend callback arrives. The new device's event mask must not make
         # the old callback appear to belong to the new device generation.
         new_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", new_device)
+        registry.register_device(client_a, new_device)
         self.assertEqual(
-            registry.select_queue_events("client-A", "device-A", (0, 0), 1),
+            registry.select_queue_events(client_a, "device-A", (0, 0), 1),
             "SUCCESS",
         )
-        self.assertEqual(registry.terminal_callback("client-A", 299, "COMPLETE"), "SUCCESS")
+        self.assertEqual(registry.terminal_callback(client_a, 299, "COMPLETE"), "SUCCESS")
         self.assertEqual(submission.terminal, "COMPLETE")
         self.assertEqual(registry.emitted_events, [])
-        self.assertNotIn(("client-A", 299), registry.submissions)
+        self.assertNotIn((client_a, 299), registry.submissions)
 
 
     def test_late_device_loss_error_cannot_target_recreated_device(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         old_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", old_device)
+        registry.register_device(client_a, old_device)
         self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
 
         new_device = AsyncDeviceIdentity("device-A", 71)
-        registry.register_device("client-A", new_device)
+        registry.register_device(client_a, new_device)
 
         # A delayed Device-Loss/ASYNC_ERROR callback still carries the old
         # device object. It must neither emit against the replacement's XID
         # nor mark the replacement device dead.
-        self.assertEqual(registry.async_error("client-A", old_device, 999), "SUCCESS")
+        self.assertEqual(registry.async_error(client_a, old_device, 999), "SUCCESS")
         self.assertEqual(registry.emitted_events, [])
         self.assertTrue(new_device.live)
         self.assertIs(registry.live_devices["device-A"], new_device)
 
         # A callback captured from the current generation remains deliverable.
-        self.assertEqual(registry.async_error("client-A", new_device, 1000), "SUCCESS")
+        self.assertEqual(registry.async_error(client_a, new_device, 1000), "SUCCESS")
         self.assertEqual(registry.emitted_events, [
-            ("ASYNC_ERROR", "client-A", 71, 1000),
+            ("ASYNC_ERROR", client_a.client_label, 71, 1000),
         ])
 
 
     def test_disconnect_detaches_client_callback_links_but_keeps_backend_work(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-a", "client-b"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
+        client_b = registry.connect(client_b)
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
-        registry.register_device("client-a", device)
+        registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
-            connection_identity="client-a",
+            connection_identity=client_a,
             token=301,
             device_identity="device-a",
             device_xid=71,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(submission), "SUCCESS")
-        registry.select_queue_events("client-a", "device-a", (0, 0), 1)
+        registry.select_queue_events(client_a, "device-a", (0, 0), 1)
 
-        registry.disconnect("client-a")
-        self.assertNotIn(("client-a", 301), registry.submissions)
-        self.assertIs(registry.detached_submissions[("client-a", 301)], submission)
-        self.assertFalse(any(key[0] == "client-a" for key in registry.queue_masks))
+        registry.disconnect(client_a)
+        self.assertNotIn((client_a, 301), registry.submissions)
+        self.assertIs(registry.detached_submissions[(client_a, 301)], submission)
+        self.assertFalse(any(key[0] == client_a for key in registry.queue_masks))
 
         # The backend's actual terminal result is still recorded, but it can
         # neither emit an event on the closed connection nor retain its link.
-        self.assertEqual(registry.terminal_callback("client-a", 301, "COMPLETE"), "SUCCESS")
+        self.assertEqual(registry.terminal_callback(client_a, 301, "COMPLETE"), "SUCCESS")
         self.assertEqual(submission.terminal, "COMPLETE")
-        self.assertNotIn(("client-a", 301), registry.detached_submissions)
+        self.assertNotIn((client_a, 301), registry.detached_submissions)
         self.assertEqual(registry.emitted_events, [])
-        self.assertEqual(registry.terminal_callback("client-a", 301, "FAILED"), "BadValue")
+        self.assertEqual(registry.terminal_callback(client_a, 301, "FAILED"), "BadValue")
 
     def test_disconnect_reserves_submission_token_until_detached_callback_retires(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-a"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
-        registry.register_device("client-a", device)
+        registry.register_device(client_a, device)
         original = AsyncSubmissionIdentity(
-            connection_identity="client-a",
+            connection_identity=client_a,
             token=302,
             device_identity="device-a",
             device_xid=71,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(original), "SUCCESS")
-        registry.disconnect("client-a")
-        self.assertIs(registry.detached_submissions[("client-a", 302)], original)
+        registry.disconnect(client_a)
+        self.assertIs(registry.detached_submissions[(client_a, 302)], original)
 
         # A reintroduced connection identity must not reuse a key still owned
         # by an accepted backend callback.
-        registry.live_connections.add("client-a")
+        client_a = registry.connect("client-A")
         replacement = AsyncSubmissionIdentity(
-            connection_identity="client-a",
+            connection_identity=client_a,
             token=302,
             device_identity="device-a",
             device_xid=71,
             queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(replacement), "BadValue")
-        self.assertEqual(registry.terminal_callback("client-a", 302, "COMPLETE"), "SUCCESS")
+        self.assertEqual(registry.terminal_callback(client_a, 302, "COMPLETE"), "SUCCESS")
         self.assertEqual(original.terminal, "COMPLETE")
         self.assertIsNone(replacement.terminal)
-        self.assertNotIn(("client-a", 302), registry.detached_submissions)
+        self.assertNotIn((client_a, 302), registry.detached_submissions)
         self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
 
 
@@ -6257,16 +6266,17 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
 
 class SubmissionTokenAbaTests(unittest.TestCase):
     def test_duplicate_old_callback_cannot_complete_reused_submission_token(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         device = AsyncDeviceIdentity("device-generation-1", 71)
-        registry.register_device("client-A", device)
+        registry.register_device(client_a, device)
         old = AsyncSubmissionIdentity(
-            connection_identity="client-A", token=1201,
+            connection_identity=client_a, token=1201,
             device_identity=device.identity, device_xid=71, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(old), "SUCCESS")
         self.assertEqual(
-            registry.terminal_callback("client-A", 1201, "COMPLETE"), "SUCCESS"
+            registry.terminal_callback(client_a, 1201, "COMPLETE"), "SUCCESS"
         )
         self.assertEqual(old.terminal, "COMPLETE")
 
@@ -6274,14 +6284,14 @@ class SubmissionTokenAbaTests(unittest.TestCase):
         # that pair could be reused, it would now resolve the replacement and
         # incorrectly commit the old operation's terminal result against it.
         replacement = AsyncSubmissionIdentity(
-            connection_identity="client-A", token=1201,
+            connection_identity=client_a, token=1201,
             device_identity=device.identity, device_xid=71, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(replacement), "BadValue")
         before = copy.deepcopy((registry.submissions, registry.detached_submissions,
                                 registry.emitted_events, old, replacement))
         self.assertEqual(
-            registry.terminal_callback("client-A", 1201, "FAILED"), "BadValue"
+            registry.terminal_callback(client_a, 1201, "FAILED"), "BadValue"
         )
         self.assertEqual(
             (registry.submissions, registry.detached_submissions,
@@ -6289,24 +6299,25 @@ class SubmissionTokenAbaTests(unittest.TestCase):
         )
 
     def test_token_remains_reserved_after_disconnect_and_late_retirement(self) -> None:
-        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        registry = AsyncSubmissionEventRegistry()
+        client_a = registry.connect(client_a)
         device = AsyncDeviceIdentity("device-generation-1", 72)
-        registry.register_device("client-A", device)
+        registry.register_device(client_a, device)
         old = AsyncSubmissionIdentity(
-            connection_identity="client-A", token=1202,
+            connection_identity=client_a, token=1202,
             device_identity=device.identity, device_xid=72, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(old), "SUCCESS")
-        registry.disconnect("client-A")
+        registry.disconnect(client_a)
         self.assertEqual(
-            registry.terminal_callback("client-A", 1202, "COMPLETE"), "SUCCESS"
+            registry.terminal_callback(client_a, 1202, "COMPLETE"), "SUCCESS"
         )
         # A connection that is still disconnected cannot accept work; after a
         # new connection with the same textual identity, token tombstones also
         # prevent accidental callback aliasing in this model.
-        registry.live_connections.add("client-A")
+        client_a = registry.connect("client-A")
         replacement = AsyncSubmissionIdentity(
-            connection_identity="client-A", token=1202,
+            connection_identity=client_a, token=1202,
             device_identity=device.identity, device_xid=72, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(replacement), "BadValue")
