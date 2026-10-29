@@ -44,6 +44,7 @@ class SharedBinarySemaphore:
     wait_reservation: tuple[str, int] | None = None
     wait_reservation_owner: object | None = field(default=None, repr=False, compare=False)
     signal_reservation: tuple[str, int] | None = None
+    signal_reservation_owner: object | None = field(default=None, repr=False, compare=False)
     signal_consumed: bool = False
     # Durable evidence that a Submit signal was consumed, even after its
     # owner callback retires the transient reservation.
@@ -165,6 +166,7 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         if not known_empty:
             shared.signal_state = BinarySignalState.UNTRUSTED
             shared.signal_reservation = None
+            shared.signal_reservation_owner = None
             shared.signal_consumed = False
         shared.signal_from_submit = False
     for state in models:
@@ -1022,6 +1024,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             if index < len(state.shared_semaphores):
                 state.shared_semaphores[index].signal_state = BinarySignalState.SIGNAL_PENDING
                 state.shared_semaphores[index].signal_reservation = ("submit", request.token)
+                state.shared_semaphores[index].signal_reservation_owner = state
                 state.shared_semaphores[index].signal_consumed = False
                 state.shared_semaphores[index].signal_consumption_confirmed = False
                 state.shared_semaphores[index].signal_from_submit = True
@@ -1111,7 +1114,7 @@ def finish_submission(
         consumed = (
             reservation in state.consumed_pending_binary_signals
             or (shared is not None and shared.signal_reservation == ("submit", token)
-                and shared.signal_consumed)
+                and shared.signal_reservation_owner is state and shared.signal_consumed)
         )
         state.consumed_pending_binary_signals.discard(reservation)
         previous = state.binary_signal_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
@@ -1164,8 +1167,10 @@ def finish_submission(
         state.signal_slots[index] = None
         if index < len(state.shared_semaphores):
             shared = state.shared_semaphores[index]
-            if shared.signal_reservation == ("submit", token):
+            if (shared.signal_reservation == ("submit", token)
+                    and shared.signal_reservation_owner is state):
                 shared.signal_reservation = None
+                shared.signal_reservation_owner = None
                 shared.signal_consumed = False
                 # Provenance is retained only when the Submit actually
                 # published a signal. A failed callback with a confirmed
