@@ -1296,18 +1296,18 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 "require successful XGE 1.0-or-later negotiation",
             ),
             "SignalSemaphore": (
-                "exact total length",
+                "incorrect length",
                 "resolve Device XID, then Semaphore XID",
-                "resource type, client/device ownership",
+                "validate resource type, ownership, and cross-device use",
                 "check Device state",
-                "Timeline type",
+                "finally validate semaphore type",
             ),
             "WaitSemaphores": (
-                "exact total length",
-                "resolve Device XID, then Semaphore XIDs",
-                "resource type, client/device ownership",
+                "length and overflow",
+                "resolve Device and Semaphore XIDs in array order",
+                "validate type, ownership, and cross-device use",
                 "check Device state",
-                "Timeline type",
+                "finally require every Semaphore to be `TIMELINE`"
             ),
         }
         for request, phases in ordered_error_phases.items():
