@@ -1616,8 +1616,14 @@ class AsyncCallbackRegistry:
     """Oracle for delayed callbacks: never resolve callback targets by reused XID."""
     resources_by_xid: dict[int, AsyncResourceIdentity] = field(default_factory=dict)
     devices_by_xid: dict[int, AsyncDeviceIdentity] = field(default_factory=dict)
-    connections_live: set[str] = field(default_factory=set)
+    # These are opaque connection-instance handles, not client names. A
+    # reconnect must allocate a fresh handle even when the peer/process label
+    # is unchanged; delayed callbacks retain the original handle.
+    connections_live: set[object] = field(default_factory=set)
     emitted_events: list[tuple[str, int, int]] = field(default_factory=list)
+
+    def disconnect(self, connection_identity: object) -> None:
+        self.connections_live.discard(connection_identity)
 
     def register_device(self, device: AsyncDeviceIdentity) -> None:
         self.devices_by_xid[device.xid] = device
@@ -1645,7 +1651,7 @@ class AsyncCallbackRegistry:
 
     def complete_backend_callback(
         self, resource: AsyncResourceIdentity, device: AsyncDeviceIdentity,
-        connection_identity: str, *, token: str,
+        connection_identity: object, *, token: str,
     ) -> str:
         """Finish captured work; event targets come from captured identities only."""
         # One operation token owns one backend reference. A duplicate
