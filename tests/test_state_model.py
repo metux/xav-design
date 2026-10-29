@@ -1008,8 +1008,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(mark_present_device_lost(present), "SUCCESS")
         self.assertTrue(submit_a.device_lost)
         self.assertTrue(submit_b.device_lost)
-        self.assertEqual(submit_a.pending_submissions, [])
-        self.assertEqual(submit_b.pending_submissions, [])
+        # Logical terminalization is immediate, while foreign callback records
+        # remain until their own callbacks release backend reservations.
+        self.assertEqual(submit_a.pending_submissions, [205])
+        self.assertEqual(submit_b.pending_submissions, [206])
+        self.assertEqual(submit_a.terminal_submission_status[205], "DEVICE_LOST")
+        self.assertEqual(submit_b.terminal_submission_status[206], "DEVICE_LOST")
         self.assertEqual(present.terminal_present_status[207], "DEVICE_LOST")
         for shared in (first, second):
             self.assertTrue(shared.device_lost)
@@ -1019,12 +1023,14 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 
         # Terminal Submit callbacks cannot revive either signal; Present's own
         # wait callbacks still retire their independent reservations exactly once.
-        before_a = copy.deepcopy(submit_a)
-        before_b = copy.deepcopy(submit_b)
+        self.assertEqual(finish_submission(submit_a, 205, success=True), "SUCCESS")
+        self.assertEqual(finish_submission(submit_b, 206, success=True), "SUCCESS")
+        self.assertEqual(submit_a.pending_submissions, [])
+        self.assertEqual(submit_b.pending_submissions, [])
+        self.assertEqual(submit_a.terminal_submission_status[205], "DEVICE_LOST")
+        self.assertEqual(submit_b.terminal_submission_status[206], "DEVICE_LOST")
         self.assertEqual(finish_submission(submit_a, 205, success=True), "BadValue")
         self.assertEqual(finish_submission(submit_b, 206, success=True), "BadValue")
-        self.assertEqual(submit_a, before_a)
-        self.assertEqual(submit_b, before_b)
         self.assertEqual(finish_present_wait(present, 207, 0, consumed=True), "SUCCESS")
         self.assertEqual(first.signal_state, BinarySignalState.UNTRUSTED)
         self.assertIsNone(first.wait_reservation)

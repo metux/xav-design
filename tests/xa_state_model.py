@@ -135,16 +135,18 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         state.device_lost = True
     for shared in semaphores:
         shared.device_lost = True
-    # Device loss terminalizes every accepted submission in the transitive
-    # closure, regardless of whether Submit or Present observed it first.
-    # finish_submission is the single idempotent terminalization path for each
-    # operation; late backend callbacks then find no pending token and cannot
-    # publish success. Presentation wait callbacks remain separately pending
-    # so they can retire their own canonical wait reservations.
+    # Logical terminal outcome and backend cleanup are separate. Record the
+    # device-loss outcome for every linked pending submission immediately, but
+    # retain foreign operation records until their callbacks retire reservations
+    # and backend-access holds. The origin Submit can use the normal finalizer
+    # now; other models must not lose their callback-cleanup records.
     for state in models:
         if isinstance(state, SubmissionModel):
-            for token in list(state.pending_submissions):
-                finish_submission(state, token, success=False)
+            for token in state.pending_submissions:
+                state.terminal_submission_status[token] = "DEVICE_LOST"
+    if isinstance(origin, SubmissionModel):
+        for token in list(origin.pending_submissions):
+            finish_submission(origin, token, success=False)
     for state in models:
         if not isinstance(state, PresentState):
             continue
@@ -791,6 +793,8 @@ class SubmissionModel:
     queue_supported_stage_mask: int = 0xF
     fence_attached: bool = False
     pending_submissions: list[int] = field(default_factory=list)
+    # Logical terminal outcomes are separate from pending callback-cleanup records.
+    terminal_submission_status: dict[int, str] = field(default_factory=dict)
     # Command buffers and an optional fence are owned by individual pending submissions.
     pending_command_buffers: list[tuple[int, int]] = field(default_factory=list)
     pending_fence_submissions: list[int] = field(default_factory=list)
