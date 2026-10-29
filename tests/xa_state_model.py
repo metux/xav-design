@@ -1733,27 +1733,23 @@ class AsyncSubmissionEventRegistry:
         return isinstance(connection, ConnectionInstance)
 
     def _connection_is_live(self, connection: object) -> bool:
-        # Legacy string fixtures remain accepted for older model tests; new
-        # reconnect-sensitive tests and all new callers must use handles.
-        if isinstance(connection, str):
-            return connection in self.live_connections
         return (self._is_connection_handle(connection)
                 and connection not in self.retired_connections
                 and connection in self.live_connections)
     live_devices: dict[str, AsyncDeviceIdentity] = field(default_factory=dict)
-    queue_masks: dict[tuple[str, tuple[int, int]], int] = field(default_factory=dict)
-    submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    queue_masks: dict[tuple[ConnectionInstance, tuple[int, int]]] = field(default_factory=dict)
+    submissions: dict[tuple[ConnectionInstance, int], AsyncSubmissionIdentity] = field(default_factory=dict)
     # Submission IDs are unique for the lifetime of a connection, not merely
     # while an operation is pending. Otherwise a duplicate late backend callback
     # carrying an old (connection, token) pair could resolve a newer submission
     # after the first operation has been retired (an ABA reuse).
-    used_submission_keys: set[tuple[str, int]] = field(default_factory=set)
+    used_submission_keys: set[tuple[ConnectionInstance, int]] = field(default_factory=set)
     # Disconnect detaches client/event links immediately, but accepted backend
     # work remains indexed here until its real terminal callback arrives.
-    detached_submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    detached_submissions: dict[tuple[ConnectionInstance, int], AsyncSubmissionIdentity] = field(default_factory=dict)
     # Open host waits hold wait-only references and are canceled on disconnect;
     # they are not backend submissions and must not survive the connection.
-    wait_registrations: dict[tuple[str, int], AsyncWaitIdentity] = field(default_factory=dict)
+    wait_registrations: dict[tuple[ConnectionInstance, int], AsyncWaitIdentity] = field(default_factory=dict)
     emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
 
     def register_device(self, connection: ConnectionInstance, device: AsyncDeviceIdentity) -> None:
@@ -1828,9 +1824,10 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def disconnect(self, connection: ConnectionInstance) -> None:
+        if not self._is_connection_handle(connection):
+            raise TypeError("disconnect requires an opaque connection-instance handle")
         self.live_connections.discard(connection)
-        if self._is_connection_handle(connection):
-            self.retired_connections.add(connection)
+        self.retired_connections.add(connection)
         for key in [key for key in self.queue_masks if key[0] == connection]:
             del self.queue_masks[key]
         # Open host waits are connection-owned, not backend work. Cancel them
@@ -1845,8 +1842,10 @@ class AsyncSubmissionEventRegistry:
                 del self.submissions[key]
 
     def terminal_callback(self, connection: ConnectionInstance, token: int, result: str) -> str:
-        if not self._connection_is_live(connection) and not isinstance(connection, str):
-            return "BadValue"
+        if not self._connection_is_live(connection):
+            # A disconnected connection may still own a detached submission;
+            # only its captured handle can retire that callback. Labels are
+            # never valid lookup keys.
         key = (connection, token)
         submission = self.submissions.get(key)
         detached = False
@@ -1870,7 +1869,7 @@ class AsyncSubmissionEventRegistry:
         mask = self.queue_masks.get((connection, (submission.device_xid, queue_code)), 0)
         bit = 1 if result == "COMPLETE" else 2
         if mask & bit:
-            self.emitted_events.append((result, connection, submission.device_xid, token))
+            self.emitted_events.append((result, connection.client_label, submission.device_xid, token))
         # A terminal callback has consumed this connection/token link. Keep the
         # captured object alive only through any external backend ownership;
         # the registry must not retain completed submissions indefinitely.
@@ -1886,7 +1885,7 @@ class AsyncSubmissionEventRegistry:
         device = self.live_devices.get(captured_device.identity)
         if (self._connection_is_live(connection) and captured_device.live
                 and device is captured_device):
-            self.emitted_events.append(("ASYNC_ERROR", connection, captured_device.xid, token))
+            self.emitted_events.append(("ASYNC_ERROR", connection.client_label, captured_device.xid, token))
         return "SUCCESS"
 
 @dataclass
