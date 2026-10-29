@@ -1697,6 +1697,11 @@ class AsyncSubmissionEventRegistry:
     live_devices: dict[str, AsyncDeviceIdentity] = field(default_factory=dict)
     queue_masks: dict[tuple[str, tuple[int, int]], int] = field(default_factory=dict)
     submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
+    # Submission IDs are unique for the lifetime of a connection, not merely
+    # while an operation is pending. Otherwise a duplicate late backend callback
+    # carrying an old (connection, token) pair could resolve a newer submission
+    # after the first operation has been retired (an ABA reuse).
+    used_submission_keys: set[tuple[str, int]] = field(default_factory=set)
     # Disconnect detaches client/event links immediately, but accepted backend
     # work remains indexed here until its real terminal callback arrives.
     detached_submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
@@ -1715,8 +1720,8 @@ class AsyncSubmissionEventRegistry:
         # Its key remains reserved until that callback retires the detached link;
         # reusing it would make terminal_callback ambiguous and could leak the
         # old detached submission indefinitely.
-        if (submission.token == 0 or key in self.submissions
-                or key in self.detached_submissions):
+        if (submission.token == 0 or key in self.used_submission_keys
+                or key in self.submissions or key in self.detached_submissions):
             return "BadValue"
         if submission.connection_identity not in self.live_connections:
             return "BadValue"
@@ -1725,6 +1730,7 @@ class AsyncSubmissionEventRegistry:
             return "BadValue"
         submission.captured_device = device
         self.submissions[key] = submission
+        self.used_submission_keys.add(key)
         return "SUCCESS"
 
     def select_queue_events(

@@ -6253,3 +6253,60 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                 self.assertEqual(submit.terminal_submission_status[970], "DEVICE_LOST")
                 self.assertEqual(present.terminal_present_status[971], "DEVICE_LOST")
                 self.assertIsNone(shared.wait_reservation)
+
+
+class SubmissionTokenAbaTests(unittest.TestCase):
+    def test_duplicate_old_callback_cannot_complete_reused_submission_token(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        device = AsyncDeviceIdentity("device-generation-1", 71)
+        registry.register_device("client-A", device)
+        old = AsyncSubmissionIdentity(
+            connection_identity="client-A", token=1201,
+            device_identity=device.identity, device_xid=71, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(old), "SUCCESS")
+        self.assertEqual(
+            registry.terminal_callback("client-A", 1201, "COMPLETE"), "SUCCESS"
+        )
+        self.assertEqual(old.terminal, "COMPLETE")
+
+        # A duplicate callback has only the public connection/token pair. If
+        # that pair could be reused, it would now resolve the replacement and
+        # incorrectly commit the old operation's terminal result against it.
+        replacement = AsyncSubmissionIdentity(
+            connection_identity="client-A", token=1201,
+            device_identity=device.identity, device_xid=71, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(replacement), "BadValue")
+        before = copy.deepcopy((registry.submissions, registry.detached_submissions,
+                                registry.emitted_events, old, replacement))
+        self.assertEqual(
+            registry.terminal_callback("client-A", 1201, "FAILED"), "BadValue"
+        )
+        self.assertEqual(
+            (registry.submissions, registry.detached_submissions,
+             registry.emitted_events, old, replacement), before,
+        )
+
+    def test_token_remains_reserved_after_disconnect_and_late_retirement(self) -> None:
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A"})
+        device = AsyncDeviceIdentity("device-generation-1", 72)
+        registry.register_device("client-A", device)
+        old = AsyncSubmissionIdentity(
+            connection_identity="client-A", token=1202,
+            device_identity=device.identity, device_xid=72, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(old), "SUCCESS")
+        registry.disconnect("client-A")
+        self.assertEqual(
+            registry.terminal_callback("client-A", 1202, "COMPLETE"), "SUCCESS"
+        )
+        # A connection that is still disconnected cannot accept work; after a
+        # new connection with the same textual identity, token tombstones also
+        # prevent accidental callback aliasing in this model.
+        registry.live_connections.add("client-A")
+        replacement = AsyncSubmissionIdentity(
+            connection_identity="client-A", token=1202,
+            device_identity=device.identity, device_xid=72, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(replacement), "BadValue")
