@@ -232,8 +232,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
         section = memory.split("## 5.7 `WriteBuffer`", 1)[1].split("\n## ", 1)[0]
         error_section = errors.split("### `WriteBuffer`", 1)[1].split("\n### ", 1)[0]
-        phases = (
-            "total request length with checked wide arithmetic",
+        memory_phases = (
+            "calculate the total request length with checked wide arithmetic",
             "validate `data_length > 0` and zero payload padding",
             "resolve `device_xid`, then `buffer_xid` in wire order",
             "validate live resource types, client ownership, and device association",
@@ -241,7 +241,16 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "validate binding, `TRANSFER_DST` usage, and the overflow-safe buffer range",
             "perform the ordered transfer",
         )
-        for document in (section, error_section):
+        error_phases = (
+            "total length with checked count/overflow arithmetic",
+            "positive `data_length` and zero padding",
+            "`device_xid`, then `buffer_xid` in wire order",
+            "live resource type, client ownership, and Device association",
+            "Device state",
+            "Buffer binding, `TRANSFER_DST`, and range",
+            "transfer/synchronization work",
+        )
+        for document, phases in ((section, memory_phases), (error_section, error_phases)):
             positions = [document.find(phase) for phase in phases]
             self.assertTrue(all(position >= 0 for position in positions), positions)
             self.assertEqual(positions, sorted(positions))
