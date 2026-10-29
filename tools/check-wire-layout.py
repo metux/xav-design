@@ -317,7 +317,7 @@ def check_events(c: Check) -> None:
     )
     c.require(
         "Device loss takes precedence over these binding-specific state/backend checks" in read("spec/memory-buffers.md")
-        and "Device Loss precedes compatibility and pending-use errors" in read("spec/shaders-pipelines.md")
+        and "Device Loss gewinnt daher gegen jeden solchen späteren Fehler" in read("spec/shaders-pipelines.md")
         and "pending-set conflict" in conformance,
         "BindBufferMemory/UpdateDescriptorSets: device-loss precedence must follow valid XID/type/ownership checks and precede mutable/backend checks")
     for name, (event_id, total, length) in expected.items():
