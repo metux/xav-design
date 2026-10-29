@@ -258,10 +258,13 @@ class GoldenXGEEventTests(unittest.TestCase):
             body = match.group(1).replace("Device-XID", "Device XID").replace("Physical-Device-XID", "Physical Device XID")
             expected = sorted((offset, size) for offset, size in fields.values())
             actual = []
+            labels_by_offset = {}
             for line in body.splitlines():
-                row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|", line)
+                row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|\s*(.*?)\s*\|", line)
                 if row:
-                    actual.append((int(row.group(1)), sizes[row.group(2)]))
+                    offset = int(row.group(1))
+                    actual.append((offset, sizes[row.group(2)]))
+                    labels_by_offset[offset] = row.group(3)
                     continue
                 bullet = re.match(r"^\s*- Offset (\d+):\s*(.*)$", line)
                 if bullet:
@@ -273,7 +276,31 @@ class GoldenXGEEventTests(unittest.TestCase):
                     else:
                         continue
                     actual.append((offset, size))
+                    labels_by_offset[offset] = tail
             self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
+            field_patterns = {
+                "device_xid": r"Device XID|Device-XID",
+                "error_code": r"error_code",
+                "origin": r"\borigin\b",
+                "submission_token": r"submission_token",
+                "resource_xid": r"affected resource XID",
+                "reserved": r"reserved",
+                "reason_code": r"reason_code",
+                "device_generation": r"device_generation",
+                "physical_device_xid": r"Physical-Device XID|Physical-Device-XID",
+                "new_status": r"new_status",
+                "heap_index": r"heap_index",
+                "pressure_level": r"pressure_level",
+                "idle_reason": r"idle_reason",
+                "queue_family_index": r"queue_family_index",
+                "queue_index": r"queue_index",
+                "failure_class": r"failure_class",
+            }
+            for field, (offset, _size) in fields.items():
+                with self.subTest(event=event, field=field, offset=offset):
+                    self.assertIn(offset, labels_by_offset, f"{event}: no field label at offset {offset}")
+                    self.assertRegex(labels_by_offset.get(offset, ""), field_patterns[field],
+                                     f"{event}.{field} has the wrong name at offset {offset}")
             field_labels = {
                 "device_xid": "Device XID",
                 "error_code": "`error_code`",
@@ -314,12 +341,26 @@ class GoldenXGEEventTests(unittest.TestCase):
             self.assertIsNotNone(match, f"missing normative event section {event}")
             body = match.group(1)
             actual = []
+            actual_labels = {}
             for line in body.splitlines():
                 row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|\s*(.*?)\s*\|", line)
                 if row:
-                    actual.append((int(row.group(1)), row.group(2)))
+                    offset = int(row.group(1))
+                    actual.append((offset, row.group(2)))
+                    actual_labels[offset] = row.group(3)
             expected = [(offset, typ) for offset, _width, typ in fields.values()]
             self.assertEqual(actual, expected, f"{event}: field offsets, widths, or types changed")
+            expected_names = {
+                32: r"Device-XID", 36: r"queue_family_index", 40: r"queue_index",
+                44: r"Swapchain-XID", 48: r"image_index",
+                52: r"reserved = 0" if event == "IMAGE_RELEASED" else r"status",
+                56: r"presentation_token",
+            }
+            self.assertEqual(set(actual_labels), set(expected_names), f"{event}: field offsets differ")
+            for offset, pattern in expected_names.items():
+                with self.subTest(event=event, offset=offset):
+                    self.assertRegex(actual_labels.get(offset, ""), pattern,
+                                     f"{event}: wrong field name at offset {offset}")
             self.assertRegex(body, r"Total length:\s*64 bytes; XGE \`length = 8\`")
             owners = [0] * 64
             for field, (offset, width, _typ) in fields.items():
