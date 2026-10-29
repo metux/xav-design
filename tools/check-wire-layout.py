@@ -250,6 +250,7 @@ def check_events(c: Check) -> None:
               "synchronization: host waits must not block later signals or submissions on the same connection")
     c.require(re.search(r"The timeout deadline starts when the wait request is taken for execution and continues to run", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
+    devices = read("spec/devices.md")
     memory = read("spec/memory-buffers.md")
     c.require(re.search(r"signal entries in deferred `QueueSubmit` requests", memory) is not None and
               "`DEPENDENCY_FAILED`" in memory,
@@ -1556,6 +1557,12 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
           "validate the target `device_xid` as a create-XID",
           "require successful XGE 1.0-or-later negotiation",
           "select a suitable physical device and compute-capable queue family")),
+        ("GetPhysicalDeviceProperty", request_section(devices, "GetPhysicalDeviceProperty"),
+         ("exact 16-byte request length (`BadLength`)",
+          "resolve the Physical-Device XID (`BadValue` if unknown or non-live)",
+          "validate that the live resource is a Physical Device (`BadMatch` otherwise)",
+          "validate `property_atom` as a server-known X11 Atom (`BadAtom` if invalid)",
+          "look up the Atom name in the XAverius property registry")),
         ("BindBufferMemory", request_section(memory, "BindBufferMemory"),
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),
