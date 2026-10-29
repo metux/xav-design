@@ -75,6 +75,8 @@ At most 32 memory types and 16 memory heaps are supported. Indices start at zero
 
 `memory_properties_flags` has no defined semantics yet; the field MUST be zero until a registry definition is assigned.
 
+Normative validation precedence: (1) exact 12-byte request length (`BadLength`); (2) resolve the Physical-Device XID (`BadValue` for unknown or non-live XIDs); (3) validate that the live resource is a Physical Device (`BadMatch` otherwise); (4) return the server-stored memory-property snapshot for that Physical Device. There is no logical-Device availability phase: removal or failure of the Physical Device does not invalidate its still-live identity or rewrite its stored memory-type/heap mapping. This query performs no backend operation and changes no state. A later `AllocateMemory` must independently validate the logical Device and memory-type index against the associated Physical Device.
+
 ## 5.3 `GetBufferMemoryRequirements`
 
 Request:
