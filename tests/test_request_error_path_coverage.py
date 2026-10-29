@@ -311,7 +311,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         errors = self.errors
         conformance = self.conformance
 
-        wait = synchronization.split("## `WaitSemaphores`", 1)[1].split("\\n## ", 1)[0]
+        wait = synchronization.split("## `WaitSemaphores`", 1)[1].split("\n## ", 1)[0]
         for phrase in (
             "initial condition check and installation of the open wait registration MUST be one atomic operation",
             "visible to the initial condition check",
