@@ -1623,6 +1623,11 @@ class AsyncCallbackRegistry:
     retired_connections: set[ConnectionInstance] = field(default_factory=set)
     emitted_events: list[tuple[str, int, int]] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        if any(not isinstance(item, ConnectionInstance)
+               for item in self.connections_live | self.retired_connections):
+            raise TypeError("callback registries require opaque connection-instance handles")
+
     def connect(self, client_label: str) -> ConnectionInstance:
         """Allocate a unique opaque identity for one accepted X11 connection."""
         connection = ConnectionInstance(client_label)
@@ -1751,6 +1756,11 @@ class AsyncSubmissionEventRegistry:
     # they are not backend submissions and must not survive the connection.
     wait_registrations: dict[tuple[ConnectionInstance, int], AsyncWaitIdentity] = field(default_factory=dict)
     emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if any(not isinstance(item, ConnectionInstance)
+               for item in self.live_connections | self.retired_connections):
+            raise TypeError("callback registries require opaque connection-instance handles")
 
     def register_device(self, connection: ConnectionInstance, device: AsyncDeviceIdentity) -> None:
         if not self._connection_is_live(connection):
