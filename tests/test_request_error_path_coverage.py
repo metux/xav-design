@@ -1152,7 +1152,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                     "validate live type and client ownership",
                     "require successful XGE 1.0-or-later negotiation",
                 ),
-                "oracle": "XID/type/ownership errors take precedence over the XGE prerequisite",
+                "oracle": "after valid Device XID/type/ownership checks, missing XGE negotiation plus an invalid queue tuple returns `BadMatch` from the XGE prerequisite",
                 "winner": "`BadMatch`",
             },
             {
