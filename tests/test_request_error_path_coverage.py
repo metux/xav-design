@@ -225,6 +225,39 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("keine Backend-Arbeit", error_section)
         self.assertIn("bei Device Loss zulässig", error_section)
 
+
+    def test_write_buffer_mixed_failure_precedence_matches_normative_contract(self):
+        memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        section = memory.split("## 5.7 `WriteBuffer`", 1)[1].split("\n## ", 1)[0]
+        error_section = errors.split("### `WriteBuffer`", 1)[1].split("\n### ", 1)[0]
+        phases = (
+            "total request length with checked wide arithmetic",
+            "validate `data_length > 0` and zero payload padding",
+            "resolve `device_xid`, then `buffer_xid` in wire order",
+            "validate live resource types, client ownership, and device association",
+            "check logical-device availability",
+            "validate binding, `TRANSFER_DST` usage, and the overflow-safe buffer range",
+            "perform the ordered transfer",
+        )
+        for document in (section, error_section):
+            positions = [document.find(phase) for phase in phases]
+            self.assertTrue(all(position >= 0 for position in positions), positions)
+            self.assertEqual(positions, sorted(positions))
+        mixed_cases = (
+            "truncated or oversized request combined with zero",
+            "nonzero padding combined with unknown Device/Buffer XIDs",
+            "unknown Device XID and a Buffer XID",
+            "`DEVICE_LOST` takes precedence over an unbound Buffer",
+            "before any dependency wait, staging allocation, or transfer attempt",
+        )
+        for phrase in mixed_cases:
+            with self.subTest(mixed_failure=phrase):
+                self.assertIn(phrase, conformance)
+        self.assertIn("No wait, transfer, or state reservation may begin before stages 1–6 succeed", section)
+        self.assertIn("MUST NOT produce a successful reply", conformance)
+
     def test_physical_device_property_error_precedence_is_explicit_and_consistent(self):
         devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
         errors = self.errors
