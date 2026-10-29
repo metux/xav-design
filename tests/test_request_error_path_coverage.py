@@ -1535,5 +1535,21 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("live non-Physical-Device XID → `BadMatch`", self.conformance)
         self.assertIn("still-live Physical-Device XID marked removed/failed", self.conformance)
 
+    def test_query_reply_error_status_boundaries(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        counter = synchronization.split("## `GetSemaphoreCounterValue`", 1)[1].split("## `WaitSemaphores`", 1)[0]
+        requirements = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("## 5.4", 1)[0]
+        self.assertIn("`DEVICE_LOST` X11 error", self.errors)
+        self.assertIn("emits the X11 error `DEVICE_LOST` and no normal reply", counter)
+        self.assertIn("exactly one X11 `DEVICE_LOST` error and no normal reply", self.conformance)
+        self.assertIn("a Binary semaphore combined with Device Loss still yields that error", self.conformance)
+        self.assertIn("remains valid after logical-device loss", requirements)
+        self.assertIn("Device Loss does not block the metadata-only query", self.conformance)
+        self.assertIn("must reject an unavailable/lost Device", self.conformance)
+        self.assertIn("stored Fence state in reply byte 1", self.conformance)
+        self.assertIn("still-live Physical-Device XID marked removed/failed", self.conformance)
+        self.assertIn("Serialize only complete records", self.conformance) if "Serialize only complete records" in self.conformance else self.assertIn("serialize only complete records", self.conformance)
+
 if __name__ == "__main__":
     unittest.main()
