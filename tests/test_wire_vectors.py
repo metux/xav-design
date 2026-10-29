@@ -316,7 +316,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                     )
                     prose_row = (
                         r"(?m)^- Offset " + str(offset) + r": `?" + wire_type +
-                        r"\s+" + re.escape(field) + r"`?\s*$"
+                        r"\s+" + re.escape(field) + r"(?:\s*=\s*0)?`?\s*$"
                     )
                     if wire_type == "XID":
                         label = {
