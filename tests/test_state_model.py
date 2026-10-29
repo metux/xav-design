@@ -6012,6 +6012,11 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                 self.assertIsNone(shared.signal_reservation)
                 self.assertEqual(shared.wait_reservation, ("present", 971))
 
+                # Device loss terminalizes both accepted operations before
+                # backend completion. Their late callbacks must be rejected
+                # without mutating the canonical payload or releasing a
+                # reservation owned by the other operation.
+                before = copy.deepcopy((shared, submit, present))
                 callbacks = {
                     "submit": lambda: finish_submission(submit, 970, success=True),
                     "present": lambda: finish_present_wait(
@@ -6019,14 +6024,11 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                     ),
                 }
                 for callback in order:
-                    self.assertEqual(callbacks[callback](), "SUCCESS")
-                    # Repeated lifecycle notification and stale callback must
-                    # not rewrite the payload or release the other operation.
+                    self.assertEqual(callbacks[callback](), "BadValue")
                     self.assertEqual(mark_device_lost(submit), "SUCCESS")
                     self.assertEqual(mark_present_device_lost(present), "SUCCESS")
                     self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
                     self.assertIsNone(shared.signal_reservation)
-                before = copy.deepcopy((shared, submit, present))
                 self.assertEqual(finish_submission(submit, 970, success=False), "BadValue")
                 self.assertEqual(finish_present_wait(
                     present, 971, 0, consumed=False
