@@ -602,6 +602,65 @@ class GoldenXGEEventTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "total length does not match event type"):
                         validate_event_wire(bytes(wire), order)
 
+    def test_payload_field_coverage_has_no_gaps_overlaps_or_bad_widths(self):
+        """Every payload byte belongs to exactly one declared field, including reserved words."""
+        for event, fields in EVENT_FIELDS.items():
+            vector = next(v for v in self.vectors if v["event"] == event)
+            total = vector["total_bytes"]
+            owners = [0] * total
+            for field, (offset, width) in fields.items():
+                with self.subTest(event=event, field=field):
+                    self.assertIn(width, (4, 8), "unsupported wire-field width")
+                    self.assertGreaterEqual(offset, 32, "event field overlaps the XGE header")
+                    self.assertEqual(offset % min(width, 4), 0, "misaligned event field")
+                    self.assertLessEqual(offset + width, total, "field extends beyond event")
+                    for byte in range(offset, offset + width):
+                        owners[byte] += 1
+            self.assertEqual(owners[:32], [0] * 32, f"{event}: payload map includes header bytes")
+            self.assertEqual(owners[32:], [1] * (total - 32),
+                             f"{event}: payload contains an uncovered byte or overlapping fields")
+
+    def test_each_golden_field_uses_its_declared_offset_and_width(self):
+        """Cross-check each encoded scalar against the fixture value in both byte orders."""
+        for vector in self.vectors:
+            wire = bytes.fromhex(vector["wire_hex"])
+            for field, (offset, width) in EVENT_FIELDS[vector["event"]].items():
+                value = int(vector["fields"][field])
+                with self.subTest(vector=vector["name"], field=field):
+                    self.assertEqual(
+                        int.from_bytes(wire[offset:offset + width], vector["byte_order"]),
+                        value,
+                        f"{field} value is not encoded at offset {offset} with width {width}",
+                    )
+                    self.assertEqual(len(wire[offset:offset + width]), width)
+
+    def test_every_reserved_header_and_payload_padding_byte_must_be_zero(self):
+        """Flip each reserved byte individually so no padding position escapes validation."""
+        reserved_ranges = [(10, 32)]
+        for event, offset in EVENT_RESERVED_OFFSETS.items():
+            reserved_ranges.append((offset, offset + 4))
+        for vector in self.vectors:
+            order = vector["byte_order"]
+            for start, end in reserved_ranges:
+                if end > vector["total_bytes"]:
+                    continue
+                # Only test payload-reserved ranges on the matching event type.
+                if start >= 32 and vector["event_type"] not in (
+                    event_id for event_id, fields in EVENT_RESERVED_OFFSETS.items()
+                ):
+                    continue
+                if start >= 32:
+                    field_event = next((name for name, fields in EVENT_FIELDS.items()
+                                        if fields.get("reserved") == (start, end - start)), None)
+                    if field_event != vector["event"]:
+                        continue
+                for offset in range(start, end):
+                    wire = bytearray(encode_event(vector))
+                    wire[offset] = 1
+                    with self.subTest(event=vector["event"], order=order, padding_offset=offset):
+                        with self.assertRaisesRegex(ValueError, "reserved"):
+                            validate_event_wire(bytes(wire), order)
+
     def test_rejects_raw_event_reserved_payload_fields(self):
         cases = (("ASYNC_ERROR", 56), ("DEVICE_STATUS_CHANGED", 44),
                  ("DEVICE_MEMORY_PRESSURE", 44), ("SUBMISSION_COMPLETE", 44))
