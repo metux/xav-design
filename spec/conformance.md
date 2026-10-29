@@ -517,6 +517,19 @@ These cases target request-error paths that can be hidden by otherwise valid com
 - **Atomicity across batch requests:** for `AllocateDescriptorSets`, `UpdateDescriptorSets`, and any multi-entry binding/update request, place the only invalid entry last after at least one valid entry. The request must fail as a whole: no target XID is published, no descriptor slot or binding changes, and no internal reference is leaked or released early. Repeat with the first entry invalid to ensure the same externally visible atomicity.
 
 
+
+### `CreatePipelineLayout` and `CreateComputePipeline` mixed-failure vectors
+
+The following combinations MUST be tested as single requests, and the reported error MUST be the first failing phase in each request's normative validation order:
+
+- `CreatePipelineLayout`: malformed count-derived length combined with an occupied target XID and an unknown Device or Set-Layout XID returns `BadLength`.
+- `CreatePipelineLayout`: valid length but nonzero reserved fields or invalid stage/range syntax combined with an occupied target XID returns `BadValue`.
+- `CreatePipelineLayout`: valid framing and scalar fields with an invalid or occupied target XID plus an unknown Device or Set-Layout XID returns `BadIDChoice`; no input XID is resolved first.
+- `CreatePipelineLayout`: with valid target and input XIDs, unknown input XIDs return `BadValue), live wrong types or cross-Device layouts return `BadMatch), and `DEVICE_LOST` takes precedence over device-dependent range/compatibility checks and backend allocation.
+- `CreateComputePipeline`: malformed length combined with an invalid Entry Point, occupied target XID, and unknown input XIDs returns `BadLength`; valid length with empty/non-ASCII/NUL-containing Entry Point, nonzero padding, or nonzero reserved field returns `BadValue) before target-XID validation.
+- `CreateComputePipeline`: valid framing and Entry Point with an invalid or occupied target XID plus unknown Device/Layout/Shader XIDs returns `BadIDChoice); otherwise unknown input XIDs return `BadValue), live wrong types/cross-Device resources return `BadMatch), and `DEVICE_LOST` precedes backend pipeline creation.
+- Every rejected create leaves the target XID unallocated and creates no partial backend object or leaked internal reference. Injected backend allocation failure is reached only after all preceding phases pass and also leaves no public target resource.
+
 ## Remaining resource, descriptor, and device rejection matrix
 
 This matrix closes cross-request gaps not covered by isolated golden replies. Each test must assert the precise X11 error or protocol status, unchanged state on rejection, and absence of delayed events for work that was never accepted.
