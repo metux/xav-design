@@ -13,7 +13,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -30,7 +30,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -47,7 +47,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -65,7 +65,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -83,7 +83,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900007000e00000004030201d0c0b0a0080706050403020103000000"
@@ -99,7 +99,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900000070e00000001020304a0b0c0d0010203040506070800000003"
@@ -115,7 +115,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -133,7 +133,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -151,7 +151,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -169,7 +169,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -187,7 +187,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
@@ -205,12 +205,106 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
       },
       "wire_hex": "900000090d00000001020304a0b0c0d0010203040506070800000005aabbccddee000000"
+    },
+    {
+      "name": "AllocateMemory-little-endian",
+      "byte_order": "little",
+      "request": "AllocateMemory",
+      "major_opcode": 144,
+      "subopcode": 10,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "memory_xid": 2695938256,
+        "allocation_size": 72623859790382850,
+        "memory_type_index": 2,
+        "reserved": 0
+      },
+      "wire_hex": "900008000a00000004030201d0c0b0a000070605040302010200000000000000"
+    },
+    {
+      "name": "AllocateMemory-big-endian",
+      "byte_order": "big",
+      "request": "AllocateMemory",
+      "major_opcode": 144,
+      "subopcode": 10,
+      "flags": 0,
+      "length_bytes": 32,
+      "fields": {
+        "device_xid": 16909060,
+        "memory_xid": 2695938256,
+        "allocation_size": 72623859790382850,
+        "memory_type_index": 2,
+        "reserved": 0
+      },
+      "wire_hex": "900000080a00000001020304a0b0c0d001020304050607000000000200000000"
+    },
+    {
+      "name": "FreeMemory-little-endian",
+      "byte_order": "little",
+      "request": "FreeMemory",
+      "major_opcode": 144,
+      "subopcode": 11,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "memory_xid": 2695938256
+      },
+      "wire_hex": "900004000b00000004030201d0c0b0a0"
+    },
+    {
+      "name": "FreeMemory-big-endian",
+      "byte_order": "big",
+      "request": "FreeMemory",
+      "major_opcode": 144,
+      "subopcode": 11,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "memory_xid": 2695938256
+      },
+      "wire_hex": "900000040b00000001020304a0b0c0d0"
+    },
+    {
+      "name": "BindBufferMemory-little-endian",
+      "byte_order": "little",
+      "request": "BindBufferMemory",
+      "major_opcode": 144,
+      "subopcode": 12,
+      "flags": 0,
+      "length_bytes": 28,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "memory_xid": 287454020,
+        "memory_offset": 72623859790382850
+      },
+      "wire_hex": "900007000c00000004030201d0c0b0a0443322110007060504030201"
+    },
+    {
+      "name": "BindBufferMemory-big-endian",
+      "byte_order": "big",
+      "request": "BindBufferMemory",
+      "major_opcode": 144,
+      "subopcode": 12,
+      "flags": 0,
+      "length_bytes": 28,
+      "fields": {
+        "device_xid": 16909060,
+        "buffer_xid": 2695938256,
+        "memory_xid": 287454020,
+        "memory_offset": 72623859790382850
+      },
+      "wire_hex": "900000070c00000001020304a0b0c0d0112233440102030405060700"
     }
   ]
 }
