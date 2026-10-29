@@ -528,7 +528,7 @@ def check_other_numeric_registries(c: Check) -> None:
         "nicht zugewiesener `descriptor_type`" in descriptor_errors
         and "registrierter Descriptor-Typ inkompatibel" in descriptor_errors
         and "doppelte Writes desselben Slots" in descriptor_errors
-        and "`descriptor_type = 0` und nicht zugewiesene Descriptor-Typ-Werte ergeben `BadValue`" in descriptor_conformance,
+        and "`descriptor_type = 0` and unassigned descriptor-type values return `BadValue`" in descriptor_conformance,
         "UpdateDescriptorSets: error map and conformance cases must agree on descriptor type validation",
     )
     lifetime = read("spec/resource-lifetime.md")
