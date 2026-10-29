@@ -745,7 +745,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("every syntactically valid name is unknown to XAverius", extensions)
         self.assertIn("a malformed name MUST be rejected with `BadValue`", extensions)
         self.assertIn("unknown to the XAverius extension registry or unsupported by the selected physical device results in `BadMatch`", devices)
-        self.assertIn("syntactically valid extension unknown to the XAverius extension registry", errors)
+        self.assertIn("An extension name that is syntactically valid but unknown to the XAverius extension registry or unsupported by the physical device", errors)
 
         ordered = (
             "Validate wire-level and scalar fields",
