@@ -661,7 +661,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # Length and scalar syntax precede XID checks; target XID precedes Window lookup.
         order = (
-            "validate exact/fixed or formula-derived wire length",
+            "Validate exact/fixed or formula-derived wire length",
             "Validate scalar syntax and reserved fields",
             "`CreateSurface` checks `surface_xid` before resolving `window_xid`",
         )
@@ -678,7 +678,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "an invalid request length combined with either invalid XID returns `BadLength`",
             conformance,
         )
-        self.assertIn("failure allocates no Surface or retains a Window reference", conformance)
+        self.assertIn("Neither rejection allocates a Surface or retains a Window reference.", conformance)
 
     def test_presentation_create_and_status_precedence_match_error_contract(self):
         presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
