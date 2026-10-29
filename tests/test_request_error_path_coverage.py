@@ -263,7 +263,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         }
         for request, phases in ordered_phases.items():
             with self.subTest(request=request):
-                request_line = next(line for line in section.splitlines() if line.startswith("- `" + request + "`:"))
+                request_line = section.split("- `" + request + "`:", 1)[1].split("\\n- ", 1)[0]
                 positions = [request_line.index(phase) for phase in phases]
                 self.assertEqual(positions, sorted(positions))
 
