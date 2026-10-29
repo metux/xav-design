@@ -103,6 +103,8 @@ Reply: standard reply header followed by 12-byte `QUEUEFAMILYINFO` records. Ther
 
 Records follow Vulkan order. The payload length MUST be divisible by 12.
 
+Normative validation precedence: (1) exact 12-byte request length (`BadLength`); (2) resolve the Physical-Device XID (`BadValue` for unknown or non-live XIDs); (3) validate that the live resource is a Physical Device (`BadMatch` otherwise); (4) return the server-stored queue-family snapshot for that Physical Device. There is no logical-Device availability phase: removal or failure of the Physical Device does not invalidate its still-live identity or rewrite its stored queue-family metadata. This query performs no backend operation and changes no state. A later `CreateDevice` must independently evaluate current availability and queue support.
+
 The `queue_flags` bits are normatively defined in the [Queue Flag Registry](../registries/queue-flags.md). Servers MUST translate native Vulkan flags into these XAverius wire bits; bits 5–31 are reserved.
 
 ## `CreateDevice`
