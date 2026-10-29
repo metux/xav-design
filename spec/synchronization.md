@@ -163,7 +163,7 @@ Request: exactly 24 bytes; any other total length results in `BadLength`.
 - Offset 12: Fence-XID
 - Offset 16: `CARD64 timeout_ns`
 
-Unknown or non-live device or fence XIDs result in `BadValue`; a live resource of the wrong type, foreign client/device ownership, or cross-device use results in `BadMatch`. These checks occur before registering the wait.
+Normative validation precedence is: (1) exact total length (`BadLength`); (2) resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs); (3) validate live resource types, client ownership, and Device association (`BadMatch`); (4) inspect Device state and the Fence/wait outcome. These checks occur before registering the wait. Device loss yields the normal reply status `DEVICE_LOST`, even if the Fence is already `FAILED`; it is not an X11 error. If `DestroyDevice` is processed while the wait remains open, the wait's terminal result is `DEVICE_DESTROYED`, unless Device Loss has already been detected and established as the terminal result. No wait registration or retained wait-only reference may remain after a synchronous X11-error rejection.
 
 The reply is exactly 32 bytes long. Offset 8 contains a `CARD32 status`; offsets 12–31 are zero and `reply.length = 0`.
 
@@ -183,7 +183,7 @@ Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12. No
 
 ## Destroying Fences
 
-`DestroyFence` is a void request with a fixed total length of 16 bytes: device XID at offset 8 and fence XID at offset 12.
+`DestroyFence` is a void request with a fixed total length of 16 bytes: device XID at offset 8 and fence XID at offset 12. Normative validation precedence is: (1) exact total length (`BadLength`); (2) resolve Device XID, then Fence XID (`BadValue` for unknown or non-live XIDs); (3) validate live resource types, client ownership, and Device association (`BadMatch`); (4) validate lifetime blockers (`INVALID_SYNCHRONIZATION_STATE`) before invalidating the public XID. Device Loss alone is not an error for this logical cleanup request and does not override an earlier validation error or the lifetime-blocker result.
 
 A fence may be destroyed only when it is not `PENDING` and no open `WaitForFence` registration is waiting on that exact internal fence identity. While such a host wait remains open, `DestroyFence` is rejected with `INVALID_SYNCHRONIZATION_STATE`; the XID and fence state remain unchanged. A wait is no longer open once its terminal result (satisfaction, timeout, device loss, or `DestroyDevice`) has been serialized by the server; a reply still waiting in the output buffer does not prevent destruction. After successful destruction, the public XID becomes invalid immediately; internal data may be retained until all possible server accesses have ended. A fence in the `FAILED` state may be destroyed if no host wait remains registered for it.
 
