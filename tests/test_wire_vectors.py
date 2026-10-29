@@ -224,7 +224,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                     else:
                         prose_row = (
                             r"(?m)^- Offset " + str(offset) + r": `" +
-                            wire_type + r" " + re.escape(field) + r"`\s*$"
+                            wire_type + r" " + re.escape(field) + r"(?:\s*=\s*0)?`\s*$"
                         )
                     self.assertTrue(
                         re.search(table_row, section) or re.search(prose_row, section),
