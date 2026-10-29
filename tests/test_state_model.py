@@ -1934,12 +1934,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.pending_timeline_signals, [])
         self.assertEqual(state.signal_slots, [None])
 
-        # A host signal below the current counter remains invalid after both
-        # callbacks; a duplicate callback is mutation-free as well.
+        # A host signal not greater than the current counter is BadValue;
+        # a duplicate callback is mutation-free as well.
         before = copy.deepcopy(state)
         self.assertEqual(
             signal_timeline_host(state, 0, 10),
-            "INVALID_SYNCHRONIZATION_STATE",
+            "BadValue",
         )
         self.assertEqual(state, before)
         self.assertEqual(finish_submission(state, 417, success=False), "BadValue")
