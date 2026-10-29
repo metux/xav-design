@@ -1104,7 +1104,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         cases = (
             {
                 "request": "CreateDevice",
-                "subopcode": 40,
+                "subopcode": 4,
                 "source": devices,
                 "ordered": (
                     "Validate the complete variable-length request framing",
@@ -1143,7 +1143,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             },
             {
                 "request": "SelectEvents",
-                "subopcode": 4,
+                "subopcode": 40,
                 "source": events,
                 "ordered": (
                     "exact 32-byte request length",
@@ -1157,7 +1157,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             },
             {
                 "request": "SignalSemaphore",
-                "subopcode": 31,
+                "subopcode": 32,
                 "source": synchronization,
                 "ordered": (
                     "(1) exact total length of 24 bytes (`BadLength`)",
@@ -1171,7 +1171,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             },
             {
                 "request": "WaitSemaphores",
-                "subopcode": 32,
+                "subopcode": 31,
                 "source": synchronization,
                 "ordered": (
                     "length and checked arithmetic",
