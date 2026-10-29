@@ -69,5 +69,41 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(len(registry.emitted_events), 1)
 
 
+    def test_token_scope_is_connection_instance_and_old_callback_cannot_cross_reconnect(self):
+        registry = AsyncSubmissionEventRegistry(live_connections={"client-A@conn-1"})
+        old_device = AsyncDeviceIdentity("device-generation-1", 7)
+        registry.register_device("client-A@conn-1", old_device)
+        old = AsyncSubmissionIdentity(
+            token=1201, connection_identity="client-A@conn-1",
+            device_identity=old_device.identity, device_xid=7, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(old), "SUCCESS")
+        registry.disconnect("client-A@conn-1")
+
+        # A reconnect is a new X11 connection instance, even if it belongs to
+        # the same client process/account. Reusing the numeric token is valid,
+        # but the old callback must remain scoped to the old connection key.
+        new_device = AsyncDeviceIdentity("device-generation-2", 7)
+        registry.live_connections.add("client-A@conn-2")
+        registry.register_device("client-A@conn-2", new_device)
+        replacement = AsyncSubmissionIdentity(
+            token=1201, connection_identity="client-A@conn-2",
+            device_identity=new_device.identity, device_xid=7, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
+        self.assertEqual(
+            registry.terminal_callback("client-A@conn-1", 1201, "COMPLETE"),
+            "SUCCESS",
+        )
+        self.assertIsNone(replacement.terminal)
+        self.assertIs(registry.submissions[("client-A@conn-2", 1201)], replacement)
+        self.assertEqual(registry.emitted_events, [])
+        self.assertEqual(
+            registry.terminal_callback("client-A@conn-2", 1201, "COMPLETE"),
+            "SUCCESS",
+        )
+        self.assertEqual(replacement.terminal, "COMPLETE")
+
+
 if __name__ == "__main__":
     unittest.main()
