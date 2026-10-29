@@ -654,6 +654,32 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, queue + errors)
 
 
+    def test_create_surface_mixed_xid_precedence_has_golden_contract(self):
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # Length and scalar syntax precede XID checks; target XID precedes Window lookup.
+        order = (
+            "validate exact/fixed or formula-derived wire length",
+            "Validate scalar syntax and reserved fields",
+            "`CreateSurface` checks `surface_xid` before resolving `window_xid`",
+        )
+        for section_name, section in (("presentation", presentation), ("errors", errors)):
+            with self.subTest(section=section_name):
+                positions = [section.index(phrase) for phrase in order]
+                self.assertEqual(positions, sorted(positions))
+
+        self.assertIn(
+            "invalid/already occupied `surface_xid` combined with an unknown/destroyed/non-Window `window_xid` returns `BadIDChoice`",
+            conformance,
+        )
+        self.assertIn(
+            "an invalid request length combined with either invalid XID returns `BadLength`",
+            conformance,
+        )
+        self.assertIn("failure allocates no Surface or retains a Window reference", conformance)
+
     def test_presentation_create_and_status_precedence_match_error_contract(self):
         presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
         errors = self.errors
