@@ -476,6 +476,19 @@ The request register and the request-specific error map define the expected resu
 
 These checks distinguish reply-format validation from server-side request rejection: reply golden vectors do not prove that the server chooses the correct X11 error/status or preserves state on rejection.
 
+
+### `WriteBuffer` mixed-failure precedence
+
+The normative validation order in [Memory and Buffers](memory-buffers.md#57-writebuffer) MUST be tested with mixed failures, not only one invalid field at a time:
+
+- A truncated or oversized request combined with zero `data_length`, nonzero payload padding, and unknown XIDs returns `BadLength`.
+- A correctly framed request with zero `data_length` or nonzero padding combined with unknown Device/Buffer XIDs returns `BadValue` before any XID lookup.
+- A syntactically valid request with unknown Device XID and a Buffer XID that is unknown or has the wrong live type returns `BadValue` for the Device XID first.
+- A valid Device XID followed by an unknown Buffer XID returns `BadValue`; a live wrong-type or cross-Device Buffer returns `BadMatch` before Device-state checks.
+- With valid XIDs and ownership, `DEVICE_LOST` takes precedence over an unbound Buffer, missing `TRANSFER_DST`, or out-of-range destination.
+- Binding/usage/range errors return `BadMatch` before any dependency wait, staging allocation, or transfer attempt. Injected dependency, staging-allocation, and transfer failures must not produce a successful reply or claim that the destination was updated.
+- Every synchronous rejection leaves destination bytes and transfer/wait reservations unchanged by the rejected request; earlier independent GPU work may still complete normally.
+
 ## Synchronization request rejection matrix
 
 The following negative cases are required in addition to the positive wait/signal vectors above. Each case is repeated with both connection byte orders where its wire fields differ by byte order; an X11 error replaces the reply, while normal wait outcomes remain reply statuses.
