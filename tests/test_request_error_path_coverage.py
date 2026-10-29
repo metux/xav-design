@@ -229,7 +229,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
     def test_descriptor_create_mixed_failure_precedence_is_normative_and_atomic(self):
         errors = self.errors
         conformance = self.conformance
-        section = errors.split("### Normative descriptor-create validation precedence", 1)[1].split("\\n\\n### Command Pool requests", 1)[0]
+        section = errors.split("### Normative descriptor-create validation precedence", 1)[1].split("\n\n### Command Pool requests", 1)[0]
 
         ordered_phases = {
             "CreateDescriptorSetLayout": (
