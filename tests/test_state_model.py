@@ -6025,7 +6025,11 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                     ),
                 }
                 for callback in order:
-                    self.assertEqual(callbacks[callback](), "SUCCESS")
+                    # The origin Submit was already finalized by its own loss
+                    # notification; the cross-model Present wait still has a
+                    # live cleanup reservation until its callback arrives.
+                    expected = "BadValue" if callback == "submit" else "SUCCESS"
+                    self.assertEqual(callbacks[callback](), expected)
                     self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
                     self.assertIsNone(shared.signal_reservation)
                     if callback == "submit":
