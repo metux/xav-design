@@ -105,5 +105,32 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(replacement.terminal, "COMPLETE")
 
 
+    def test_delayed_async_error_cannot_target_reconnected_client_instance(self):
+        old_connection = "client-A@connection-1"
+        new_connection = "client-A@connection-2"
+        registry = AsyncSubmissionEventRegistry(live_connections={old_connection})
+        old_device = AsyncDeviceIdentity("device-still-live", 7)
+        registry.register_device(old_connection, old_device)
+
+        registry.disconnect(old_connection)
+        registry.live_connections.add(new_connection)
+        new_device = AsyncDeviceIdentity("new-device-generation", 7)
+        registry.register_device(new_connection, new_device)
+
+        # Even if the same client process reconnects and receives the same XID,
+        # a callback holding the old connection-instance key cannot deliver.
+        self.assertEqual(
+            registry.async_error(old_connection, old_device, 1202), "SUCCESS"
+        )
+        self.assertEqual(registry.emitted_events, [])
+        self.assertEqual(
+            registry.async_error(new_connection, new_device, 1202), "SUCCESS"
+        )
+        self.assertEqual(
+            registry.emitted_events,
+            [("ASYNC_ERROR", new_connection, 7, 1202)],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
