@@ -984,10 +984,10 @@ if __name__ == "__main__":
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
         conformance = self.conformance
 
-        binary = synchronization.split("## Binary Semaphores", 1)[1].split("\\n## Presentation Waits", 1)[0]
-        timeline = synchronization.split("## Timeline Semaphores", 1)[1].split("\\n## `GetSemaphoreCounterValue`", 1)[0]
-        terminal = queue.split("**Atomic terminal transition:**", 1)[1].split("\\n## Semaphore references", 1)[0]
-        references = queue.split("## Semaphore references", 1)[1].split("\\n# Queue Ordering", 1)[0]
+        binary = synchronization.split("## Binary Semaphores", 1)[1].split("\n## Presentation Waits", 1)[0]
+        timeline = synchronization.split("## Timeline Semaphores", 1)[1].split("\n## `GetSemaphoreCounterValue`", 1)[0]
+        terminal = queue.split("**Atomic terminal transition:**", 1)[1].split("\n## Semaphore references", 1)[0]
+        references = queue.split("## Semaphore references", 1)[1].split("\n# Queue Ordering", 1)[0]
 
         for phrase in (
             "unique internal reservation identity tied to the exact internal semaphore identity",
