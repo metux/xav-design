@@ -1131,12 +1131,12 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             {
                 "request": "CreateSurface",
                 "subopcode": 41,
-                "source": presentation,
+                "source": self.errors,
                 "ordered": (
-                    "exact request length",
-                    "scalar",
-                    "`surface_xid`",
-                    "`window_xid`",
+                    "Validate exact/fixed or formula-derived wire length",
+                    "Validate scalar syntax and reserved fields",
+                    "Resolve request XIDs in wire-field order",
+                    "Validate live resource types, connection ownership",
                 ),
                 "oracle": "Mixed-failure `CreateSurface`: after exact-length and scalar validation, an invalid/already occupied `surface_xid` combined with an unknown/destroyed/non-Window `window_xid` returns `BadIDChoice`",
                 "winner": "`BadIDChoice`",
