@@ -726,5 +726,40 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn("`" + phrase + "`", errors)
                 self.assertIn("`" + phrase + "`", conformance)
 
+
+    def test_create_device_empty_registries_and_unknown_requests_have_distinct_errors(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        features = (ROOT / "registries/feature-ids.md").read_text(encoding="utf-8")
+        extensions = (ROOT / "registries/device-extensions.md").read_text(encoding="utf-8")
+        errors = self.errors
+
+        # v0.1 has no optional feature IDs: an unknown ID is a scalar error
+        # and therefore precedes create-XID occupancy.
+        self.assertIn("every `feature_id` value is unknown in v0.1", features)
+        self.assertIn("unknown feature ID", devices)
+        self.assertIn("unknown feature ID takes precedence over target-XID occupancy", devices)
+        self.assertIn("An unknown `feature_id` not defined in the XAverius feature registry results in `BadValue`", devices)
+
+        # Extension syntax errors are scalar BadValue; syntactically valid
+        # but unregistered names reach the later registry phase and are BadMatch.
+        self.assertIn("every syntactically valid name is unknown to XAverius", extensions)
+        self.assertIn("a malformed name MUST be rejected with `BadValue`", extensions)
+        self.assertIn("unknown to the XAverius extension registry or unsupported by the selected physical device results in `BadMatch`", devices)
+        self.assertIn("syntactically valid extension unknown to the XAverius extension registry", errors)
+
+        ordered = (
+            "Validate wire-level and scalar fields",
+            "Validate `device_xid` as a create-XID",
+            "Resolve `physical_device_xid`",
+            "Require successful XGE 1.0-or-later negotiation",
+            "Check physical-device availability",
+            "Validate every requested queue-family index and queue count",
+            "Check requested registry-defined features and extensions",
+        )
+        positions = [devices.index(phrase, devices.index("### Normative validation precedence")) for phrase in ordered]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("All validation occurs before creating the logical device", devices)
+        self.assertIn("device_xid remains unallocated", devices)
+
 if __name__ == "__main__":
     unittest.main()
