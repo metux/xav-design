@@ -5878,7 +5878,8 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
 
 class AsyncBackendResourceLifetimeTests(unittest.TestCase):
     def test_destroy_device_and_reuse_xids_do_not_redirect_old_backend_callbacks(self) -> None:
-        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        registry = AsyncCallbackRegistry()
+        connection = registry.connect("client-A")
         old_device = AsyncDeviceIdentity(identity="device-generation-1", xid=17)
         old_resource = AsyncResourceIdentity(
             identity="buffer-generation-1", xid=33,
@@ -5905,7 +5906,7 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         registry.register_resource(new_resource)
 
         self.assertEqual(registry.complete_backend_callback(
-            old_resource, old_device, "client-A", token="old-op-1",
+            old_resource, old_device, connection, token="old-op-1",
         ), "SUCCESS")
         self.assertEqual(old_resource.backend_refs, 1)
         self.assertEqual(old_resource.callback_count, 1)
@@ -5913,12 +5914,12 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         self.assertEqual(registry.emitted_events, [])
         before = copy.deepcopy((old_resource, new_resource, registry.emitted_events))
         self.assertEqual(registry.complete_backend_callback(
-            old_resource, old_device, "client-A", token="old-op-1",
+            old_resource, old_device, connection, token="old-op-1",
         ), "BadValue")
         self.assertEqual((old_resource, new_resource, registry.emitted_events), before)
 
         self.assertEqual(registry.complete_backend_callback(
-            old_resource, old_device, "client-A", token="old-op-2",
+            old_resource, old_device, connection, token="old-op-2",
         ), "SUCCESS")
         self.assertEqual(old_resource.backend_refs, 0)
         self.assertEqual(old_resource.callback_count, 2)
@@ -5926,7 +5927,8 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         self.assertEqual(registry.emitted_events, [])
 
     def test_disconnect_suppresses_event_but_drains_each_captured_resource_hold(self) -> None:
-        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        registry = AsyncCallbackRegistry()
+        connection = registry.connect("client-A")
         device = AsyncDeviceIdentity(identity="device-A", xid=18)
         resource = AsyncResourceIdentity(
             identity="image-A", xid=34, device_identity=device.identity,
@@ -5934,27 +5936,28 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         )
         registry.register_device(device)
         registry.register_resource(resource)
-        registry.connections_live.discard("client-A")
+        registry.disconnect(connection)
 
         self.assertEqual(registry.complete_backend_callback(
-            resource, device, "client-A", token="present-1",
+            resource, device, connection, token="present-1",
         ), "SUCCESS")
         self.assertEqual(resource.backend_refs, 1)
         self.assertEqual(registry.complete_backend_callback(
-            resource, device, "client-A", token="present-2",
+            resource, device, connection, token="present-2",
         ), "SUCCESS")
         self.assertEqual(resource.backend_refs, 0)
         self.assertEqual(resource.callback_count, 2)
         self.assertEqual(registry.emitted_events, [])
         before = copy.deepcopy((resource, registry.emitted_events))
         self.assertEqual(registry.complete_backend_callback(
-            resource, device, "client-A", token="present-2",
+            resource, device, connection, token="present-2",
         ), "BadValue")
         self.assertEqual((resource, registry.emitted_events), before)
 
 
     def test_destroyed_resource_callback_never_resolves_reused_resource_xid(self) -> None:
-        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        registry = AsyncCallbackRegistry()
+        connection = registry.connect("client-A")
         device = AsyncDeviceIdentity(identity="device-A", xid=19)
         old_resource = AsyncResourceIdentity(
             identity="buffer-generation-1", xid=35,
@@ -5970,7 +5973,7 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         )
         registry.register_resource(new_resource)
         self.assertEqual(registry.complete_backend_callback(
-            old_resource, device, "client-A", token="destroyed-buffer-op",
+            old_resource, device, connection, token="destroyed-buffer-op",
         ), "SUCCESS")
         self.assertEqual(old_resource.backend_refs, 0)
         self.assertEqual(new_resource.backend_refs, 1)
