@@ -428,10 +428,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(command_buffer_vector=phrase):
                 self.assertIn(phrase, conformance)
         for phrase in (
-            "`QueueSubmit` mit Token `0` oder bereits verwendetem Token und gleichzeitig unbekannter",
-            "falsche Live-Typen oder fremde Ownership ergeben `BadMatch`",
-            "Nach gültiger XID-/Typ-/Ownership-/Queue-Prüfung ergibt Device Loss `DEVICE_LOST` vor einem nicht-`EXECUTABLE` Command Buffer",
-            "Eine Wait-Stage-Maske mit reservierten Bits ergibt `BadValue` vor XID-/Zustandsprüfung",
+            "`QueueSubmit` uses token `0` or a previously used token while also containing an unknown Device/Buffer XID",
+            "an incorrect live resource type or foreign ownership returns `BadMatch`",
+            "After valid XID/type/ownership/queue checks, Device Loss returns `DEVICE_LOST` before errors for a non-`EXECUTABLE` command buffer",
+            "A wait-stage mask containing reserved bits returns `BadValue` before XID/state validation",
         ):
             with self.subTest(submit_vector=phrase):
                 self.assertIn(phrase, conformance)
@@ -547,7 +547,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             with self.subTest(reset_contract=phrase):
                 self.assertIn(phrase, reset)
-        self.assertIn("`ResetCommandBuffer` prüft Request-Länge", conformance)
+        self.assertIn("`ResetCommandBuffer` validates request length, XIDs, type, ownership, and cross-Device association", conformance)
 
         # WaitSemaphores rejects malformed requests before registration; pending waits
         # have terminal outcomes distinct from initial request validation.
