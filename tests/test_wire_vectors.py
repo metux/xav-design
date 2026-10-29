@@ -240,11 +240,11 @@ class GoldenWireVectorTests(unittest.TestCase):
         for vector in self.vectors:
             request = vector["request"]
             section_match = re.search(
-                r"^##\\s+\\d+(?:\\.\\d+)*\\s+`" + re.escape(request) + r"`\\s*$",
+                r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$",
                 memory, re.M,
             )
             self.assertIsNotNone(section_match, f"{request}: normative section missing")
-            next_heading = re.search(r"^##\\s+", memory[section_match.end():], re.M)
+            next_heading = re.search(r"^##\s+", memory[section_match.end():], re.M)
             section = memory[section_match.start():section_match.end() + next_heading.start()] if next_heading else memory[section_match.start():]
             wire = bytes.fromhex(vector["wire_hex"])
             endian = "<" if vector["byte_order"] == "little" else ">"
@@ -259,15 +259,15 @@ class GoldenWireVectorTests(unittest.TestCase):
                 for offset, wire_type, field, fmt in contracts[request]:
                     # Ensure the normative document still names the same field/type/offset.
                     table_row = (
-                        r"(?m)^\\|\\s*" + str(offset) + r"\\s*\\|\\s*" + wire_type +
-                        r"\\s*\\|\\s*`?" + re.escape(field) + r"`?[^|]*\\|"
+                        r"(?m)^\|\s*" + str(offset) + r"\s*\|\s*" + wire_type +
+                        r"\s*\|\s*`?" + re.escape(field) + r"`?[^|]*\|"
                     )
                     prose_row = (
                         r"(?m)^- Offset " + str(offset) + r": `?" + wire_type +
-                        r"\\s+" + re.escape(field) + r"`?\\s*$"
+                        r"\s+" + re.escape(field) + r"`?\s*$"
                     )
                     if wire_type == "XID":
-                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape("Device-XID" if field == "device_xid" else "Buffer-XID") + r"\\s*$"
+                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape("Device-XID" if field == "device_xid" else "Buffer-XID") + r"\s*$"
                     self.assertTrue(
                         re.search(table_row, section) or re.search(prose_row, section),
                         f"{request}: normative spec must define {wire_type} {field} at offset {offset}",
