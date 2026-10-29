@@ -1219,7 +1219,12 @@ def finish_submission(
                 # A signal may be owned by a different SubmissionModel (e.g.
                 # another queue). Record consumption on the canonical object,
                 # or that owner's later terminal callback could resurrect it.
-                if shared is not None and shared.signal_reservation is not None:
+                owns_wait_reservation = (
+                    shared is not None
+                    and shared.wait_reservation == ("submit", token)
+                    and shared.wait_reservation_owner is state
+                )
+                if owns_wait_reservation and shared.signal_reservation is not None:
                     shared.signal_consumed = True
                     if shared.signal_reservation[0] == "submit":
                         shared.signal_consumption_confirmed = True
