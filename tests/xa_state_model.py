@@ -156,7 +156,9 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         for token in pending_present:
             state.pending_present_tokens.remove(token)
             state.terminal_present_status[token] = "DEVICE_LOST"
-        if pending_present:
+        if state.accepted_tokens:
+            # Device loss invalidates the image even when presentation already
+            # reached its terminal milestone but backend release is still open.
             state.image_state = ImageState.INVALID
     for shared in semaphores:
         known_empty = (
@@ -208,6 +210,8 @@ class PresentState:
     pending_present_waits: list[tuple[int, int]] = field(default_factory=list)
     pending_present_tokens: set[int] = field(default_factory=set)
     terminal_present_status: dict[int, str] = field(default_factory=dict)
+    image_release_tokens: set[int] = field(default_factory=set)
+    image_release_reusable: dict[int, bool] = field(default_factory=dict)
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -340,15 +344,51 @@ def finish_present_terminal(state: PresentState, token: int, status: str) -> str
         return "BadValue"
     state.pending_present_tokens.remove(token)
     state.terminal_present_status[token] = status
-    if status == "SUCCESS":
-        state.image_state = ImageState.AVAILABLE
-    else:
+    lifecycle_usable = not (
+        state.device_lost or state.surface_lost or state.out_of_date
+    )
+    if status in {"OUT_OF_DATE", "SURFACE_LOST", "DEVICE_LOST"}:
         state.image_state = ImageState.INVALID
+    elif token in state.image_release_tokens:
+        reusable = state.image_release_reusable.get(token, False)
+        state.image_state = (
+            ImageState.AVAILABLE
+            if reusable and lifecycle_usable
+            and (status == "SUCCESS" or status == "PRESENTATION_FAILED")
+            else ImageState.INVALID
+        )
+    elif status == "SUCCESS":
+        state.image_state = (
+            ImageState.PRESENT_PENDING if lifecycle_usable else ImageState.INVALID
+        )
+    # PRESENTATION_FAILED can be reusable only after the independent release
+    # callback proves that backend access has ended.
     if status == "DEVICE_LOST":
         # A backend terminal callback may be the first observer of Device Loss.
         # Propagate it across shared semaphore owners just like the explicit
         # device-loss notification path; this terminal token is already retired.
         _propagate_device_loss(state)
+    return "SUCCESS"
+
+
+def finish_present_image_release(
+    state: PresentState, token: int, *, reusable: bool = True,
+) -> str:
+    """Commit the independent backend image-release milestone exactly once."""
+    if token not in state.accepted_tokens or token in state.image_release_tokens:
+        return "BadValue"
+    state.image_release_tokens.add(token)
+    state.image_release_reusable[token] = reusable
+    terminal = state.terminal_present_status.get(token)
+    lifecycle_usable = not (
+        state.device_lost or state.surface_lost or state.out_of_date
+    )
+    terminal_allows_reuse = terminal in (None, "SUCCESS", "PRESENTATION_FAILED")
+    state.image_state = (
+        ImageState.AVAILABLE
+        if reusable and lifecycle_usable and terminal_allows_reuse
+        else ImageState.INVALID
+    )
     return "SUCCESS"
 
 
