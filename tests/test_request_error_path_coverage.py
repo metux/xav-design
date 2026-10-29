@@ -1416,8 +1416,55 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(winner, error_sections[request])
 
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_update_descriptor_sets_precedence_and_atomic_rollback(self):
+        shaders = (ROOT / "spec/shaders-pipelines.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        section = shaders.split("## 6.5 `UpdateDescriptorSets`", 1)[1].split("\n\n## 6.6", 1)[0]
+        error_section = errors.split("### `UpdateDescriptorSets`", 1)[1].split("\n\n###", 1)[0]
+        ordered = (
+            "Exakte Gesamtlänge `20 + 36 * write_count`",
+            "Feldlokale Syntaxprüfung aller Writes",
+            "Auflösung aller XIDs in Wire-Reihenfolge",
+            "Validierung der aufgelösten Ressourcen",
+            "Device-Verfügbarkeit",
+            "Prüfung aller Writes auf Layout-/Binding-/Array-Slot-/Descriptor-Typ-Kompatibilität",
+            "Prüfung aller betroffenen Sets auf bereits angenommene GPU-Arbeit",
+            "Atomarer Commit und Rollback",
+        )
+        positions = [section.index(phrase) for phrase in ordered]
+        self.assertEqual(positions, sorted(positions))
+        error_phases = (
+            "exact `20 + 36 * write_count` length",
+            "`write_count > 0`",
+            "resolve `device_xid`",
+            "validate live types, client ownership",
+            "Device availability",
+            "validate all Layout/Binding/Array-Slot/Descriptor-Type compatibility",
+            "reject if any affected Set is used by already accepted work",
+        )
+        error_positions = [error_section.index(phrase) for phrase in error_phases]
+        self.assertEqual(error_positions, sorted(error_positions))
+        vectors = (
+            "Malformed/truncated/oversized total length or `write_count` mismatch combined with zero count, nonzero reserved fields, duplicate slots, unknown XIDs, and pending use returns `BadLength`.",
+            "Valid framing with zero `write_count`, either nonzero reserved field, unassigned/zero descriptor type, invalid typeless values, or duplicate (Set, binding, array-element) slots combined with unknown XIDs and Device Loss returns `BadValue`.",
+            "With valid XIDs/types/ownership, Device Loss combined with an invalid binding, array element, descriptor-type/layout mismatch, unbound Buffer, missing usage, bad alignment/range, or a pending Set returns `DEVICE_LOST`.",
+            "With all writes compatible, a Set used by already accepted work returns `INVALID_SYNCHRONIZATION_STATE`.",
+            "Inject failure while preparing/retaining a replacement Buffer reference after at least one earlier replacement has been prepared.",
+            "all old slots and references to remain unchanged",
+            "old Buffer references are released only after the atomic swap",
+        )
+        for phrase in vectors:
+            self.assertIn(phrase, conformance)
+        for phrase in (
+            "all newly prepared references are released",
+            "every old slot and reference edge remains unchanged",
+            "all slots and reference edges are swapped in one serialized commit",
+        ):
+            self.assertIn(phrase, error_section)
+        self.assertIn("no duplicate (Set, binding, array-element) slot", error_section)
+        self.assertIn("Device Loss precedes compatibility and pending-use errors", error_section)
+
 
     def test_descriptor_set_release_precedence_and_atomicity_are_normative(self):
         errors = self.errors
@@ -1461,3 +1508,7 @@ if __name__ == "__main__":
             self.assertIn(vector, conformance)
         self.assertIn("There is no Device-availability phase", section)
         self.assertIn("No selected Set may be freed unless every selected Set passes every phase", section)
+
+
+if __name__ == "__main__":
+    unittest.main()
