@@ -173,8 +173,28 @@ class GoldenWireVectorTests(unittest.TestCase):
                 next_heading = re.search(r"^##\s+", memory[heading.end():], re.M)
                 section = memory[heading.start():heading.end() + next_heading.start()] if next_heading else memory[heading.start():]
                 for offset, wire_type, field in contract["fields"]:
-                    self.assertRegex(section, r"(?m)^\|\s*" + str(offset) + r"\s*\|\s*" + wire_type + r"\s*\|\s*`?" + re.escape(field) + r"`?[^|]*\|",
-                                     f"{request}: {field} must be {wire_type} at offset {offset}")
+                    table_row = (
+                        r"(?m)^\|\s*" + str(offset) + r"\s*\|\s*" +
+                        wire_type + r"\s*\|\s*`?" + re.escape(field) +
+                        r"`?[^|]*\|"
+                    )
+                    if re.search(table_row, section):
+                        continue
+                    # Some normative request sections use prose offset entries
+                    # rather than a Markdown field table. Validate the same
+                    # offset/type/name contract in either representation.
+                    if wire_type == "XID":
+                        label = "Device-XID" if field == "device_xid" else "Buffer-XID"
+                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
+                    else:
+                        prose_row = (
+                            r"(?m)^- Offset " + str(offset) + r": `" +
+                            wire_type + r" " + re.escape(field) + r"`\s*$"
+                        )
+                    self.assertRegex(
+                        section, r"(?:" + table_row + r")|(?:" + prose_row + r")",
+                        f"{request}: {field} must be {wire_type} at offset {offset}",
+                    )
                 if isinstance(contract["length"], int):
                     self.assertRegex(section, r"(?i)(?:Total length|Gesamtlänge):?\s*" + str(contract["length"]) + r"\s*bytes?\b",
                                      f"{request}: normative fixed length changed")
