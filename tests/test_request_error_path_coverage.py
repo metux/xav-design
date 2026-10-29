@@ -1418,3 +1418,46 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_descriptor_set_release_precedence_and_atomicity_are_normative(self):
+        errors = self.errors
+        conformance = self.conformance
+        section = errors.split(
+            "### Normative descriptor-set release validation precedence", 1
+        )[1].split("\n\n### Command Pool requests", 1)[0]
+        phases = {
+            "DestroyDescriptorPool": (
+                "exact 16-byte request length",
+                "resolve the Device XID, then Pool XID in wire order",
+                "validate live resource types, client ownership, and Device association",
+                "inspect every child Set for a pending use",
+                "atomically invalidate the Pool and all child Sets",
+            ),
+            "FreeDescriptorSets": (
+                "exact `20 + 4 * descriptor_set_count` framing",
+                "validate nonzero count, zero reserved/scalar fields, and no duplicate Set XIDs",
+                "resolve Device, Pool, then Set XIDs in wire order",
+                "validate live resource types, client ownership, and each Set's association",
+                "inspect all selected Sets for pending use",
+                "atomically invalidate all selected Sets",
+            ),
+        }
+        for request, ordered in phases.items():
+            with self.subTest(request=request):
+                clause = section.split("- `" + request + "`:", 1)[1].split("\n- ", 1)[0]
+                positions = [clause.index(phase) for phase in ordered]
+                self.assertEqual(positions, sorted(positions))
+        vectors = (
+            "a truncated or oversized request combined with an unknown Device/Pool XID and a child lifetime blocker returns `BadLength`",
+            "an unknown Device or Pool XID combined with a live wrong-type/foreign-owned resource or a child blocker returns `BadValue`",
+            "a child Set pending or referenced by a `RECORDING` command buffer returns `INVALID_SYNCHRONIZATION_STATE`",
+            "malformed count-derived length combined with zero count, duplicate Set XIDs, unknown XIDs, and a pending Set returns `BadLength`",
+            "zero count, nonzero reserved/scalar fields, or duplicate Set XIDs combined with unknown Device/Pool/Set XIDs and a lifetime blocker returns `BadValue`",
+            "an unknown Device/Pool/Set XID combined with wrong ownership or a pending/recording blocker returns `BadValue`",
+            "Device Loss after valid XID/type/ownership resolution does not block logical freeing",
+            "no earlier Set is freed",
+        )
+        for vector in vectors:
+            self.assertIn(vector, conformance)
+        self.assertIn("There is no Device-availability phase", section)
+        self.assertIn("No selected Set may be freed unless every selected Set passes every phase", section)
