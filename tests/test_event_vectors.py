@@ -331,7 +331,10 @@ class GoldenXGEEventTests(unittest.TestCase):
                         owners[byte] += 1
             self.assertEqual(owners[:32], [0] * 32)
             self.assertEqual(owners[32:], [1] * 32, f"{event}: field gap or overlap")
-            self.assertRegex(body, r"\|\s*52\s*\|\s*CARD32\s*\|\s*\`reserved = 0\`")
+            if event == "IMAGE_RELEASED":
+                self.assertRegex(body, r"\|\s*52\s*\|\s*CARD32\s*\|\s*\`reserved = 0\`")
+            else:
+                self.assertRegex(body, r"\|\s*52\s*\|\s*CARD32\s*\|\s*\`status\`")
             self.assertIn("presentation_token", body)
 
     def test_event_ids_and_vector_field_sets_match_registry(self):
