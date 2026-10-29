@@ -1842,10 +1842,11 @@ class AsyncSubmissionEventRegistry:
                 del self.submissions[key]
 
     def terminal_callback(self, connection: ConnectionInstance, token: int, result: str) -> str:
-        if not self._connection_is_live(connection):
-            # A disconnected connection may still own a detached submission;
-            # only its captured handle can retire that callback. Labels are
-            # never valid lookup keys.
+        if not self._is_connection_handle(connection):
+            return "BadValue"
+        # A disconnected connection may still own a detached submission;
+        # only its captured handle can retire that callback. Labels are never
+        # valid lookup keys.
         key = (connection, token)
         submission = self.submissions.get(key)
         detached = False
