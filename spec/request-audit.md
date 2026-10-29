@@ -447,3 +447,12 @@ Audited the state machine across ResetCommandBuffer, resource-driven executable-
 ## Repository-local Markdown anchor audit — 2026-10-28
 
 Extended the existing repository-wide Markdown link check to validate generated heading fragments as well as local target paths. The check now covers same-document fragments, relative Markdown links, duplicate heading slugs, explicit HTML IDs, URL-encoded fragments, and paths escaping the repository. It found and corrected a stale WriteBuffer section link and a presentation command-entry link whose heading includes a profile qualifier. The checker follows GitHub-style heading slugs, including underscores. On commit `be14180755b17423577bc249f01713ab983ad594`, CI passed with 4,575 wire-layout/documentation assertions and all 549 Python tests. This validates repository-local links and static protocol consistency, not runtime X11/XGE interoperability or Vulkan backend behavior.
+
+## Normative request-error precedence audit — 2026-10-29
+
+Audited the 47 registered request contracts against the common validation stages in `wire-protocol.md`, request-specific mappings in `errors.md`, and the negative-case matrix in `conformance.md`. The common order remains: X11 envelope framing; invariant common-header fields; subopcode/profile dispatch; supported-request layout and checked length; then request-local scalar, XID, ownership/type, lifecycle, and backend checks. Documented local exceptions remain constrained to later phases and do not bypass the envelope/header/profile boundary.
+
+No conflicting phase order was found in the reviewed request-specific contracts. One under-specified mixed-failure case was found in `GetPhysicalDeviceProperty`: the error map named `BadAtom` and Device-XID errors but did not say which wins when both inputs are invalid. The contract now explicitly orders exact length, Physical-Device XID resolution, live resource type, Atom validation, then property registry/availability lookup. The conformance matrix now covers the mixed pairs (malformed length + invalid Atom, unknown Device + invalid Atom, wrong live resource type + invalid Atom, and valid Device + invalid Atom), and a regression test checks the ordering and error-map agreement.
+
+The automated checks here are specification/contract regression checks, not execution against a live X11 server. Server-side runtime tests must still exercise the same mixed-failure cases when an implementation exists.
+
