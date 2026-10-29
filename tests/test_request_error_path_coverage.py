@@ -75,7 +75,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Only after all prior checks succeed may backend device creation begin",
         ]
         errors_order = [
-            "Validate request framing and all wire-only fields",
+            "Validate complete request framing using checked arithmetic",
+            "Validate wire-level and scalar fields",
             "Validate create-XID `device_xid`",
             "Resolve `physical_device_xid`",
             "Validate that the resolved XID is a Physical-Device resource",
