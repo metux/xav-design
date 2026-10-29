@@ -131,11 +131,9 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 
 ### `SelectEvents`
 
-- An incorrect request length results in `BadLength`.
-- If the client has not successfully negotiated at least XGE 1.0 with `GEQueryVersion`, the request results in `BadMatch`.
-- An unknown scope, nonzero flags/reserved fields, invalid mask bits, or nonzero fields outside the selected scope results in `BadValue`.
-- An unknown or non-live Device XID, or an invalid queue-family/queue index, results in `BadValue`; a live resource of the wrong type or foreign client ownership results in `BadMatch`.
-- An error leaves the previous event selection unchanged; a successful request atomically replaces only the selection for the specified scope.
+Normative validation precedence, matching [Event Selection](events.md#event-selection-selectevents): (1) exact 32-byte request length (`BadLength`); (2) scope, unused fields, reserved fields, and profile-legal mask bits (`BadValue`); (3) for `DEVICE` and `QUEUE` scope, resolve `device_xid` (`BadValue` if unknown/non-live); (4) validate live type and client ownership (`BadMatch`); (5) require successful XGE 1.0-or-later negotiation through `GEQueryVersion` (`BadMatch` otherwise); (6) for `QUEUE` scope, validate the queue-family/index tuple (`BadValue` if it does not identify an existing queue); (7) atomically replace the selected mask.
+
+A later phase MUST NOT override an earlier error. In particular, malformed framing and scalar errors take precedence over XID errors, and XID/type/ownership errors take precedence over the XGE prerequisite and queue existence check. For `CONNECTION` scope, the device XID and queue tuple are not resolved because their required values are zero. Every error leaves the previous event selection unchanged.
 
 ### `CreateDescriptorSetLayout`
 
