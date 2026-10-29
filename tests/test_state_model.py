@@ -4977,6 +4977,165 @@ class SharedSubmitPresentReservationRaceTests(unittest.TestCase):
         self.assertEqual(submit, before_submit)
 
 
+    def test_repeated_device_loss_and_cross_api_callbacks_in_both_orders(self):
+        # Exercise two overlapping Submit owners and one Present waiting on
+        # both signals. Repeat the loss observation between callbacks, with
+        # opposite callback orders, and require cleanup to remain per-operation.
+        callback_orders = (
+            ("submit_a", "present_b", "submit_b", "present_a"),
+            ("present_a", "submit_b", "present_b", "submit_a"),
+        )
+        for order_index, order in enumerate(callback_orders):
+            with self.subTest(order=order):
+                shared_a = SharedBinarySemaphore()
+                shared_b = SharedBinarySemaphore()
+                submit_a = SubmissionModel(
+                    command_buffers=[CommandBufferModel(
+                        lifecycle=CommandBufferLifecycle.EXECUTABLE
+                    )],
+                    wait_states=[WaitState.READY],
+                    binary_signal_states=[BinarySignalState.UNSIGNALED],
+                    signal_slots=[None],
+                    semaphore_kinds=[SemaphoreKind.BINARY],
+                    shared_semaphores=[shared_a],
+                )
+                submit_b = SubmissionModel(
+                    command_buffers=[CommandBufferModel(
+                        lifecycle=CommandBufferLifecycle.EXECUTABLE
+                    )],
+                    wait_states=[WaitState.READY],
+                    binary_signal_states=[BinarySignalState.UNSIGNALED],
+                    signal_slots=[None],
+                    semaphore_kinds=[SemaphoreKind.BINARY],
+                    shared_semaphores=[shared_b],
+                )
+                self.assertEqual(queue_submit(
+                    submit_a, SubmitRequest(
+                        token=830 + order_index * 10,
+                        signal_indices=(0,), signal_values=(0,),
+                    )
+                ), "SUCCESS")
+                self.assertEqual(queue_submit(
+                    submit_b, SubmitRequest(
+                        token=831 + order_index * 10,
+                        signal_indices=(0,), signal_values=(0,),
+                    )
+                ), "SUCCESS")
+                present = PresentState(
+                    valid_wait_xids=(True, True),
+                    wait_states=[WaitState.READY, WaitState.READY],
+                    binary_signal_states=[
+                        BinarySignalState.SIGNAL_PENDING,
+                        BinarySignalState.SIGNAL_PENDING,
+                    ],
+                    shared_semaphores=[shared_a, shared_b],
+                )
+                present_token = 832 + order_index * 10
+                self.assertTrue(queue_present(
+                    present, PresentRequest(
+                        token=present_token, wait_indices=(0, 1),
+                    )
+                ).accepted)
+
+                # Loss is observed repeatedly from both API sides. Logical
+                # outcomes must be stable, but pending callbacks retain their
+                # own cleanup records until delivered.
+                # Present observes loss first; repeat the observation here
+                # and inject a Submit-side observation after a Submit callback.
+                self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+                self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+                self.assertEqual(submit_a.terminal_submission_status[
+                    830 + order_index * 10
+                ], "DEVICE_LOST")
+                self.assertEqual(submit_b.terminal_submission_status[
+                    831 + order_index * 10
+                ], "DEVICE_LOST")
+                self.assertEqual(
+                    present.terminal_present_status[present_token], "DEVICE_LOST"
+                )
+                self.assertNotIn(present_token, present.pending_present_tokens)
+                self.assertEqual(
+                    present.pending_present_waits, [(present_token, 0), (present_token, 1)]
+                )
+                for shared in (shared_a, shared_b):
+                    self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+                    self.assertIsNone(shared.signal_reservation)
+                    self.assertEqual(shared.wait_reservation, ("present", present_token))
+
+                callbacks = {
+                    "submit_a": lambda: finish_submission(
+                        submit_a, 830 + order_index * 10, success=True
+                    ),
+                    "submit_b": lambda: finish_submission(
+                        submit_b, 831 + order_index * 10, success=True
+                    ),
+                    "present_a": lambda: finish_present_wait(
+                        present, present_token, 0, consumed=True
+                    ),
+                    "present_b": lambda: finish_present_wait(
+                        present, present_token, 1, consumed=False
+                    ),
+                }
+                for step, callback_name in enumerate(order):
+                    self.assertEqual(callbacks[callback_name](), "SUCCESS")
+                    # Repeated loss between callbacks must not change an
+                    # already-terminal result or steal another callback's slot.
+                    if step == 1:
+                        self.assertEqual(
+                            mark_present_device_lost(present), "SUCCESS"
+                        )
+                        # A Submit callback has retired in either order; repeat the
+                        # loss observation from that owner.
+                        observed_submit = (
+                            submit_a if order[0] == "submit_a" else submit_b
+                        )
+                        self.assertEqual(
+                            mark_device_lost(observed_submit), "SUCCESS"
+                        )
+                    self.assertEqual(
+                        present.terminal_present_status[present_token], "DEVICE_LOST"
+                    )
+                    for shared in (shared_a, shared_b):
+                        self.assertEqual(
+                            shared.signal_state, BinarySignalState.UNTRUSTED
+                        )
+                    self.assertEqual(
+                        shared_a.wait_reservation,
+                        None if "present_a" in order[:step + 1]
+                        else ("present", present_token),
+                    )
+                    self.assertEqual(
+                        shared_b.wait_reservation,
+                        None if "present_b" in order[:step + 1]
+                        else ("present", present_token),
+                    )
+
+                self.assertEqual(submit_a.pending_submissions, [])
+                self.assertEqual(submit_b.pending_submissions, [])
+                self.assertEqual(submit_a.pending_binary_signals, [])
+                self.assertEqual(submit_b.pending_binary_signals, [])
+                self.assertEqual(present.pending_present_waits, [])
+                terminal_snapshot = copy.deepcopy(
+                    (submit_a, submit_b, present, shared_a, shared_b)
+                )
+                self.assertEqual(finish_submission(
+                    submit_a, 830 + order_index * 10, success=True
+                ), "BadValue")
+                self.assertEqual(finish_submission(
+                    submit_b, 831 + order_index * 10, success=True
+                ), "BadValue")
+                self.assertEqual(finish_present_wait(
+                    present, present_token, 0, consumed=True
+                ), "BadValue")
+                self.assertEqual(finish_present_wait(
+                    present, present_token, 1, consumed=True
+                ), "BadValue")
+                self.assertEqual(
+                    (submit_a, submit_b, present, shared_a, shared_b),
+                    terminal_snapshot,
+                )
+
+
 class CompetingTimelineWaitCallbackOutcomeTests(unittest.TestCase):
     """Out-of-order wait completions must retire only their own reservations."""
 
