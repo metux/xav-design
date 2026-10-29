@@ -1,3 +1,9 @@
+## Request-wide error-precedence follow-up — 2026-10-29
+
+The all-request pass found one concrete ordering gap in `SelectEvents`: the defining chapter listed its individual error cases, while the central error chapter placed the XGE prerequisite before scalar validation without stating whether that order was normative. This conflicted with the common framing/scalar/XID ordering rule. Both normative chapters now define the same phases: exact length; scalar scope/reserved/mask validation; applicable Device-XID resolution; type/ownership; XGE negotiation; queue existence; atomic mask replacement. Regression coverage checks the phase order in both chapters and preserves the prior selection on rejection. This is a specification consistency correction; it does not change request layouts, subopcodes, or event IDs.
+
+The request-wide static audit remains distinct from runtime conformance. The complete request inventory and cross-chapter precedence tests are the regression oracle; live X11/XGE interoperability and Vulkan backend acceptance remain open implementation gates.
+
 # Request catalogue and wire-contract audit — 2026-10-21
 
 ## Request-specific error-precedence cross-check — 2026-10-27
