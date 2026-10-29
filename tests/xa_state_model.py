@@ -383,7 +383,7 @@ def finish_present_image_release(
     lifecycle_usable = not (
         state.device_lost or state.surface_lost or state.out_of_date
     )
-    terminal_allows_reuse = terminal in ("SUCCESS", "PRESENTATION_FAILED")
+    terminal_allows_reuse = terminal in (None, "SUCCESS", "PRESENTATION_FAILED")
     state.image_state = (
         ImageState.AVAILABLE
         if reusable and lifecycle_usable and terminal_allows_reuse
