@@ -179,9 +179,7 @@ Timeouts and execution failures are returned as normal reply status values. `tim
 
 ## `ResetFence`
 
-Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12. Any other total length results in `BadLength`. Unknown or non-live device or fence XIDs result in `BadValue`; a live resource of the wrong type, foreign client/device ownership, or cross-device use results in `BadMatch`. A lost device returns `DEVICE_LOST`.
-
-Only `SIGNALED` and `FAILED` may be reset. Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`. Unknown or non-live device or fence XIDs result in `BadValue`; a live resource of the wrong type or foreign client/device ownership results in `BadMatch`. A lost device returns `DEVICE_LOST`. Rejection leaves the fence state unchanged.
+Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12. Normative validation precedence is: (1) exact total length (`BadLength`); (2) resolve Device XID, then Fence XID (`BadValue` for unknown or non-live XIDs); (3) validate live resource types, client ownership, and Device association (`BadMatch`); (4) check Device state (`DEVICE_LOST`); (5) validate the mutable Fence state. Only `SIGNALED` and `FAILED` may be reset; reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`. Earlier phases take precedence over later phases when multiple conditions are invalid. Rejection leaves the fence state unchanged.
 
 ## Destroying Fences
 
