@@ -61,7 +61,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         fence = synchronization.split("## `GetFenceStatus`", 1)[1].split("\n## ", 1)[0]
         fence_phases = (
-            "exact 16-byte length (`BadLength`)",
+            "exact total length (`BadLength`)",
             "resolve Device XID, then Fence XID in wire order (`BadValue`",
             "validate live resource types, client ownership, and Device association (`BadMatch`)",
             "atomically snapshot the server-stored Fence state",
