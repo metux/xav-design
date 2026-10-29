@@ -135,22 +135,24 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         state.device_lost = True
     for shared in semaphores:
         shared.device_lost = True
-    # The reporting model terminalizes its own work. Other connected models
-    # observe device loss immediately but retain their tokens so their own late
-    # callbacks can retire reservations and references exactly once.
+    # Submission callbacks must retire their own operation records, while
+    # presentation terminal status is independent of its per-semaphore wait
+    # callbacks. Terminalize every accepted presentation immediately on loss,
+    # but keep pending_present_waits and canonical wait reservations intact so
+    # late backend callbacks can resolve payload uncertainty and release only
+    # their own wait slots.
     if isinstance(origin, SubmissionModel):
         for token in list(origin.pending_submissions):
             finish_submission(origin, token, success=False)
-    else:
-        # Terminalize directly here: finish_present_terminal("DEVICE_LOST")
-        # also initiates propagation when Device Loss is first reported by a
-        # backend callback, so calling it recursively would re-enter this walk.
-        pending_present = list(origin.pending_present_tokens)
+    for state in models:
+        if not isinstance(state, PresentState):
+            continue
+        pending_present = list(state.pending_present_tokens)
         for token in pending_present:
-            origin.pending_present_tokens.remove(token)
-            origin.terminal_present_status[token] = "DEVICE_LOST"
+            state.pending_present_tokens.remove(token)
+            state.terminal_present_status[token] = "DEVICE_LOST"
         if pending_present:
-            origin.image_state = ImageState.INVALID
+            state.image_state = ImageState.INVALID
     for shared in semaphores:
         known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
