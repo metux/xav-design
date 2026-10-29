@@ -6099,6 +6099,78 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         self.assertEqual(shared.signal_reservation, ("submit", 46))
         self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
 
+    def test_late_submit_wait_callback_cannot_consume_reused_signal(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNAL_PENDING)
+        old_submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            old_submit, SubmitRequest(token=47, wait_indices=(0,))
+        ), "SUCCESS")
+        self.assertIs(shared.wait_reservation_owner, old_submit)
+
+        # Recycle the same canonical semaphore and token for a new wait while
+        # the old submission still has a delayed terminal callback.
+        shared.wait_reservation = None
+        shared.wait_reservation_owner = None
+        new_submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            new_submit, SubmitRequest(token=47, wait_indices=(0,))
+        ), "SUCCESS")
+        before = copy.deepcopy(shared)
+
+        self.assertEqual(finish_submission(old_submit, 47, success=True), "SUCCESS")
+        self.assertEqual(shared, before)
+        self.assertIs(shared.wait_reservation_owner, new_submit)
+        self.assertEqual(shared.wait_reservation, ("submit", 47))
+
+    def test_late_present_callback_cannot_mutate_reused_submit_wait(self) -> None:
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNAL_PENDING)
+        old_present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            old_present, PresentRequest(token=48, wait_indices=(0,))
+        ).accepted)
+
+        # Replace the old Present owner with a Submit wait using the same
+        # public token/index and the same canonical semaphore object.
+        shared.wait_reservation = None
+        shared.wait_reservation_owner = None
+        new_submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            new_submit, SubmitRequest(token=48, wait_indices=(0,))
+        ), "SUCCESS")
+        before = copy.deepcopy(shared)
+
+        self.assertEqual(
+            finish_present_wait(old_present, 48, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual(shared, before)
+        self.assertIs(shared.wait_reservation_owner, new_submit)
+
     def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
         # One accepted Submit signal is reserved by Present. Both API models
         # observe Device Loss repeatedly; callbacks then arrive in either
