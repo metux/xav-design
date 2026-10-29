@@ -5668,7 +5668,10 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         state = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(state, PresentRequest(token=907)).accepted)
         self.assertEqual(finish_present_image_release(state, 907), "SUCCESS")
-        self.assertEqual(state.image_state, ImageState.AVAILABLE)
+        # Backend release alone is not enough to expose the image as reusable:
+        # a later terminal Device-Loss/Surface-Loss result must not invalidate
+        # an image that has already been reacquired by a new operation.
+        self.assertEqual(state.image_state, ImageState.PRESENT_PENDING)
         self.assertEqual(finish_present_terminal(state, 907, "SUCCESS"), "SUCCESS")
         self.assertEqual(state.terminal_present_status[907], "SUCCESS")
         self.assertEqual(state.image_state, ImageState.AVAILABLE)
