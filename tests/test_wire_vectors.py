@@ -168,15 +168,15 @@ class GoldenWireVectorTests(unittest.TestCase):
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
-                heading = re.search(r"^##\\s+\\d+(?:\\.\\d+)*\\s+`" + re.escape(request) + r"`\\s*$", memory, re.M)
+                heading = re.search(r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$", memory, re.M)
                 self.assertIsNotNone(heading, f"{request}: normative section heading missing")
-                next_heading = re.search(r"^##\\s+", memory[heading.end():], re.M)
+                next_heading = re.search(r"^##\s+", memory[heading.end():], re.M)
                 section = memory[heading.start():heading.end() + next_heading.start()] if next_heading else memory[heading.start():]
                 for offset, wire_type, field in contract["fields"]:
-                    self.assertRegex(section, r"(?m)^\\|\\s*" + str(offset) + r"\\s*\\|\\s*" + wire_type + r"\\s*\\|\\s*`?" + re.escape(field) + r"`?[^|]*\\|",
+                    self.assertRegex(section, r"(?m)^\|\s*" + str(offset) + r"\s*\|\s*" + wire_type + r"\s*\|\s*`?" + re.escape(field) + r"`?[^|]*\|",
                                      f"{request}: {field} must be {wire_type} at offset {offset}")
                 if isinstance(contract["length"], int):
-                    self.assertRegex(section, r"(?i)(?:Total length|Gesamtlänge):?\\s*" + str(contract["length"]) + r"\\s*bytes?\\b",
+                    self.assertRegex(section, r"(?i)(?:Total length|Gesamtlänge):?\s*" + str(contract["length"]) + r"\s*bytes?\b",
                                      f"{request}: normative fixed length changed")
                 else:
                     self.assertIn(contract["length"], section, f"{request}: normative variable-length formula changed")
