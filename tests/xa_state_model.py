@@ -135,15 +135,16 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
         state.device_lost = True
     for shared in semaphores:
         shared.device_lost = True
-    # Submission callbacks must retire their own operation records, while
-    # presentation terminal status is independent of its per-semaphore wait
-    # callbacks. Terminalize every accepted presentation immediately on loss,
-    # but keep pending_present_waits and canonical wait reservations intact so
-    # late backend callbacks can resolve payload uncertainty and release only
-    # their own wait slots.
-    if isinstance(origin, SubmissionModel):
-        for token in list(origin.pending_submissions):
-            finish_submission(origin, token, success=False)
+    # Device loss terminalizes every accepted submission in the transitive
+    # closure, regardless of whether Submit or Present observed it first.
+    # finish_submission is the single idempotent terminalization path for each
+    # operation; late backend callbacks then find no pending token and cannot
+    # publish success. Presentation wait callbacks remain separately pending
+    # so they can retire their own canonical wait reservations.
+    for state in models:
+        if isinstance(state, SubmissionModel):
+            for token in list(state.pending_submissions):
+                finish_submission(state, token, success=False)
     for state in models:
         if not isinstance(state, PresentState):
             continue

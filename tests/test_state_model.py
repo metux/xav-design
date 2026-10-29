@@ -958,6 +958,81 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertIsNone(shared.wait_reservation)
 
+
+    def test_present_device_loss_terminalizes_transitive_submits_and_preserves_late_wait_cleanup(self) -> None:
+        first = SharedBinarySemaphore()
+        second = SharedBinarySemaphore()
+        submit_a = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[first],
+        )
+        submit_b = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[second],
+        )
+        self.assertEqual(
+            queue_submit(submit_a, SubmitRequest(token=205, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            queue_submit(submit_b, SubmitRequest(token=206, signal_indices=(0,), signal_values=(0,))),
+            "SUCCESS",
+        )
+        # The Present model bridges the two independently owned Submit models,
+        # making the loss graph transitive rather than a single shared edge.
+        present = PresentState(
+            valid_wait_xids=(True, True),
+            wait_states=[WaitState.READY, WaitState.READY],
+            binary_signal_states=[
+                BinarySignalState.SIGNAL_PENDING,
+                BinarySignalState.SIGNAL_PENDING,
+            ],
+            shared_semaphores=[first, second],
+        )
+        self.assertTrue(
+            queue_present(present, PresentRequest(token=207, wait_indices=(0, 1))).accepted
+        )
+        self.assertEqual(first.wait_reservation, ("present", 207))
+        self.assertEqual(second.wait_reservation, ("present", 207))
+        self.assertEqual(submit_a.pending_submissions, [205])
+        self.assertEqual(submit_b.pending_submissions, [206])
+
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertTrue(submit_a.device_lost)
+        self.assertTrue(submit_b.device_lost)
+        self.assertEqual(submit_a.pending_submissions, [])
+        self.assertEqual(submit_b.pending_submissions, [])
+        self.assertEqual(present.terminal_present_status[207], "DEVICE_LOST")
+        for shared in (first, second):
+            self.assertTrue(shared.device_lost)
+            self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+            self.assertIsNone(shared.signal_reservation)
+            self.assertEqual(shared.wait_reservation, ("present", 207))
+
+        # Terminal Submit callbacks cannot revive either signal; Present's own
+        # wait callbacks still retire their independent reservations exactly once.
+        before_a = copy.deepcopy(submit_a)
+        before_b = copy.deepcopy(submit_b)
+        self.assertEqual(finish_submission(submit_a, 205, success=True), "BadValue")
+        self.assertEqual(finish_submission(submit_b, 206, success=True), "BadValue")
+        self.assertEqual(submit_a, before_a)
+        self.assertEqual(submit_b, before_b)
+        self.assertEqual(finish_present_wait(present, 207, 0, consumed=True), "SUCCESS")
+        self.assertEqual(first.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(first.wait_reservation)
+        self.assertEqual(finish_present_wait(present, 207, 1, consumed=True), "SUCCESS")
+        self.assertEqual(second.signal_state, BinarySignalState.UNTRUSTED)
+        self.assertIsNone(second.wait_reservation)
+        self.assertEqual(finish_present_wait(present, 207, 1, consumed=True), "BadValue")
+
     def test_submit_device_loss_terminalizes_shared_present_but_retains_wait_cleanup(self) -> None:
         shared = SharedBinarySemaphore()
         submit = SubmissionModel(
