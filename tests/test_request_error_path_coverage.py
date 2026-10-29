@@ -1232,7 +1232,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 "The following error precedence applies to `CreateDevice`", 1
             )[1].split("\n\n## Request-spezifische Fehlerzuordnung", 1)[0],
             "GetPhysicalDeviceProperty": errors.split(
-                "- `GetPhysicalDeviceProperty`:", 1
+                "- `GetPhysicalDeviceProperty` precedence is:", 1
             )[1].split("\n- `GetPhysicalDeviceQueueFamilyProperties`:", 1)[0],
             "CreateSurface": errors.split(
                 "- `CreateSurface`:", 1
