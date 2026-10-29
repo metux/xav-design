@@ -159,8 +159,15 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(registry.register_wait("client-A", 1402, "WaitForFence", ("fence-A",)), "BadValue")
         self.assertEqual(registry.terminal_callback("client-A", 1401, "COMPLETE"), "BadValue")
         self.assertEqual(registry.async_error("client-A", device, 1401), "SUCCESS")
+        string_submission = AsyncSubmissionIdentity(
+            token=1403, connection_identity="client-A",
+            device_identity=device.identity, device_xid=7, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(string_submission), "BadValue")
         with self.assertRaises(TypeError):
             registry.disconnect("client-A")
+        with self.assertRaises(TypeError):
+            AsyncSubmissionEventRegistry(live_connections={"client-A"})
         self.assertEqual(registry.terminal_callback(connection, 1401, "COMPLETE"), "SUCCESS")
 
 
