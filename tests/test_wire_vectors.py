@@ -181,10 +181,14 @@ class GoldenWireVectorTests(unittest.TestCase):
     def test_golden_vectors_match_normative_request_layouts_and_lengths(self) -> None:
         # Prevent the encoder and golden hex from drifting together away from the spec.
         import re
-        spec_files = {
+        spec_by_request = {
             "CreateCommandPool": "command-recording.md",
             "CreateSemaphore": "synchronization.md",
             "DestroySemaphore": "synchronization.md",
+        }
+        spec_text = {
+            name: (ROOT / "spec" / path).read_text(encoding="utf-8")
+            for name, path in spec_by_request.items()
         }
         spec_by_request = {
             "CreateCommandPool": "command-recording.md",
@@ -245,10 +249,13 @@ class GoldenWireVectorTests(unittest.TestCase):
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
-                heading = re.search(r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$", memory, re.M)
-                self.assertIsNotNone(heading, f"{request}: normative section heading missing")
-                next_heading = re.search(r"^##\s+", memory[heading.end():], re.M)
-                section = memory[heading.start():heading.end() + next_heading.start()] if next_heading else memory[heading.start():]
+                if request in spec_by_request:
+                    section = spec_text[request]
+                else:
+                    heading = re.search(r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$", memory, re.M)
+                    self.assertIsNotNone(heading, f"{request}: normative section heading missing")
+                    next_heading = re.search(r"^##\s+", memory[heading.end():], re.M)
+                    section = memory[heading.start():heading.end() + next_heading.start()] if next_heading else memory[heading.start():]
                 for offset, wire_type, field in contract["fields"]:
                     table_row = (
                         r"(?m)^\|\s*" + str(offset) + r"\s*\|\s*" +
@@ -279,7 +286,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                         f"{request}: {field} must be {wire_type} at offset {offset}",
                     )
                 if isinstance(contract["length"], int):
-                    self.assertRegex(section, r"(?i)(?:Total length|Gesamtlänge):?\s*" + str(contract["length"]) + r"\s*bytes?\b",
+                    self.assertRegex(section, r"(?i)(?:fixed\s+)?(?:total length|Gesamtlänge):?\s*" + str(contract["length"]) + r"\s*bytes?\b",
                                      f"{request}: normative fixed length changed")
                 else:
                     self.assertIn(contract["length"], section, f"{request}: normative variable-length formula changed")
@@ -355,13 +362,16 @@ class GoldenWireVectorTests(unittest.TestCase):
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
         for vector in self.vectors:
             request = vector["request"]
-            section_match = re.search(
-                r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$",
-                memory, re.M,
-            )
-            self.assertIsNotNone(section_match, f"{request}: normative section missing")
-            next_heading = re.search(r"^##\s+", memory[section_match.end():], re.M)
-            section = memory[section_match.start():section_match.end() + next_heading.start()] if next_heading else memory[section_match.start():]
+            if request in spec_by_request:
+                section = spec_text[request]
+            else:
+                section_match = re.search(
+                    r"^##\s+\d+(?:\.\d+)*\s+`" + re.escape(request) + r"`\s*$",
+                    memory, re.M,
+                )
+                self.assertIsNotNone(section_match, f"{request}: normative section missing")
+                next_heading = re.search(r"^##\s+", memory[section_match.end():], re.M)
+                section = memory[section_match.start():section_match.end() + next_heading.start()] if next_heading else memory[section_match.start():]
             wire = bytes.fromhex(vector["wire_hex"])
             endian = "<" if vector["byte_order"] == "little" else ">"
             with self.subTest(vector=vector["name"]):
