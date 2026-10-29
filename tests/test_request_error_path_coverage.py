@@ -1589,7 +1589,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "condition satisfaction, timeout expiry, Device Loss, and `DestroyDevice`",
             "the first terminal outcome committed while the registration is open wins",
             "a later signal MUST NOT rewrite it",
-            "prevent all later callbacks from replying or releasing the registration twice",
+            "prevents all later callbacks from replying or releasing the registration twice",
         ):
             self.assertIn(phrase, semaphores)
         for phrase in (
@@ -1622,14 +1622,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
         errors = self.errors
         conformance = self.conformance
-        acquire = presentation.split("### AcquireNextImage", 1)[1].split("### QueuePresent", 1)[0]
+        acquire = errors.split("- `AcquireNextImage`:", 1)[1].split("\n- `QueuePresent`:", 1)[0]
         for phrase in (
-            "initial evaluation and registration/terminalization boundary MUST be atomic",
-            "image becoming available between the initial check and registration",
-            "first terminal transition committed while the registration is open wins",
-            "commit both supplied signals and the image transition as one indivisible operation",
-            "Late or duplicate callbacks MUST NOT emit another reply",
-            "release every registration-only reference exactly once",
+            "initial check and open-registration installation",
+            "The first committed terminal outcome wins",
+            "late/duplicate callbacks cannot reply, acquire, signal, or release references twice",
         ):
             self.assertIn(phrase, acquire)
         acquire_errors = errors.split("- `AcquireNextImage`:", 1)[1].split("\n- `QueuePresent`:", 1)[0]
