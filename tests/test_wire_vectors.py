@@ -102,6 +102,12 @@ def encode_request(vector: dict) -> bytes:
         ))
     elif request == "DestroySemaphore":
         data.extend(struct.pack(endian + "II", fields["device_xid"], fields["semaphore_xid"]))
+    elif request == "DestroyCommandPool":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["command_pool_xid"]))
+    elif request == "ResetCommandBuffer":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["command_buffer_xid"]))
+    elif request == "DestroyFence":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["fence_xid"]))
     elif request == "BindBufferMemory":
         data.extend(struct.pack(
             endian + "IIIQ",
@@ -185,6 +191,9 @@ class GoldenWireVectorTests(unittest.TestCase):
             "CreateCommandPool": "command-recording.md",
             "CreateSemaphore": "synchronization.md",
             "DestroySemaphore": "synchronization.md",
+            "DestroyCommandPool": "command-recording.md",
+            "ResetCommandBuffer": "command-recording.md",
+            "DestroyFence": "synchronization.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -237,6 +246,18 @@ class GoldenWireVectorTests(unittest.TestCase):
                 "fields": [(8, "XID", "device_xid"), (12, "XID", "semaphore_xid")],
                 "length": 16,
             },
+            "DestroyCommandPool": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "command_pool_xid")],
+                "length": 16,
+            },
+            "ResetCommandBuffer": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "command_buffer_xid")],
+                "length": 16,
+            },
+            "DestroyFence": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid")],
+                "length": 16,
+            },
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
@@ -265,6 +286,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "memory_xid": "Memory-XID",
                             "command_pool_xid": "Command-Pool-XID",
                             "semaphore_xid": "Semaphore-XID",
+                            "command_buffer_xid": "Command-Buffer-XID",
+                            "fence_xid": "Fence-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     else:
@@ -357,6 +380,18 @@ class GoldenWireVectorTests(unittest.TestCase):
             "DestroySemaphore": [
                 (8, "XID", "device_xid", "I"),
                 (12, "XID", "semaphore_xid", "I"),
+            ],
+            "DestroyCommandPool": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "command_pool_xid", "I"),
+            ],
+            "ResetCommandBuffer": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "command_buffer_xid", "I"),
+            ],
+            "DestroyFence": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "fence_xid", "I"),
             ],
         }
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
