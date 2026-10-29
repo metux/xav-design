@@ -84,6 +84,24 @@ def encode_request(vector: dict) -> bytes:
         ))
     elif request == "FreeMemory":
         data.extend(struct.pack(endian + "II", fields["device_xid"], fields["memory_xid"]))
+    elif request == "CreateCommandPool":
+        if fields["flags"] & ~0x3:
+            raise ValueError("CreateCommandPool reserved flag bits must be zero")
+        data.extend(struct.pack(
+            endian + "IIII", fields["device_xid"], fields["command_pool_xid"],
+            fields["queue_family_index"], fields["flags"],
+        ))
+    elif request == "CreateSemaphore":
+        if fields["semaphore_type"] not in (0, 1):
+            raise ValueError("unknown semaphore type")
+        if fields["semaphore_type"] == 0 and fields["initial_value"] != 0:
+            raise ValueError("binary semaphore initial_value must be zero")
+        data.extend(struct.pack(
+            endian + "II IQ".replace(" ", ""), fields["device_xid"], fields["semaphore_xid"],
+            fields["semaphore_type"], fields["initial_value"],
+        ))
+    elif request == "DestroySemaphore":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["semaphore_xid"]))
     elif request == "BindBufferMemory":
         data.extend(struct.pack(
             endian + "IIIQ",
@@ -163,6 +181,20 @@ class GoldenWireVectorTests(unittest.TestCase):
     def test_golden_vectors_match_normative_request_layouts_and_lengths(self) -> None:
         # Prevent the encoder and golden hex from drifting together away from the spec.
         import re
+        spec_files = {
+            "CreateCommandPool": "command-recording.md",
+            "CreateSemaphore": "synchronization.md",
+            "DestroySemaphore": "synchronization.md",
+        }
+        spec_by_request = {
+            "CreateCommandPool": "command-recording.md",
+            "CreateSemaphore": "synchronization.md",
+            "DestroySemaphore": "synchronization.md",
+        }
+        spec_text = {
+            name: (ROOT / "spec" / path).read_text(encoding="utf-8")
+            for name, path in spec_by_request.items()
+        }
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         contracts = {
             "CreateBuffer": {
@@ -196,6 +228,20 @@ class GoldenWireVectorTests(unittest.TestCase):
                            (16, "XID", "memory_xid"), (20, "CARD64", "memory_offset")],
                 "length": 28,
             },
+            "CreateCommandPool": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "command_pool_xid"),
+                           (16, "CARD32", "queue_family_index"), (20, "CARD32", "flags")],
+                "length": 24,
+            },
+            "CreateSemaphore": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "semaphore_xid"),
+                           (16, "CARD32", "semaphore_type"), (20, "CARD64", "initial_value")],
+                "length": 28,
+            },
+            "DestroySemaphore": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "semaphore_xid")],
+                "length": 16,
+            },
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
@@ -219,6 +265,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "device_xid": "Device-XID",
                             "buffer_xid": "Buffer-XID",
                             "memory_xid": "Memory-XID",
+                            "command_pool_xid": "Command-Pool-XID",
+                            "semaphore_xid": "Semaphore-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     else:
@@ -287,6 +335,22 @@ class GoldenWireVectorTests(unittest.TestCase):
                 (16, "XID", "memory_xid", "I"),
                 (20, "CARD64", "memory_offset", "Q"),
             ],
+            "CreateCommandPool": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "command_pool_xid", "I"),
+                (16, "CARD32", "queue_family_index", "I"),
+                (20, "CARD32", "flags", "I"),
+            ],
+            "CreateSemaphore": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "semaphore_xid", "I"),
+                (16, "CARD32", "semaphore_type", "I"),
+                (20, "CARD64", "initial_value", "Q"),
+            ],
+            "DestroySemaphore": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "semaphore_xid", "I"),
+            ],
         }
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
         for vector in self.vectors:
@@ -323,6 +387,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "device_xid": "Device-XID",
                             "buffer_xid": "Buffer-XID",
                             "memory_xid": "Memory-XID",
+                            "command_pool_xid": "Command-Pool-XID",
+                            "semaphore_xid": "Semaphore-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     self.assertTrue(
@@ -350,6 +416,12 @@ class GoldenWireVectorTests(unittest.TestCase):
                 elif request == "AllocateMemory":
                     self.assertGreater(fields["allocation_size"], 0, "allocation_size MUST be positive")
                     self.assertEqual(fields["reserved"], 0, "reserved MUST be zero")
+                elif request == "CreateCommandPool":
+                    self.assertEqual(fields["flags"] & ~0x3, 0, "reserved command-pool flag bits MUST be zero")
+                elif request == "CreateSemaphore":
+                    self.assertIn(fields["semaphore_type"], (0, 1))
+                    if fields["semaphore_type"] == 0:
+                        self.assertEqual(fields["initial_value"], 0, "binary semaphore initial_value MUST be zero")
     def test_golden_vectors_match_central_request_registry(self) -> None:
         # Golden bytes can otherwise remain internally consistent while the
         # normative subopcode assignment changes underneath them.
