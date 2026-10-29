@@ -447,6 +447,21 @@ For every rejection, verify that `device_xid` remains unallocated, no logical De
 - A server without the presentation-capable profile rejects requests 41–47 with core X11 `BadRequest` before parsing presentation payloads or resolving their XIDs; no normal reply or state change follows. A server advertising the profile handles each request according to its assigned request-specific contract.
 
 
+
+### Descriptor-set release mixed-failure vectors
+
+The following combinations MUST be issued as individual requests and checked against the ordered phases in [Errors](errors.md#normative-descriptor-set-release-validation-precedence):
+
+- `DestroyDescriptorPool`: a truncated or oversized request combined with an unknown Device/Pool XID and a child lifetime blocker returns `BadLength`.
+- `DestroyDescriptorPool`: an unknown Device or Pool XID combined with a live wrong-type/foreign-owned resource or a child blocker returns `BadValue`; a live wrong type or foreign ownership combined with a child blocker returns `BadMatch`.
+- `DestroyDescriptorPool`: a child Set pending or referenced by a `RECORDING` command buffer returns `INVALID_SYNCHRONIZATION_STATE`; verify the Pool, every child Set, capacity accounting, command-buffer states, and all references remain unchanged. Device Loss alone does not reject destruction; after terminalization, destruction succeeds if no recording reference remains.
+- `FreeDescriptorSets`: malformed count-derived length combined with zero count, duplicate Set XIDs, unknown XIDs, and a pending Set returns `BadLength`.
+- `FreeDescriptorSets`: zero count, nonzero reserved/scalar fields, or duplicate Set XIDs combined with unknown Device/Pool/Set XIDs and a lifetime blocker returns `BadValue`.
+- `FreeDescriptorSets`: an unknown Device/Pool/Set XID combined with wrong ownership or a pending/recording blocker returns `BadValue`; a live wrong type, foreign ownership, or Set-to-Pool/Device association mismatch combined with a lifetime blocker returns `BadMatch`.
+- `FreeDescriptorSets`: place the only unknown Set, wrong-Pool Set, pending Set, and recording-referenced Set in the final array position in separate vectors. Require the corresponding earlier-phase error and verify no earlier Set is freed.
+- `FreeDescriptorSets`: Device Loss after valid XID/type/ownership resolution does not block logical freeing. Verify no Vulkan operation is attempted and internal references survive until backend quiescence.
+- For both requests, verify successful cleanup invalidates all intended public XIDs exactly once, and a repeated destroy/free using the old XID returns `BadValue` without changing any newer resource that reuses the numeric XID.
+
 ## Remaining request error-path negative tests
 
 The following negative cases are mandatory in addition to the wire-vector checks. They target lifecycle and cross-resource paths where a syntactically valid request can still be rejected. For each rejected operation, verify the stated error and that public XIDs, bindings, pool membership, descriptor contents, semaphore/fence state, and retained references are unchanged unless the contract explicitly says otherwise.
