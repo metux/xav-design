@@ -226,6 +226,68 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("bei Device Loss zulässig", error_section)
 
 
+    def test_descriptor_create_mixed_failure_precedence_is_normative_and_atomic(self):
+        errors = self.errors
+        conformance = self.conformance
+        section = errors.split("### Normative descriptor-create validation precedence", 1)[1].split("\\n\\n### Command Pool requests", 1)[0]
+
+        ordered_phases = {
+            "CreateDescriptorSetLayout": (
+                "exact `24 + 16 * binding_count` framing",
+                "validate flags, reserved fields, binding uniqueness",
+                "validate the target layout XID",
+                "resolve `device_xid`",
+                "validate live type and client ownership",
+                "check Device availability",
+                "perform backend allocation",
+            ),
+            "CreateDescriptorPool": (
+                "exact `24 + 8 * pool_size_count` framing",
+                "validate nonzero supported counts",
+                "validate the target pool XID",
+                "resolve `device_xid`",
+                "validate live type and ownership",
+                "check Device availability",
+                "backend allocation",
+            ),
+            "AllocateDescriptorSets": (
+                "exact `20 + 8 * descriptor_set_count` framing",
+                "validate nonzero count and reserved/scalar fields",
+                "validate every target Set XID in array order",
+                "resolve input XIDs in wire order: Device, Pool, then each Layout",
+                "validate live resource types, client ownership, and Device association",
+                "check Device availability",
+                "validate Pool/Layout compatibility",
+                "reserve pool capacity and allocate all Sets",
+            ),
+        }
+        for request, phases in ordered_phases.items():
+            with self.subTest(request=request):
+                positions = [section.index(phase) for phase in phases]
+                self.assertEqual(positions, sorted(positions))
+                self.assertIn("`" + request + "`", section)
+
+        cases = (
+            "truncated or count-mismatched payload combined with invalid binding fields and an occupied target returns `BadLength`",
+            "duplicate binding numbers, zero descriptor count, unsupported descriptor type/stage bits, or nonzero reserved fields combined with an occupied target returns `BadValue`",
+            "invalid or occupied target XID plus an unknown Device XID returns `BadIDChoice`",
+            "malformed count-derived length combined with zero/duplicate pool-size entries and an occupied target returns `BadLength`",
+            "zero descriptor count, duplicate pool-size types, unsupported descriptor type, or nonzero reserved field combined with an occupied target returns `BadValue`",
+            "malformed count-derived length combined with zero count, duplicate/occupied target Set XIDs, and unknown Device/Pool/Layout XIDs returns `BadLength`",
+            "zero count or nonzero reserved fields combined with any target collision or unknown input XID returns `BadValue`",
+            "an occupied or duplicate target Set XID anywhere in the target array plus an unknown Device, Pool, or Layout XID returns `BadIDChoice`",
+            "a collision in the final target entry and assert that no earlier Set becomes live",
+            "insufficient pool capacity or injected backend allocation failure returns `ALLOCATION_FAILED`",
+            "the entire target batch is absent after every failure",
+        )
+        for phrase in cases:
+            with self.subTest(mixed_failure=phrase):
+                self.assertIn(phrase, conformance)
+
+        self.assertIn("any target-XID collision beats every unknown input XID", section)
+        self.assertIn("Device Loss beats pool-capacity/backend errors", section)
+        self.assertIn("publishes no Set and retains no capacity or Layout reference", section)
+
     def test_write_buffer_mixed_failure_precedence_matches_normative_contract(self):
         memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
         errors = self.errors
@@ -265,7 +327,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(mixed_failure=phrase):
                 self.assertIn(phrase, conformance)
         self.assertIn("No wait, transfer, or state reservation may begin before stages 1–6 succeed", section)
-        self.assertIn("`WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply", conformance)
+        self.assertIn("With valid XIDs and ownership, `DEVICE_LOST` takes precedence over an unbound Buffer", conformance)
 
     def test_physical_device_property_error_precedence_is_explicit_and_consistent(self):
         devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
