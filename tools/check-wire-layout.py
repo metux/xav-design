@@ -1004,9 +1004,9 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: CreateSemaphore/CreateFence must define device-state errors and atomic XID behavior",
     )
     c.require(
-        "Nicht verfügbares/verlorenes Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
-        and "synchroner Backend-Allokationsfehler: `ALLOCATION_FAILED`" in errors
-        and "falscher live Ressourcentyp, fremde Device-Ownership oder Cross-Device-Ressource: `BadMatch`" in errors,
+        "An unavailable/lost Device returns `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
+        and "a synchronous backend allocation failure returns `ALLOCATION_FAILED`" in errors
+        and "foreign Device ownership, or a cross-Device resource returns `BadMatch`" in errors,
         "error mapping: CreateDescriptorSetLayout must distinguish device, ownership and allocation errors",
     )
     c.require(
