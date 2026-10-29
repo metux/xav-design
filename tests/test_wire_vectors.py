@@ -324,6 +324,9 @@ class GoldenWireVectorTests(unittest.TestCase):
             "CreateCommandPool": "command-recording.md",
             "CreateSemaphore": "synchronization.md",
             "DestroySemaphore": "synchronization.md",
+            "DestroyCommandPool": "command-recording.md",
+            "ResetCommandBuffer": "command-recording.md",
+            "DestroyFence": "synchronization.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
