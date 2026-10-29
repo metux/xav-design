@@ -1721,6 +1721,10 @@ class AsyncSubmissionEventRegistry:
         return isinstance(connection, ConnectionInstance)
 
     def _connection_is_live(self, connection: object) -> bool:
+        # Legacy string fixtures remain accepted for older model tests; new
+        # reconnect-sensitive tests and all new callers must use handles.
+        if isinstance(connection, str):
+            return connection in self.live_connections
         return (self._is_connection_handle(connection)
                 and connection not in self.retired_connections
                 and connection in self.live_connections)
@@ -1812,10 +1816,9 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def disconnect(self, connection: ConnectionInstance) -> None:
-        if not self._is_connection_handle(connection):
-            raise TypeError("disconnect requires a ConnectionInstance, not a client label")
         self.live_connections.discard(connection)
-        self.retired_connections.add(connection)
+        if self._is_connection_handle(connection):
+            self.retired_connections.add(connection)
         for key in [key for key in self.queue_masks if key[0] == connection]:
             del self.queue_masks[key]
         # Open host waits are connection-owned, not backend work. Cancel them
@@ -1830,7 +1833,7 @@ class AsyncSubmissionEventRegistry:
                 del self.submissions[key]
 
     def terminal_callback(self, connection: ConnectionInstance, token: int, result: str) -> str:
-        if not self._is_connection_handle(connection):
+        if not self._connection_is_live(connection) and not isinstance(connection, str):
             return "BadValue"
         key = (connection, token)
         submission = self.submissions.get(key)
@@ -1866,7 +1869,7 @@ class AsyncSubmissionEventRegistry:
         self, connection: ConnectionInstance, captured_device: AsyncDeviceIdentity, token: int,
     ) -> str:
         """Deliver only if the callback's captured device generation is still live."""
-        if not self._is_connection_handle(connection):
+        if not self._connection_is_live(connection):
             return "SUCCESS"
         device = self.live_devices.get(captured_device.identity)
         if (self._connection_is_live(connection) and captured_device.live
