@@ -760,7 +760,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [devices.index(phrase, devices.index("### Normative validation precedence")) for phrase in ordered]
         self.assertEqual(positions, sorted(positions))
         self.assertIn("All validation occurs before creating the logical device", devices)
-        self.assertIn("device_xid remains unallocated", devices)
+        self.assertIn("`device_xid` remains unallocated", devices)
 
 
     def test_select_events_mixed_failure_precedence_matches_normative_chapters(self):
@@ -771,11 +771,13 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Keep the normative chapter and central error map synchronized. This
         # prevents an implementation from checking XGE before scalar/XID errors
         # in one code path but after them in another.
-        event_section = events[events.index("## Event Selection: `SelectEvents`"):]
-        error_section = errors[errors.index("## `SelectEvents`"):errors.index("### `CreateDescriptorSetLayout`")]
+        event_start = events.index("Normative validation precedence is:")
+        event_section = events[event_start:events.index("\\n\\n", event_start)]
+        error_start = errors.index("Normative validation precedence, matching [Event Selection]")
+        error_section = errors[error_start:errors.index("\\n\\n", error_start)]
         phases = (
             "exact 32-byte request length",
-            "scope",
+            "scope, unused fields",
             "resolve `device_xid`",
             "validate live type and client ownership",
             "successful XGE 1.0-or-later negotiation",
