@@ -6019,6 +6019,44 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         self.assertEqual(new_shared, before_new)
         self.assertEqual(new_shared.wait_reservation, ("present", 44))
 
+    def test_same_semaphore_object_reuse_rejects_aba_wait_callback(self) -> None:
+        # Even if a backend wrapper recycles the same canonical semaphore
+        # object, equal token/index values must not make an old owner current.
+        shared = SharedBinarySemaphore(
+            signal_state=BinarySignalState.SIGNAL_PENDING,
+        )
+        old_present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            old_present, PresentRequest(token=45, wait_indices=(0,))
+        ).accepted)
+
+        # Model retirement/reuse of the public semaphore identity while the
+        # old owner's delayed callback record still exists.
+        shared.wait_reservation = None
+        shared.wait_reservation_owner = None
+        new_present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            new_present, PresentRequest(token=45, wait_indices=(0,))
+        ).accepted)
+        before = copy.deepcopy(shared)
+
+        self.assertEqual(
+            finish_present_wait(old_present, 45, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual(shared, before)
+        self.assertIs(shared.wait_reservation_owner, new_present)
+        self.assertEqual(shared.wait_reservation, ("present", 45))
+
     def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
         # One accepted Submit signal is reserved by Present. Both API models
         # observe Device Loss repeatedly; callbacks then arrive in either
