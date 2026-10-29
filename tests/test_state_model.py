@@ -52,6 +52,8 @@ from xa_state_model import (
     AsyncSubmissionEventRegistry,
     AsyncSubmissionIdentity,
     AsyncDeviceIdentity,
+    AsyncCallbackRegistry,
+    AsyncResourceIdentity,
     _unregister_semaphore_owner,
 )
 
