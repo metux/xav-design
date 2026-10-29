@@ -153,7 +153,8 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
             device_identity=device.identity, device_xid=7, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(submission), "SUCCESS")
-        self.assertEqual(registry.register_device("client-A", AsyncDeviceIdentity("other", 8)) if False else "BadValue", "BadValue")
+        with self.assertRaises(ValueError):
+            registry.register_device("client-A", AsyncDeviceIdentity("other", 8))
         self.assertEqual(registry.select_queue_events("client-A", device.identity, (0, 0), 1), "BadValue")
         self.assertEqual(registry.register_wait("client-A", 1402, "WaitForFence", ("fence-A",)), "BadValue")
         self.assertEqual(registry.terminal_callback("client-A", 1401, "COMPLETE"), "BadValue")
