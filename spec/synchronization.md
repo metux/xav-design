@@ -157,6 +157,8 @@ Reply: 32 bytes.
 
 Request: exactly 24 bytes; any other total length results in `BadLength`.
 
+An unknown or non-live Device or Fence XID is `BadValue`. A live XID with the wrong resource type, foreign client ownership, or a Fence associated with another Device is `BadMatch`. Device loss yields the normal reply status `DEVICE_LOST`, not an X11 error.
+
 - Offset 8: Device-XID
 - Offset 12: Fence-XID
 - Offset 16: `CARD64 timeout_ns`
