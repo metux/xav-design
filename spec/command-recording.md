@@ -20,12 +20,16 @@ The pool flags defined in v0.1 are:
 The queue-family index MUST identify a queue family of the logical device that supports command buffers. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or ownership by another device results in `BadMatch`; an invalid queue-family index results in `BadValue`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; a backend allocation failure results in `ALLOCATION_FAILED`. Creation is atomic: on any failure, the pool XID remains unallocated. The server MUST NOT silently add flags. `TRANSIENT` is an optimization hint and does not change observable semantics. `RESET_COMMAND_BUFFER` permits the explicit `ResetCommandBuffer` request for individual non-pending command buffers. Without this flag, `ResetCommandBuffer` MUST be rejected with `INVALID_SYNCHRONIZATION_STATE`. 
 
 `DestroyCommandPool` has a fixed total length of 16 bytes: `device_xid` is at offset 8 and `command_pool_xid` is at offset 12.
+- Offset 8: Device-XID
+- Offset 12: Command-Pool-XID
 
 The pool MUST belong to the specified logical device. Unknown or non-live device or pool XIDs result in `BadValue`; a live resource of the wrong type, ownership by another client, or cross-device use results in `BadMatch`. Destruction is atomically rejected with `INVALID_SYNCHRONIZATION_STATE` while any child command buffer is `PENDING`. On rejection, the pool, child XIDs, and states remain unchanged. On success, the pool and all child command buffers are publicly invalidated; internal objects remain alive until possible backend accesses have ended.
 
 Device loss alone does not prevent `DestroyCommandPool`. Once affected accepted submissions have been terminalized and their command buffers become `INVALID` after the pending phase ends, completed device-loss handling no longer blocks destruction solely because of earlier GPU work. No new GPU work may be started; internal backend references remain until safe quiescence or are quarantined.
 
 `ResetCommandBuffer` is a void request with a fixed total length of 16 bytes:
+- Offset 8: Device-XID
+- Offset 12: Command-Buffer-XID
 
 | Offset | Type | Field |
 |---:|---|---|
