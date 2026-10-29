@@ -54,6 +54,41 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         )
         self.assertIn("FreeMemory", self.lifetime)
 
+    def test_wait_for_fence_and_destroy_fence_precedence_matches_error_map(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        wait = synchronization.split("## `WaitForFence`", 1)[1].split("\n## ", 1)[0]
+        destroy = synchronization.split("## Destroying Fences", 1)[1].split("\n## ", 1)[0]
+        wait_errors = errors.split("- `WaitForFence`:", 1)[1].split("\n- `DestroyFence`:", 1)[0]
+        destroy_errors = errors.split("- `DestroyFence`:", 1)[1].split("\n- `DestroySemaphore`:", 1)[0]
+
+        wait_phases = (
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Fence XID in wire order (`BadValue`",
+            "validate live resource types, client ownership, and Device association (`BadMatch`)",
+            "inspect Device state and the Fence/wait outcome",
+        )
+        positions = [wait.find(phase) for phase in wait_phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Device loss yields the normal reply status `DEVICE_LOST`, even if the Fence is already `FAILED`", wait)
+        self.assertIn("Device Loss has already been detected and established as the terminal result", wait)
+        self.assertIn("Device loss returns normal reply status `DEVICE_LOST`, even if the stored Fence state is `FAILED`", wait_errors)
+        self.assertIn("Device Loss has already been detected and established as terminal", wait_errors)
+
+        destroy_phases = (
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Fence XID (`BadValue`",
+            "validate live resource types, client ownership, and Device association (`BadMatch`)",
+            "validate lifetime blockers (`INVALID_SYNCHRONIZATION_STATE`)",
+        )
+        positions = [destroy.find(phase) for phase in destroy_phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Device Loss alone is not an error for this logical cleanup request", destroy)
+        self.assertIn("finally check lifetime blockers (`INVALID_SYNCHRONIZATION_STATE`", destroy_errors)
+        self.assertIn("Device Loss alone is not an error for this logical cleanup request", destroy_errors)
+
     def test_fence_destroy_boundary_is_serialized_wait_result(self):
         self.assertIn("terminal result has been serialized", self.conformance)
         self.assertIn("an unsent reply alone does not keep destruction blocked", self.conformance)
