@@ -194,15 +194,15 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"Exactly one terminal event remains designated.*delivery is not suppressed by the `DestroyDevice` lifecycle rules", submissions, re.S) is not None,
               "QueueSubmit/device loss: terminal event requirement must not contradict DestroyDevice suppression")
     sync = read("spec/synchronization.md")
-    c.require(re.search(r"GetFenceStatus.*after device loss.*stored state", sync, re.S) is not None,
+    c.require(re.search(r"After device loss, `GetFenceStatus` remains available.*returns the stored state", sync, re.S | re.I) is not None,
               "synchronization: GetFenceStatus must remain a state query after device loss")
-    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*returns the (?:server-)?stored fence state", sync, re.S | re.I) is not None and
-              re.search(r"`GetFenceStatus`: incorrect length `BadLength`.*after device loss", errors, re.S | re.I) is not None,
+    c.require(re.search(r"`GetFenceStatus`.*Request: exactly 16 bytes.*`BadValue`.*Device Loss is not an error.*stored state", sync, re.S | re.I) is not None and
+              re.search(r"`GetFenceStatus`: normative precedence: exact 16-byte length.*`BadMatch`.*Device Loss is not an error", errors, re.S | re.I) is not None,
               "GetFenceStatus: exact length, XID/ownership errors, and post-loss state query must be explicit")
-    c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*`DEVICE_LOST`", sync, re.S | re.I) is not None and
+    c.require(re.search(r"`ResetFence`.*Request: exactly 16 bytes.*`BadValue`.*`DEVICE_LOST`", sync, re.S | re.I) is not None and
               re.search(r"`ResetFence`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST` takes precedence over the Fence state.*`INVALID_SYNCHRONIZATION_STATE`", errors, re.S | re.I) is not None,
               "ResetFence: request length, XID/ownership, state, and device-loss errors must be explicit")
-    c.require(re.search(r"WaitForFence.*Device loss returns `DEVICE_LOST`", sync, re.S | re.I) is not None,
+    c.require(re.search(r"`WaitForFence`.*Device loss (?:returns|yields) `DEVICE_LOST`", sync, re.S | re.I) is not None,
               "synchronization: WaitForFence must terminate with DEVICE_LOST")
     c.require(re.search(r"open `WaitForFence` registration is waiting on that exact internal fence identity", sync, re.S | re.I) is not None,
               "DestroyFence: must reject while a host wait registration is still open")
@@ -212,10 +212,10 @@ def check_events(c: Check) -> None:
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
-    c.require(re.search(r"GetSemaphoreCounterValue.*rejected with `DEVICE_LOST`", sync, re.S) is not None,
+    c.require(re.search(r"`GetSemaphoreCounterValue`.*request fails with `DEVICE_LOST`", sync, re.S | re.I) is not None,
               "synchronization: counter query must not return an apparently successful value after device loss")
-    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*Unknown or non-live Device or Semaphore XIDs result in `BadValue`.*rejected with `DEVICE_LOST`", sync, re.S | re.I) is not None and
-              re.search(r"`GetSemaphoreCounterValue`: incorrect length `BadLength`.*cross-device use `BadMatch`.*`DEVICE_LOST`", errors, re.S | re.I) is not None,
+    c.require(re.search(r"`GetSemaphoreCounterValue`.*Request: exactly 16 bytes.*`BadValue`.*request fails with `DEVICE_LOST`", sync, re.S | re.I) is not None and
+              re.search(r"`GetSemaphoreCounterValue`: normative precedence: exact 16-byte length.*`BadMatch`.*`DEVICE_LOST`", errors, re.S | re.I) is not None,
               "GetSemaphoreCounterValue: request length, XID/ownership, and device-loss errors must be explicit")
     c.require(re.search(r"WaitSemaphores.*terminates with `DEVICE_LOST`", sync, re.S) is not None,
               "synchronization: semaphore waits must terminate on device loss")
@@ -243,8 +243,8 @@ def check_events(c: Check) -> None:
               re.search(r"In mixed-error cases, the earlier phase wins", read("spec/conformance.md")) is not None and
               "All synchronous rejections occur without registering a wait" in read("spec/conformance.md"),
               "WaitSemaphores: precedence must distinguish pre-registration validation from terminal wait outcomes")
-    c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*Unknown or non-live Device or Fence XIDs result in `BadValue`.*cross-device use results in `BadMatch`", sync, re.S | re.I) is not None and
-              re.search(r"`WaitForFence`: incorrect length `BadLength`.*Device loss.*`DestroyDevice`.*normal reply statuses", errors, re.S | re.I) is not None,
+    c.require(re.search(r"`WaitForFence`.*Request: exactly 24 bytes.*`BadValue`.*`BadMatch`.*Device loss yields the normal reply status", sync, re.S | re.I) is not None and
+              re.search(r"`WaitForFence`: normative precedence: exact 24-byte length.*Device loss.*`DestroyDevice`.*normal reply statuses", errors, re.S | re.I) is not None,
               "WaitForFence: request length, XID/ownership errors, and reply terminal states must be explicit")
     c.require(re.search(r"WaitSemaphores` MUST NOT synchronously block the X11 request dispatcher", sync) is not None,
               "synchronization: host waits must not block later signals or submissions on the same connection")

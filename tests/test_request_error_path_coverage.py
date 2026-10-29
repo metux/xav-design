@@ -976,9 +976,6 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, events + errors)
         self.assertIn("`SelectEvents`", conformance)
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_semaphore_reservation_identity_and_device_loss_ignore_stale_callbacks(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
