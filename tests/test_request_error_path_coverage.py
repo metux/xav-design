@@ -265,7 +265,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(mixed_failure=phrase):
                 self.assertIn(phrase, conformance)
         self.assertIn("No wait, transfer, or state reservation may begin before stages 1–6 succeed", section)
-        self.assertIn("MUST NOT produce a successful reply", conformance)
+        self.assertIn("`WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply", conformance)
 
     def test_physical_device_property_error_precedence_is_explicit_and_consistent(self):
         devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
