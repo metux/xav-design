@@ -74,6 +74,22 @@ def encode_request(vector: dict) -> bytes:
                 raise ValueError("WriteBuffer padding must be the required number of zero bytes")
             data.extend(payload)
             data.extend(padding)
+    elif request == "AllocateMemory":
+        if fields["reserved"] != 0:
+            raise ValueError("AllocateMemory reserved field must be zero")
+        data.extend(struct.pack(
+            endian + "IIQII",
+            fields["device_xid"], fields["memory_xid"],
+            fields["allocation_size"], fields["memory_type_index"], fields["reserved"],
+        ))
+    elif request == "FreeMemory":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["memory_xid"]))
+    elif request == "BindBufferMemory":
+        data.extend(struct.pack(
+            endian + "IIIQ",
+            fields["device_xid"], fields["buffer_xid"], fields["memory_xid"],
+            fields["memory_offset"],
+        ))
     else:
         raise ValueError(f"no reference encoder for {request}")
 
@@ -165,6 +181,21 @@ class GoldenWireVectorTests(unittest.TestCase):
                            (16, "CARD64", "buffer_offset"), (24, "CARD32", "data_length")],
                 "length": 28,
             },
+            "AllocateMemory": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "memory_xid"),
+                           (16, "CARD64", "allocation_size"), (24, "CARD32", "memory_type_index"),
+                           (28, "CARD32", "reserved")],
+                "length": 32,
+            },
+            "FreeMemory": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "memory_xid")],
+                "length": 16,
+            },
+            "BindBufferMemory": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "buffer_xid"),
+                           (16, "XID", "memory_xid"), (20, "CARD64", "memory_offset")],
+                "length": 28,
+            },
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
@@ -184,7 +215,11 @@ class GoldenWireVectorTests(unittest.TestCase):
                     # rather than a Markdown field table. Validate the same
                     # offset/type/name contract in either representation.
                     if wire_type == "XID":
-                        label = "Device-XID" if field == "device_xid" else "Buffer-XID"
+                        label = {
+                            "device_xid": "Device-XID",
+                            "buffer_xid": "Buffer-XID",
+                            "memory_xid": "Memory-XID",
+                        }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     else:
                         prose_row = (
@@ -235,6 +270,23 @@ class GoldenWireVectorTests(unittest.TestCase):
                 (16, "CARD64", "buffer_offset", "Q"),
                 (24, "CARD32", "data_length", "I"),
             ],
+            "AllocateMemory": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "memory_xid", "I"),
+                (16, "CARD64", "allocation_size", "Q"),
+                (24, "CARD32", "memory_type_index", "I"),
+                (28, "CARD32", "reserved", "I"),
+            ],
+            "FreeMemory": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "memory_xid", "I"),
+            ],
+            "BindBufferMemory": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "buffer_xid", "I"),
+                (16, "XID", "memory_xid", "I"),
+                (20, "CARD64", "memory_offset", "Q"),
+            ],
         }
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
         for vector in self.vectors:
@@ -267,7 +319,12 @@ class GoldenWireVectorTests(unittest.TestCase):
                         r"\s+" + re.escape(field) + r"`?\s*$"
                     )
                     if wire_type == "XID":
-                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape("Device-XID" if field == "device_xid" else "Buffer-XID") + r"\s*$"
+                        label = {
+                            "device_xid": "Device-XID",
+                            "buffer_xid": "Buffer-XID",
+                            "memory_xid": "Memory-XID",
+                        }[field]
+                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     self.assertTrue(
                         re.search(table_row, section) or re.search(prose_row, section),
                         f"{request}: normative spec must define {wire_type} {field} at offset {offset}",
@@ -281,7 +338,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                     self.assertNotEqual(fields["usage_flags"], 0, "usage_flags MUST select at least one usage bit")
                     self.assertEqual(fields["usage_flags"] & ~0x7F, 0, "usage_flags bits 7..31 are reserved")
                     self.assertEqual(fields["reserved"], 0, "reserved MUST be zero")
-                else:
+                elif request in ("WriteBuffer", "ReadBuffer"):
                     self.assertGreater(fields["data_length"], 0, "data_length MUST be positive")
                     if request == "WriteBuffer":
                         payload = bytes.fromhex(fields["payload_hex"])
@@ -290,6 +347,9 @@ class GoldenWireVectorTests(unittest.TestCase):
                         padding = wire[28 + fields["data_length"]:]
                         self.assertEqual(padding, bytes((-fields["data_length"]) % 4))
                         self.assertEqual(padding, bytes.fromhex(fields["padding_hex"]))
+                elif request == "AllocateMemory":
+                    self.assertGreater(fields["allocation_size"], 0, "allocation_size MUST be positive")
+                    self.assertEqual(fields["reserved"], 0, "reserved MUST be zero")
     def test_golden_vectors_match_central_request_registry(self) -> None:
         # Golden bytes can otherwise remain internally consistent while the
         # normative subopcode assignment changes underneath them.
