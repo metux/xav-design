@@ -1208,5 +1208,115 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn(cases[2]["oracle"], presentation_oracles)
 
 
+    def test_mixed_failure_oracles_are_scoped_to_their_request_contracts(self):
+        """Reject false positives caused by finding an outcome elsewhere in the spec."""
+        errors = self.errors
+        conformance = self.conformance
+
+        # The oracle must live in the request's own conformance area, and the
+        # winning result must be justified by that request's own error mapping.
+        first_heading = conformance.find("\n## ")
+        preamble = conformance[:first_heading] if first_heading >= 0 else conformance
+        presentation_cases = conformance.split(
+            "## Presentation-profile conformance cases", 1
+        )[1].split("\n## ", 1)[0]
+        create_device_cases = conformance.split(
+            "## `CreateDevice` mixed-failure and atomicity tests", 1
+        )[1].split("\n## ", 1)[0]
+        discovery_cases = conformance.split(
+            "## Discovery, allocation, and transfer rejection matrix", 1
+        )[1].split("\n## ", 1)[0]
+
+        error_sections = {
+            "CreateDevice": errors.split(
+                "The following error precedence applies to `CreateDevice`", 1
+            )[1].split("\n\n## Request-spezifische Fehlerzuordnung", 1)[0],
+            "GetPhysicalDeviceProperty": errors.split(
+                "- `GetPhysicalDeviceProperty`:", 1
+            )[1].split("\n- `GetPhysicalDeviceQueueFamilyProperties`:", 1)[0],
+            "CreateSurface": errors.split(
+                "- `CreateSurface`:", 1
+            )[1].split("\n- `DestroySurface`:", 1)[0],
+            "SelectEvents": errors.split(
+                "### `SelectEvents`", 1
+            )[1].split("\n\n### ", 1)[0],
+            "SignalSemaphore": errors.split(
+                "- `SignalSemaphore`: normative precedence:", 1
+            )[1].split("\n- `WaitSemaphores`:", 1)[0],
+            "WaitSemaphores": errors.split(
+                "- `WaitSemaphores`:", 1
+            )[1].split("\n- `WaitForFence`:", 1)[0],
+        }
+        conformance_sections = {
+            "CreateDevice": create_device_cases,
+            "GetPhysicalDeviceProperty": discovery_cases,
+            "CreateSurface": presentation_cases,
+            "SelectEvents": preamble,
+            "SignalSemaphore": preamble,
+            "WaitSemaphores": preamble,
+        }
+        cases = (
+            ("CreateDevice", "Malformed total length plus an invalid or occupied `device_xid` → `BadLength`", "`BadLength`"),
+            ("GetPhysicalDeviceProperty", "malformed length + invalid Atom → `BadLength`", "`BadLength`"),
+            ("CreateSurface", "Mixed-failure `CreateSurface`: after exact-length and scalar validation, an invalid/already occupied `surface_xid` combined with an unknown/destroyed/non-Window `window_xid` returns `BadIDChoice`", "`BadIDChoice`"),
+            ("SelectEvents", "after valid Device XID/type/ownership checks, missing XGE negotiation plus an invalid queue tuple returns `BadMatch` from the XGE prerequisite", "`BadMatch`"),
+            ("SignalSemaphore", "in particular, `DEVICE_LOST` after valid resource resolution takes precedence over a Binary-semaphore type error", "`DEVICE_LOST`"),
+            ("WaitSemaphores", "in particular, `DEVICE_LOST` after valid XIDs and ownership takes precedence over a Semaphore type error", "`DEVICE_LOST`"),
+        )
+        for request, oracle, winner in cases:
+            with self.subTest(request=request):
+                self.assertIn(oracle, conformance_sections[request])
+                self.assertIn(winner, error_sections[request])
+                self.assertIn(winner, oracle)
+
+        # Every normative error mapping used above must retain its own ordered
+        # stages; an error token elsewhere in errors.md is not sufficient.
+        ordered_error_phases = {
+            "CreateDevice": (
+                "Validate complete request framing using checked arithmetic",
+                "Validate wire-level and scalar fields",
+                "Validate create-XID `device_xid`",
+                "Resolve `physical_device_xid`",
+            ),
+            "GetPhysicalDeviceProperty": (
+                "Physical-Device XID resolution (`BadValue` for unknown/non-live XIDs)",
+                "live resource type (`BadMatch`)",
+                "Atom (`BadAtom` if invalid)",
+            ),
+            "CreateSurface": (
+                "Validate exact/fixed or formula-derived wire length",
+                "Validate scalar syntax and reserved fields",
+                "Resolve request XIDs in wire-field order",
+                "Validate live resource types, connection ownership",
+            ),
+            "SelectEvents": (
+                "exact 32-byte request length",
+                "scope, unused fields, reserved fields",
+                "resolve `device_xid`",
+                "require successful XGE 1.0-or-later negotiation",
+            ),
+            "SignalSemaphore": (
+                "exact total length",
+                "resolve Device XID, then Semaphore XID",
+                "resource type, client/device ownership",
+                "check Device state",
+                "Timeline type",
+            ),
+            "WaitSemaphores": (
+                "exact total length",
+                "resolve Device XID, then Semaphore XIDs",
+                "resource type, client/device ownership",
+                "check Device state",
+                "Timeline type",
+            ),
+        }
+        for request, phases in ordered_error_phases.items():
+            section = error_sections[request]
+            positions = [section.find(phase) for phase in phases]
+            with self.subTest(request=request, phases="error-map order"):
+                self.assertTrue(all(pos >= 0 for pos in positions), positions)
+                self.assertEqual(positions, sorted(positions), "error-map precedence contradicts its declared order")
+
+
 if __name__ == "__main__":
     unittest.main()
