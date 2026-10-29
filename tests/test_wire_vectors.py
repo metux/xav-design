@@ -439,6 +439,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "memory_xid": "Memory-XID",
                             "command_pool_xid": "Command-Pool-XID",
                             "semaphore_xid": "Semaphore-XID",
+                            "command_buffer_xid": "Command-Buffer-XID",
+                            "fence_xid": "Fence-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     self.assertTrue(
