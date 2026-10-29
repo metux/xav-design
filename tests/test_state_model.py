@@ -2410,7 +2410,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
 class RecreatedDeviceSubmissionCallbackTests(unittest.TestCase):
     def test_old_terminal_callback_cannot_emit_for_recreated_device_generation(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         old_device = AsyncDeviceIdentity("device-A", 71)
         registry.register_device(client_a, old_device)
         old_submission = AsyncSubmissionIdentity(
@@ -3990,7 +3990,7 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
 class ClientDisconnectCallbackCleanupTests(unittest.TestCase):
     def test_disconnect_drops_event_subscriptions_and_terminal_callback_link(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         device = AsyncDeviceIdentity("device-A", 17)
         registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
@@ -4028,8 +4028,8 @@ class ClientDisconnectCallbackCleanupTests(unittest.TestCase):
 class ClientDisconnectWaitRegistrationTests(unittest.TestCase):
     def test_disconnect_cancels_only_connection_waits_not_accepted_work(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
-        client_b = registry.connect(client_b)
+        client_a = registry.connect("client-A")
+        client_b = registry.connect("client-B")
         device = AsyncDeviceIdentity("device-A", 17)
         registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
@@ -5755,7 +5755,7 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
 class DisconnectCallbackCleanupTests(unittest.TestCase):
     def test_late_submission_callback_cannot_target_recreated_device_identity(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         old_device = AsyncDeviceIdentity("device-A", 71)
         registry.register_device(client_a, old_device)
         submission = AsyncSubmissionIdentity(
@@ -5789,7 +5789,7 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
 
     def test_late_device_loss_error_cannot_target_recreated_device(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         old_device = AsyncDeviceIdentity("device-A", 71)
         registry.register_device(client_a, old_device)
         self.assertEqual(registry.destroy_device("device-A"), "SUCCESS")
@@ -5814,8 +5814,8 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
 
     def test_disconnect_detaches_client_callback_links_but_keeps_backend_work(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
-        client_b = registry.connect(client_b)
+        client_a = registry.connect("client-A")
+        client_b = registry.connect("client-B")
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
         registry.register_device(client_a, device)
         submission = AsyncSubmissionIdentity(
@@ -5843,7 +5843,7 @@ class DisconnectCallbackCleanupTests(unittest.TestCase):
 
     def test_disconnect_reserves_submission_token_until_detached_callback_retires(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         device = AsyncDeviceIdentity(identity="device-a", xid=71)
         registry.register_device(client_a, device)
         original = AsyncSubmissionIdentity(
@@ -6267,7 +6267,7 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
 class SubmissionTokenAbaTests(unittest.TestCase):
     def test_duplicate_old_callback_cannot_complete_reused_submission_token(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         device = AsyncDeviceIdentity("device-generation-1", 71)
         registry.register_device(client_a, device)
         old = AsyncSubmissionIdentity(
@@ -6300,7 +6300,7 @@ class SubmissionTokenAbaTests(unittest.TestCase):
 
     def test_token_remains_reserved_after_disconnect_and_late_retirement(self) -> None:
         registry = AsyncSubmissionEventRegistry()
-        client_a = registry.connect(client_a)
+        client_a = registry.connect("client-A")
         device = AsyncDeviceIdentity("device-generation-1", 72)
         registry.register_device(client_a, device)
         old = AsyncSubmissionIdentity(
