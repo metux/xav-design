@@ -5973,6 +5973,44 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         )
 
 
+    def test_late_present_callback_cannot_release_reused_semaphore_identity(self) -> None:
+        # Device loss quarantines the old semaphore generation. A newly
+        # allocated semaphore may reuse the same public XID and token values,
+        # but an old backend callback must remain bound to the old object.
+        old_shared = SharedBinarySemaphore()
+        old_present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[old_shared],
+        )
+        self.assertTrue(queue_present(
+            old_present, PresentRequest(token=44, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(mark_present_device_lost(old_present), "SUCCESS")
+        self.assertEqual(old_shared.wait_reservation, ("present", 44))
+        # Simulate retirement of the old reservation while backend cleanup is
+        # still outstanding; the callback retains old_shared, not new_shared.
+        old_shared.wait_reservation = None
+
+        new_shared = SharedBinarySemaphore()
+        new_present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[new_shared],
+        )
+        self.assertTrue(queue_present(
+            new_present, PresentRequest(token=44, wait_indices=(0,))
+        ).accepted)
+        before_new = copy.deepcopy(new_shared)
+        self.assertEqual(
+            finish_present_wait(old_present, 44, 0, consumed=True), "BadValue"
+        )
+        self.assertEqual(new_shared, before_new)
+        self.assertEqual(new_shared.wait_reservation, ("present", 44))
+        self.assertEqual(old_shared.signal_state, BinarySignalState.UNTRUSTED)
+
     def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
         # One accepted Submit signal is reserved by Present. Both API models
         # observe Device Loss repeatedly; callbacks then arrive in either
@@ -6034,7 +6072,10 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                     self.assertIsNone(shared.signal_reservation)
                     if callback == "submit":
                         self.assertEqual(submit.pending_submissions, [])
-                        self.assertEqual(shared.wait_reservation, ("present", 971))
+                        if order.index("present") < order.index("submit"):
+                            self.assertIsNone(shared.wait_reservation)
+                        else:
+                            self.assertEqual(shared.wait_reservation, ("present", 971))
                     else:
                         self.assertIsNone(shared.wait_reservation)
                     # More loss notifications between callbacks must not
