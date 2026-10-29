@@ -978,3 +978,42 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_semaphore_reservation_identity_and_device_loss_ignore_stale_callbacks(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+
+        binary = synchronization.split("## Binary Semaphores", 1)[1].split("\\n## Presentation Waits", 1)[0]
+        timeline = synchronization.split("## Timeline Semaphores", 1)[1].split("\\n## `GetSemaphoreCounterValue`", 1)[0]
+        terminal = queue.split("**Atomic terminal transition:**", 1)[1].split("\\n## Semaphore references", 1)[0]
+        references = queue.split("## Semaphore references", 1)[1].split("\\n# Queue Ordering", 1)[0]
+
+        for phrase in (
+            "unique internal reservation identity tied to the exact internal semaphore identity",
+            "MUST NOT find or modify a reservation by numeric XID alone",
+            "MUST NOT publish success, change `UNTRUSTED`, consume/resurrect a signal",
+        ):
+            with self.subTest(section="binary", phrase=phrase):
+                self.assertIn(phrase, binary)
+
+        for phrase in (
+            "unique internal reservation identity tied to the exact semaphore identity",
+            "late or duplicate callbacks MUST NOT advance the counter or remove a newer operation's reservation",
+            "max(current_counter, completed_signal_value)",
+        ):
+            with self.subTest(section="timeline", phrase=phrase):
+                self.assertIn(phrase, timeline)
+
+        for phrase in (
+            "unique reservation identity for the specific wait/signal operation",
+            "numeric XID lookup alone is never sufficient",
+            "MUST NOT publish success, change an `UNTRUSTED` binary semaphore",
+        ):
+            with self.subTest(section="terminalization", phrase=phrase):
+                self.assertIn(phrase, terminal)
+
+        self.assertIn("removing a reservation must compare the captured internal semaphore identity and reservation identity", references)
+        self.assertIn("interleave Device Loss with wait-consumption, signal-success and signal-failure callbacks", conformance)
+        self.assertIn("no late callback changes the payload state or affects a newer reservation", conformance)
+
