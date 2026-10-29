@@ -144,6 +144,53 @@ class GoldenWireVectorTests(unittest.TestCase):
                     len(actual) // 4,
                 )
 
+    def test_golden_vectors_match_normative_request_layouts_and_lengths(self) -> None:
+        # Prevent the encoder and golden hex from drifting together away from the spec.
+        import re
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        contracts = {
+            "CreateBuffer": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "buffer_xid"),
+                           (16, "CARD64", "size"), (24, "CARD32", "usage_flags"),
+                           (28, "CARD32", "reserved")],
+                "length": 32,
+            },
+            "WriteBuffer": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "buffer_xid"),
+                           (16, "CARD64", "buffer_offset"), (24, "CARD32", "data_length")],
+                "length": "28 + ((uint64(data_length) + 3) & ~uint64(3))",
+            },
+            "ReadBuffer": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "buffer_xid"),
+                           (16, "CARD64", "buffer_offset"), (24, "CARD32", "data_length")],
+                "length": 28,
+            },
+        }
+        for request, contract in contracts.items():
+            with self.subTest(request=request):
+                heading = re.search(r"^##\\s+\\d+(?:\\.\\d+)*\\s+`" + re.escape(request) + r"`\\s*$", memory, re.M)
+                self.assertIsNotNone(heading, f"{request}: normative section heading missing")
+                next_heading = re.search(r"^##\\s+", memory[heading.end():], re.M)
+                section = memory[heading.start():heading.end() + next_heading.start()] if next_heading else memory[heading.start():]
+                for offset, wire_type, field in contract["fields"]:
+                    self.assertRegex(section, r"(?m)^\\|\\s*" + str(offset) + r"\\s*\\|\\s*" + wire_type + r"\\s*\\|\\s*`?" + re.escape(field) + r"`?[^|]*\\|",
+                                     f"{request}: {field} must be {wire_type} at offset {offset}")
+                if isinstance(contract["length"], int):
+                    self.assertRegex(section, r"(?i)(?:Total length|Gesamtlänge):?\\s*" + str(contract["length"]) + r"\\s*bytes?\\b",
+                                     f"{request}: normative fixed length changed")
+                else:
+                    self.assertIn(contract["length"], section, f"{request}: normative variable-length formula changed")
+                vectors = [v for v in self.vectors if v["request"] == request]
+                self.assertTrue(vectors, f"{request}: missing golden vectors")
+                for vector in vectors:
+                    if isinstance(contract["length"], int):
+                        expected_length = contract["length"]
+                    else:
+                        n = vector["fields"]["data_length"]
+                        expected_length = 28 + ((n + 3) & ~3)
+                    self.assertEqual(vector["length_bytes"], expected_length,
+                                     f"{vector['name']}: fixture length disagrees with normative length contract")
+
     def test_golden_vectors_match_central_request_registry(self) -> None:
         # Golden bytes can otherwise remain internally consistent while the
         # normative subopcode assignment changes underneath them.
