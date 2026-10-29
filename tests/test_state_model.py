@@ -6298,7 +6298,7 @@ class SubmissionTokenAbaTests(unittest.TestCase):
              registry.emitted_events, old, replacement), before,
         )
 
-    def test_token_remains_reserved_after_disconnect_and_late_retirement(self) -> None:
+    def test_token_scope_is_new_after_disconnect_and_reconnect(self) -> None:
         registry = AsyncSubmissionEventRegistry()
         client_a = registry.connect("client-A")
         device = AsyncDeviceIdentity("device-generation-1", 72)
@@ -6312,12 +6312,15 @@ class SubmissionTokenAbaTests(unittest.TestCase):
         self.assertEqual(
             registry.terminal_callback(client_a, 1202, "COMPLETE"), "SUCCESS"
         )
-        # A connection that is still disconnected cannot accept work; after a
-        # new connection with the same textual identity, token tombstones also
-        # prevent accidental callback aliasing in this model.
-        client_a = registry.connect("client-A")
+        # A fresh connection handle is a different token namespace; reuse must
+        # not let the old callback resolve the replacement operation.
+        new_client_a = registry.connect("client-A")
         replacement = AsyncSubmissionIdentity(
-            connection_identity=client_a, token=1202,
+            connection_identity=new_client_a, token=1202,
             device_identity=device.identity, device_xid=72, queue_key=(0, 0),
         )
-        self.assertEqual(registry.accept_submission(replacement), "BadValue")
+        self.assertIsNot(client_a, new_client_a)
+        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
+        self.assertIs(registry.submissions[(new_client_a, 1202)], replacement)
+        self.assertEqual(registry.terminal_callback(client_a, 1202, "FAILED"), "BadValue")
+        self.assertIsNone(replacement.terminal)
