@@ -306,6 +306,27 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, section)
 
 
+    def test_wait_semaphores_check_registration_race_is_closed(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        wait = synchronization.split("## `WaitSemaphores`", 1)[1].split("\\n## ", 1)[0]
+        for phrase in (
+            "initial condition check and installation of the open wait registration MUST be one atomic operation",
+            "visible to the initial condition check",
+            "observe the installed registration and trigger its reevaluation",
+            "MUST NOT install a wait registration",
+            "no callback can terminalize a cancelled or already-terminal registration",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, wait)
+
+        self.assertIn("prevents lost wakeups", errors)
+        self.assertIn("never be lost between check and registration", conformance)
+        self.assertIn("callback after cancellation or terminalization", conformance)
+
+
     def test_reset_fence_device_loss_precedes_mutable_fence_state(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         errors = self.errors
