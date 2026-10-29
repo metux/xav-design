@@ -2412,6 +2412,34 @@ def check_xge_abi(c: Check) -> None:
         actual_layout = [(off, typ) for off, _size, typ, _field in parsed]
         c.require(actual_layout == fields,
                   f"{name}: payload field offsets/types changed: {actual_layout!r}")
+        # Check semantic field names at their exact offsets, not merely that
+        # the names occur somewhere in the section.
+        field_names = {
+            "ASYNC_ERROR": [(32, r"Device XID|Device-XID"), (36, r"error_code"),
+                            (40, r"origin"), (44, r"submission_token"),
+                            (52, r"affected resource XID"), (56, r"reserved")],
+            "DEVICE_LOST": [(32, r"Device-XID"), (36, r"reason_code"),
+                            (40, r"device_generation")],
+            "DEVICE_STATUS_CHANGED": [(32, r"Physical-Device XID|Physical-Device-XID"),
+                                      (36, r"new_status"), (40, r"reason_code"),
+                                      (44, r"reserved")],
+            "DEVICE_MEMORY_PRESSURE": [(32, r"Device-XID"), (36, r"heap_index"),
+                                       (40, r"pressure_level"), (44, r"reserved")],
+            "DEVICE_IDLE": [(32, r"Device-XID"), (36, r"idle_reason"),
+                            (40, r"device_generation")],
+            "SUBMISSION_COMPLETE": [(32, r"Device-XID"), (36, r"queue_family_index"),
+                                    (40, r"queue_index"), (44, r"reserved"),
+                                    (48, r"submission_token")],
+            "SUBMISSION_FAILED": [(32, r"Device-XID"), (36, r"queue_family_index"),
+                                  (40, r"queue_index"), (44, r"failure_class"),
+                                  (48, r"submission_token")],
+        }[name]
+        c.require(len(parsed) == len(field_names),
+                  f"{name}: field count differs from the named ABI")
+        for (offset, pattern), record in zip(field_names, parsed):
+            actual_offset, _size, _typ, label = record
+            c.require(actual_offset == offset and re.search(pattern, label, re.I) is not None,
+                      f"{name}: field at offset {offset} must be named as {pattern!r}, got offset {actual_offset} label {label!r}")
         c.require(all(off + field_sizes[typ] <= total for off, typ in fields),
                   f"{name}: payload field extends past event size")
         c.require(all(off % min(field_sizes[typ], 4) == 0 for off, typ in fields),
@@ -2661,6 +2689,19 @@ def check_presentation_profile(c: Check) -> None:
         ]
         c.require([(offset, typ) for offset, _size, typ, _field in records] == expected_layout,
                   f"{name}: event payload offsets/types differ from the presentation ABI")
+        expected_names = [
+            (32, r"Device-XID"), (36, r"queue_family_index"),
+            (40, r"queue_index"), (44, r"Swapchain-XID"),
+            (48, r"image_index"),
+            (52, r"reserved" if name == "IMAGE_RELEASED" else r"status"),
+            (56, r"presentation_token"),
+        ]
+        c.require(len(records) == len(expected_names),
+                  f"{name}: field count differs from the presentation ABI")
+        for (offset, pattern), record in zip(expected_names, records):
+            actual_offset, _size, _typ, label = record
+            c.require(actual_offset == offset and re.search(pattern, label, re.I) is not None,
+                      f"{name}: field at offset {offset} must be named as {pattern!r}, got offset {actual_offset} label {label!r}")
         occupied: set[int] = set()
         for offset, size, typ, field in records:
             c.require(offset >= 32 and offset % min(size, 4) == 0,
