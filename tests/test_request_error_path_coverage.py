@@ -1591,5 +1591,39 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             self.assertIn(phrase, conformance)
 
+
+    def test_acquire_next_image_terminalization_and_precedence(self):
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        acquire = presentation.split("### AcquireNextImage", 1)[1].split("### QueuePresent", 1)[0]
+        for phrase in (
+            "initial evaluation and registration/terminalization boundary MUST be atomic",
+            "image becoming available between the initial check and registration",
+            "first terminal transition committed while the registration is open wins",
+            "commit both supplied signals and the image transition as one indivisible operation",
+            "Late or duplicate callbacks MUST NOT emit another reply",
+            "release every registration-only reference exactly once",
+        ):
+            self.assertIn(phrase, acquire)
+        acquire_errors = errors.split("- `AcquireNextImage`:", 1)[1].split("\n- `QueuePresent`:", 1)[0]
+        for phrase in (
+            "request-field order",
+            "`DEVICE_LOST` takes precedence",
+            "`SURFACE_LOST` precedes `OUT_OF_DATE`",
+            "ineligible state or conflicting pending acquire is `INVALID_SYNCHRONIZATION_STATE`",
+            "initial check and open-registration installation",
+            "first committed terminal outcome wins",
+        ):
+            self.assertIn(phrase, acquire_errors)
+        for phrase in (
+            "Acquire initial-check versus registration",
+            "Acquire completion versus timeout",
+            "Acquire lifecycle precedence mixed failures",
+            "Acquire signal reservation and rollback",
+            "Acquire duplicate callbacks and disconnect",
+        ):
+            self.assertIn(phrase, conformance)
+
 if __name__ == "__main__":
     unittest.main()
