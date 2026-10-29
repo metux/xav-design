@@ -112,7 +112,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         destroy_phases = (
             "exact total length (`BadLength`)",
-            "resolve Device XID, then Fence XID (`BadValue`",
+            "resolve Device XID, then Fence XID",
             "validate live resource types, client ownership, and Device association (`BadMatch`)",
             "validate lifetime blockers (`INVALID_SYNCHRONIZATION_STATE`)",
         )
