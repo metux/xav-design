@@ -1580,10 +1580,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "never X11 errors",
             "initial snapshot and wait registration are atomic",
         ):
-            self.assertIn(phrase, errors.split("- `WaitForFence`:", 1)[1].split("\\n- `DestroyFence`:", 1)[0])
+            self.assertIn(phrase, errors.split("- `WaitForFence`:", 1)[1].split("\n- `DestroyFence`:", 1)[0])
         for phrase in (
-            "WaitSemaphores status races",
-            "WaitForFence status races",
+            "`WaitSemaphores` status races",
+            "`WaitForFence` status races",
             "completion is either observed before registration or terminalizes the installed registration",
             "exactly one normal reply",
             "exactly one X11 `DEVICE_LOST` error",
