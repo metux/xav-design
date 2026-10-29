@@ -157,5 +157,25 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         )
 
 
+    def test_reusable_string_label_is_not_a_connection_identity(self):
+        registry = AsyncCallbackRegistry()
+        connection = registry.connect("reused-label")
+        device = AsyncDeviceIdentity("device-generation-1", 7)
+        resource = AsyncResourceIdentity("resource-generation-1", 42, device.identity)
+        registry.register_device(device)
+        registry.register_resource(resource)
+        self.assertEqual(
+            registry.complete_backend_callback(
+                resource, device, "reused-label", token="string-label-only",
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(registry.emitted_events, [])
+        self.assertEqual(resource.backend_refs, 0)
+        with self.assertRaises(TypeError):
+            registry.disconnect("reused-label")
+        self.assertIn(connection, registry.connections_live)
+
+
 if __name__ == "__main__":
     unittest.main()
