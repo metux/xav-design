@@ -1674,11 +1674,20 @@ class AsyncCallbackRegistry:
         return "SUCCESS"
 
 
+@dataclass(frozen=True, eq=False)
+class ConnectionInstance:
+    """Opaque identity for one concrete X11 connection lifetime.
+
+    Equality and hashing intentionally use object identity, never the reusable
+    peer/client label. Construct a fresh instance for every accepted connection.
+    """
+    client_label: str
+
 @dataclass
 class AsyncSubmissionIdentity:
     """Submission callback target captured at QueueSubmit acceptance."""
     token: int
-    connection_identity: str
+    connection_identity: ConnectionInstance
     device_identity: str
     device_xid: int
     queue_key: tuple[int, int]
@@ -1690,7 +1699,7 @@ class AsyncSubmissionIdentity:
 @dataclass(frozen=True)
 class AsyncWaitIdentity:
     """One open server-side host wait, independent of accepted GPU work."""
-    connection_identity: str
+    connection_identity: ConnectionInstance
     token: int
     kind: str
     resource_identities: tuple[str, ...]
@@ -1698,8 +1707,23 @@ class AsyncWaitIdentity:
 
 @dataclass
 class AsyncSubmissionEventRegistry:
-    """Serialized event-decision oracle for terminal callbacks."""
-    live_connections: set[str] = field(default_factory=set)
+    """Callback oracle keyed by opaque per-connection instance handles."""
+    live_connections: set[ConnectionInstance] = field(default_factory=set)
+    retired_connections: set[ConnectionInstance] = field(default_factory=set)
+
+    def connect(self, client_label: str) -> ConnectionInstance:
+        """Create a fresh identity even when the client label was seen before."""
+        connection = ConnectionInstance(client_label)
+        self.live_connections.add(connection)
+        return connection
+
+    def _is_connection_handle(self, connection: object) -> bool:
+        return isinstance(connection, ConnectionInstance)
+
+    def _connection_is_live(self, connection: object) -> bool:
+        return (self._is_connection_handle(connection)
+                and connection not in self.retired_connections
+                and connection in self.live_connections)
     live_devices: dict[str, AsyncDeviceIdentity] = field(default_factory=dict)
     queue_masks: dict[tuple[str, tuple[int, int]], int] = field(default_factory=dict)
     submissions: dict[tuple[str, int], AsyncSubmissionIdentity] = field(default_factory=dict)
@@ -1716,7 +1740,9 @@ class AsyncSubmissionEventRegistry:
     wait_registrations: dict[tuple[str, int], AsyncWaitIdentity] = field(default_factory=dict)
     emitted_events: list[tuple[str, str, int, int]] = field(default_factory=list)
 
-    def register_device(self, connection: str, device: AsyncDeviceIdentity) -> None:
+    def register_device(self, connection: ConnectionInstance, device: AsyncDeviceIdentity) -> None:
+        if not self._connection_is_live(connection):
+            raise ValueError("callback registry requires a live connection-instance handle")
         self.live_devices[device.identity] = device
         self.queue_masks[(connection, (device.xid, 0))] = 0
 
@@ -1729,7 +1755,7 @@ class AsyncSubmissionEventRegistry:
         if (submission.token == 0 or key in self.used_submission_keys
                 or key in self.submissions or key in self.detached_submissions):
             return "BadValue"
-        if submission.connection_identity not in self.live_connections:
+        if not self._connection_is_live(submission.connection_identity):
             return "BadValue"
         device = self.live_devices.get(submission.device_identity)
         if device is None or not device.live or device.xid != submission.device_xid:
@@ -1740,10 +1766,10 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def select_queue_events(
-        self, connection: str, device_identity: str, queue: tuple[int, int], mask: int,
+        self, connection: ConnectionInstance, device_identity: str, queue: tuple[int, int], mask: int,
     ) -> str:
         device = self.live_devices.get(device_identity)
-        if connection not in self.live_connections or device is None or not device.live:
+        if not self._connection_is_live(connection) or device is None or not device.live:
             return "BadValue"
         self.queue_masks[(connection, (device.xid, queue[0] * 65536 + queue[1]))] = mask
         return "SUCCESS"
@@ -1759,11 +1785,11 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def register_wait(
-        self, connection: str, token: int, kind: str,
+        self, connection: ConnectionInstance, token: int, kind: str,
         resource_identities: tuple[str, ...],
     ) -> str:
         key = (connection, token)
-        if (connection not in self.live_connections or token == 0
+        if (not self._connection_is_live(connection) or token == 0
                 or kind not in {"WaitSemaphores", "WaitForFence"}
                 or not resource_identities or key in self.wait_registrations):
             return "BadValue"
@@ -1785,8 +1811,11 @@ class AsyncSubmissionEventRegistry:
         del self.wait_registrations[key]
         return "SUCCESS"
 
-    def disconnect(self, connection: str) -> None:
+    def disconnect(self, connection: ConnectionInstance) -> None:
+        if not self._is_connection_handle(connection):
+            raise TypeError("disconnect requires a ConnectionInstance, not a client label")
         self.live_connections.discard(connection)
+        self.retired_connections.add(connection)
         for key in [key for key in self.queue_masks if key[0] == connection]:
             del self.queue_masks[key]
         # Open host waits are connection-owned, not backend work. Cancel them
@@ -1800,7 +1829,9 @@ class AsyncSubmissionEventRegistry:
                 self.detached_submissions[key] = submission
                 del self.submissions[key]
 
-    def terminal_callback(self, connection: str, token: int, result: str) -> str:
+    def terminal_callback(self, connection: ConnectionInstance, token: int, result: str) -> str:
+        if not self._is_connection_handle(connection):
+            return "BadValue"
         key = (connection, token)
         submission = self.submissions.get(key)
         detached = False
@@ -1832,11 +1863,13 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def async_error(
-        self, connection: str, captured_device: AsyncDeviceIdentity, token: int,
+        self, connection: ConnectionInstance, captured_device: AsyncDeviceIdentity, token: int,
     ) -> str:
         """Deliver only if the callback's captured device generation is still live."""
+        if not self._is_connection_handle(connection):
+            return "SUCCESS"
         device = self.live_devices.get(captured_device.identity)
-        if (connection in self.live_connections and captured_device.live
+        if (self._connection_is_live(connection) and captured_device.live
                 and device is captured_device):
             self.emitted_events.append(("ASYNC_ERROR", connection, captured_device.xid, token))
         return "SUCCESS"
