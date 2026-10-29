@@ -1619,11 +1619,21 @@ class AsyncCallbackRegistry:
     # These are opaque connection-instance handles, not client names. A
     # reconnect must allocate a fresh handle even when the peer/process label
     # is unchanged; delayed callbacks retain the original handle.
-    connections_live: set[object] = field(default_factory=set)
+    connections_live: set[ConnectionInstance] = field(default_factory=set)
+    retired_connections: set[ConnectionInstance] = field(default_factory=set)
     emitted_events: list[tuple[str, int, int]] = field(default_factory=list)
 
-    def disconnect(self, connection_identity: object) -> None:
+    def connect(self, client_label: str) -> ConnectionInstance:
+        """Allocate a unique opaque identity for one accepted X11 connection."""
+        connection = ConnectionInstance(client_label)
+        self.connections_live.add(connection)
+        return connection
+
+    def disconnect(self, connection_identity: ConnectionInstance) -> None:
+        if not isinstance(connection_identity, ConnectionInstance):
+            raise TypeError("disconnect requires an opaque connection-instance handle")
         self.connections_live.discard(connection_identity)
+        self.retired_connections.add(connection_identity)
 
     def register_device(self, device: AsyncDeviceIdentity) -> None:
         self.devices_by_xid[device.xid] = device
@@ -1665,6 +1675,8 @@ class AsyncCallbackRegistry:
         # particular, never look up resource.xid in resources_by_xid here.
         if (resource.device_identity == device.identity
                 and device.live and self.devices_by_xid.get(device.xid) is device
+                and isinstance(connection_identity, ConnectionInstance)
+                and connection_identity not in self.retired_connections
                 and connection_identity in self.connections_live):
             resource_xid = (
                 resource.xid if resource.live
