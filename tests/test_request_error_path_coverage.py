@@ -237,6 +237,24 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, section)
 
 
+    def test_reset_fence_device_loss_precedes_mutable_fence_state(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        section = synchronization.split("## `ResetFence`", 1)[1].split("\n## ", 1)[0]
+        error_section = errors.split("- `ResetFence`:", 1)[1].split("\n- `WaitForFence`:", 1)[0]
+        phases = (
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Fence XID (`BadValue`",
+            "validate live resource types, client ownership, and Device association (`BadMatch`)",
+            "check Device state (`DEVICE_LOST`)",
+            "validate the mutable Fence state",
+        )
+        positions = [section.find(phase) for phase in phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("`DEVICE_LOST` takes precedence over the Fence state", error_section)
+        self.assertIn("Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`", section)
+
     def test_signal_semaphore_counter_and_reservation_errors_have_distinct_precedence(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
