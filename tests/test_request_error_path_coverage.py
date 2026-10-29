@@ -254,6 +254,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "not greater than the observable counter returns `BadValue`",
             error_section,
         )
+        self.assertIn("counter returns `BadValue`", error_section)
         self.assertIn(
             "exceeds the counter but crosses or violates an already reserved GPU signal value returns `INVALID_SYNCHRONIZATION_STATE`",
             error_section,
