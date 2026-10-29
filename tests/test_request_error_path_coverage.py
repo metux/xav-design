@@ -1510,5 +1510,30 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("No selected Set may be freed unless every selected Set passes every phase", section)
 
 
+    def test_physical_device_metadata_query_precedence_is_complete(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        memory = (ROOT / "spec/memory-buffers.md").read_text(encoding="utf-8")
+        queue = devices.split("## `GetPhysicalDeviceQueueFamilyProperties`", 1)[1].split("## `CreateDevice`", 1)[0]
+        props = memory.split("## 5.2 `GetPhysicalDeviceMemoryProperties`", 1)[1].split("## 5.3", 1)[0]
+        central = self.errors.split("### Device discovery and Device creation", 1)[1].split("### `SelectEvents`", 1)[0]
+        for request, section in (("queue-family", queue), ("memory-properties", props)):
+            with self.subTest(request=request):
+                phases = (
+                    "exact 12-byte request length (`BadLength`)",
+                    "resolve the Physical-Device XID (`BadValue` for unknown or non-live XIDs)",
+                    "validate that the live resource is a Physical Device (`BadMatch` otherwise)",
+                    "server-stored",
+
+                )
+                positions = [section.index(phase) for phase in phases]
+                self.assertEqual(positions, sorted(positions))
+                self.assertIn("There is no logical-Device availability phase", section)
+                self.assertIn("removal or failure of the Physical Device", section)
+        self.assertIn("same complete precedence", central)
+        self.assertIn("still-live Physical-Device XID remains queryable", central)
+        self.assertIn("malformed length + unknown XID + wrong-type live XID → `BadLength`", self.conformance)
+        self.assertIn("live non-Physical-Device XID → `BadMatch`", self.conformance)
+        self.assertIn("still-live Physical-Device XID marked removed/failed", self.conformance)
+
 if __name__ == "__main__":
     unittest.main()
