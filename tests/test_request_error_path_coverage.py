@@ -343,7 +343,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertTrue(all(position >= 0 for position in positions), positions)
         self.assertEqual(positions, sorted(positions))
         self.assertIn("`DEVICE_LOST` takes precedence over the Fence state", error_section)
-        self.assertIn("Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`", section)
+        self.assertIn("reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`", section)
 
     def test_reset_fence_is_serialized_with_submission_completion_and_stale_callbacks(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
@@ -391,7 +391,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "not greater than the observable counter returns `BadValue`",
             error_section,
         )
-        self.assertIn("`signal_value` kleiner oder gleich dem beobachtbaren Counter `BadValue`", error_section)
+        self.assertIn("a timeline `signal_value` not greater than the observable counter returns `BadValue`", error_section)
         self.assertIn(
             "exceeds the counter but crosses or violates an already reserved GPU signal value returns `INVALID_SYNCHRONIZATION_STATE`",
             error_section,
@@ -747,8 +747,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         fence_wait = synchronization[synchronization.index("## `WaitForFence`"):synchronization.index("## `ResetFence`") ]
         for phrase in (
             "Request: exactly 24 bytes",
-            "Unknown or non-live device or fence XIDs result in `BadValue`",
-            "Device loss returns `DEVICE_LOST`",
+            "resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs)",
+            "Device loss yields the normal reply status `DEVICE_LOST`",
             "`DEVICE_DESTROYED` is returned",
         ):
             with self.subTest(fence_wait_contract=phrase):
@@ -782,11 +782,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Destroying Fences") ]
         reset_order = (
-            "Any other total length results in `BadLength`",
-            "Unknown or non-live device or fence XIDs result in `BadValue`",
-            "A lost device returns `DEVICE_LOST`",
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs)",
+            "check Device state (`DEVICE_LOST`)",
             "Only `SIGNALED` and `FAILED` may be reset",
-            "Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`",
+            "reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`",
         )
         positions = [reset_fence.index(phrase) for phrase in reset_order]
         self.assertEqual(positions, sorted(positions))
@@ -949,9 +949,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # prevents an implementation from checking XGE before scalar/XID errors
         # in one code path but after them in another.
         event_start = events.index("Normative validation precedence is:")
-        event_section = events[event_start:events.index("\n\n", event_start)]
+        event_section = events[event_start:events.index("The masks depend on the scope:", event_start)]
         error_start = errors.index("Normative validation precedence, matching [Event Selection]")
-        error_section = errors[error_start:errors.index("\n\n", error_start)]
+        error_section = errors[error_start:errors.index("\n\n###", error_start)]
         phases = (
             "exact 32-byte request length",
             "scope, unused fields",
