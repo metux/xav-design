@@ -249,7 +249,16 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "check device state",
         ):
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, signal_section + error_section)
+                self.assertIn(phrase, signal_section)
+        self.assertIn(
+            "not greater than the observable counter returns `BadValue`",
+            error_section,
+        )
+        self.assertIn(
+            "exceeds the counter but crosses or violates an already reserved GPU signal value returns `INVALID_SYNCHRONIZATION_STATE`",
+            error_section,
+        )
+
         self.assertLess(
             signal_section.index("check device state"),
             signal_section.index("less than or equal to the observable counter"),
