@@ -317,7 +317,7 @@ def check_events(c: Check) -> None:
     )
     c.require(
         "Device loss takes precedence over these binding-specific state/backend checks" in read("spec/memory-buffers.md")
-        and "The Device-state check takes precedence over these request-specific compatibility and pending-state checks" in read("spec/shaders-pipelines.md")
+        and "Device Loss precedes compatibility and pending-use errors" in read("spec/shaders-pipelines.md")
         and "pending-set conflict" in conformance,
         "BindBufferMemory/UpdateDescriptorSets: device-loss precedence must follow valid XID/type/ownership checks and precede mutable/backend checks")
     for name, (event_id, total, length) in expected.items():
@@ -1567,9 +1567,11 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
          ("exact wire length", "resolve device, buffer, and memory XIDs in wire order",
           "resource type, client/device ownership", "device state", "binding-specific checks")),
         ("UpdateDescriptorSets", request_section(shaders, "UpdateDescriptorSets"),
-         ("Request-Länge/Count und strukturelle Integrität", "syntax- und feldlokale Prüfungen",
-          "Auflösung der XIDs in Wire-Reihenfolge", "Ressourcentyp, Client-/Device-Ownership",
-          "Device-Zustand")),
+         ("Exakte Gesamtlänge `20 + 36 * write_count`", "Feldlokale Syntaxprüfung aller Writes",
+          "Auflösung aller XIDs in Wire-Reihenfolge", "Validierung der aufgelösten Ressourcen",
+          "Device-Verfügbarkeit", "Prüfung aller Writes auf Layout-/Binding-/Array-Slot-/Descriptor-Typ-Kompatibilität",
+          "Prüfung aller betroffenen Sets auf bereits angenommene GPU-Arbeit",
+          "Atomarer Commit und Rollback")),
         ("CommandBufferData", request_section(command, "CommandBufferData"),
          ("wire-structure errors take precedence over field errors",
           "field errors take precedence over target/pool XID errors",
