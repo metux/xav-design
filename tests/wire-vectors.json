@@ -13,7 +13,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -30,7 +30,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -47,7 +47,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -65,7 +65,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -83,7 +83,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900007000e00000004030201d0c0b0a0080706050403020103000000"
@@ -99,7 +99,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900000070e00000001020304a0b0c0d0010203040506070800000003"
@@ -115,7 +115,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -133,7 +133,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -151,7 +151,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -169,7 +169,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -187,7 +187,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
@@ -205,7 +205,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
@@ -223,7 +223,7 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382856,
+        "allocation_size": 72623859790382850,
         "memory_type_index": 2,
         "reserved": 0
       },
@@ -240,7 +240,7 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382856,
+        "allocation_size": 72623859790382850,
         "memory_type_index": 2,
         "reserved": 0
       },
@@ -286,7 +286,7 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382856
+        "memory_offset": 72623859790382850
       },
       "wire_hex": "900007000c00000004030201d0c0b0a0443322110807060504030201"
     },
@@ -302,7 +302,7 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382856
+        "memory_offset": 72623859790382850
       },
       "wire_hex": "900000070c00000001020304a0b0c0d0112233440102030405060708"
     },
@@ -350,7 +350,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": 72623859790382856
+        "initial_value": 72623859790382850
       },
       "wire_hex": "900007001d00000004030201d0c0b0a0010000000807060504030201"
     },
@@ -366,7 +366,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": 72623859790382856
+        "initial_value": 72623859790382850
       },
       "wire_hex": "900000071d00000001020304a0b0c0d0000000010102030405060708"
     },
@@ -397,6 +397,90 @@
         "semaphore_xid": 2695938256
       },
       "wire_hex": "900000042100000001020304a0b0c0d0"
+    },
+    {
+      "name": "DestroyCommandPool-little-endian",
+      "byte_order": "little",
+      "request": "DestroyCommandPool",
+      "major_opcode": 144,
+      "subopcode": 25,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "command_pool_xid": 2695938256
+      },
+      "wire_hex": "900004001900000004030201d0c0b0a0"
+    },
+    {
+      "name": "DestroyCommandPool-big-endian",
+      "byte_order": "big",
+      "request": "DestroyCommandPool",
+      "major_opcode": 144,
+      "subopcode": 25,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "command_pool_xid": 2695938256
+      },
+      "wire_hex": "900000041900000001020304a0b0c0d0"
+    },
+    {
+      "name": "ResetCommandBuffer-little-endian",
+      "byte_order": "little",
+      "request": "ResetCommandBuffer",
+      "major_opcode": 144,
+      "subopcode": 26,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "command_buffer_xid": 2695938256
+      },
+      "wire_hex": "900004001a00000004030201d0c0b0a0"
+    },
+    {
+      "name": "ResetCommandBuffer-big-endian",
+      "byte_order": "big",
+      "request": "ResetCommandBuffer",
+      "major_opcode": 144,
+      "subopcode": 26,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "command_buffer_xid": 2695938256
+      },
+      "wire_hex": "900000041a00000001020304a0b0c0d0"
+    },
+    {
+      "name": "DestroyFence-little-endian",
+      "byte_order": "little",
+      "request": "DestroyFence",
+      "major_opcode": 144,
+      "subopcode": 38,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256
+      },
+      "wire_hex": "900004002600000004030201d0c0b0a0"
+    },
+    {
+      "name": "DestroyFence-big-endian",
+      "byte_order": "big",
+      "request": "DestroyFence",
+      "major_opcode": 144,
+      "subopcode": 38,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256
+      },
+      "wire_hex": "900000042600000001020304a0b0c0d0"
     }
   ]
 }
