@@ -114,5 +114,43 @@ class DelayedCallbackXidReuseTests(unittest.TestCase):
         self.assertEqual(resource.backend_refs, 1)
 
 
+    def test_reconnect_uses_fresh_connection_handle_for_delayed_resource_callback(self):
+        # The human-readable peer label is deliberately the same. The callback
+        # captures an opaque handle for the old X11 connection instance.
+        old_connection = object()
+        registry = AsyncCallbackRegistry(connections_live={old_connection})
+        device = AsyncDeviceIdentity("device-generation-1", 7)
+        resource = AsyncResourceIdentity("resource-generation-1", 42, device.identity)
+        registry.register_device(device)
+        registry.register_resource(resource)
+
+        registry.disconnect(old_connection)
+        new_connection = object()
+        registry.connections_live.add(new_connection)
+
+        self.assertEqual(
+            registry.complete_backend_callback(
+                resource, device, old_connection, token="old-connection-submit",
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(registry.emitted_events, [])
+        self.assertEqual(resource.backend_refs, 0)
+
+        # A fresh operation on the new connection can deliver, but the old
+        # callback cannot be retargeted by a reused client name.
+        replacement = AsyncResourceIdentity("resource-generation-2", 43, device.identity)
+        registry.register_resource(replacement)
+        self.assertEqual(
+            registry.complete_backend_callback(
+                replacement, device, new_connection, token="new-connection-submit",
+            ),
+            "SUCCESS",
+        )
+        self.assertEqual(
+            registry.emitted_events, [("new-connection-submit", 7, 43)]
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
