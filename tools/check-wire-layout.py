@@ -267,7 +267,7 @@ def check_events(c: Check) -> None:
         and "Nach terminal festgestelltem Wait-Ergebnis blockiert ein noch ausstehender Reply die Zerstörung nicht" in conformance,
         "conformance: specialized destroy tests must cover error precedence and terminal wait release",
     )
-    c.require(re.search(r"`WriteBuffer`.*zurückgestellter `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
+    c.require(re.search(r"`WriteBuffer`.*deferred `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
               "conformance: WriteBuffer dependency-cycle case must be covered")
     submissions = read("spec/queue-submission.md")
     c.require(re.search(r"all semaphore wait/signal reservations and internal references are committed atomically", submissions, re.S) is not None,
