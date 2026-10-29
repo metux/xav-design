@@ -190,15 +190,6 @@ class GoldenWireVectorTests(unittest.TestCase):
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
             for name, path in spec_by_request.items()
         }
-        spec_by_request = {
-            "CreateCommandPool": "command-recording.md",
-            "CreateSemaphore": "synchronization.md",
-            "DestroySemaphore": "synchronization.md",
-        }
-        spec_text = {
-            name: (ROOT / "spec" / path).read_text(encoding="utf-8")
-            for name, path in spec_by_request.items()
-        }
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         contracts = {
             "CreateBuffer": {
@@ -286,7 +277,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                         f"{request}: {field} must be {wire_type} at offset {offset}",
                     )
                 if isinstance(contract["length"], int):
-                    self.assertRegex(section, r"(?i)(?:fixed\s+)?(?:total length|Gesamtlänge):?\s*" + str(contract["length"]) + r"\s*bytes?\b",
+                    self.assertRegex(section, r"(?i)(?:has a\s+)?(?:fixed\s+)?total length(?: of)?:?\s*" + str(contract["length"]) + r"\s*bytes?\b",
                                      f"{request}: normative fixed length changed")
                 else:
                     self.assertIn(contract["length"], section, f"{request}: normative variable-length formula changed")
@@ -304,6 +295,15 @@ class GoldenWireVectorTests(unittest.TestCase):
     def test_golden_scalar_values_decode_against_normative_fields(self) -> None:
         """Decode every scalar in every fixture using normative offsets and types."""
         import re
+        spec_by_request = {
+            "CreateCommandPool": "command-recording.md",
+            "CreateSemaphore": "synchronization.md",
+            "DestroySemaphore": "synchronization.md",
+        }
+        spec_text = {
+            name: (ROOT / "spec" / path).read_text(encoding="utf-8")
+            for name, path in spec_by_request.items()
+        }
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         contracts = {
             "CreateBuffer": [
