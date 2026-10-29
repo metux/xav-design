@@ -5976,7 +5976,7 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
     def test_late_present_callback_cannot_release_reused_semaphore_identity(self) -> None:
         # Device loss quarantines the old semaphore generation. A newly
         # allocated semaphore may reuse the same public XID and token values,
-        # but an old backend callback must remain bound to the old object.
+        # but a duplicate backend callback must remain bound to the old object.
         old_shared = SharedBinarySemaphore()
         old_present = PresentState(
             valid_wait_xids=(True,),
@@ -5989,10 +5989,16 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         ).accepted)
         self.assertEqual(mark_present_device_lost(old_present), "SUCCESS")
         self.assertEqual(old_shared.wait_reservation, ("present", 44))
-        # Simulate retirement of the old reservation while backend cleanup is
-        # still outstanding; the callback retains old_shared, not new_shared.
-        old_shared.wait_reservation = None
 
+        # The first late callback retires the old reservation but cannot make
+        # the old, lost semaphore reusable.
+        self.assertEqual(
+            finish_present_wait(old_present, 44, 0, consumed=True), "SUCCESS"
+        )
+        self.assertIsNone(old_shared.wait_reservation)
+        self.assertEqual(old_shared.signal_state, BinarySignalState.UNTRUSTED)
+
+        # A new semaphore generation can be used with the same public token.
         new_shared = SharedBinarySemaphore()
         new_present = PresentState(
             valid_wait_xids=(True,),
@@ -6004,12 +6010,14 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
             new_present, PresentRequest(token=44, wait_indices=(0,))
         ).accepted)
         before_new = copy.deepcopy(new_shared)
+
+        # A duplicate old callback must neither release nor rewrite the new
+        # generation's reservation, even though token/index values coincide.
         self.assertEqual(
-            finish_present_wait(old_present, 44, 0, consumed=True), "BadValue"
+            finish_present_wait(old_present, 44, 0, consumed=False), "BadValue"
         )
         self.assertEqual(new_shared, before_new)
         self.assertEqual(new_shared.wait_reservation, ("present", 44))
-        self.assertEqual(old_shared.signal_state, BinarySignalState.UNTRUSTED)
 
     def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
         # One accepted Submit signal is reserved by Present. Both API models
