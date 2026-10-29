@@ -223,11 +223,11 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382850,
+        "allocation_size": 72623859790382856,
         "memory_type_index": 2,
         "reserved": 0
       },
-      "wire_hex": "900008000a00000004030201d0c0b0a000070605040302010200000000000000"
+      "wire_hex": "900008000a00000004030201d0c0b0a008070605040302010200000000000000"
     },
     {
       "name": "AllocateMemory-big-endian",
@@ -240,11 +240,11 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382850,
+        "allocation_size": 72623859790382856,
         "memory_type_index": 2,
         "reserved": 0
       },
-      "wire_hex": "900000080a00000001020304a0b0c0d001020304050607000000000200000000"
+      "wire_hex": "900000080a00000001020304a0b0c0d001020304050607080000000200000000"
     },
     {
       "name": "FreeMemory-little-endian",
@@ -286,9 +286,9 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382850
+        "memory_offset": 72623859790382856
       },
-      "wire_hex": "900007000c00000004030201d0c0b0a0443322110007060504030201"
+      "wire_hex": "900007000c00000004030201d0c0b0a0443322110807060504030201"
     },
     {
       "name": "BindBufferMemory-big-endian",
@@ -302,9 +302,9 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382850
+        "memory_offset": 72623859790382856
       },
-      "wire_hex": "900000070c00000001020304a0b0c0d0112233440102030405060700"
+      "wire_hex": "900000070c00000001020304a0b0c0d0112233440102030405060708"
     }
   ]
 }
