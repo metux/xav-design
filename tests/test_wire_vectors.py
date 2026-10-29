@@ -211,6 +211,85 @@ class GoldenWireVectorTests(unittest.TestCase):
                     self.assertEqual(vector["length_bytes"], expected_length,
                                      f"{vector['name']}: fixture length disagrees with normative length contract")
 
+    def test_golden_scalar_values_decode_against_normative_fields(self) -> None:
+        """Decode every scalar in every fixture using normative offsets and types."""
+        import re
+        memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
+        contracts = {
+            "CreateBuffer": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "buffer_xid", "I"),
+                (16, "CARD64", "size", "Q"),
+                (24, "CARD32", "usage_flags", "I"),
+                (28, "CARD32", "reserved", "I"),
+            ],
+            "WriteBuffer": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "buffer_xid", "I"),
+                (16, "CARD64", "buffer_offset", "Q"),
+                (24, "CARD32", "data_length", "I"),
+            ],
+            "ReadBuffer": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "buffer_xid", "I"),
+                (16, "CARD64", "buffer_offset", "Q"),
+                (24, "CARD32", "data_length", "I"),
+            ],
+        }
+        sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
+        for vector in self.vectors:
+            request = vector["request"]
+            section_match = re.search(
+                r"^##\\s+\\d+(?:\\.\\d+)*\\s+`" + re.escape(request) + r"`\\s*$",
+                memory, re.M,
+            )
+            self.assertIsNotNone(section_match, f"{request}: normative section missing")
+            next_heading = re.search(r"^##\\s+", memory[section_match.end():], re.M)
+            section = memory[section_match.start():section_match.end() + next_heading.start()] if next_heading else memory[section_match.start():]
+            wire = bytes.fromhex(vector["wire_hex"])
+            endian = "<" if vector["byte_order"] == "little" else ">"
+            with self.subTest(vector=vector["name"]):
+                # The common header also contains normative scalar values.
+                self.assertEqual(wire[0], vector["major_opcode"])
+                self.assertEqual(wire[1], 0, "X11 data byte is reserved zero")
+                self.assertEqual(struct.unpack_from(endian + "H", wire, 2)[0], vector["length_bytes"] // 4)
+                self.assertEqual(wire[4], vector["subopcode"])
+                self.assertEqual(wire[5], vector["flags"])
+                self.assertEqual(struct.unpack_from(endian + "H", wire, 6)[0], 0, "common-header reserved field")
+                for offset, wire_type, field, fmt in contracts[request]:
+                    # Ensure the normative document still names the same field/type/offset.
+                    table_row = (
+                        r"(?m)^\\|\\s*" + str(offset) + r"\\s*\\|\\s*" + wire_type +
+                        r"\\s*\\|\\s*`?" + re.escape(field) + r"`?[^|]*\\|"
+                    )
+                    prose_row = (
+                        r"(?m)^- Offset " + str(offset) + r": `?" + wire_type +
+                        r"\\s+" + re.escape(field) + r"`?\\s*$"
+                    )
+                    if wire_type == "XID":
+                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape("Device-XID" if field == "device_xid" else "Buffer-XID") + r"\\s*$"
+                    self.assertTrue(
+                        re.search(table_row, section) or re.search(prose_row, section),
+                        f"{request}: normative spec must define {wire_type} {field} at offset {offset}",
+                    )
+                    value = struct.unpack_from(endian + fmt, wire, offset)[0]
+                    self.assertEqual(value, vector["fields"][field], f"{field}: decoded wire value differs from fixture")
+                    self.assertEqual(sizes[wire_type], struct.calcsize(fmt))
+                fields = vector["fields"]
+                if request == "CreateBuffer":
+                    self.assertGreater(fields["size"], 0, "size MUST be positive")
+                    self.assertNotEqual(fields["usage_flags"], 0, "usage_flags MUST select at least one usage bit")
+                    self.assertEqual(fields["usage_flags"] & ~0x7F, 0, "usage_flags bits 7..31 are reserved")
+                    self.assertEqual(fields["reserved"], 0, "reserved MUST be zero")
+                else:
+                    self.assertGreater(fields["data_length"], 0, "data_length MUST be positive")
+                    if request == "WriteBuffer":
+                        payload = bytes.fromhex(fields["payload_hex"])
+                        self.assertEqual(len(payload), fields["data_length"])
+                        self.assertEqual(wire[28:28 + fields["data_length"]], payload)
+                        padding = wire[28 + fields["data_length"]:]
+                        self.assertEqual(padding, bytes((-fields["data_length"]) % 4))
+                        self.assertEqual(padding, bytes.fromhex(fields["padding_hex"]))
     def test_golden_vectors_match_central_request_registry(self) -> None:
         # Golden bytes can otherwise remain internally consistent while the
         # normative subopcode assignment changes underneath them.
