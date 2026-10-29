@@ -1513,6 +1513,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
     """Guard documented request-local orderings that refine the common baseline."""
     wire = read("spec/wire-protocol.md")
     errors = read("spec/errors.md")
+    devices = read("spec/devices.md")
     memory = read("spec/memory-buffers.md")
     shaders = read("spec/shaders-pipelines.md")
     command = read("spec/command-recording.md")
