@@ -262,9 +262,9 @@ def check_events(c: Check) -> None:
     errors = read("spec/errors.md")
     c.require(
         "`DestroyFence` and `DestroySemaphore` validate the fixed request length before resolving XIDs" in conformance
-        and "nicht-terminalen Submission zugeordnet" in conformance
-        and "Queue-Wait/-Signal" in conformance
-        and "Nach terminal festgestelltem Wait-Ergebnis blockiert ein noch ausstehender Reply die Zerstörung nicht" in conformance,
+        and "non-terminal submission" in conformance
+        and "queue wait/signal" in conformance
+        and "Once a terminal wait result has been observed in serialized order, a reply that is still pending does not block destruction" in conformance,
         "conformance: specialized destroy tests must cover error precedence and terminal wait release",
     )
     c.require(re.search(r"`WriteBuffer`.*deferred `QueueSubmit`.*`DEPENDENCY_FAILED`", conformance, re.S) is not None,
