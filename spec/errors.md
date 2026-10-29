@@ -317,7 +317,9 @@ The complete XID, ownership, field-value, and Device error mapping is defined in
 
 ### `UpdateDescriptorSets`
 
-The complete XID, ownership, field-value, and Device error mapping is defined in the unified table above. The request is atomic on every error.
+Normative precedence (all phases cover the entire request before mutation): (1) exact `20 + 36 * write_count` length, checked arithmetic, and X11 request limit (`BadLength`); (2) `write_count > 0`, zero reserved fields, valid typeless fields, assigned descriptor type, and no duplicate (Set, binding, array-element) slot (`BadValue`); (3) resolve `device_xid`, then each write's Set XID and Buffer XID in wire order (`BadValue` for unknown/non-live XIDs); (4) validate live types, client ownership, and Device association (`BadMatch`); (5) Device availability (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) validate all Layout/Binding/Array-Slot/Descriptor-Type compatibility, Buffer binding/usage, alignment, range/overflow, and device limits (`BadMatch`); (7) reject if any affected Set is used by already accepted work (`INVALID_SYNCHRONIZATION_STATE`). A later phase MUST NOT override an earlier one. In particular, Device Loss precedes compatibility and pending-use errors.
+
+Updates are all-or-nothing. The server prepares and retains every replacement Buffer reference before changing any slot. If validation or reference preparation fails, all newly prepared references are released and every old slot and reference edge remains unchanged. Once preparation succeeds, all slots and reference edges are swapped in one serialized commit; only then may old references be released. No partial slot update or transient loss of a required Buffer reference is permitted.
 
 Jeder Request muss vor Implementierungsfreigabe eine vollständige, konkrete Fehlerzuordnung besitzen.
 
