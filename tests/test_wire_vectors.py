@@ -288,6 +288,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "semaphore_xid": "Semaphore-XID",
                             "command_buffer_xid": "Command-Buffer-XID",
                             "fence_xid": "Fence-XID",
+                            "command_buffer_xid": "Command-Buffer-XID",
+                            "fence_xid": "Fence-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     else:
