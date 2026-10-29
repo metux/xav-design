@@ -61,7 +61,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         fence = synchronization.split("## `GetFenceStatus`", 1)[1].split("\n## ", 1)[0]
         fence_phases = (
-            "exact 24-byte length (`BadLength`)",
+            "exact 16-byte length (`BadLength`)",
             "resolve Device XID, then Fence XID in wire order (`BadValue`",
             "validate live resource types, client ownership, and Device association (`BadMatch`)",
             "atomically snapshot the server-stored Fence state",
@@ -97,7 +97,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         destroy_errors = errors.split("- `DestroyFence`:", 1)[1].split("\n- `DestroySemaphore`:", 1)[0]
 
         wait_phases = (
-            "exact total length (`BadLength`)",
+            "exact 24-byte length (`BadLength`)",
             "resolve Device XID, then Fence XID in wire order (`BadValue`",
             "validate live resource types, client ownership, and Device association (`BadMatch`)",
             "inspect Device state and the Fence/wait outcome",
@@ -105,8 +105,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         positions = [wait.find(phase) for phase in wait_phases]
         self.assertTrue(all(position >= 0 for position in positions), positions)
         self.assertEqual(positions, sorted(positions))
-        self.assertIn("Device loss yields the normal reply status `DEVICE_LOST`, even if the Fence is already `FAILED`", wait)
-        self.assertIn("Device Loss has already been detected and established as the terminal result", wait)
+        self.assertIn("Device loss already established at that snapshot yields the normal reply status `DEVICE_LOST`, even if the Fence is already `FAILED`", wait)
+        self.assertIn("Device Loss wins only if it is detected and committed before another terminal outcome", wait)
         self.assertIn("Device loss returns normal reply status `DEVICE_LOST`, even if the stored Fence state is `FAILED`", wait_errors)
         self.assertIn("Device Loss has already been detected and established as terminal", wait_errors)
 
@@ -473,7 +473,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         error_section = errors.split("- `ResetFence`:", 1)[1].split("\n- `WaitForFence`:", 1)[0]
         phases = (
             "exact total length (`BadLength`)",
-            "resolve Device XID, then Fence XID (`BadValue`",
+            "resolve Device XID, then Fence XID in wire order (`BadValue`",
             "validate live resource types, client ownership, and Device association (`BadMatch`)",
             "check Device state (`DEVICE_LOST`)",
             "validate the mutable Fence state",
@@ -976,7 +976,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Destroying Fences") ]
         reset_order = (
             "exact total length (`BadLength`)",
-            "resolve Device XID, then Fence XID (`BadValue` for unknown or non-live XIDs)",
+            "resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs)",
             "check Device state (`DEVICE_LOST`)",
             "Only `SIGNALED` and `FAILED` may be reset",
             "reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`",
