@@ -1,3 +1,7 @@
+## ResetFence and stale submission-callback race audit — 2026-10-29
+
+The Fence audit now explicitly serializes `ResetFence` with submission terminalization and new submission acceptance. A successful reset advances an internal use generation; each accepted submission captures the Fence identity, generation, and association. Delayed or duplicate callbacks from an older submission cannot overwrite a Fence after reset/reuse. Regression coverage asserts the ordering contract and the stale-callback guard. Static tests do not replace runtime race testing against a backend.
+
 ## Fence wait/destruction precedence audit — 2026-10-29
 
 The fence request cross-check found that `WaitForFence` described its XID failures and terminal statuses but did not state the complete validation order, while `DestroyFence` described lifetime blockers without explicitly ordering them after XID/type/ownership checks. The normative synchronization chapter and central error map now agree on the phase order. `WaitForFence` explicitly keeps `DEVICE_LOST` and `DEVICE_DESTROYED` as normal reply statuses and defines their race by which terminal result was established first; `DestroyFence` explicitly permits logical cleanup after Device Loss unless ordinary validation or a live lifetime blocker rejects it. Regression coverage checks phase ordering, status precedence, and agreement between the two chapters. These are static specification checks, not evidence of runtime backend conformance.

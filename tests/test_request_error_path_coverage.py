@@ -345,6 +345,35 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("`DEVICE_LOST` takes precedence over the Fence state", error_section)
         self.assertIn("Reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`", section)
 
+    def test_reset_fence_is_serialized_with_submission_completion_and_stale_callbacks(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+        reset = synchronization.split("## `ResetFence`", 1)[1].split("\n## ", 1)[0]
+        terminal = queue.split("**Atomic terminal transition:**", 1)[1].split("\n## ", 1)[0]
+
+        for phrase in (
+            "form one serialized atomic operation against submission terminalization and new `QueueSubmit` acceptance",
+            "if the Fence is `PENDING` at the operation's linearization point, reset is rejected",
+            "Each Fence has an internal, non-wire-visible use generation",
+            "A completion/failure callback may update the Fence only if",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, reset)
+
+        for phrase in (
+            "captured internal Fence identity, internal use generation, and submission association",
+            "MUST be ignored even if the numeric Fence XID has since been reused",
+            "one atomic terminalization step",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, terminal)
+
+        self.assertIn("`ResetFence` gegen den terminalen Submission-Callback", conformance)
+        self.assertIn("verspätete oder doppelte Callbacks der alten Submission", conformance)
+        self.assertIn("weder `FAILED` zurück auf `SIGNALED` setzen", conformance)
+
+
     def test_signal_semaphore_counter_and_reservation_errors_have_distinct_precedence(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")

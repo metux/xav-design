@@ -213,6 +213,8 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `ResetFence`: Fence ist weder `SIGNALED` noch `FAILED` | `INVALID_SYNCHRONIZATION_STATE` |
 | `ResetFence`: Device verloren | `DEVICE_LOST` |
 
+`ResetFence` serializes its state check and reset atomically against submission completion and new `QueueSubmit` acceptance. A reset of `PENDING` is rejected without mutation; a terminal state committed first may be reset. Each accepted submission captures the Fence's internal identity and use generation. Completion/failure callbacks may mutate Fence state only when their terminal transition wins and the captured identity, generation, and current submission association still match. Reset and reuse invalidate stale callback authority; delayed/duplicate callbacks from older submissions cannot overwrite a newer `PENDING`, `SIGNALED`, `FAILED`, or reset state.
+
 Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler gemeldet; der Request darf keine Teiländerungen hinterlassen. Nach angenommener `QueueSubmit` werden Ausführungsfehler ausschließlich über die Submission-Terminalereignisse und zugehörige Zustände gemeldet, nicht als nachträglicher X11-Fehler. Ein nicht verfügbarer Zustand wird nur dann gemeldet, wenn der Request tatsächlich weitere Backend-Arbeit benötigt; rein logische Bereinigung nach Device Loss folgt den jeweiligen Lebensdauerregeln.
 
 ### Synchronization Requests
