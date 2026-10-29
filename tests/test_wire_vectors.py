@@ -191,8 +191,8 @@ class GoldenWireVectorTests(unittest.TestCase):
                             r"(?m)^- Offset " + str(offset) + r": `" +
                             wire_type + r" " + re.escape(field) + r"`\s*$"
                         )
-                    self.assertRegex(
-                        section, r"(?:" + table_row + r")|(?:" + prose_row + r")",
+                    self.assertTrue(
+                        re.search(table_row, section) or re.search(prose_row, section),
                         f"{request}: {field} must be {wire_type} at offset {offset}",
                     )
                 if isinstance(contract["length"], int):
