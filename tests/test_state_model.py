@@ -6057,6 +6057,48 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
         self.assertIs(shared.wait_reservation_owner, new_present)
         self.assertEqual(shared.wait_reservation, ("present", 45))
 
+    def test_late_submit_callback_cannot_release_reused_signal_token(self) -> None:
+        shared = SharedBinarySemaphore()
+        old_submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            old_submit, SubmitRequest(token=46, signal_indices=(0,), signal_values=(0,))
+        ), "SUCCESS")
+        self.assertEqual(shared.signal_reservation, ("submit", 46))
+        self.assertIs(shared.signal_reservation_owner, old_submit)
+
+        # Simulate the old operation's reservation being retired while its
+        # callback record remains pending, then reuse the same token and object.
+        shared.signal_reservation = None
+        shared.signal_reservation_owner = None
+        shared.signal_state = BinarySignalState.UNSIGNALED
+        old_submit.binary_signal_states[0] = BinarySignalState.UNSIGNALED
+        new_submit = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            new_submit, SubmitRequest(token=46, signal_indices=(0,), signal_values=(0,))
+        ), "SUCCESS")
+        before = copy.deepcopy(shared)
+        self.assertIs(shared.signal_reservation_owner, new_submit)
+
+        self.assertEqual(finish_submission(old_submit, 46, success=True), "SUCCESS")
+        self.assertEqual(shared, before)
+        self.assertIs(shared.signal_reservation_owner, new_submit)
+        self.assertEqual(shared.signal_reservation, ("submit", 46))
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+
     def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
         # One accepted Submit signal is reserved by Present. Both API models
         # observe Device Loss repeatedly; callbacks then arrive in either
