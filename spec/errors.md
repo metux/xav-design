@@ -135,6 +135,13 @@ Normative validation precedence, matching [Event Selection](events.md#event-sele
 
 A later phase MUST NOT override an earlier error. In particular, malformed framing and scalar errors take precedence over XID errors, and XID/type/ownership errors take precedence over the XGE prerequisite and queue existence check. For `CONNECTION` scope, the device XID and queue tuple are not resolved because their required values are zero. Every error leaves the previous event selection unchanged.
 
+The following individual mappings are retained as explicit error summaries and MUST be interpreted according to the ordered phases above:
+- An incorrect request length results in `BadLength`.
+- If the client has not successfully negotiated at least XGE 1.0 with `GEQueryVersion`, the request results in `BadMatch`.
+- An unknown scope, nonzero flags/reserved fields, invalid mask bits, or nonzero fields outside the selected scope results in `BadValue`.
+- An unknown or non-live Device XID, or an invalid queue-family/queue index, results in `BadValue`; a live resource of the wrong type or foreign client ownership results in `BadMatch`.
+- An error leaves the previous event selection unchanged; a successful request atomically replaces only the selection for the specified scope.
+
 ### `CreateDescriptorSetLayout`
 
 - An incorrect request length or a payload inconsistent with `binding_count` returns `BadLength`.
