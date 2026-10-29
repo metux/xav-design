@@ -962,6 +962,41 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, errors)
                 self.assertIn(phrase, conformance)
 
+
+    def test_pipeline_create_mixed_failures_have_explicit_scoped_oracles(self):
+        pipelines = (ROOT / "spec/shaders-pipelines.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        cases = {
+            "CreatePipelineLayout": (
+                "malformed count-derived length combined with an occupied target XID",
+                "valid length but nonzero reserved fields or invalid stage/range syntax",
+                "valid framing and scalar fields with an invalid or occupied target XID",
+                "`DEVICE_LOST` takes precedence over device-dependent range/compatibility checks",
+            ),
+            "CreateComputePipeline": (
+                "malformed length combined with an invalid Entry Point",
+                "valid length with empty/non-ASCII/NUL-containing Entry Point",
+                "valid framing and Entry Point with an invalid or occupied target XID",
+                "`DEVICE_LOST` precedes backend pipeline creation",
+            ),
+        }
+        sections = {
+            "CreatePipelineLayout": pipelines.split("## 6.7 `CreatePipelineLayout`", 1)[1].split("\n## 6.8", 1)[0],
+            "CreateComputePipeline": pipelines.split("## 6.8 Compute Pipeline", 1)[1].split("\n### Descriptor-slot", 1)[0],
+        }
+        for request, phrases in cases.items():
+            with self.subTest(request=request):
+                for phrase in phrases:
+                    self.assertIn(phrase, conformance)
+                self.assertIn(request, sections[request])
+                self.assertIn("`BadLength`", errors)
+                self.assertIn("`BadIDChoice`", errors)
+                self.assertIn("`DEVICE_LOST`", sections[request])
+                self.assertIn("target XID unallocated", conformance)
+        self.assertIn("no input XID is resolved first", conformance)
+        self.assertIn("leaves no public target resource", conformance)
+
     def test_pipeline_creation_and_resource_destroy_lifetimes_match_error_precedence(self):
         pipelines = (ROOT / "spec/shaders-pipelines.md").read_text(encoding="utf-8")
         lifetime = self.lifetime
