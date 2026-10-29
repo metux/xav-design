@@ -119,6 +119,22 @@ class QueuePresentStateModelTests(unittest.TestCase):
         )
         self.assert_rejected_atomically(state, PresentRequest(), "DEVICE_LOST")
 
+    def test_device_loss_beats_accepted_token_reuse(self) -> None:
+        state = self.state(device_lost=True, accepted_tokens={1})
+        self.assert_rejected_atomically(state, PresentRequest(token=1), "DEVICE_LOST")
+
+    def test_release_then_device_loss_invalidates_image_and_keeps_first_terminal(self) -> None:
+        state = self.state()
+        self.assertTrue(queue_present(state, PresentRequest(token=912)).accepted)
+        self.assertEqual(finish_present_image_release(state, 912), "SUCCESS")
+        self.assertEqual(state.image_state, ImageState.AVAILABLE)
+        self.assertEqual(finish_present_terminal(state, 912, "DEVICE_LOST"), "SUCCESS")
+        self.assertEqual(state.terminal_present_status, {912: "DEVICE_LOST"})
+        self.assertEqual(state.image_state, ImageState.INVALID)
+        snapshot = copy.deepcopy(state)
+        self.assertEqual(finish_present_terminal(state, 912, "SUCCESS"), "BadValue")
+        self.assertEqual(state, snapshot)
+
     def test_queue_index_error_beats_surface_lifecycle(self) -> None:
         state = self.state(valid_image_index=False, surface_lost=True)
         self.assert_rejected_atomically(state, PresentRequest(), "BadValue")
