@@ -263,9 +263,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         }
         for request, phases in ordered_phases.items():
             with self.subTest(request=request):
-                positions = [section.index(phase) for phase in phases]
+                request_line = next(line for line in section.splitlines() if line.startswith("- `" + request + "`:"))
+                positions = [request_line.index(phase) for phase in phases]
                 self.assertEqual(positions, sorted(positions))
-                self.assertIn("`" + request + "`", section)
 
         cases = (
             "truncated or count-mismatched payload combined with invalid binding fields and an occupied target returns `BadLength`",
@@ -274,8 +274,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "malformed count-derived length combined with zero/duplicate pool-size entries and an occupied target returns `BadLength`",
             "zero descriptor count, duplicate pool-size types, unsupported descriptor type, or nonzero reserved field combined with an occupied target returns `BadValue`",
             "malformed count-derived length combined with zero count, duplicate/occupied target Set XIDs, and unknown Device/Pool/Layout XIDs returns `BadLength`",
-            "zero count or nonzero reserved fields combined with any target collision or unknown input XID returns `BadValue`",
-            "an occupied or duplicate target Set XID anywhere in the target array plus an unknown Device, Pool, or Layout XID returns `BadIDChoice`",
+            "valid framing with zero count or nonzero reserved fields combined with any target collision or unknown input XID returns `BadValue`",
+            "valid framing/scalars with an occupied or duplicate target Set XID anywhere in the target array plus an unknown Device, Pool, or Layout XID returns `BadIDChoice`",
             "a collision in the final target entry and assert that no earlier Set becomes live",
             "insufficient pool capacity or injected backend allocation failure returns `ALLOCATION_FAILED`",
             "the entire target batch is absent after every failure",
