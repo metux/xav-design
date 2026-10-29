@@ -783,7 +783,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         reset_fence = synchronization[synchronization.index("## `ResetFence`"):synchronization.index("## Destroying Fences") ]
         reset_order = (
             "exact total length (`BadLength`)",
-            "resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs)",
+            "resolve Device XID, then Fence XID (`BadValue` for unknown or non-live XIDs)",
             "check Device state (`DEVICE_LOST`)",
             "Only `SIGNALED` and `FAILED` may be reset",
             "reset from `PENDING` or `UNSIGNALED` results in `INVALID_SYNCHRONIZATION_STATE`",
