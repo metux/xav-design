@@ -1091,5 +1091,122 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("no late callback changes the payload state or affects a newer reservation", conformance)
 
 
+    def test_mixed_failure_oracles_are_complete_and_match_normative_phase_order(self):
+        """Cross-check the same precedence decisions in spec, error map, and test oracle."""
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        events = (ROOT / "spec/events.md").read_text(encoding="utf-8")
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
+
+        # Each entry is a concrete mixed-failure oracle, not merely a list of
+        # error names. The source order and the expected winner must both exist.
+        cases = (
+            {
+                "request": "CreateDevice",
+                "subopcode": 3,
+                "source": devices,
+                "ordered": (
+                    "Validate the complete variable-length request framing",
+                    "Validate wire-level and scalar fields",
+                    "Validate `device_xid` as a create-XID",
+                    "Resolve `physical_device_xid`",
+                ),
+                "oracle": "Malformed total length plus an invalid or occupied `device_xid` → `BadLength`",
+                "winner": "`BadLength`",
+            },
+            {
+                "request": "GetPhysicalDeviceProperty",
+                "subopcode": 5,
+                "source": devices,
+                "ordered": (
+                    "exact 16-byte request length (`BadLength`)",
+                    "resolve the Physical-Device XID (`BadValue` if unknown or non-live)",
+                    "validate that the live resource is a Physical Device (`BadMatch` otherwise)",
+                    "validate `property_atom` as a server-known X11 Atom (`BadAtom` if invalid)",
+                ),
+                "oracle": "malformed length + invalid Atom → `BadLength`",
+                "winner": "`BadLength`",
+            },
+            {
+                "request": "CreateSurface",
+                "subopcode": 41,
+                "source": presentation,
+                "ordered": (
+                    "exact request length",
+                    "scalar",
+                    "`surface_xid`",
+                    "`window_xid`",
+                ),
+                "oracle": "Mixed-failure `CreateSurface`: after exact-length and scalar validation, an invalid/already occupied `surface_xid` combined with an unknown/destroyed/non-Window `window_xid` returns `BadIDChoice`",
+                "winner": "`BadIDChoice`",
+            },
+            {
+                "request": "SelectEvents",
+                "subopcode": 4,
+                "source": events,
+                "ordered": (
+                    "exact 32-byte request length",
+                    "validate scope, zero-valued unused fields",
+                    "resolve `device_xid`",
+                    "validate live type and client ownership",
+                    "require successful XGE 1.0-or-later negotiation",
+                ),
+                "oracle": "XID/type/ownership errors take precedence over the XGE prerequisite",
+                "winner": "`BadMatch`",
+            },
+            {
+                "request": "SignalSemaphore",
+                "subopcode": 34,
+                "source": synchronization,
+                "ordered": (
+                    "(1) exact total length of 24 bytes (`BadLength`)",
+                    "(2) resolve the device XID, then the semaphore XID",
+                    "(3) check resource type, client/device ownership, and cross-device association",
+                    "(4) check device state",
+                    "(5) check timeline type and signal-value/reservation consistency",
+                ),
+                "oracle": "in particular, `DEVICE_LOST` after valid resource resolution takes precedence over a Binary-semaphore type error",
+                "winner": "`DEVICE_LOST`",
+            },
+            {
+                "request": "WaitSemaphores",
+                "subopcode": 32,
+                "source": synchronization,
+                "ordered": (
+                    "length and checked arithmetic",
+                    "semaphore_count != 0",
+                    "resolve the device XID and then semaphore XIDs in array order",
+                    "check resource type, client/device ownership, and cross-device association",
+                    "check device state",
+                    "verify that all semaphores are timeline semaphores",
+                ),
+                "oracle": "in particular, `DEVICE_LOST` after valid XIDs and ownership takes precedence over a Semaphore type error",
+                "winner": "`DEVICE_LOST`",
+            },
+        )
+        conformance = self.conformance
+        for case in cases:
+            request = case["request"]
+            with self.subTest(request=request):
+                self.assertIn(f"`{request}` | {case['subopcode']} |", registry)
+                self.assertIn(f"`{request}`", self.errors)
+                self.assertIn(f"`{request}`", conformance)
+                self.assertIn(case["oracle"], conformance)
+                self.assertIn(case["winner"], self.errors)
+                positions = [case["source"].find(phase) for phase in case["ordered"]]
+                self.assertTrue(all(position >= 0 for position in positions), positions)
+                self.assertEqual(positions, sorted(positions), f"{request}: normative phase order changed")
+
+        # Detect accidental omission of a mixed-failure oracle: the listed
+        # cases must stay unique and the presentation case must remain in the
+        # presentation-profile section rather than an unrelated chapter.
+        self.assertEqual(len({case["request"] for case in cases}), len(cases))
+        presentation_oracles = self.conformance.split(
+            "## Presentation-profile conformance cases", 1
+        )[1]
+        self.assertIn(cases[2]["oracle"], presentation_oracles)
+
+
 if __name__ == "__main__":
     unittest.main()
