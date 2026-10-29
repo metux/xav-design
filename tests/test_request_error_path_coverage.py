@@ -868,6 +868,32 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("Device loss (without destruction) serializes first, `CreateSwapchain` returns `DEVICE_LOST`", presentation)
 
 
+    def test_queue_present_terminal_and_image_release_are_independent(self):
+        model = (ROOT / "tests/xa_state_model.py").read_text(encoding="utf-8")
+        tests = (ROOT / "tests/test_state_model.py").read_text(encoding="utf-8")
+        presentation = (ROOT / "spec/presentation.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+        for phrase in (
+            "finish_present_image_release",
+            "image_release_tokens",
+            "successful terminal outcome MUST NOT by itself make an image AVAILABLE",
+        ):
+            self.assertIn(phrase, model + presentation)
+        for phrase in (
+            "test_present_image_release_before_terminal_completion",
+            "test_resize_between_terminal_completion_and_image_release_invalidates_image",
+            "test_device_loss_after_present_terminal_but_before_release_cannot_revive_image",
+            "test_present_failure_can_release_only_when_backend_proves_reuse_safe",
+        ):
+            self.assertIn(phrase, tests)
+        for phrase in (
+            "Model both callback orders explicitly",
+            "preserve an already committed terminal SUCCESS",
+            "A duplicate release callback is mutation-free",
+        ):
+            self.assertIn(phrase, conformance)
+
+
     def test_reset_and_host_wait_validation_phases_agree_across_chapters(self):
         recording = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
