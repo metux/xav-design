@@ -94,6 +94,8 @@ def validate_request_wire(wire: bytes, byte_order: str) -> None:
         raise ValueError("unknown byte order")
     if wire[0] < 128:
         raise ValueError("extension major opcode must be in 128..255")
+    if wire[4] == 0:
+        raise ValueError("subopcode zero is reserved")
     declared_words = int.from_bytes(wire[2:4], byte_order)
     if declared_words == 0:
         raise ValueError("zero request length is invalid; BIG-REQUESTS is unsupported")
@@ -197,6 +199,13 @@ class GoldenWireVectorTests(unittest.TestCase):
             encode_request(invalid)
         with self.assertRaisesRegex(ValueError, "byte order"):
             validate_request_wire(encode_request(vector), "middle")
+
+    def test_rejects_reserved_zero_subopcode(self) -> None:
+        vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        wire = bytearray(encode_request(vector))
+        wire[4] = 0
+        with self.assertRaisesRegex(ValueError, "subopcode zero is reserved"):
+            validate_request_wire(bytes(wire), vector["byte_order"])
 
     def test_rejects_non_extension_major_opcode(self) -> None:
         vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
