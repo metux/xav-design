@@ -159,10 +159,22 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n## Request-spezifische Fehlerzuordnung", 1)[0]
         for phrase in device_order:
             self.assertIn(phrase, device_section)
+        device_positions = [device_section.index(phrase) for phrase in device_order]
+        self.assertEqual(device_positions, sorted(device_positions), "devices.md phase order must be normative")
         for phrase in errors_order:
             self.assertIn(phrase, error_section)
         for earlier, later in zip(errors_order, errors_order[1:]):
             self.assertLess(error_section.index(earlier), error_section.index(later))
+        # The conformance oracle must preserve the specific mixed-failure outcomes.
+        conformance = self.conformance.split("## `CreateDevice` mixed-failure and atomicity tests", 1)[1].split("\n\n- A server without", 1)[0]
+        for phrase in (
+            "Malformed total length plus an invalid or occupied `device_xid` → `BadLength`",
+            "Invalid or occupied `device_xid` plus unknown `physical_device_xid` → `BadIDChoice`",
+            "Unknown `physical_device_xid` plus missing XGE 1.0 negotiation → `BadValue`",
+            "An unavailable Physical Device plus a well-formed but unsupported queue/feature/extension request → `DEVICE_UNAVAILABLE`",
+        ):
+            with self.subTest(mixed_failure=phrase):
+                self.assertIn(phrase, conformance)
 
     def test_discovery_allocation_and_transfer_negative_matrix(self):
         section = self.conformance.split(
