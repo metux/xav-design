@@ -948,22 +948,35 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # Keep the normative chapter and central error map synchronized. This
         # prevents an implementation from checking XGE before scalar/XID errors
         # in one code path but after them in another.
-        event_start = events.index("Normative validation precedence is:")
+        event_heading = events.index("## Event Selection")
+        event_start = events.index("Normative validation precedence is:", event_heading)
         event_section = events[event_start:events.index("The masks depend on the scope:", event_start)]
-        error_start = errors.index("Normative validation precedence, matching [Event Selection]")
+        error_heading = errors.index("### `SelectEvents`")
+        error_start = errors.index("Normative validation precedence, matching [Event Selection]", error_heading)
         error_section = errors[error_start:errors.index("\n\n###", error_start)]
-        phases = (
-            "exact 32-byte request length",
-            "scope, unused fields",
-            "resolve `device_xid`",
-            "validate live type and client ownership",
-            "successful XGE 1.0-or-later negotiation",
-            "queue-family/index tuple",
-            "atomically replace",
-        )
+        phases_by_section = {
+            "events": (
+                "exact 32-byte request length",
+                "validate scope, zero-valued unused fields",
+                "resolve `device_xid`",
+                "validate live type and client ownership",
+                "require successful XGE 1.0-or-later negotiation",
+                "validate the queue-family/index tuple",
+                "atomically replace",
+            ),
+            "errors": (
+                "exact 32-byte request length",
+                "scope, unused fields, reserved fields",
+                "resolve `device_xid`",
+                "validate live type and client ownership",
+                "require successful XGE 1.0-or-later negotiation",
+                "validate the queue-family/index tuple",
+                "atomically replace",
+            ),
+        }
         for section_name, section in (("events", event_section), ("errors", error_section)):
             with self.subTest(section=section_name):
-                positions = [section.index(phrase) for phrase in phases]
+                positions = [section.index(phrase) for phrase in phases_by_section[section_name]]
                 self.assertEqual(positions, sorted(positions))
                 self.assertIn("A later phase MUST NOT override an earlier error", section)
 
