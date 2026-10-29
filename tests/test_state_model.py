@@ -5971,3 +5971,65 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
             registry.emitted_events,
             [("destroyed-buffer-op", device.xid, 0)],
         )
+
+
+    def test_repeated_loss_and_duplicate_cross_api_callbacks_preserve_terminal_payload(self) -> None:
+        # One accepted Submit signal is reserved by Present. Both API models
+        # observe Device Loss repeatedly; callbacks then arrive in either
+        # order, including a stale duplicate. The canonical payload must stay
+        # quarantined and every reservation must be retired at most once.
+        for order in (("present", "submit"), ("submit", "present")):
+            with self.subTest(order=order):
+                shared = SharedBinarySemaphore()
+                submit = SubmissionModel(
+                    command_buffers=[
+                        CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)
+                    ],
+                    wait_states=[WaitState.READY],
+                    binary_signal_states=[BinarySignalState.UNSIGNALED],
+                    signal_slots=[None],
+                    semaphore_kinds=[SemaphoreKind.BINARY],
+                    shared_semaphores=[shared],
+                )
+                self.assertEqual(queue_submit(
+                    submit, SubmitRequest(token=970, signal_indices=(0,), signal_values=(0,))
+                ), "SUCCESS")
+                present = PresentState(
+                    valid_wait_xids=(True,),
+                    wait_states=[WaitState.READY],
+                    binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+                    shared_semaphores=[shared],
+                )
+                self.assertTrue(queue_present(
+                    present, PresentRequest(token=971, wait_indices=(0,))
+                ).accepted)
+
+                self.assertEqual(mark_device_lost(submit), "SUCCESS")
+                self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+                self.assertEqual(mark_device_lost(submit), "SUCCESS")
+                self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+                self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+                self.assertIsNone(shared.signal_reservation)
+                self.assertEqual(shared.wait_reservation, ("present", 971))
+
+                callbacks = {
+                    "submit": lambda: finish_submission(submit, 970, success=True),
+                    "present": lambda: finish_present_wait(
+                        present, 971, 0, consumed=True
+                    ),
+                }
+                for callback in order:
+                    self.assertEqual(callbacks[callback](), "SUCCESS")
+                    # Repeated lifecycle notification and stale callback must
+                    # not rewrite the payload or release the other operation.
+                    self.assertEqual(mark_device_lost(submit), "SUCCESS")
+                    self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+                    self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+                    self.assertIsNone(shared.signal_reservation)
+                before = copy.deepcopy((shared, submit, present))
+                self.assertEqual(finish_submission(submit, 970, success=False), "BadValue")
+                self.assertEqual(finish_present_wait(
+                    present, 971, 0, consumed=False
+                ), "BadValue")
+                self.assertEqual((shared, submit, present), before)
+                self.assertIsNone(shared.wait_reservation)
