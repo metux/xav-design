@@ -5665,7 +5665,7 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
 
 
     def test_present_image_release_before_terminal_completion(self):
-        state = self.state()
+        state = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(state, PresentRequest(token=907)).accepted)
         self.assertEqual(finish_present_image_release(state, 907), "SUCCESS")
         self.assertEqual(state.image_state, ImageState.AVAILABLE)
@@ -5677,7 +5677,7 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(state, snapshot)
 
     def test_resize_between_terminal_completion_and_image_release_invalidates_image(self):
-        state = self.state()
+        state = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(state, PresentRequest(token=908)).accepted)
         self.assertEqual(finish_present_terminal(state, 908, "SUCCESS"), "SUCCESS")
         self.assertEqual(state.image_state, ImageState.PRESENT_PENDING)
@@ -5690,7 +5690,7 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(state, snapshot)
 
     def test_device_loss_after_present_terminal_but_before_release_cannot_revive_image(self):
-        state = self.state()
+        state = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(state, PresentRequest(token=909)).accepted)
         self.assertEqual(finish_present_terminal(state, 909, "SUCCESS"), "SUCCESS")
         self.assertEqual(state.image_state, ImageState.PRESENT_PENDING)
@@ -5701,14 +5701,14 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(state.image_state, ImageState.INVALID)
 
     def test_present_failure_can_release_only_when_backend_proves_reuse_safe(self):
-        reusable = self.state()
+        reusable = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(reusable, PresentRequest(token=910)).accepted)
         self.assertEqual(finish_present_terminal(reusable, 910, "PRESENTATION_FAILED"), "SUCCESS")
         self.assertEqual(reusable.image_state, ImageState.PRESENT_PENDING)
         self.assertEqual(finish_present_image_release(reusable, 910, reusable=True), "SUCCESS")
         self.assertEqual(reusable.image_state, ImageState.AVAILABLE)
 
-        unsafe = self.state()
+        unsafe = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
         self.assertTrue(queue_present(unsafe, PresentRequest(token=911)).accepted)
         self.assertEqual(finish_present_terminal(unsafe, 911, "PRESENTATION_FAILED"), "SUCCESS")
         self.assertEqual(finish_present_image_release(unsafe, 911, reusable=False), "SUCCESS")
