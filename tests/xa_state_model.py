@@ -1004,6 +1004,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             state.pending_binary_waits.append((request.token, i))
             if i < len(state.shared_semaphores):
                 state.shared_semaphores[i].wait_reservation = ("submit", request.token)
+                state.shared_semaphores[i].wait_reservation_owner = state
     for i in request.command_buffer_indices:
         state.command_buffers[i].lifecycle = CommandBufferLifecycle.PENDING
         state.pending_command_buffers.append((request.token, i))
@@ -1202,8 +1203,10 @@ def finish_submission(
                 state.binary_signal_states[index] = BinarySignalState.UNTRUSTED
             if signal_state is BinarySignalState.UNTRUSTED:
                 state.wait_states[index] = WaitState.UNTRUSTED
-                if shared is not None and shared.wait_reservation == ("submit", token):
+                if (shared is not None and shared.wait_reservation == ("submit", token)
+                        and shared.wait_reservation_owner is state):
                     shared.wait_reservation = None
+                    shared.wait_reservation_owner = None
                 continue
             if signal_state is BinarySignalState.SIGNAL_PENDING:
                 signal_token = next(
@@ -1246,8 +1249,10 @@ def finish_submission(
             # lifecycle path has retired the old reservation and a newer
             # operation now owns the semaphore, the stale local mirror must
             # not overwrite that newer operation's payload state.
-            if shared.wait_reservation == ("submit", token):
+            if (shared.wait_reservation == ("submit", token)
+                    and shared.wait_reservation_owner is state):
                 shared.wait_reservation = None
+                shared.wait_reservation_owner = None
                 shared.signal_state = state.binary_signal_states[index]
     state.pending_timeline_waits = [
         wait for wait in state.pending_timeline_waits if wait[0] != token
