@@ -530,6 +530,24 @@ The following combinations MUST be tested as single requests, and the reported e
 - `CreateComputePipeline`: valid framing and Entry Point with an invalid or occupied target XID plus unknown Device/Layout/Shader XIDs returns `BadIDChoice); otherwise unknown input XIDs return `BadValue), live wrong types/cross-Device resources return `BadMatch), and `DEVICE_LOST` precedes backend pipeline creation.
 - Every rejected create leaves the target XID unallocated and creates no partial backend object or leaked internal reference. Injected backend allocation failure is reached only after all preceding phases pass and also leaves no public target resource.
 
+### Descriptor creation mixed-failure vectors
+
+The following combinations MUST be issued as individual requests. Each test checks the exact winning error, that no public target XID is created, and that no pool capacity or internal reference is retained after rejection.
+
+- `CreateDescriptorSetLayout`: truncated or count-mismatched payload combined with invalid binding fields and an occupied target returns `BadLength`.
+- `CreateDescriptorSetLayout`: valid framing with duplicate binding numbers, zero descriptor count, unsupported descriptor type/stage bits, or nonzero reserved fields combined with an occupied target returns `BadValue`.
+- `CreateDescriptorSetLayout`: valid framing/scalars with an invalid or occupied target XID plus an unknown Device XID returns `BadIDChoice`; the Device XID is not resolved first.
+- `CreateDescriptorSetLayout`: valid target plus unknown Device returns `BadValue`; a live wrong-type or foreign-owned Device resource returns `BadMatch`; after valid Device resolution/ownership, Device Loss returns `DEVICE_LOST) before backend allocation. Injected backend failure returns `ALLOCATION_FAILED`.
+- `CreateDescriptorPool`: malformed count-derived length combined with zero/duplicate pool-size entries and an occupied target returns `BadLength`.
+- `CreateDescriptorPool`: valid framing with zero descriptor count, duplicate pool-size types, unsupported descriptor type, or nonzero reserved field combined with an occupied target returns `BadValue`.
+- `CreateDescriptorPool`: valid framing/scalars with an occupied pool target plus an unknown Device XID returns `BadIDChoice); a valid target plus unknown Device returns `BadValue); live wrong type/foreign ownership returns `BadMatch); Device Loss precedes pool backend allocation and returns `DEVICE_LOST).
+- `AllocateDescriptorSets`: malformed count-derived length combined with zero count, duplicate/occupied target Set XIDs, and unknown Device/Pool/Layout XIDs returns `BadLength).
+- `AllocateDescriptorSets`: valid framing with zero count or nonzero reserved fields combined with any target collision or unknown input XID returns `BadValue).
+- `AllocateDescriptorSets`: valid framing/scalars with an occupied or duplicate target Set XID anywhere in the target array plus an unknown Device, Pool, or Layout XID returns `BadIDChoice). Include a collision in the final target entry and assert that no earlier Set becomes live.
+- `AllocateDescriptorSets`: all target Set XIDs valid, then an unknown Device/Pool/Layout XID returns `BadValue); a live wrong type, foreign ownership, or cross-Device resource returns `BadMatch); Device Loss after valid XID/type/ownership resolution returns `DEVICE_LOST) before Pool/Layout compatibility or capacity checks.
+- `AllocateDescriptorSets`: with valid Device/Pool/Layout resources, incompatible Pool/Layout returns `BadMatch); insufficient pool capacity or injected backend allocation failure returns `ALLOCATION_FAILED). Both failures leave every target Set unallocated and restore the Pool's available capacity and all reference counts exactly.
+- For all three requests, rejected creates leave the target XIDs available for a subsequent valid create. For `AllocateDescriptorSets`, assert the entire target batch is absent after every failure, including a late collision, a later invalid Layout, Device Loss, insufficient capacity, and backend failure.
+
 ## Remaining resource, descriptor, and device rejection matrix
 
 This matrix closes cross-request gaps not covered by isolated golden replies. Each test must assert the precise X11 error or protocol status, unchanged state on rejection, and absence of delayed events for work that was never accepted.
