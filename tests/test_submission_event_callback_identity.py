@@ -6,6 +6,7 @@ import unittest
 from xa_state_model import (
     AsyncDeviceIdentity,
     AsyncSubmissionEventRegistry,
+    ConnectionInstance,
     AsyncSubmissionIdentity,
 )
 
@@ -130,6 +131,44 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
             registry.emitted_events,
             [("ASYNC_ERROR", new_connection, 7, 1202)],
         )
+
+
+    def test_connection_handles_are_distinct_and_retired_handle_cannot_reactivate(self):
+        registry = AsyncSubmissionEventRegistry()
+        old_connection = registry.connect("same-client")
+        old_device = AsyncDeviceIdentity("device-old-connection", 71)
+        registry.register_device(old_connection, old_device)
+        old_submission = AsyncSubmissionIdentity(
+            token=1301, connection_identity=old_connection,
+            device_identity=old_device.identity, device_xid=71, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(old_submission), "SUCCESS")
+        registry.disconnect(old_connection)
+
+        new_connection = registry.connect("same-client")
+        self.assertIsInstance(old_connection, ConnectionInstance)
+        self.assertIsNot(old_connection, new_connection)
+        self.assertNotEqual(old_connection, new_connection)
+        new_device = AsyncDeviceIdentity("device-new-connection", 72)
+        registry.register_device(new_connection, new_device)
+        replacement = AsyncSubmissionIdentity(
+            token=1301, connection_identity=new_connection,
+            device_identity=new_device.identity, device_xid=72, queue_key=(0, 0),
+        )
+        self.assertEqual(registry.accept_submission(replacement), "SUCCESS")
+
+        # Late completion retires only the old detached object; it cannot
+        # resolve the same numeric token on the newly connected instance.
+        self.assertEqual(
+            registry.terminal_callback(old_connection, 1301, "COMPLETE"), "SUCCESS"
+        )
+        self.assertIsNone(replacement.terminal)
+        self.assertIn((new_connection, 1301), registry.submissions)
+        self.assertEqual(
+            registry.terminal_callback(new_connection, 1301, "COMPLETE"), "SUCCESS"
+        )
+        self.assertEqual(replacement.terminal, "COMPLETE")
+        self.assertEqual(registry.terminal_callback(old_connection, 1302, "COMPLETE"), "BadValue")
 
 
 if __name__ == "__main__":
