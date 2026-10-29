@@ -772,9 +772,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # prevents an implementation from checking XGE before scalar/XID errors
         # in one code path but after them in another.
         event_start = events.index("Normative validation precedence is:")
-        event_section = events[event_start:events.index("\\n\\n", event_start)]
+        event_section = events[event_start:events.index("\n\n", event_start)]
         error_start = errors.index("Normative validation precedence, matching [Event Selection]")
-        error_section = errors[error_start:errors.index("\\n\\n", error_start)]
+        error_section = errors[error_start:errors.index("\n\n", error_start)]
         phases = (
             "exact 32-byte request length",
             "scope, unused fields",
