@@ -6012,11 +6012,12 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                 self.assertIsNone(shared.signal_reservation)
                 self.assertEqual(shared.wait_reservation, ("present", 971))
 
-                # Device loss terminalizes both accepted operations before
-                # backend completion. Their late callbacks must be rejected
-                # without mutating the canonical payload or releasing a
-                # reservation owned by the other operation.
-                before = copy.deepcopy((shared, submit, present))
+                # Device Loss commits the logical terminal result immediately,
+                # but accepted backend callbacks still own cleanup records.
+                # The first callback for each operation must therefore retire
+                # only its own record; duplicates must be mutation-free.
+                self.assertEqual(submit.terminal_submission_status[970], "DEVICE_LOST")
+                self.assertEqual(present.terminal_present_status[971], "DEVICE_LOST")
                 callbacks = {
                     "submit": lambda: finish_submission(submit, 970, success=True),
                     "present": lambda: finish_present_wait(
@@ -6024,14 +6025,26 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
                     ),
                 }
                 for callback in order:
-                    self.assertEqual(callbacks[callback](), "BadValue")
+                    self.assertEqual(callbacks[callback](), "SUCCESS")
+                    self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
+                    self.assertIsNone(shared.signal_reservation)
+                    if callback == "submit":
+                        self.assertEqual(submit.pending_submissions, [])
+                        self.assertEqual(shared.wait_reservation, ("present", 971))
+                    else:
+                        self.assertIsNone(shared.wait_reservation)
+                    # More loss notifications between callbacks must not
+                    # resurrect a signal or steal the other callback's hold.
                     self.assertEqual(mark_device_lost(submit), "SUCCESS")
                     self.assertEqual(mark_present_device_lost(present), "SUCCESS")
                     self.assertEqual(shared.signal_state, BinarySignalState.UNTRUSTED)
                     self.assertIsNone(shared.signal_reservation)
+                terminal_snapshot = copy.deepcopy((shared, submit, present))
                 self.assertEqual(finish_submission(submit, 970, success=False), "BadValue")
                 self.assertEqual(finish_present_wait(
                     present, 971, 0, consumed=False
                 ), "BadValue")
-                self.assertEqual((shared, submit, present), before)
+                self.assertEqual((shared, submit, present), terminal_snapshot)
+                self.assertEqual(submit.terminal_submission_status[970], "DEVICE_LOST")
+                self.assertEqual(present.terminal_present_status[971], "DEVICE_LOST")
                 self.assertIsNone(shared.wait_reservation)
