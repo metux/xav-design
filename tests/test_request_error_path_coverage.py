@@ -1014,3 +1014,6 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("interleave Device Loss with wait-consumption, signal-success and signal-failure callbacks", conformance)
         self.assertIn("no late callback changes the payload state or affects a newer reservation", conformance)
 
+
+if __name__ == "__main__":
+    unittest.main()
