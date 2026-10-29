@@ -762,5 +762,40 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("All validation occurs before creating the logical device", devices)
         self.assertIn("device_xid remains unallocated", devices)
 
+
+    def test_select_events_mixed_failure_precedence_matches_normative_chapters(self):
+        events = (ROOT / "spec/events.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        # Keep the normative chapter and central error map synchronized. This
+        # prevents an implementation from checking XGE before scalar/XID errors
+        # in one code path but after them in another.
+        event_section = events[events.index("## Event Selection: `SelectEvents`"):]
+        error_section = errors[errors.index("## `SelectEvents`"):errors.index("### `CreateDescriptorSetLayout`")]
+        phases = (
+            "exact 32-byte request length",
+            "scope",
+            "resolve `device_xid`",
+            "validate live type and client ownership",
+            "successful XGE 1.0-or-later negotiation",
+            "queue-family/index tuple",
+            "atomically replace",
+        )
+        for section_name, section in (("events", event_section), ("errors", error_section)):
+            with self.subTest(section=section_name):
+                positions = [section.index(phrase) for phrase in phases]
+                self.assertEqual(positions, sorted(positions))
+                self.assertIn("A later phase MUST NOT override an earlier error", section)
+
+        # Rejection must preserve the prior selection even if earlier phases passed.
+        for phrase in (
+            "previous selection remains unchanged",
+            "XID/type/ownership errors take precedence over the XGE prerequisite",
+        ):
+            with self.subTest(atomicity=phrase):
+                self.assertIn(phrase, events + errors)
+        self.assertIn("`SelectEvents`", conformance)
+
 if __name__ == "__main__":
     unittest.main()
