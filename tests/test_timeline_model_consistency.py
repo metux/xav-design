@@ -85,6 +85,18 @@ class TimelineModelConsistencyTests(unittest.TestCase):
         self.assertEqual(submit, submit_before)
         self.assert_counters_match(host, submit)
 
+    def test_equal_to_visible_counter_is_bad_value_in_both_models(self) -> None:
+        host = Timeline(counter=2)
+        submit = submission_state()
+        host_before = copy.deepcopy(host)
+        submit_before = copy.deepcopy(submit)
+
+        self.assertEqual(host.signal_host(2), "BadValue")
+        self.assertEqual(signal_timeline_host(submit, 0, 2), "BadValue")
+        self.assertEqual(host, host_before)
+        self.assertEqual(submit, submit_before)
+        self.assert_counters_match(host, submit)
+
     def test_out_of_order_gpu_success_keeps_counter_monotonic(self) -> None:
         host = Timeline(counter=2)
         submit = submission_state()

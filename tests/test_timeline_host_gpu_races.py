@@ -86,11 +86,17 @@ class TimelineHostGpuRaceTests(unittest.TestCase):
         before = copy.deepcopy(state)
         self.assertEqual(
             signal_timeline_host(state, 0, 9),
-            "INVALID_SYNCHRONIZATION_STATE",
+            "BadValue",
         )
         self.assertEqual(state, before)
         self.assertEqual(signal_timeline_host(state, 0, 12), "SUCCESS")
         self.assertEqual(state.signal_counters, [12])
+
+    def test_host_signal_equal_to_counter_is_bad_value_without_reservations(self) -> None:
+        state = self.state()
+        before = copy.deepcopy(state)
+        self.assertEqual(signal_timeline_host(state, 0, 2), "BadValue")
+        self.assertEqual(state, before)
 
     def test_late_gpu_callback_cannot_decrease_counter_after_host_progress(self) -> None:
         state = self.state()

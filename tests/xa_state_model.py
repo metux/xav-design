@@ -1038,7 +1038,7 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
     if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
         return "BadValue"
     if value <= state.signal_counters[semaphore_index]:
-        return "INVALID_SYNCHRONIZATION_STATE"
+        return "BadValue"
     pending_values = [
         pending_value
         for _token, index, pending_value in state.pending_timeline_signals

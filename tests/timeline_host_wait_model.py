@@ -38,7 +38,7 @@ class Timeline:
         if self.lifecycle == "DEVICE_DESTROYED":
             return "DEVICE_DESTROYED"
         if value <= self.counter:
-            return "INVALID_SYNCHRONIZATION_STATE"
+            return "BadValue"
         if any(value >= reserved for reserved in self.pending_gpu_signals.values()):
             return "INVALID_SYNCHRONIZATION_STATE"
         self.counter = value
