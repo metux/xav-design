@@ -261,7 +261,7 @@ def check_events(c: Check) -> None:
     conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
     c.require(
-        "`DestroyFence` und `DestroySemaphore` prüfen die feste Request-Länge vor XID-Auflösung" in conformance
+        "`DestroyFence` and `DestroySemaphore` validate the fixed request length before resolving XIDs" in conformance
         and "nicht-terminalen Submission zugeordnet" in conformance
         and "Queue-Wait/-Signal" in conformance
         and "Nach terminal festgestelltem Wait-Ergebnis blockiert ein noch ausstehender Reply die Zerstörung nicht" in conformance,
