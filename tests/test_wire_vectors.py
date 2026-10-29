@@ -108,6 +108,19 @@ def encode_request(vector: dict) -> bytes:
         data.extend(struct.pack(endian + "II", fields["device_xid"], fields["command_buffer_xid"]))
     elif request == "DestroyFence":
         data.extend(struct.pack(endian + "II", fields["device_xid"], fields["fence_xid"]))
+    elif request == "CreateFence":
+        if fields["create_flags"] != 0 or fields["reserved"] != 0:
+            raise ValueError("CreateFence flags and reserved field must be zero")
+        data.extend(struct.pack(
+            endian + "IIII", fields["device_xid"], fields["fence_xid"],
+            fields["create_flags"], fields["reserved"],
+        ))
+    elif request == "ResetFence":
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields["fence_xid"]))
+    elif request == "SignalSemaphore":
+        data.extend(struct.pack(
+            endian + "IIQ", fields["device_xid"], fields["semaphore_xid"], fields["signal_value"],
+        ))
     elif request == "BindBufferMemory":
         data.extend(struct.pack(
             endian + "IIIQ",
@@ -194,6 +207,9 @@ class GoldenWireVectorTests(unittest.TestCase):
             "DestroyCommandPool": "command-recording.md",
             "ResetCommandBuffer": "command-recording.md",
             "DestroyFence": "synchronization.md",
+            "CreateFence": "synchronization.md",
+            "ResetFence": "synchronization.md",
+            "SignalSemaphore": "synchronization.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -257,6 +273,20 @@ class GoldenWireVectorTests(unittest.TestCase):
             "DestroyFence": {
                 "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid")],
                 "length": 16,
+            },
+            "CreateFence": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid"),
+                           (16, "CARD32", "create_flags"), (20, "CARD32", "reserved")],
+                "length": 24,
+            },
+            "ResetFence": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid")],
+                "length": 16,
+            },
+            "SignalSemaphore": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "semaphore_xid"),
+                           (16, "CARD64", "signal_value")],
+                "length": 24,
             },
         }
         for request, contract in contracts.items():
@@ -395,6 +425,21 @@ class GoldenWireVectorTests(unittest.TestCase):
             "DestroyFence": [
                 (8, "XID", "device_xid", "I"),
                 (12, "XID", "fence_xid", "I"),
+            ],
+            "CreateFence": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "fence_xid", "I"),
+                (16, "CARD32", "create_flags", "I"),
+                (20, "CARD32", "reserved", "I"),
+            ],
+            "ResetFence": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "fence_xid", "I"),
+            ],
+            "SignalSemaphore": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "semaphore_xid", "I"),
+                (16, "CARD64", "signal_value", "Q"),
             ],
         }
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
