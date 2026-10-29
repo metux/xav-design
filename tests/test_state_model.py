@@ -6291,14 +6291,29 @@ class SubmissionTokenAbaTests(unittest.TestCase):
             device_identity=device.identity, device_xid=71, queue_key=(0, 0),
         )
         self.assertEqual(registry.accept_submission(replacement), "BadValue")
-        before = copy.deepcopy((registry.submissions, registry.detached_submissions,
-                                registry.emitted_events, old, replacement))
+        # Snapshot containers shallowly and object fields separately. A deep
+        # copy clones identity-bearing connection/device objects, whose equality
+        # is intentionally identity-based; that made an unchanged callback state
+        # compare unequal to its snapshot.
+        before = (
+            dict(registry.submissions),
+            dict(registry.detached_submissions),
+            list(registry.emitted_events),
+            dict(vars(old)),
+            dict(vars(replacement)),
+        )
         self.assertEqual(
             registry.terminal_callback(client_a, 1201, "FAILED"), "BadValue"
         )
         self.assertEqual(
-            (registry.submissions, registry.detached_submissions,
-             registry.emitted_events, old, replacement), before,
+            (
+                dict(registry.submissions),
+                dict(registry.detached_submissions),
+                list(registry.emitted_events),
+                dict(vars(old)),
+                dict(vars(replacement)),
+            ),
+            before,
         )
 
     def test_token_scope_is_new_after_disconnect_and_reconnect(self) -> None:
