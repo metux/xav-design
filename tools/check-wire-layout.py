@@ -2547,8 +2547,9 @@ def check_xge_abi(c: Check) -> None:
             struct.pack_into(endian + "H", frame, 8, event_id)
             def valid_xge(candidate: bytes) -> bool:
                 return (len(candidate) >= 32 and len(candidate) % 4 == 0 and
-                        candidate[0] == 35 and
+                        candidate[0] == 35 and 128 <= candidate[1] <= 255 and
                         len(candidate) == 32 + 4 * struct.unpack_from(endian + "I", candidate, 4)[0] and
+                        struct.unpack_from(endian + "H", candidate, 8)[0] == event_id and
                         candidate[10:32] == bytes(22))
             c.require(valid_xge(bytes(frame)), f"XGE frame ({name}/{order_name}): valid frame rejected")
             bad_length = bytearray(frame)
@@ -2560,6 +2561,12 @@ def check_xge_abi(c: Check) -> None:
             bad_response = bytearray(frame)
             bad_response[0] = 2
             c.require(not valid_xge(bytes(bad_response)), f"XGE negative ({name}/{order_name}): wrong response type accepted")
+            bad_extension = bytearray(frame)
+            bad_extension[1] = 0x7f
+            c.require(not valid_xge(bytes(bad_extension)), f"XGE negative ({name}/{order_name}): invalid extension opcode accepted")
+            bad_event_type = bytearray(frame)
+            struct.pack_into(endian + "H", bad_event_type, 8, (event_id + 1) % 7)
+            c.require(not valid_xge(bytes(bad_event_type)), f"XGE negative ({name}/{order_name}): mismatched event type accepted")
 
 
 
