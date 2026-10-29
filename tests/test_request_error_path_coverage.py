@@ -54,6 +54,40 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         )
         self.assertIn("FreeMemory", self.lifetime)
 
+    def test_sync_status_query_precedence_matches_error_map(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+
+        fence = synchronization.split("## `GetFenceStatus`", 1)[1].split("\n## ", 1)[0]
+        fence_phases = (
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Fence XID in wire order (`BadValue`",
+            "validate live resource types, client ownership, and Device association (`BadMatch`)",
+            "atomically snapshot the server-stored Fence state",
+        )
+        positions = [fence.find(phase) for phase in fence_phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Device Loss is not an error for this state-only query", fence)
+
+        counter = synchronization.split("## `GetSemaphoreCounterValue`", 1)[1].split("\n## ", 1)[0]
+        counter_phases = (
+            "exact total length (`BadLength`)",
+            "resolve Device XID, then Semaphore XID in wire order (`BadValue`",
+            "validate live resource type, client ownership, and Device association (`BadMatch`)",
+            "check Device state (`DEVICE_LOST`)",
+            "require a Timeline semaphore (`BadMatch`)",
+        )
+        positions = [counter.find(phase) for phase in counter_phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("serialized against Device Loss", counter)
+        self.assertIn("GetFenceStatus", errors)
+        self.assertIn("GetSemaphoreCounterValue", errors)
+        self.assertIn("Device Loss is not an error", conformance)
+        self.assertIn("counter snapshot", conformance)
+
     def test_wait_for_fence_and_destroy_fence_precedence_matches_error_map(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
         errors = self.errors

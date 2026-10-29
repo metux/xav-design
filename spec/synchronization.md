@@ -47,9 +47,7 @@ Timeline semaphores have a monotonically increasing unsigned 64-bit counter.
 
 ## `GetSemaphoreCounterValue`
 
-Request: exactly 16 bytes; device XID at offset 8 and semaphore XID at offset 12. Any other total length results in `BadLength`. Unknown or non-live device or semaphore XIDs result in `BadValue`; a live resource of the wrong type, foreign client/device ownership, or cross-device use results in `BadMatch`.
-
-Timeline semaphores only. If the logical device is already known to be lost, the request is rejected with `DEVICE_LOST`: the wire reply has no status field that can reliably distinguish an error from a counter value. The server MUST NOT return a purported current counter as a successful reply.
+Request: exactly 16 bytes; device XID at offset 8 and semaphore XID at offset 12. Normative validation precedence is: (1) exact total length (`BadLength`); (2) resolve Device XID, then Semaphore XID in wire order (`BadValue` for unknown or non-live XIDs); (3) validate live resource type, client ownership, and Device association (`BadMatch`); (4) check Device state (`DEVICE_LOST`); (5) require a Timeline semaphore (`BadMatch`). Earlier phases take precedence when multiple conditions are invalid. The Device-state check and counter snapshot are serialized against Device Loss: if loss is already established at the check, the request fails with `DEVICE_LOST`; otherwise the query returns the counter snapshot at its linearization point. The wire reply has no status field that can reliably distinguish an error from a counter value, so the server MUST NOT return a purported current counter as a successful reply after Device Loss has been established.
 
 Reply:
 
@@ -145,7 +143,7 @@ Unknown or non-live device XIDs result in `BadValue`; a live resource of the wro
 
 ## `GetFenceStatus`
 
-Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12. Other lengths result in `BadLength`. Unknown or non-live device or fence XIDs result in `BadValue`; a live resource of the wrong type, foreign client/device ownership, or cross-device use results in `BadMatch`. The query returns the server-stored fence state, including after device loss.
+Request: exactly 16 bytes; device XID at offset 8 and fence XID at offset 12. Normative validation precedence is: (1) exact total length (`BadLength`); (2) resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs); (3) validate live resource types, client ownership, and Device association (`BadMatch`); (4) atomically snapshot the server-stored Fence state. Device Loss is not an error for this state-only query. The returned state is the value at the query's linearization point, including after Device Loss; a concurrent state transition is observed either before or after that point, never as a partially updated state.
 
 Reply: 32 bytes.
 
