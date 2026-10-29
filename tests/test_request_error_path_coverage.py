@@ -213,6 +213,26 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("keine Backend-Arbeit", error_section)
         self.assertIn("bei Device Loss zulässig", error_section)
 
+    def test_physical_device_property_error_precedence_is_explicit_and_consistent(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        errors = self.errors
+        section = devices.split("## `GetPhysicalDeviceProperty`", 1)[1].split("\\n## ", 1)[0]
+        phases = (
+            "exact 16-byte request length (`BadLength`)",
+            "resolve the Physical-Device XID (`BadValue` if unknown or non-live)",
+            "validate that the live resource is a Physical Device (`BadMatch` otherwise)",
+            "validate `property_atom` as a server-known X11 Atom (`BadAtom` if invalid)",
+            "look up the Atom name in the XAverius property registry",
+        )
+        positions = [section.find(phase) for phase in phases]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("Physical-Device XID resolution (`BadValue` for unknown/non-live XIDs)", errors)
+        self.assertIn("an invalid Atom", section)
+        self.assertIn("takes precedence over an invalid Atom", errors)
+        self.assertIn("NOT_SUPPORTED", section)
+        self.assertIn("NOT_AVAILABLE", section)
+
     def test_discovery_and_memory_request_names_match_registry(self):
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
         names = (
