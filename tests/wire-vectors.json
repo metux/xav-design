@@ -350,7 +350,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": "72623859790382856"
+        "initial_value": 72623859790382856
       },
       "wire_hex": "900007001d00000004030201d0c0b0a0010000000807060504030201"
     },
@@ -366,7 +366,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": "72623859790382856"
+        "initial_value": 72623859790382856
       },
       "wire_hex": "900000071d00000001020304a0b0c0d0000000010102030405060708"
     },
