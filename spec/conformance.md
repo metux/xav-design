@@ -462,6 +462,23 @@ The following combinations MUST be issued as individual requests and checked aga
 - `FreeDescriptorSets`: Device Loss after valid XID/type/ownership resolution does not block logical freeing. Verify no Vulkan operation is attempted and internal references survive until backend quiescence.
 - For both requests, verify successful cleanup invalidates all intended public XIDs exactly once, and a repeated destroy/free using the old XID returns `BadValue` without changing any newer resource that reuses the numeric XID.
 
+
+### `UpdateDescriptorSets` mixed-failure and rollback vectors
+
+Each vector is one request. Assert the exact winning error and compare every affected Set slot, Buffer reference edge, and reference count before and after rejection.
+
+- Malformed/truncated/oversized total length or `write_count` mismatch combined with zero count, nonzero reserved fields, duplicate slots, unknown XIDs, and pending use returns `BadLength`.
+- Valid framing with zero `write_count`, either nonzero reserved field, unassigned/zero descriptor type, invalid typeless values, or duplicate (Set, binding, array-element) slots combined with unknown XIDs and Device Loss returns `BadValue`.
+- Valid framing/scalars with an unknown Device XID and later unknown Set/Buffer XIDs returns `BadValue` for the Device first; with a valid Device, place unknown Set and Buffer XIDs in later writes and verify first invalid XID in wire order wins.
+- With all XIDs known, a live wrong resource type, foreign client ownership, cross-Device Set/Buffer, or Set not belonging to the Device returns `BadMatch` before Device Loss or later compatibility/pending failures.
+- With valid XIDs/types/ownership, Device Loss combined with an invalid binding, array element, descriptor-type/layout mismatch, unbound Buffer, missing usage, bad alignment/range, or a pending Set returns `DEVICE_LOST`.
+- With a live Device, test each compatibility failure independently: nonexistent binding, out-of-range array element, descriptor type incompatible with the binding, unbound Buffer, missing required usage, zero/overflowing/out-of-bounds range, invalid alignment, and exceeded device limit. Each returns `BadMatch` before pending-state inspection.
+- With all writes compatible, a Set used by already accepted work returns `INVALID_SYNCHRONIZATION_STATE`. Put the pending Set in the final write after earlier valid writes and verify no earlier slot changes.
+- Include multiple distinct slots in one Set and across multiple Sets (valid); duplicate the same slot with identical data and with conflicting Buffer/range data (both `BadValue`).
+- Inject failure while preparing/retaining a replacement Buffer reference after at least one earlier replacement has been prepared. Require all newly prepared references to be released, all old slots and references to remain unchanged, and no transient zero-reference interval for an old Buffer.
+- On success, assert all slot contents and new Buffer reference edges become visible together; old Buffer references are released only after the atomic swap. Non-pending `EXECUTABLE` command buffers remain executable and observe the new contents on subsequent submission.
+- After each rejected request, retry with a corrected final write and verify it succeeds, proving that rollback did not poison slots, reference counts, or Set state.
+
 ## Remaining request error-path negative tests
 
 The following negative cases are mandatory in addition to the wire-vector checks. They target lifecycle and cross-resource paths where a syntactically valid request can still be rejected. For each rejected operation, verify the stated error and that public XIDs, bindings, pool membership, descriptor contents, semaphore/fence state, and retained references are unchanged unless the contract explicitly says otherwise.
