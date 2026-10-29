@@ -1890,11 +1890,14 @@ class AsyncFenceCallbackModel:
             return "BadValue"
         captured_fence.completed_tokens.add(token)
         captured_fence.pending_token = None
-        if captured_fence.live and self.fences.get(captured_fence.xid) is captured_fence:
-            # A backend success arriving after Device Loss is not a successful
-            # fence signal from the protocol's point of view.
-            captured_fence.status = (
-                "SIGNALED" if success and self._device_is_current(captured_fence)
-                else "FAILED"
-            )
+        # Always terminalize the captured internal fence, even after its
+        # public XID was invalidated by DestroyDevice. Public replacement state
+        # is never resolved by XID and therefore cannot be changed here.
+        captured_fence.status = (
+            "SIGNALED" if (
+                success and captured_fence.live
+                and self.fences.get(captured_fence.xid) is captured_fence
+                and self._device_is_current(captured_fence)
+            ) else "FAILED"
+        )
         return "SUCCESS"
