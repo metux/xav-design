@@ -189,6 +189,8 @@ Scope values:
 
 Unused fields must contain exactly the specified zero values. Unknown scope values, non-zero reserved fields, invalid mask bits, or invalid scope/field combinations result in `BadValue`. Unknown or non-live XIDs result in `BadValue`; an incorrect resource type or foreign client ownership results in `BadMatch`. A nonexistent queue within a valid device results in `BadValue`. On any error, the previous selection remains unchanged.
 
+Normative validation precedence is: (1) validate the exact 32-byte request length (`BadLength`); (2) validate scope, zero-valued unused fields, reserved fields, and profile-legal mask bits (`BadValue`); (3) for `DEVICE` and `QUEUE` scope, resolve `device_xid` (`BadValue` if unknown/non-live); (4) validate live type and client ownership (`BadMatch`); (5) require successful XGE 1.0-or-later negotiation (`BadMatch` otherwise); (6) for `QUEUE` scope, validate the queue-family/index tuple (`BadValue` if it does not identify a queue); (7) atomically replace the selection. A later phase MUST NOT override an earlier error. The previous selection is unchanged on every rejection.
+
 The masks depend on the scope:
 
 | Scope | Bit | Event |
