@@ -228,7 +228,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertTrue(all(position >= 0 for position in positions), positions)
         self.assertEqual(positions, sorted(positions))
         self.assertIn("Physical-Device XID resolution (`BadValue` for unknown/non-live XIDs)", errors)
-        self.assertIn("an invalid Atom", section)
+        self.assertIn("Atom (`BadAtom` if invalid)", section)
         self.assertIn("takes precedence over an invalid Atom", errors)
         conformance = (ROOT / "spec/conformance.md").read_text(encoding="utf-8")
         for mixed_case in ("malformed length + invalid Atom → `BadLength`", "unknown Device + invalid Atom → `BadValue`", "live non-Physical-Device XID + invalid Atom → `BadMatch`", "valid Physical Device + invalid Atom → `BadAtom`"):
