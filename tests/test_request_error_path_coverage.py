@@ -665,10 +665,12 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Validate scalar syntax and reserved fields",
             "`CreateSurface` checks `surface_xid` before resolving `window_xid`",
         )
-        for section_name, section in (("presentation", presentation), ("errors", errors)):
-            with self.subTest(section=section_name):
-                positions = [section.index(phrase) for phrase in order]
-                self.assertEqual(positions, sorted(positions))
+        positions = [errors.index(phrase, errors.index("### Normative validation precedence for the seven presentation requests")) for phrase in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn(
+            "For `CreateSurface`, validate `surface_xid` as a create-XID before resolving `window_xid`",
+            presentation,
+        )
 
         self.assertIn(
             "invalid/already occupied `surface_xid` combined with an unknown/destroyed/non-Window `window_xid` returns `BadIDChoice`",
