@@ -259,12 +259,14 @@ class GoldenXGEEventTests(unittest.TestCase):
             expected = sorted((offset, size) for offset, size in fields.values())
             actual = []
             labels_by_offset = {}
+            types_by_offset = {}
             for line in body.splitlines():
                 row = re.match(r"^\|\s*(\d+)\s*\|\s*(XID|CARD32|CARD64)\s*\|\s*(.*?)\s*\|", line)
                 if row:
                     offset = int(row.group(1))
                     actual.append((offset, sizes[row.group(2)]))
                     labels_by_offset[offset] = row.group(3)
+                    types_by_offset[offset] = row.group(2)
                     continue
                 bullet = re.match(r"^\s*- Offset (\d+):\s*(.*)$", line)
                 if bullet:
@@ -277,7 +279,26 @@ class GoldenXGEEventTests(unittest.TestCase):
                         continue
                     actual.append((offset, size))
                     labels_by_offset[offset] = tail
+                    if re.search(r"\bCARD64\b", tail):
+                        types_by_offset[offset] = "CARD64"
+                    elif re.search(r"Device-XID|Physical-Device-XID|\bXID\b", tail):
+                        types_by_offset[offset] = "XID"
+                    else:
+                        types_by_offset[offset] = "CARD32"
             self.assertEqual(sorted(actual), expected, f"{event} offsets/sizes differ from EVENT_FIELDS")
+            xid_fields = {
+                "ASYNC_ERROR": {32, 52}, "DEVICE_LOST": {32},
+                "DEVICE_STATUS_CHANGED": {32}, "DEVICE_MEMORY_PRESSURE": {32},
+                "DEVICE_IDLE": {32}, "SUBMISSION_COMPLETE": {32},
+                "SUBMISSION_FAILED": {32},
+            }
+            for offset, size in fields.values():
+                expected_type = "CARD64" if size == 8 else (
+                    "XID" if offset in xid_fields[event] else "CARD32"
+                )
+                with self.subTest(event=event, offset=offset, type=expected_type):
+                    self.assertEqual(types_by_offset.get(offset), expected_type,
+                                     f"{event}: wrong wire type at offset {offset}")
             field_patterns = {
                 "device_xid": r"Device XID|Device-XID",
                 "error_code": r"error_code",
