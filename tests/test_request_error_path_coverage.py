@@ -237,6 +237,36 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
                 self.assertIn(phrase, section)
 
 
+    def test_signal_semaphore_counter_and_reservation_errors_have_distinct_precedence(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
+        errors = self.errors
+        signal_section = synchronization.split("## `SignalSemaphore`", 1)[1].split("\n## ", 1)[0]
+        error_section = errors.split("- `SignalSemaphore`: normative precedence:", 1)[1].split("\n- `WaitSemaphores`:", 1)[0]
+        for phrase in (
+            "less than or equal to the observable counter is rejected with `BadValue`",
+            "crosses or violates an existing GPU signal reservation is rejected with `INVALID_SYNCHRONIZATION_STATE`",
+            "check device state",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, signal_section + error_section)
+        self.assertLess(
+            signal_section.index("check device state"),
+            signal_section.index("less than or equal to the observable counter"),
+        )
+        self.assertLess(
+            signal_section.index("less than or equal to the observable counter"),
+            signal_section.index("crosses or violates an existing GPU signal reservation"),
+        )
+        self.assertIn(
+            "a timeline signal value that is not greater than the observable counter results in `BadValue`",
+            queue,
+        )
+        self.assertIn(
+            "a value that exceeds the counter but is not greater than every already-reserved pending GPU signal value results in `INVALID_SYNCHRONIZATION_STATE`",
+            queue,
+        )
+
     def test_queue_submit_precedence_and_atomic_acceptance_match_error_contract(self):
         queue = (ROOT / "spec/queue-submission.md").read_text(encoding="utf-8")
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
