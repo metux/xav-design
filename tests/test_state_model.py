@@ -3318,6 +3318,62 @@ class ConcurrentAcceptedSubmissionResourceReferenceTests(unittest.TestCase):
         self.assertEqual(finish_submission(state, 801, False), "BadValue")
         self.assertEqual((descriptor_set.pending_submission_refs, buffer.accepted_uses), (0, 0))
 
+    def test_present_side_device_loss_retains_submission_resource_refs_until_callback(self) -> None:
+        shared = SharedBinarySemaphore()
+        buffer = BufferMemoryLifetime(descriptor_slot_refs=1, backend_accesses=1)
+        descriptor_set = DescriptorSetLifetime(slots={0: buffer.identity})
+        command_buffer = CommandBufferModel(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            descriptor_sets=[descriptor_set],
+            indirect_buffer_refs={buffer.identity},
+        )
+        submit = SubmissionModel(
+            command_buffers=[command_buffer],
+            buffer_registry=[buffer],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        present = PresentState(
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            shared_semaphores=[shared],
+        )
+
+        self.assertEqual(
+            queue_submit(submit, SubmitRequest(
+                token=901, command_buffer_indices=(0,),
+                signal_indices=(0,), signal_values=(0,),
+            )),
+            "SUCCESS",
+        )
+        self.assertEqual((buffer.accepted_uses, descriptor_set.pending_submission_refs), (1, 1))
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.PENDING)
+
+        # Present observes device loss first. The submission's terminal outcome
+        # becomes DEVICE_LOST immediately, but its own callback still owns the
+        # cleanup obligation for command-buffer, descriptor-set and buffer refs.
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(submit.terminal_submission_status[901], "DEVICE_LOST")
+        self.assertEqual(submit.pending_submissions, [901])
+        self.assertEqual(submit.pending_command_buffers, [(901, 0)])
+        self.assertEqual((buffer.accepted_uses, descriptor_set.pending_submission_refs), (1, 1))
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.PENDING)
+        self.assertEqual(buffer.backend_accesses, 1)
+        self.assertEqual(buffer.internal_state, "ACTIVE")
+
+        self.assertEqual(finish_submission(submit, 901, success=True), "SUCCESS")
+        self.assertEqual(submit.pending_submissions, [])
+        self.assertEqual(submit.pending_command_buffers, [])
+        self.assertEqual((buffer.accepted_uses, descriptor_set.pending_submission_refs), (0, 0))
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.INVALID)
+        self.assertEqual(buffer.backend_accesses, 1)
+        self.assertEqual(submit.terminal_submission_status[901], "DEVICE_LOST")
+        before = copy.deepcopy((submit, buffer, descriptor_set, command_buffer))
+        self.assertEqual(finish_submission(submit, 901, success=False), "BadValue")
+        self.assertEqual((submit, buffer, descriptor_set, command_buffer), before)
+
     def test_descriptor_update_keeps_each_submission_snapshot_until_its_callback(self) -> None:
         old = BufferMemoryLifetime(identity="buffer-old", descriptor_slot_refs=1)
         new = BufferMemoryLifetime(identity="buffer-new", memory_identity="memory-B")
