@@ -571,6 +571,92 @@
         "signal_value": 72623859790382850
       },
       "wire_hex": "900000062000000001020304a0b0c0d00102030405060700"
+    },
+    {
+      "name": "GetSemaphoreCounterValue-little-endian",
+      "byte_order": "little",
+      "request": "GetSemaphoreCounterValue",
+      "major_opcode": 144,
+      "subopcode": 30,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "semaphore_xid": 2695938256
+      },
+      "wire_hex": "900004001e00000004030201d0c0b0a0"
+    },
+    {
+      "name": "GetSemaphoreCounterValue-big-endian",
+      "byte_order": "big",
+      "request": "GetSemaphoreCounterValue",
+      "major_opcode": 144,
+      "subopcode": 30,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "semaphore_xid": 2695938256
+      },
+      "wire_hex": "900000041e00000001020304a0b0c0d0"
+    },
+    {
+      "name": "GetFenceStatus-little-endian",
+      "byte_order": "little",
+      "request": "GetFenceStatus",
+      "major_opcode": 144,
+      "subopcode": 35,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256
+      },
+      "wire_hex": "900004002300000004030201d0c0b0a0"
+    },
+    {
+      "name": "GetFenceStatus-big-endian",
+      "byte_order": "big",
+      "request": "GetFenceStatus",
+      "major_opcode": 144,
+      "subopcode": 35,
+      "flags": 0,
+      "length_bytes": 16,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256
+      },
+      "wire_hex": "900000042300000001020304a0b0c0d0"
+    },
+    {
+      "name": "WaitForFence-little-endian",
+      "byte_order": "little",
+      "request": "WaitForFence",
+      "major_opcode": 144,
+      "subopcode": 36,
+      "flags": 0,
+      "length_bytes": 24,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256,
+        "timeout_ns": 72623859790382850
+      },
+      "wire_hex": "900006002400000004030201d0c0b0a00007060504030201"
+    },
+    {
+      "name": "WaitForFence-big-endian",
+      "byte_order": "big",
+      "request": "WaitForFence",
+      "major_opcode": 144,
+      "subopcode": 36,
+      "flags": 0,
+      "length_bytes": 24,
+      "fields": {
+        "device_xid": 16909060,
+        "fence_xid": 2695938256,
+        "timeout_ns": 72623859790382850
+      },
+      "wire_hex": "900000062400000001020304a0b0c0d00102030405060700"
     }
   ]
 }
