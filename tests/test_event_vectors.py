@@ -636,24 +636,15 @@ class GoldenXGEEventTests(unittest.TestCase):
 
     def test_every_reserved_header_and_payload_padding_byte_must_be_zero(self):
         """Flip each reserved byte individually so no padding position escapes validation."""
-        reserved_ranges = [(10, 32)]
-        for event, offset in EVENT_RESERVED_OFFSETS.items():
-            reserved_ranges.append((offset, offset + 4))
+        reserved_ranges = [(None, 10, 32)]
+        for event_id, offsets in EVENT_RESERVED_OFFSETS.items():
+            for offset in offsets:
+                reserved_ranges.append((event_id, offset, offset + 4))
         for vector in self.vectors:
             order = vector["byte_order"]
-            for start, end in reserved_ranges:
-                if end > vector["total_bytes"]:
+            for event_id, start, end in reserved_ranges:
+                if event_id is not None and vector["event_type"] != event_id:
                     continue
-                # Only test payload-reserved ranges on the matching event type.
-                if start >= 32 and vector["event_type"] not in (
-                    event_id for event_id, fields in EVENT_RESERVED_OFFSETS.items()
-                ):
-                    continue
-                if start >= 32:
-                    field_event = next((name for name, fields in EVENT_FIELDS.items()
-                                        if fields.get("reserved") == (start, end - start)), None)
-                    if field_event != vector["event"]:
-                        continue
                 for offset in range(start, end):
                     wire = bytearray(encode_event(vector))
                     wire[offset] = 1
