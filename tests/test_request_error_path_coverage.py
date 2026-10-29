@@ -216,7 +216,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
     def test_physical_device_property_error_precedence_is_explicit_and_consistent(self):
         devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
         errors = self.errors
-        section = devices.split("## `GetPhysicalDeviceProperty`", 1)[1].split("\\n## ", 1)[0]
+        section = devices.split("## `GetPhysicalDeviceProperty`", 1)[1].split("\n## ", 1)[0]
         phases = (
             "exact 16-byte request length (`BadLength`)",
             "resolve the Physical-Device XID (`BadValue` if unknown or non-live)",
