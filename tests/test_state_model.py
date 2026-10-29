@@ -5942,3 +5942,32 @@ class AsyncBackendResourceLifetimeTests(unittest.TestCase):
             resource, device, "client-A", token="present-2",
         ), "BadValue")
         self.assertEqual((resource, registry.emitted_events), before)
+
+
+    def test_destroyed_resource_callback_never_resolves_reused_resource_xid(self) -> None:
+        registry = AsyncCallbackRegistry(connections_live={"client-A"})
+        device = AsyncDeviceIdentity(identity="device-A", xid=19)
+        old_resource = AsyncResourceIdentity(
+            identity="buffer-generation-1", xid=35,
+            device_identity=device.identity, backend_refs=1,
+        )
+        registry.register_device(device)
+        registry.register_resource(old_resource)
+        self.assertEqual(registry.destroy_resource(old_resource), "SUCCESS")
+
+        new_resource = AsyncResourceIdentity(
+            identity="buffer-generation-2", xid=35,
+            device_identity=device.identity, backend_refs=1,
+        )
+        registry.register_resource(new_resource)
+        self.assertEqual(registry.complete_backend_callback(
+            old_resource, device, "client-A", token="destroyed-buffer-op",
+        ), "SUCCESS")
+        self.assertEqual(old_resource.backend_refs, 0)
+        self.assertEqual(new_resource.backend_refs, 1)
+        # A completion may still be reported for the live device, but its
+        # resource field must not be resolved through the reused public XID.
+        self.assertEqual(
+            registry.emitted_events,
+            [("destroyed-buffer-op", device.xid, 0)],
+        )
