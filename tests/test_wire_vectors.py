@@ -121,6 +121,13 @@ def encode_request(vector: dict) -> bytes:
         data.extend(struct.pack(
             endian + "IIQ", fields["device_xid"], fields["semaphore_xid"], fields["signal_value"],
         ))
+    elif request in ("GetSemaphoreCounterValue", "GetFenceStatus"):
+        resource_field = "semaphore_xid" if request == "GetSemaphoreCounterValue" else "fence_xid"
+        data.extend(struct.pack(endian + "II", fields["device_xid"], fields[resource_field]))
+    elif request == "WaitForFence":
+        data.extend(struct.pack(
+            endian + "IIQ", fields["device_xid"], fields["fence_xid"], fields["timeout_ns"],
+        ))
     elif request == "BindBufferMemory":
         data.extend(struct.pack(
             endian + "IIIQ",
@@ -210,6 +217,9 @@ class GoldenWireVectorTests(unittest.TestCase):
             "CreateFence": "synchronization.md",
             "ResetFence": "synchronization.md",
             "SignalSemaphore": "synchronization.md",
+            "GetSemaphoreCounterValue": "synchronization.md",
+            "GetFenceStatus": "synchronization.md",
+            "WaitForFence": "synchronization.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -288,6 +298,19 @@ class GoldenWireVectorTests(unittest.TestCase):
                            (16, "CARD64", "signal_value")],
                 "length": 24,
             },
+            "GetSemaphoreCounterValue": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "semaphore_xid")],
+                "length": 16,
+            },
+            "GetFenceStatus": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid")],
+                "length": 16,
+            },
+            "WaitForFence": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "fence_xid"),
+                           (16, "CARD64", "timeout_ns")],
+                "length": 24,
+            },
         }
         for request, contract in contracts.items():
             with self.subTest(request=request):
@@ -358,6 +381,9 @@ class GoldenWireVectorTests(unittest.TestCase):
             "CreateFence": "synchronization.md",
             "ResetFence": "synchronization.md",
             "SignalSemaphore": "synchronization.md",
+            "GetSemaphoreCounterValue": "synchronization.md",
+            "GetFenceStatus": "synchronization.md",
+            "WaitForFence": "synchronization.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -443,6 +469,19 @@ class GoldenWireVectorTests(unittest.TestCase):
                 (8, "XID", "device_xid", "I"),
                 (12, "XID", "semaphore_xid", "I"),
                 (16, "CARD64", "signal_value", "Q"),
+            ],
+            "GetSemaphoreCounterValue": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "semaphore_xid", "I"),
+            ],
+            "GetFenceStatus": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "fence_xid", "I"),
+            ],
+            "WaitForFence": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "fence_xid", "I"),
+                (16, "CARD64", "timeout_ns", "Q"),
             ],
         }
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
