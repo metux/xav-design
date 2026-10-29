@@ -1541,7 +1541,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         counter = synchronization.split("## `GetSemaphoreCounterValue`", 1)[1].split("## `WaitSemaphores`", 1)[0]
         requirements = memory.split("## 5.3 `GetBufferMemoryRequirements`", 1)[1].split("## 5.4", 1)[0]
         self.assertIn("`DEVICE_LOST` X11 error", self.errors)
-        self.assertIn("emits the X11 error `DEVICE_LOST` and no normal reply", counter)
+        self.assertIn("MUST NOT return a purported current counter as a successful reply after Device Loss has been established", counter)
         self.assertIn("exactly one X11 `DEVICE_LOST` error and no normal reply", self.conformance)
         self.assertIn("a Binary semaphore combined with Device Loss still yields that error", self.conformance)
         self.assertIn("remains valid after logical-device loss", requirements)
@@ -1550,6 +1550,46 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("stored Fence state in reply byte 1", self.conformance)
         self.assertIn("still-live Physical-Device XID marked removed/failed", self.conformance)
         self.assertIn("Serialize only complete records", self.conformance) if "Serialize only complete records" in self.conformance else self.assertIn("serialize only complete records", self.conformance)
+
+
+    def test_wait_status_races_and_terminalization_contracts(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        semaphores = synchronization.split("## `WaitSemaphores`", 1)[1].split("## `SignalSemaphore`", 1)[0]
+        fences = synchronization.split("## `WaitForFence`", 1)[1].split("## `ResetFence`", 1)[0]
+
+        for phrase in (
+            "condition satisfaction, timeout expiry, Device Loss, and `DestroyDevice`",
+            "the first terminal outcome committed while the registration is open wins",
+            "a later signal MUST NOT rewrite it",
+            "prevent all later callbacks from replying or releasing the registration twice",
+        ):
+            self.assertIn(phrase, semaphores)
+        for phrase in (
+            "initial Fence/Device state check and installation of the open wait registration MUST be one atomic operation",
+            "the first terminal transition committed while the registration is open wins",
+            "a later Fence callback reports completion",
+            "Late or duplicate callbacks MUST NOT send another reply",
+            "Device Loss wins only if it is detected and committed before another terminal outcome",
+        ):
+            self.assertIn(phrase, fences)
+        for phrase in (
+            "first committed terminal outcome",
+            "normal reply statuses",
+            "never X11 errors",
+            "initial snapshot and wait registration are atomic",
+        ):
+            self.assertIn(phrase, errors.split("- `WaitForFence`:", 1)[1].split("\\n- `DestroyFence`:", 1)[0])
+        for phrase in (
+            "WaitSemaphores status races",
+            "WaitForFence status races",
+            "completion is either observed before registration or terminalizes the installed registration",
+            "exactly one normal reply",
+            "exactly one X11 `DEVICE_LOST` error",
+            "zero timeout installs no registration",
+        ):
+            self.assertIn(phrase, conformance)
 
 if __name__ == "__main__":
     unittest.main()
