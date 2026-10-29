@@ -22,6 +22,8 @@ def encode_request(vector: dict) -> bytes:
     fields = vector["fields"]
     if vector["byte_order"] not in ("little", "big"):
         raise ValueError("unknown byte order")
+    if not 128 <= vector["major_opcode"] <= 255:
+        raise ValueError("extension major opcode must be in 128..255")
     endian = "<" if vector["byte_order"] == "little" else ">"
     length_bytes = vector["length_bytes"]
     if length_bytes < 8 or length_bytes % 4:
@@ -198,6 +200,13 @@ class GoldenWireVectorTests(unittest.TestCase):
 
     def test_rejects_non_extension_major_opcode(self) -> None:
         vector = next(v for v in self.vectors if v["request"] == "ReadBuffer")
+        for opcode in (0, 127, 256):
+            invalid = vector.copy()
+            invalid["major_opcode"] = opcode
+            with self.subTest(opcode=opcode):
+                with self.assertRaisesRegex(ValueError, "extension major opcode"):
+                    encode_request(invalid)
+
         wire = bytearray(encode_request(vector))
         wire[0] = 127
         with self.assertRaisesRegex(ValueError, "extension major opcode"):
