@@ -1159,11 +1159,16 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                     [BinarySignalState.UNSIGNALED]
                     * (index + 1 - len(state.binary_signal_states))
                 )
-            state.binary_signal_previous_states[(request.token, index)] = state.binary_signal_states[index]
+            shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
+            previous_payload = (
+                shared.signal_state if shared is not None
+                else state.binary_signal_states[index]
+            )
+            state.binary_signal_previous_states[(request.token, index)] = previous_payload
             state.binary_signal_states[index] = BinarySignalState.SIGNAL_PENDING
             state.pending_binary_signals.append((request.token, index))
-            if index < len(state.shared_semaphores):
-                state.shared_semaphores[index].signal_state = BinarySignalState.SIGNAL_PENDING
+            if shared is not None:
+                shared.signal_state = BinarySignalState.SIGNAL_PENDING
                 state.shared_semaphores[index].signal_reservation = ("submit", request.token)
                 state.shared_semaphores[index].signal_reservation_owner = state
                 state.shared_semaphores[index].signal_consumed = False
@@ -1337,7 +1342,12 @@ def finish_submission(
         previous = state.binary_wait_previous_states.pop(reservation, BinarySignalState.UNSIGNALED)
         if effective_success:
             shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
-            signal_state = state.binary_signal_states[index]
+            # Cross-queue models may hold a stale local mirror. A wait
+            # completion must consume the canonical shared payload.
+            signal_state = (
+                shared.signal_state if shared is not None
+                else state.binary_signal_states[index]
+            )
             # A callback from another API/model may have already established
             # the canonical payload state. Never make a stale local mirror
             # authoritative over a shared UNTRUSTED outcome.
