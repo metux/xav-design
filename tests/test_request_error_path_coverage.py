@@ -745,9 +745,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         cb_phases = (
             "Request length, ABORT length",
             "Common-header flags",
-            "Target XID, then pool XID",
-            "Resource type, client ownership",
-            "associated device state is checked",
+            "Resolve the target XID, then the pool XID",
+            "Validate resource type, client ownership",
+            "check the associated device state",
+            "non-CREATE buffer MUST be `RECORDING`",
+            "Validate resource-dependent command semantics and compatibility",
         )
         recording_precedence = recording[recording.index("### Error Precedence for `CommandBufferData`"):]
         positions = [recording_precedence.index(phrase) for phrase in cb_phases]
