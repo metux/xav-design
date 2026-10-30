@@ -140,7 +140,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Require successful XGE 1.0-or-later negotiation",
             "Check physical-device availability",
             "Validate every requested queue-family index and queue count",
-            "Check requested registry-defined features and extensions",
+            "Check the mandatory v0.1 baseline capability",
             "Only after all prior checks succeed may backend device creation begin",
         ]
         errors_order = [
@@ -152,11 +152,11 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Require successful XGE 1.0-or-later negotiation",
             "Check Physical-Device availability",
             "Validate queue-family indices and requested queue counts",
-            "Validate registered feature support and extension registration/support",
+            "Validate the mandatory v0.1 `timelineSemaphore` baseline capability",
             "Only after all validation succeeds may backend creation begin",
         ]
         device_section = devices.split("### Normative validation precedence", 1)[1].split("\n\nBefore creation", 1)[0]
-        error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n## Request-spezifische Fehlerzuordnung", 1)[0]
+        error_section = errors.split("The following error precedence applies to `CreateDevice`", 1)[1].split("\n\n## Request-specific error mapping", 1)[0]
         for phrase in device_order:
             self.assertIn(phrase, device_section)
         device_positions = [device_section.index(phrase) for phrase in device_order]
@@ -1191,7 +1191,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Require successful XGE 1.0-or-later negotiation",
             "Check physical-device availability",
             "Validate every requested queue-family index and queue count",
-            "Check requested registry-defined features and extensions",
+            "Check the mandatory v0.1 baseline capability",
         )
         positions = [devices.index(phrase, devices.index("### Normative validation precedence")) for phrase in ordered]
         self.assertEqual(positions, sorted(positions))
