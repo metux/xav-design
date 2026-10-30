@@ -209,9 +209,17 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
             # reached its terminal milestone but backend release is still open.
             state.image_state = ImageState.INVALID
     for shared in semaphores:
-        if isinstance(shared, (SharedTimelineSemaphore, SharedFence)):
+        if isinstance(shared, SharedTimelineSemaphore):
             # Timeline counters are monotonic and remain readable, but no
             # further signal operation or callback publication is trusted.
+            continue
+        if isinstance(shared, SharedFence):
+            # Device Loss terminalizes a fence attached to accepted work
+            # immediately. Keep the pending identity until its callback drops
+            # the backend hold; a never-submitted fence remains unchanged.
+            if shared.pending_token is not None:
+                shared.status = "FAILED"
+                _sync_shared_fence_owners(shared)
             continue
         known_empty = (
             shared.signal_state is BinarySignalState.UNSIGNALED
