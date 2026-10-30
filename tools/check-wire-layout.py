@@ -3419,7 +3419,7 @@ def check_wait_semaphore_semantics(c: Check) -> None:
         "`WAIT_ANY` is satisfied when at least one entry is satisfied.",
         "`WAIT_ALL` is satisfied only when every entry is satisfied.",
         "one coherent snapshot of all listed counters",
-        "If the complete selected predicate is already satisfied by the initial coherent snapshot, the server commits `SUCCESS` immediately and installs no registration",
+        "If the complete predicate is already satisfied, the request commits `SUCCESS` without installing a registration",
         "The Device-state check in step 5, Timeline-type check in step 6, coherent initial counter snapshot",
         "A `WAIT_ALL` registration that has only some entries satisfied remains open",
         "does not consume, reset, reserve, or otherwise modify any Timeline counter",
