@@ -51,7 +51,7 @@ The following transitions are normative:
 
 An object in `DESTROY_PENDING` cannot be addressed or destroyed again using its old XID. A reused XID identifies a new internal resource identity and MUST NOT inherit references to the old object. `RELEASED` is terminal.
 
-Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, DescriptorSet-to-DescriptorSetLayout associations, parent-child ownership, and active server operations. A DescriptorSet retains the immutable layout definition and the backend layout identity needed for descriptor validation and updates until that set is freed and all backend accesses have ended. Removing a public XID does not automatically remove references held by an accepted submission or a live dependent object. On successful ordinary destruction, all required command-buffer invalidations and internal reference updates MUST occur atomically with public invalidation.
+Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, DescriptorSet-to-DescriptorSetLayout associations, Pipeline-to-PipelineLayout dependencies, parent-child ownership, and active server operations. A DescriptorSet retains the immutable layout definition and the backend layout identity needed for descriptor validation and updates until that set is freed and all backend accesses have ended. Removing a public XID does not automatically remove references held by an accepted submission or a live dependent object. On successful ordinary destruction, all required command-buffer invalidations and internal reference updates MUST occur atomically with public invalidation.
 
 ## Ownership Hierarchy
 
@@ -67,7 +67,7 @@ Explicit parent-child relationships:
 Other relationships are dependencies, not automatic ownership relationships:
 
 - Buffer ↔ Memory
-- Pipeline ↔ Pipeline Layout
+- Pipeline → Pipeline Layout (the Pipeline retains the internal layout identity needed for its lifetime)
 - Pipeline ↔ Shader Module während der Erstellung
 - Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
 - Descriptor Set → Descriptor Set Layout (retained layout definition/backend identity for the lifetime of the allocated set)
@@ -87,7 +87,7 @@ The implementation MUST NOT assume that every object whose handle was used to cr
 | Buffer | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used directly/indirectly by accepted work; on successful destruction, non-pending `EXECUTABLE` command buffers with this reference become `INVALID`. Defer internal release while server operations or descriptor slots still reference the object |
 | Memory | Invalidated only after successful validation | Reject `FreeMemory` while any buffer remains bound to it or accepted work uses the allocation |
 | Pipeline | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
-| PipelineLayout | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
+| PipelineLayout | Public XID becomes invalid; retain its internal definition/backend identity while any live Pipeline depends on it | Reject while referenced by a `RECORDING` command buffer or directly used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID`. Existing Pipelines remain live; no new Pipeline may be created through the destroyed XID |
 | ShaderModule | May be destroyed independently after successful pipeline creation | Vulkan lifetime rules remain authoritative |
 | DescriptorSetLayout | Public XID may be destroyed once no further `CreatePipelineLayout` or `AllocateDescriptorSets` request needs it; the immutable layout definition and backend identity remain internally retained while any allocated DescriptorSet depends on them | Existing sets remain valid and updateable; no new PipelineLayout or Set may be created through the destroyed XID. Release the internal layout only after all dependent sets and backend accesses have ended |
 | Fence | XID becomes invalid | Reject while the fence belongs to a non-terminal submission or an open `WaitForFence` registration references that exact internal fence identity; a wait already determined to be terminal does not block destruction merely because its reply is still pending |
@@ -186,7 +186,7 @@ Kann der Server bei Device-Zerstörung oder Device Loss nicht bestätigen, dass 
 
 ## Pipelines and Synchronization Objects
 
-`DestroyResource` auf eine Pipeline oder ein Pipeline Layout wird abgewiesen, solange eine angenommene Submission die jeweilige Ressource verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`.
+`DestroyResource` auf eine Pipeline oder ein Pipeline Layout wird abgewiesen, solange eine angenommene Submission die jeweilige Ressource direkt verwendet. Ohne Pending-Use gelten die allgemeinen Regeln für aufgezeichnete Referenzen: Referenzen aus `RECORDING`-Command-Buffer verhindern die öffentliche Zerstörung; referenzierende nicht-pending `EXECUTABLE`-Command-Buffer werden bei erfolgreicher Zerstörung `INVALID`. Ein live Pipeline-Objekt hält zusätzlich die interne Pipeline-Layout-Identität, von der es erstellt wurde. Die öffentliche PipelineLayout-XID darf invalidiert werden, ohne die bestehende Pipeline zu invalidieren; die interne Layout-Ressource bleibt bis zur Zerstörung aller davon abhängigen Pipelines und bis zum Ende sämtlicher Backend-Zugriffe erhalten. Neue Pipelines können die zerstörte XID nicht mehr verwenden.
 
 `DestroyFence` wird abgewiesen, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert. `DestroySemaphore` wird abgewiesen, solange ein angenommener Queue-Wait, ein Queue-Signal, eine offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität oder eine andere laufende serverseitige Host-Operation die Semaphore verwendet. Ein Host-Wait ist nicht mehr offen, sobald sein terminales Ergebnis serverseitig serialisiert festgestellt wurde; ein noch nicht versendeter Reply blockiert die Zerstörung dann nicht. Diese Ablehnungen sind atomar und verwenden `INVALID_SYNCHRONIZATION_STATE`. Wenn nach Device Loss `DestroyDevice` verarbeitet wird, darf dessen Device-weite Kaskadeninvalidierung diese normalen Ablehnungen umgehen. Device Loss allein führt keine öffentliche Kaskadeninvalidierung aus; interne Referenzen bleiben bis zum Ende möglicher Backend-Zugriffe bestehen.
 
