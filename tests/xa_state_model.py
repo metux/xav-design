@@ -1747,6 +1747,7 @@ class AsyncDeviceIdentity:
     identity: str
     xid: int
     live: bool = True
+    lost: bool = False
 
 
 @dataclass
@@ -1851,13 +1852,15 @@ class AsyncSubmissionIdentity:
     captured_device: AsyncDeviceIdentity | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class AsyncWaitIdentity:
-    """One open server-side host wait, independent of accepted GPU work."""
+    """One open host wait bound to the exact Device generation it resolved."""
     connection_identity: ConnectionInstance
     token: int
     kind: str
     resource_identities: tuple[str, ...]
+    captured_device: AsyncDeviceIdentity | None = None
+    terminal_status: str | None = None
 
 
 @dataclass
@@ -1942,23 +1945,40 @@ class AsyncSubmissionEventRegistry:
         del self.live_devices[device_identity]
         for key in [key for key in self.queue_masks if key[1][0] == device.xid]:
             del self.queue_masks[key]
+        # Open waits are terminalized against the captured generation. Keep
+        # their exact registrations until the completion path retires them.
+        for registration in self.wait_registrations.values():
+            if registration.captured_device is device and registration.terminal_status is None:
+                registration.terminal_status = "DEVICE_DESTROYED"
         return "SUCCESS"
 
     def register_wait(
         self, connection: ConnectionInstance, token: int, kind: str,
-        resource_identities: tuple[str, ...],
+        resource_identities: tuple[str, ...], device_identity: str | None = None,
     ) -> str:
         key = (connection, token)
+        device = self.live_devices.get(device_identity) if device_identity is not None else None
         if (not self._connection_is_live(connection) or token == 0
                 or kind not in {"WaitSemaphores", "WaitForFence"}
-                or not resource_identities or key in self.wait_registrations):
+                or not resource_identities or key in self.wait_registrations
+                or (device_identity is not None and (device is None or not device.live))):
             return "BadValue"
         self.wait_registrations[key] = AsyncWaitIdentity(
-            connection, token, kind, resource_identities
+            connection, token, kind, resource_identities, device
         )
         return "SUCCESS"
 
-    def finish_wait(self, registration: AsyncWaitIdentity) -> str:
+    def mark_device_lost(self, device_identity: str) -> str:
+        device = self.live_devices.get(device_identity)
+        if device is None or not device.live:
+            return "BadValue"
+        device.lost = True
+        for registration in self.wait_registrations.values():
+            if registration.captured_device is device and registration.terminal_status is None:
+                registration.terminal_status = "DEVICE_LOST"
+        return "SUCCESS"
+
+    def finish_wait(self, registration: AsyncWaitIdentity, status: str = "SUCCESS") -> str:
         """Retire only the exact wait captured by its callback.
 
         Connection/token pairs can be reused after disconnect. Resolving a
@@ -1968,6 +1988,12 @@ class AsyncSubmissionEventRegistry:
         key = (registration.connection_identity, registration.token)
         if self.wait_registrations.get(key) is not registration:
             return "BadValue"
+        if status not in {"SUCCESS", "TIMEOUT", "DEVICE_LOST", "DEVICE_DESTROYED", "EXECUTION_FAILED"}:
+            return "BadValue"
+        # The first serialized terminal condition wins. A late backend result
+        # cannot overwrite Device Loss or destruction.
+        if registration.terminal_status is None:
+            registration.terminal_status = status
         del self.wait_registrations[key]
         return "SUCCESS"
 
