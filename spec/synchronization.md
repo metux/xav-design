@@ -14,7 +14,7 @@ Types:
 - `BINARY = 0`
 - `TIMELINE = 1`
 
-For binary semaphores, `initial_value` MUST be zero. Binary semaphores begin unsignaled. In `QueueSubmit`, the `wait_value` and `signal_value` fields for binary semaphores MUST also be zero. Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. Backend allocation failures result in `ALLOCATION_FAILED`. Creation is atomic: on any failure, the semaphore XID remains unallocated.
+For binary semaphores, `initial_value` MUST be zero. Binary semaphores begin unsignaled. In `QueueSubmit`, the `wait_value` and `signal_value` fields for binary semaphores MUST also be zero. `CreateSemaphore` validation precedence is normative: (1) exact 28-byte request length (`BadLength`); (2) validate `semaphore_type` and the type-dependent `initial_value` (`BadValue` for an unknown type or nonzero Binary initial value); (3) validate `semaphore_xid` as a create-XID (`BadIDChoice` if invalid or occupied); (4) resolve `device_xid` (`BadValue` if unknown or non-live); (5) validate live resource type, client ownership, and Device association (`BadMatch`); (6) check logical-Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) create the backend semaphore (`ALLOCATION_FAILED` on allocation failure). A later phase MUST NOT override an earlier error. Creation is atomic: on any failure, the semaphore XID remains unallocated.
 
 ## Binary Semaphores
 
@@ -139,7 +139,7 @@ Total length: 24 bytes.
 - Offset 16: `CARD32 create_flags = 0`
 - Offset 20: `CARD32 reserved = 0`
 
-Unknown or non-live device XIDs result in `BadValue`; a live resource of the wrong type or foreign device ownership results in `BadMatch`. An unavailable or lost logical device produces `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively. Backend allocation failures produce `ALLOCATION_FAILED`. Creation is atomic: on any failure, the fence XID remains unallocated.
+`CreateFence` validation precedence is normative: (1) exact 24-byte request length (`BadLength`); (2) validate `create_flags` and `reserved` (`BadValue` for any nonzero value); (3) validate `fence_xid` as a create-XID (`BadIDChoice` if invalid or occupied); (4) resolve `device_xid` (`BadValue` if unknown or non-live); (5) validate live resource type, client ownership, and Device association (`BadMatch`); (6) check logical-Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (7) create the backend Fence (`ALLOCATION_FAILED` on allocation failure). A later phase MUST NOT override an earlier error. Creation is atomic: on any failure, the fence XID remains unallocated.
 
 ## `GetFenceStatus`
 
