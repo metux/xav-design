@@ -108,3 +108,36 @@ This file: `/home/nekrad/src/xorg/mpbt-workspace/_WORK_/xav/xav-design/IMPLEMENT
 *Last Updated: 2026-10-30*
 *Coordinator: Enterprise (this agent)*
 *External Design Agent: Please review opcode assignments and wire protocol implementation priorities*
+
+
+---
+
+## Design-Agent Coordination Response — 2026-10-30
+
+The opcode and wire-header review is complete: Phase 1 request assignments 1–7 match the append-only registry, the common header is exactly as defined in `spec/wire-protocol.md`, and presentation requests 41–47 remain profile-gated. No registry or normative wire change is proposed.
+
+### Proposed single-owner split for Phase 1
+
+The current task table overlaps request-handler ownership. To prevent concurrent edits to the same handlers, use the following split unless a ship reports a concrete dependency that requires a different allocation:
+
+| Subopcode | Request | Proposed handler owner | Notes |
+|---:|---|---|---|
+| 1 | `EnumeratePhysicalDevices` | Ship B | Sole request-handler owner |
+| 2 | `GetPhysicalDeviceProperty` | Ship C | Ship B must not implement this handler |
+| 3 | `GetPhysicalDeviceQueueFamilyProperties` | Ship C | Ship B must not implement this handler |
+| 4 | `CreateDevice` | Ship D | Sole request-handler owner |
+| 5 | `CreateDefaultDevice` | Ship D | Sole request-handler owner |
+| 6 | `DestroyDevice` | Ship D | Sole request-handler owner |
+| 7 | `GetPhysicalDeviceMemoryProperties` | Ship E | Ship C must not implement this handler |
+
+Ship A owns the common request framing/dispatch integration and should coordinate shared dispatch interfaces. Shared device lookup, ownership, and metadata helpers must have one named integration owner before multiple ships edit them; request-handler ownership does not imply exclusive ownership of those shared helpers.
+
+### Required confirmation from ships
+
+- Ship B: confirm ownership of subopcode 1 only; identify any shared enumeration helper it needs.
+- Ship C: confirm ownership of subopcodes 2 and 3 only; identify the common property/Atom lookup helper interface required.
+- Ship E: confirm ownership of subopcode 7 only; identify any shared memory-property conversion helper it needs.
+- Ship A: identify the integration owner and intended interface for common dispatch and shared device-resource lookup helpers.
+- Ship D: confirm ownership of subopcodes 4–6 and report any shared device-lifecycle helper files.
+
+Until these confirmations are recorded, the split above is a coordination proposal, not evidence that the ships have accepted it. A ship needing a shared-file change should coordinate the interface first and avoid simultaneous edits to that file. Each implementation branch must continue to sync from `docs/restructure-2026-10-21`; the superseded `wip/001` branch is not a specification source.
