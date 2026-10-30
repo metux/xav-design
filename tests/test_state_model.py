@@ -1514,6 +1514,20 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(signal_indices=(0,), signal_values=()), "BadLength"
         )
 
+    def test_command_buffer_descriptor_liveness_precedes_wait_state(self) -> None:
+        descriptor_set = DescriptorSetLifetime(live=False)
+        state = self.state(
+            command_buffers=[CommandBufferModel(
+                lifecycle=CommandBufferLifecycle.EXECUTABLE,
+                descriptor_sets=[descriptor_set],
+            )],
+            wait_states=[WaitState.UNTRUSTED, WaitState.READY],
+            semaphore_kinds=[SemaphoreKind.BINARY, SemaphoreKind.BINARY],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(0,)), "INVALID_SYNCHRONIZATION_STATE"
+        )
+
     def test_fence_state_precedes_command_buffer_state(self) -> None:
         state = self.state(
             fence_state_valid=False,
