@@ -320,7 +320,9 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         return PresentResult("BadMatch", False)
 
     # Stage 5: Device availability precedes queue/image/lifecycle state.
-    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+    if state.device_lost or any(
+        shared.device_lost for shared in _shared_semaphore_objects(state)
+    ):
         _propagate_device_loss(state)
         return PresentResult("DEVICE_LOST", False)
 
@@ -1021,7 +1023,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # not unknown-XID failures; both precede Device Loss.
     if not state.queue_xid_valid or not state.types_and_ownership_valid:
         return "BadMatch"
-    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+    if state.device_lost or any(
+        shared.device_lost for shared in _shared_semaphore_objects(state)
+    ):
         _propagate_device_loss(state)
         return "DEVICE_LOST"
     if state.device_unavailable:
@@ -1289,7 +1293,7 @@ def finish_submission(
     state.pending_submissions.remove(token)
     # A backend may race a Device-Loss notification and later report success.
     # Once loss has been observed, that callback must not publish signal values.
-    if any(shared.device_lost for shared in state.shared_semaphores):
+    if any(shared.device_lost for shared in _shared_semaphore_objects(state)):
         state.device_lost = True
     effective_success = success and not state.device_lost
     for submission_token, index, value in list(state.pending_timeline_signals):
