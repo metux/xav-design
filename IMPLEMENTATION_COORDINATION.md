@@ -44,7 +44,7 @@
 | **Ship E** | Memory Properties (7) | `Xext/xaverius/` | `rfc/xaverius-memory-props` |
 
 ### Wire Protocol Requirements
-- Common 8-byte header: `major_opcode(1) | minor_opcode(1) | length(2) | subopcode(1) | flags(1) | reserved(2)`
+- Complete fixed request header is 8 bytes: X11 header `reqType(1) | data(1) | length(2)`, followed by XAverius header `subopcode(1) | flags(1) | reserved(2)`. `data` MUST be zero; it is NOT a minor opcode. The subopcode is exclusively at offset 4.
 - Subopcode at offset 4 (byte 4)
 - BIG-REQUESTS not supported (conflicts with subopcode at offset 4)
 - X11 `data` byte MUST be 0 for XAverius requests
@@ -80,7 +80,15 @@ This file: `/home/nekrad/src/xorg/mpbt-workspace/_WORK_/xav/xav-design/IMPLEMENT
 
 **External Design Agent**: Please review opcode assignments in `registries/request-subopcodes.md` and provide feedback on wire protocol implementation priorities.
 
+
+## Design-Agent Review Notes — 2026-10-30
+
+- **Wire-header correction (normative source: `spec/wire-protocol.md`):** the X11 request header is `reqType(1) | data(1) | length(2)`; XAverius appends `subopcode(1) | flags(1) | reserved(2)`. The former wording that called byte 1 `minor_opcode` was incorrect. Byte 1 is X11 `data` and MUST be zero. The subopcode is at offset 4 and is the only XAverius request identifier. Implementations MUST follow the normative chapter, not the superseded wording.
+- **Opcode check:** the Phase 1 assignments 1–7 agree with `registries/request-subopcodes.md`; 41–47 remain presentation-profile-only. The registry is append-only.
+- **Validation reminder:** `CreateDefaultDevice` and `CreateDevice` must follow the exact field layouts, validation precedence, ownership, and atomic-creation rules in `spec/devices.md`; this coordination table is only a task allocation, not a substitute request contract.
+
 ---
+
 *Last Updated: 2026-10-28*
 *Coordinator: Enterprise (this agent)*
 *External Design Agent: Please review opcode assignments and wire protocol implementation priorities*
