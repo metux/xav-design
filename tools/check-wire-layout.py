@@ -1249,7 +1249,9 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "`FreeDescriptorSets` atomically rejects the operation with `INVALID_SYNCHRONIZATION_STATE` if a selected Set is pending or referenced by a `RECORDING` command buffer" in conformance
-        and "`DestroyResource` on a Pipeline or Pipeline Layout atomically rejects recording references and accepted pending use" in conformance,
+        and "`DestroyResource` on a Pipeline atomically rejects recording references and accepted pending use" in conformance
+        and "For a PipelineLayout, direct recording references and direct accepted pending use reject public XID destruction" in conformance
+        and "a Pipeline-held internal dependency does not block public invalidation" in conformance,
         "conformance: descriptor-set and pipeline recorded-reference lifetime rules must be explicit",
     )
     c.require(
