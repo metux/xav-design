@@ -908,9 +908,11 @@ def destroy_resource(state: ResourceDestroyModel) -> str:
 @dataclass
 class SubmissionModel:
     device_lost: bool = False
+    device_unavailable: bool = False
     device_generation: int = 1
     device_live: bool = True
     device_xid_valid: bool = True
+    fence_xid_valid: bool = True
     queue_xid_valid: bool = True
     fence_state_valid: bool = True
     command_buffers: list[CommandBufferModel] = field(default_factory=list)
@@ -986,6 +988,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         return "BadValue"
     if not state.device_live or not state.device_xid_valid or not state.xids_valid:
         return "BadValue"
+    # The optional Fence XID is the next wire field after Device. A zero
+    # Fence-XID is represented by attach_fence=False and needs no lookup.
+    if request.attach_fence and not state.fence_xid_valid:
+        return "BadValue"
     # Resolve referenced resource XIDs in wire order before queue/type checks.
     if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
         return "BadValue"
@@ -1000,6 +1006,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
         _propagate_device_loss(state)
         return "DEVICE_LOST"
+    if state.device_unavailable:
+        return "DEVICE_UNAVAILABLE"
     # Normative mutable-state order: optional Fence, Command Buffers, waits,
     # then signals. The Fence is not attached until the acceptance commit.
     if request.attach_fence and not state.fence_state_valid:
