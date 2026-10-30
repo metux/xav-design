@@ -36,6 +36,7 @@ from xa_state_model import (
     command_buffer_data,
     reset_command_buffer,
     destroy_command_pool,
+    destroy_submission_device,
     retire_command_buffer_backend_hold,
     queue_submit,
     shader_module_data,
