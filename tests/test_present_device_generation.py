@@ -39,6 +39,10 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
             swapchain_generation=2, used_present_tokens=connection_tokens,
         )
         self.assertEqual(
+            queue_present(new, PresentRequest(token=77, wait_indices=(0,))).result,
+            "BadValue",
+        )
+        self.assertEqual(
             queue_present(new, PresentRequest(token=78, wait_indices=(0,))).result,
             "SUCCESS",
         )
@@ -116,6 +120,7 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
             shared_semaphores=[new_sem], device_generation=22,
             swapchain_generation=2, used_present_tokens=connection_tokens,
         )
+        self.assertEqual(queue_present(new, PresentRequest(token=88)).result, "BadValue")
         self.assertEqual(queue_present(new, PresentRequest(token=89)).result, "SUCCESS")
 
         self.assertEqual(
