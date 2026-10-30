@@ -8,6 +8,7 @@ from xa_state_model import (
     SharedBinarySemaphore, WaitState, queue_present,
     finish_present_terminal, finish_present_image_release,
     finish_present_wait, destroy_present_device,
+    destroy_present_swapchain, recreate_present_swapchain,
 )
 
 
@@ -83,6 +84,18 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         self.assertIsNone(old_sem.wait_reservation)
         self.assertEqual(new_sem.wait_reservation, ("present", 77))
         self.assertFalse(new.device_lost)
+
+    def test_accepted_presentation_token_cannot_be_reused_after_swapchain_recreation(self):
+        state = PresentState(valid_wait_xids=(), wait_states=(), device_generation=31)
+        self.assertEqual(queue_present(state, PresentRequest(token=901)).result, "SUCCESS")
+        self.assertEqual(finish_present_terminal(state, 901, "SUCCESS", generation=1, device_generation=31), "SUCCESS")
+        self.assertEqual(finish_present_image_release(state, 901, generation=1, device_generation=31), "SUCCESS")
+        self.assertEqual(destroy_present_swapchain(state), "SUCCESS")
+        self.assertEqual(recreate_present_swapchain(state), "SUCCESS")
+        snapshot = (state.image_state, set(state.accepted_tokens), set(state.pending_present_tokens))
+        self.assertEqual(queue_present(state, PresentRequest(token=901)).result, "BadValue")
+        self.assertEqual((state.image_state, state.accepted_tokens, state.pending_present_tokens), snapshot)
+        self.assertEqual(queue_present(state, PresentRequest(token=902)).result, "SUCCESS")
 
     def test_late_old_device_loss_does_not_propagate_to_new_device(self):
         old_sem = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
