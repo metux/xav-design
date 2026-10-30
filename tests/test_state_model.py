@@ -19,6 +19,8 @@ from xa_state_model import (
     finish_present_terminal,
     finish_present_image_release,
     mark_present_device_lost,
+    disconnect_present,
+    destroy_present_swapchain,
     CommandBufferLifecycle,
     CommandBufferChunk,
     CommandBufferModel,
@@ -5724,6 +5726,70 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(finish_present_terminal(present, 905, "DEVICE_LOST"), "BadValue")
         self.assertEqual(present.pending_present_tokens, set())
 
+
+    def test_disconnect_keeps_present_callback_holds_until_both_milestones(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,), wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=912, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(shared.wait_reservation, ("present", 912))
+
+        self.assertEqual(disconnect_present(present), "SUCCESS")
+        self.assertFalse(present.connection_live)
+        self.assertNotIn(present, [owner() for owner in shared.owners])
+        # Disconnect only detaches client/event ownership. It cannot release
+        # the accepted operation's semaphore or image/backend references.
+        self.assertEqual(shared.wait_reservation, ("present", 912))
+        self.assertEqual(present.pending_present_tokens, {912})
+        self.assertEqual(destroy_present_swapchain(present), "INVALID_SYNCHRONIZATION_STATE")
+
+        self.assertEqual(finish_present_terminal(present, 912, "SUCCESS"), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
+        self.assertEqual(destroy_present_swapchain(present), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(finish_present_image_release(present, 912), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.AVAILABLE)
+        self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
+        self.assertFalse(present.swapchain_live)
+        self.assertEqual(present.image_state, ImageState.INVALID)
+
+        # Duplicate/late callbacks after resource retirement cannot mutate
+        # the retired generation or consume another operation's holds.
+        snapshot = copy.deepcopy((present, shared))
+        self.assertEqual(finish_present_terminal(present, 912, "SUCCESS"), "BadValue")
+        self.assertEqual(finish_present_image_release(present, 912), "BadValue")
+        self.assertEqual((present, shared), snapshot)
+
+    def test_disconnect_and_device_loss_keep_terminal_and_release_one_shot(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,), wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=913, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(disconnect_present(present), "SUCCESS")
+        self.assertEqual(mark_present_device_lost(present), "SUCCESS")
+        self.assertEqual(present.terminal_present_status, {913: "DEVICE_LOST"})
+        self.assertEqual(present.pending_present_tokens, set())
+        self.assertEqual(present.image_state, ImageState.INVALID)
+        self.assertEqual(destroy_present_swapchain(present), "INVALID_SYNCHRONIZATION_STATE")
+
+        # The backend release callback still owns the final access hold even
+        # though Device Loss already terminalized the presentation.
+        self.assertEqual(finish_present_image_release(present, 913), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.INVALID)
+        self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
+        snapshot = copy.deepcopy((present, shared))
+        self.assertEqual(finish_present_terminal(present, 913, "SUCCESS"), "BadValue")
+        self.assertEqual(finish_present_image_release(present, 913), "BadValue")
+        self.assertEqual((present, shared), snapshot)
 
     def test_present_image_release_before_terminal_completion(self):
         state = PresentState(valid_wait_xids=(True, True), wait_states=[WaitState.READY, WaitState.READY])
