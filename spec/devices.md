@@ -15,6 +15,8 @@ identifiziert.
 
 The queue-family index corresponds to the position in the returned queue-family list. The queue index identifies a queue actually requested from that family.
 
+The v0.1 logical-Device baseline requires Vulkan `timelineSemaphore` support. The server MUST enable this feature on every successfully created logical Device. It is mandatory protocol functionality, not an optional `DEVICEFEATUREREQUEST`; the selected Physical Device's support is reported by `XAverius.timelineSemaphore`.
+
 ## `EnumeratePhysicalDevices`
 
 The request has no request-specific payload and is 8 bytes in total. The request type is `Reply`.
@@ -72,7 +74,7 @@ Normative validation precedence: (1) require the exact 16-byte request length (`
 
 `property_atom` is an ordinary server-assigned X11 Atom ID; XAverius does not assign numeric Atom IDs. The client MUST resolve the canonical name using the standard X11 Atom mechanisms. An Atom ID unknown to the X server results in `BadAtom`. A valid Atom ID whose name is not registered in the XAverius property registry returns `NOT_SUPPORTED`. A registered property whose value is unavailable for the queried physical device returns `NOT_AVAILABLE`. Both status cases use the empty reply encoding described above.
 
-The canonical v0.1 names, types, exact value lengths, and availability rules are defined by the [Physical Device Property and Atom Name Registry](../registries/physical-device-properties.md). The v0.1 entries are `XAverius.deviceUUID`, `XAverius.driverUUID`, `XAverius.compute.maxWorkGroupInvocations`, and `XAverius.compute.maxWorkGroupSize`. UUIDs are 16 raw bytes, not text strings; `maxWorkGroupSize` is an array of exactly three `CARD32` values in X, Y, Z order.
+The canonical v0.1 names, types, exact value lengths, and availability rules are defined by the [Physical Device Property and Atom Name Registry](../registries/physical-device-properties.md). The v0.1 entries are `XAverius.deviceUUID`, `XAverius.driverUUID`, `XAverius.compute.maxWorkGroupInvocations`, `XAverius.compute.maxWorkGroupSize`, and `XAverius.timelineSemaphore`. UUIDs are 16 raw bytes, not text strings; `maxWorkGroupSize` is an array of exactly three `CARD32` values in X, Y, Z order.
 
 Normative XAverius property type IDs:
 
@@ -121,7 +123,7 @@ The following order is normative; the server MUST complete these checks before p
 6. Require successful XGE 1.0-or-later negotiation through `GEQueryVersion`; otherwise return `BadMatch`.
 7. Check physical-device availability; if unavailable, return `DEVICE_UNAVAILABLE`.
 8. Validate every requested queue-family index and queue count against the selected Physical Device. An out-of-range family index returns `BadValue`; a valid family that cannot supply the requested count returns `BadMatch`. These checks occur only after physical-device availability is established.
-9. Check requested registry-defined features and extensions against the selected Physical Device. A registered feature unsupported by that device, or a syntactically valid extension unknown to the XAverius extension registry or unsupported by that device, returns `BadMatch`. In v0.1 every syntactically valid extension name is unregistered, because the optional extension registry is intentionally empty.
+9. Check the mandatory v0.1 baseline capability: the selected Physical Device MUST report `XAverius.timelineSemaphore = 1`; otherwise return `BadMatch`. The server MUST enable Vulkan `timelineSemaphore` for the logical Device. It MAY enable `VK_KHR_timeline_semaphore` internally when the selected Vulkan API version requires the extension; this is a protocol-required backend dependency, not a client-requested optional extension. Then check requested registry-defined optional features and extensions against the selected Physical Device. A registered optional feature unsupported by that device, or a syntactically valid extension unknown to the XAverius extension registry or unsupported by that device, returns `BadMatch`. In v0.1 every syntactically valid client extension name is unregistered, because the optional extension registry is intentionally empty.
 10. Only after all prior checks succeed may backend device creation begin. If backend creation fails, report the defined allocation/device error and publish no logical Device. Any failure leaves `device_xid` unallocated and creates no partially visible child resources.
 
 A later phase MUST NOT override an error from an earlier phase. In particular, malformed lengths or scalar fields take precedence over XID errors; an unknown feature ID takes precedence over target-XID occupancy; and target-XID validation precedes physical-device lookup. The error mappings below define the outcome within each phase.
@@ -187,7 +189,7 @@ If the selected physical device is unavailable, `DEVICE_UNAVAILABLE` is reported
 
 ## `CreateDefaultDevice`
 
-Validation precedence is normative: (1) validate the exact/formula-based request length using checked arithmetic (`BadLength`); (2) validate `queue_count`, the reserved field, and every priority (`BadValue`); (3) validate the target `device_xid` as a create-XID (`BadIDChoice` if invalid or already occupied); (4) require successful XGE 1.0-or-later negotiation through `GEQueryVersion` (`BadMatch` otherwise); (5) select a suitable physical device and compute-capable queue family (`DEVICE_UNAVAILABLE` if none exists). Every check completes before device publication, and failure leaves `device_xid` unallocated.
+Validation precedence is normative: (1) validate the exact/formula-based request length using checked arithmetic (`BadLength`); (2) validate `queue_count`, the reserved field, and every priority (`BadValue`); (3) validate the target `device_xid` as a create-XID (`BadIDChoice` if invalid or already occupied); (4) require successful XGE 1.0-or-later negotiation through `GEQueryVersion` (`BadMatch` otherwise); (5) select a suitable physical device and compute-capable queue family that reports `XAverius.timelineSemaphore = 1` (`DEVICE_UNAVAILABLE` if none exists). Every check completes before device publication, and failure leaves `device_xid` unallocated.
 
 Request:
 
@@ -198,7 +200,7 @@ Request:
 
 Total length: `16 + 4 * queue_count`.
 
-The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a physical device and a compute-capable queue family that can supply the requested `queue_count`; if no such combination is available, it reports `DEVICE_UNAVAILABLE`. No optional features or extensions are enabled implicitly.
+The queue count MUST be at least 1. All priorities MUST be finite and within [0,1], otherwise `BadValue` is reported. The reserved field MUST be zero. The server selects a physical device with `XAverius.timelineSemaphore = 1` and a compute-capable queue family that can supply the requested `queue_count`; if no such combination is available, it reports `DEVICE_UNAVAILABLE`. The mandatory baseline `timelineSemaphore` feature is enabled automatically; no optional client-requested features or extensions are enabled implicitly.
 
 `CreateDefaultDevice` is a void request. If no suitable device exists, the server reports the XAverius X11 error `DEVICE_UNAVAILABLE`; no normal reply is generated.
 
