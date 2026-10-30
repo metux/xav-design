@@ -194,6 +194,31 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
             self.assertEqual(registry.finish_wait(wait, "TIMEOUT"), "SUCCESS")
             self.assertEqual(wait.terminal_status, "DEVICE_LOST")
 
+    def test_late_device_loss_callback_with_reused_internal_label_is_ignored(self):
+        registry = AsyncSubmissionEventRegistry()
+        connection = registry.connect("client-A")
+        old_device = AsyncDeviceIdentity("reused-device-identity", 7)
+        registry.register_device(connection, old_device)
+        self.assertEqual(
+            registry.register_wait(connection, 1601, "WaitForFence", ("old-fence",), old_device.identity),
+            "SUCCESS",
+        )
+        old_wait = registry.wait_registrations[(connection, 1601)]
+        self.assertEqual(registry.destroy_device(old_device.identity), "SUCCESS")
+
+        new_device = AsyncDeviceIdentity("reused-device-identity", 7)
+        registry.register_device(connection, new_device)
+        self.assertEqual(registry.device_loss_callback(old_device), "SUCCESS")
+        self.assertFalse(new_device.lost)
+        self.assertTrue(old_wait.terminal_status == "DEVICE_DESTROYED")
+        self.assertEqual(
+            registry.register_wait(connection, 1602, "WaitForFence", ("new-fence",), new_device.identity),
+            "SUCCESS",
+        )
+        new_wait = registry.wait_registrations[(connection, 1602)]
+        self.assertIs(new_wait.captured_device, new_device)
+        self.assertIsNone(new_wait.terminal_status)
+
     def test_string_labels_are_rejected_by_every_connection_scoped_entrypoint(self):
         registry = AsyncSubmissionEventRegistry()
         connection = registry.connect("client-A")
