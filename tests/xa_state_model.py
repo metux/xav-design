@@ -213,6 +213,10 @@ class PresentState:
     image_release_tokens: set[int] = field(default_factory=set)
     image_release_reusable: dict[int, bool] = field(default_factory=dict)
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
+    # Disconnect suppresses client-facing delivery immediately but does not
+    # retire accepted backend work or its resource holds.
+    connection_live: bool = True
+    swapchain_live: bool = True
 
     def __post_init__(self) -> None:
         _register_semaphore_owner(self)
@@ -394,6 +398,30 @@ def finish_present_image_release(
 def mark_present_device_lost(state: PresentState) -> str:
     """Propagate device loss to all models connected by shared semaphores."""
     _propagate_device_loss(state)
+    return "SUCCESS"
+
+
+def disconnect_present(state: PresentState) -> str:
+    """Detach client delivery while preserving accepted callback ownership."""
+    if not state.connection_live:
+        return "BadValue"
+    state.connection_live = False
+    _unregister_semaphore_owner(state)
+    return "SUCCESS"
+
+
+def destroy_present_swapchain(state: PresentState) -> str:
+    """Destroy only after both presentation milestones drain every backend hold."""
+    if not state.swapchain_live:
+        return "BadValue"
+    if any(
+        token not in state.terminal_present_status
+        or token not in state.image_release_tokens
+        for token in state.accepted_tokens
+    ):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    state.swapchain_live = False
+    state.image_state = ImageState.INVALID
     return "SUCCESS"
 
 
