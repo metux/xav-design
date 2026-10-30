@@ -12,6 +12,7 @@ Names are exact, case-sensitive ASCII strings. Property names are registered by 
 | `XAverius.driverUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes as defined by Vulkan; no integer endianness conversion | `NOT_AVAILABLE` if the backend does not provide a valid driver UUID |
 | `XAverius.compute.maxWorkGroupInvocations` | `CARD32` (1) | One unsigned 32-bit integer | Available when the selected Physical Device exposes the corresponding compute limit |
 | `XAverius.compute.maxWorkGroupSize` | `CARD32_ARRAY` (6) | Exactly three unsigned 32-bit integers in X, Y, Z order | Available when the selected Physical Device exposes the corresponding compute limit |
+| `XAverius.timelineSemaphore` | `CARD32` (1) | `1` if the Physical Device supports the Vulkan `timelineSemaphore` feature; otherwise `0` | Always available; the server MUST query the feature and MUST NOT infer it solely from `api_version` |
 
 The numeric property-type IDs in the table refer to the normative `GetPhysicalDeviceProperty` type table in [device discovery and logical devices](../spec/devices.md). They are repeated here only to make each property row self-contained; the devices chapter remains the sole authority for the type-ID namespace.
 
