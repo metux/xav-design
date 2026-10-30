@@ -143,6 +143,7 @@ class ReplySpecCoverageTests(unittest.TestCase):
             "XAverius.driverUUID": ("BYTE_ARRAY", 5, 16),
             "XAverius.compute.maxWorkGroupInvocations": ("CARD32", 1, 4),
             "XAverius.compute.maxWorkGroupSize": ("CARD32_ARRAY", 6, 12),
+            "XAverius.timelineSemaphore": ("CARD32", 1, 4),
         }
         self.assertEqual(
             {name: (wire_type, int(type_id), 16 if name.endswith("UUID") else 4 if wire_type == "CARD32" else 12)
