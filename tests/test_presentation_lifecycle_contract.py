@@ -53,8 +53,8 @@ class PresentationLifecycleContractTests(unittest.TestCase):
             "## 5.3 Cross-operation serialization of acquisition and presentation", 1
         )[1].split("\n## ", 1)[0]
         self.assertIn("one authoritative serialization order per Swapchain", cross)
-        self.assertIn("A QueuePresent that serializes before an acquire has assigned the image", cross)
-        self.assertIn("A QueuePresent serialized after the acquire-success commit", cross)
+        self.assertIn("A `QueuePresent` that serializes before an acquire has assigned the image", cross)
+        self.assertIn("A `QueuePresent` serialized after the acquire-success commit", cross)
         self.assertIn("If release/assignment wins", cross)
         self.assertIn("**Acquire success versus QueuePresent on the same image:**", self.races)
         self.assertIn("**QueuePresent acceptance versus a pending acquire:**", self.races)
