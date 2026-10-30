@@ -52,7 +52,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("assign the image to exactly one still-open registration", self.presentation)
         self.assertIn("MUST NOT expose the image as `AVAILABLE` to a later request", self.presentation)
         self.assertIn("FIFO order and fairness are not guaranteed", self.presentation)
-        race = self.races.split("**Competing pending acquires for one released image:**", 1)[1].split("\\n-", 1)[0]
+        race = self.races.split("**Competing pending acquires for one released image:**", 1)[1].split("\n-", 1)[0]
         self.assertIn("exactly one registration to receive SUCCESS", race)
         self.assertIn("only that registration's supplied objects signaled", race)
         self.assertIn("other registration remains open", race)
