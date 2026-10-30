@@ -377,6 +377,42 @@ class ShaderModuleDataModelTests(unittest.TestCase):
         self.assertEqual((state.assembly_active, state.assembly, state.module_live), (False, b"", False))
         self.assertEqual(shader_module_data(state, ShaderChunk(data=b"tail", final=True)), "INVALID_SYNCHRONIZATION_STATE")
 
+    def test_malformed_chunk_cleanup_requires_identifiable_non_create_target(self) -> None:
+        truncated = ShaderAssemblyState()
+        shader_module_data(truncated, ShaderChunk(data=b"prefix", create=True))
+        before = copy.deepcopy(truncated)
+        self.assertEqual(
+            shader_module_data(
+                truncated,
+                ShaderChunk(data=b"", framing_valid=False, fixed_header_present=False),
+            ),
+            "BadLength",
+        )
+        self.assertEqual(truncated, before, "truncated fixed header cannot identify an assembly")
+
+        rejected_create = ShaderAssemblyState()
+        shader_module_data(rejected_create, ShaderChunk(data=b"prefix", create=True))
+        before = copy.deepcopy(rejected_create)
+        self.assertEqual(
+            shader_module_data(
+                rejected_create,
+                ShaderChunk(data=b"", create=True, framing_valid=False),
+            ),
+            "BadLength",
+        )
+        self.assertEqual(rejected_create, before, "failed CREATE must not discard the existing upload")
+
+        continuation = ShaderAssemblyState()
+        shader_module_data(continuation, ShaderChunk(data=b"prefix", create=True))
+        self.assertEqual(
+            shader_module_data(
+                continuation,
+                ShaderChunk(data=b"tail", framing_valid=False, fixed_header_present=True),
+            ),
+            "BadLength",
+        )
+        self.assertEqual((continuation.assembly_active, continuation.assembly), (False, b""))
+
     def test_device_loss_terminates_assembly_and_abort_cannot_revive_it(self) -> None:
         state = ShaderAssemblyState(device_lost=True)
         # Device-loss rejects further chunks and clears the partial assembly.
