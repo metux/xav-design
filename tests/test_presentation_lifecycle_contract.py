@@ -307,11 +307,11 @@ class PresentationLifecycleContractTests(unittest.TestCase):
 
         presentation_status = self.presentation.split(
             "The status precedence for requests with status replies is deterministic:", 1
-        )[1].split("\\nFor `CreateSurface`", 1)[0]
+        )[1].split("\nFor `CreateSurface`", 1)[0]
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         errors_precedence = errors.split(
             "### Normative validation precedence for the seven presentation requests", 1
-        )[1].split("\\n## Synchronous versus Asynchronous Errors", 1)[0]
+        )[1].split("\n## Synchronous versus Asynchronous Errors", 1)[0]
         self.assertIn("DEVICE_LOST", presentation_status)
         self.assertIn("SURFACE_LOST", presentation_status)
         self.assertIn("OUT_OF_DATE", presentation_status)
