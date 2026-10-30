@@ -143,6 +143,57 @@ class SubmissionEventCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(replacement.terminal, "COMPLETE")
         self.assertEqual(registry.terminal_callback(old_connection, 1302, "COMPLETE"), "BadValue")
 
+    def test_late_wait_callback_after_device_xid_reuse_cannot_touch_new_wait(self):
+        registry = AsyncSubmissionEventRegistry()
+        connection = registry.connect("client-A")
+        old_device = AsyncDeviceIdentity("device-generation-1", 7)
+        registry.register_device(connection, old_device)
+        self.assertEqual(
+            registry.register_wait(connection, 1501, "WaitSemaphores", ("sem-old",), old_device.identity),
+            "SUCCESS",
+        )
+        old_wait = registry.wait_registrations[(connection, 1501)]
+        self.assertEqual(registry.destroy_device(old_device.identity), "SUCCESS")
+        self.assertEqual(old_wait.terminal_status, "DEVICE_DESTROYED")
+
+        new_device = AsyncDeviceIdentity("device-generation-2", 7)
+        registry.register_device(connection, new_device)
+        # The old registration owns the token until its completion path retires it.
+        self.assertEqual(
+            registry.register_wait(connection, 1501, "WaitForFence", ("fence-new",), new_device.identity),
+            "BadValue",
+        )
+        self.assertEqual(registry.finish_wait(old_wait, "SUCCESS"), "SUCCESS")
+        self.assertEqual(old_wait.terminal_status, "DEVICE_DESTROYED")
+        self.assertEqual(
+            registry.register_wait(connection, 1501, "WaitForFence", ("fence-new",), new_device.identity),
+            "SUCCESS",
+        )
+        new_wait = registry.wait_registrations[(connection, 1501)]
+        self.assertIs(new_wait.captured_device, new_device)
+        self.assertEqual(registry.finish_wait(old_wait, "TIMEOUT"), "BadValue")
+        self.assertIs(registry.wait_registrations[(connection, 1501)], new_wait)
+        self.assertIsNone(new_wait.terminal_status)
+
+    def test_device_loss_wins_over_late_wait_timeout_and_success(self):
+        registry = AsyncSubmissionEventRegistry()
+        connection = registry.connect("client-A")
+        device = AsyncDeviceIdentity("device-generation-1", 7)
+        registry.register_device(connection, device)
+        for token, kind, resource in (
+            (1502, "WaitSemaphores", "sem-A"),
+            (1503, "WaitForFence", "fence-A"),
+        ):
+            self.assertEqual(
+                registry.register_wait(connection, token, kind, (resource,), device.identity),
+                "SUCCESS",
+            )
+            wait = registry.wait_registrations[(connection, token)]
+            self.assertEqual(registry.mark_device_lost(device.identity), "SUCCESS")
+            self.assertEqual(wait.terminal_status, "DEVICE_LOST")
+            self.assertEqual(registry.finish_wait(wait, "TIMEOUT"), "SUCCESS")
+            self.assertEqual(wait.terminal_status, "DEVICE_LOST")
+
     def test_string_labels_are_rejected_by_every_connection_scoped_entrypoint(self):
         registry = AsyncSubmissionEventRegistry()
         connection = registry.connect("client-A")
