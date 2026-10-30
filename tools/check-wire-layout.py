@@ -1232,10 +1232,11 @@ def check_request_document_coverage(c: Check) -> None:
     # The summary matrix must not contradict the normative recorded-reference
     # rules for descriptor sets and pipeline objects.
     c.require(
-        "| DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
+        "| DescriptorPool | Atomically invalidates the pool and all child sets; non-pending `EXECUTABLE` command buffers referencing any child set become `INVALID` |" in lifetime
+        and "| DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
         and "| Pipeline | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
         and "| PipelineLayout | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime,
-        "resource lifetime: DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
+        "resource lifetime: DescriptorPool, DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
     )
     c.require(
         "`FreeDescriptorSets` atomically rejects the operation with `INVALID_SYNCHRONIZATION_STATE` if a selected Set is pending or referenced by a `RECORDING` command buffer" in conformance
