@@ -615,7 +615,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "specific `DEPENDENCY_FAILED` result",
             "generic dependency failure is considered only after all Fence",
             "syntactically valid but queue-unsupported stage with Device Loss",
-            "retry the corrected request with the same token",
+            "Retry the corrected request with the same token",
         ):
             with self.subTest(conformance_vector=phrase):
                 self.assertIn(phrase, section)
