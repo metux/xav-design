@@ -2585,6 +2585,16 @@ def check_xge_abi(c: Check) -> None:
                   f"SelectEvents/XGE: missing {label}")
     c.require(re.search(r"CreateDevice.*CreateDefaultDevice.*BadMatch", devices, re.S) is not None,
               "device creation: XGE negotiation prerequisite and BadMatch must be explicit")
+    c.require(
+        "`XAverius.timelineSemaphore`" in read("registries/physical-device-properties.md")
+        and "`XAverius.timelineSemaphore = 1`" in devices
+        and "MUST enable this feature on every successfully created logical Device" in devices
+        and "mandatory v0.1 `timelineSemaphore` baseline capability" in read("registries/feature-ids.md")
+        and "XAverius.timelineSemaphore = 0" in errors
+        and "`CreateDevice` with value 0 returns `BadMatch`" in conformance
+        and "Every successful logical Device enables the feature" in conformance,
+        "device creation: mandatory timeline semaphore baseline, property query, and feature enablement must agree",
+    )
     c.require(re.search(r"SelectEvents.*XGE.*framed|XGE.*SelectEvents", conformance, re.I | re.S) is not None,
               "conformance checklist: must cover SelectEvents/XGE ABI")
 
