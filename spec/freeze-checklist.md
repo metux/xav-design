@@ -28,8 +28,8 @@ The latest content-audit checkpoint is commit `a6c9a8fb04d56e0630121ccf52756dc25
 
 ## Automated evidence at the current checkpoint (rerun on the final freeze commit)
 
-- [x] `tools/check-wire-layout.py` passes against the exact freeze commit.
-- [x] The complete Python test suite passes, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts.
+- [x] `tools/check-wire-layout.py` passes against the exact candidate commit named in the audit record; rerun on the final freeze commit.
+- [x] The complete Python test suite passes on the exact candidate commit, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts; rerun on the final freeze commit.
 - [x] CI explicitly runs all required checks and fails if a required check is skipped or missing.
 - [x] The audit record names the commit tested and describes what the checks do **not** establish.
 - [x] Project status, open issues, registry counts, profile boundaries, and the test plan describe the same current state.
