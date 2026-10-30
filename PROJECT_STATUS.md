@@ -6,7 +6,7 @@ The project is focused exclusively on completing and freezing the protocol speci
 
 The working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The latest verified evidence checkpoint is commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8`, [CI run 41067862556](https://github.com/metux/xav-design/actions/runs/41067862556): `tools/check-wire-layout.py` passed 4,688 checks, the full Python suite passed all 655 tests, and the mandatory audit confirmed that every required CI step ran successfully. The evidence and limitations are recorded in [the request audit](spec/request-audit.md).
 
-**Normative editorial blocker:** the style guide requires English throughout `spec/` and `registries/`, but several normative chapters still contain German headings and substantive German prose. Those passages must be translated without semantic changes before the editorial freeze gate can pass. The [freeze checklist](spec/freeze-checklist.md) records the gate status.
+**Editorial note (not a freeze blocker):** some normative prose remains German while other chapters are English. This will be addressed only where mixed-language wording impairs precision. The remaining freeze work is a content audit for missing rules, contradictory precedence, lifecycle races, and incomplete conformance evidence; see the [freeze checklist](spec/freeze-checklist.md).
 
 **Open implementation acceptance gates (not specification-design gaps):** live X11/XGE interoperability; end-to-end compute execution and lifecycle behavior against a real Vulkan backend; and presentation runtime validation if that profile is implemented. Static fixtures and reference models do not prove these runtime properties.
 
