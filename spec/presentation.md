@@ -184,7 +184,7 @@ For `QueuePresent`, `presentation_token = 0` and duplicate wait-semaphore XIDs a
 All image-state transitions performed by `AcquireNextImage`, `QueuePresent`, and presentation image release MUST use one authoritative serialization order per Swapchain. This is the same order used for pending-acquire terminalization and lifecycle invalidation; separate request-dispatch, queue, or callback threads MUST NOT make independent decisions from stale image-state snapshots. Each operation has one linearization point:
 
 - An immediate `AcquireNextImage` success linearizes when one `AVAILABLE` image changes to `ACQUIRED` and its supplied signal objects are committed.
-- A pending acquire success linearizes when an image-release transition assigns one image to that registration, changes it from `AVAILABLE` (or directly from the backend-released state) to `ACQUIRED`, commits its signal objects, and terminalizes the registration.
+- A pending acquire success linearizes when an image-release transition assigns one image to that registration, changes it from `AVAILABLE` to `ACQUIRED`, commits its signal objects, and terminalizes the registration.
 - `QueuePresent` acceptance linearizes when the image changes from `ACQUIRED` to `PRESENT_PENDING` together with reservation of its token, wait slots, and required references.
 - Image release linearizes when backend access has ended and the image either becomes `AVAILABLE` or is atomically assigned to one open acquire registration as specified in section 5.1.
 
