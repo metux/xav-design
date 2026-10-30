@@ -1606,6 +1606,32 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.pending_token)
         self.assertIsNone(shared.pending_owner)
 
+    def test_destroyed_pending_fence_owner_still_observes_device_loss(self) -> None:
+        shared = SharedFence()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
+        observer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
+        self.assertEqual(queue_submit(
+            producer, SubmitRequest(token=335, attach_fence=True)
+        ), "SUCCESS")
+        self.assertEqual(destroy_submission_device(producer), "SUCCESS")
+        self.assertNotIn(producer, [owner_ref() for owner_ref in shared.owners])
+        self.assertIs(shared.pending_owner(), producer)
+
+        self.assertEqual(mark_device_lost(observer), "SUCCESS")
+        self.assertTrue(producer.device_lost)
+        self.assertEqual(shared.status, "FAILED")
+        self.assertEqual(shared.pending_token, 335)
+        self.assertEqual(finish_submission(producer, 335, success=True), "SUCCESS")
+        self.assertEqual(shared.status, "FAILED")
+        self.assertIsNone(shared.pending_token)
+        self.assertIsNone(shared.pending_owner)
+
     def test_concurrent_submission_cannot_reuse_pending_fence(self) -> None:
         state = self.state(
             command_buffers=[
