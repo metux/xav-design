@@ -590,6 +590,35 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             with self.subTest(atomicity=phrase):
                 self.assertIn(phrase, queue + section)
+        # The normative six-phase order and the finer mutable-state order
+        # must be represented by explicit mixed-failure conformance vectors.
+        phases = (
+            "malformed count/length/overflow",
+            "token zero/reuse",
+            "Device, optional Fence, Command Buffer, wait Semaphore, and signal Semaphore XIDs in wire order",
+            "all XIDs resolve before type/ownership/queue checks",
+            "Device Unavailable/Loss",
+            "mutable Fence/Command Buffer/wait/signal preconditions",
+        )
+        positions = [queue.index(phrase) for phrase in phases]
+        self.assertEqual(positions, sorted(positions))
+        for phrase in (
+            "unknown/non-live XID in the defined wire order",
+            "later XID-resolution `BadValue`",
+            "combine any resolved type/ownership/queue mismatch with Device Unavailable/Loss",
+            "require `BadMatch`",
+            "invalid Fence with invalid command-buffer/wait/signal entries",
+            "first Command Buffer in array order",
+            "first wait in array order",
+            "nonzero Binary value",
+            "Timeline value greater than the observable counter",
+            "specific `DEPENDENCY_FAILED` result",
+            "generic dependency failure is considered only after all Fence",
+            "syntactically valid but queue-unsupported stage with Device Loss",
+            "retry the corrected request with the same token",
+        ):
+            with self.subTest(conformance_vector=phrase):
+                self.assertIn(phrase, section)
 
     def test_all_assigned_requests_are_named_in_error_and_conformance_contracts(self):
         registry = (ROOT / "registries/request-subopcodes.md").read_text(encoding="utf-8")
