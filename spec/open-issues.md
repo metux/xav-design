@@ -6,7 +6,7 @@ This file separates specification design gaps from implementation acceptance tes
 
 The request and event registries define 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation requests and event types remain profile-gated; their assignment does not imply support in the initial compute-only implementation.
 
-The current content-audit evidence checkpoint is commit `2558386d17aa57e1537591dd817501f6fdf12425`, verified by [CI run 41079707203](https://github.com/metux/xav-design/actions/runs/41079707203): 4,693 wire-layout/documentation checks, 72 Timeline regression tests, all 658 Python tests, and the required-check presence audit passed. The run and the latest `CommandBufferData`, resource-lifetime, ShaderModule, and DescriptorPool backend-flag corrections are recorded in [the request audit](request-audit.md) and [freeze checklist](freeze-checklist.md). A new run is required for the eventual freeze commit.
+The current content-audit evidence checkpoint is commit `5ffb625c1dc9620823d9b4e61649af01e019dd10`, verified by [CI run 41083466038](https://github.com/metux/xav-design/actions/runs/41083466038): 4,694 wire-layout/documentation checks, 72 Timeline regression tests, all 658 Python tests, and the required-check presence audit passed. The run and the `CommandBufferData` request-size boundary plus `CreateDevice` queue-family precedence corrections are recorded in [the request audit](request-audit.md) and [freeze checklist](freeze-checklist.md). A new run is required for the eventual freeze commit.
 
 **Editorial note (not a protocol blocker).** Some normative and explanatory prose remains German while other chapters are English. This is a consistency/readability issue, not evidence of a protocol-design gap. Translation is deferred unless mixed-language wording makes a requirement ambiguous; content reviews must still verify the exact normative meaning regardless of language.
 
@@ -25,7 +25,7 @@ These are implementation acceptance gates. They do not require inventing new req
 These are settled rules, not open v0.1 design questions:
 
 - **Request subopcodes:** compute-baseline requests retain assignments 1–40; presentation-capable-profile requests use 41–47. The [central request registry](../registries/request-subopcodes.md) is append-only; existing assignments MUST NOT be renumbered.
-- **Physical-device properties:** the four v0.1 properties and their wire representations are defined in the [property registry](../registries/physical-device-properties.md). Future properties must be registered append-only.
+- **Physical-device properties:** the five v0.1 properties and their wire representations are defined in the [property registry](../registries/physical-device-properties.md). Future properties must be registered append-only.
 - **Feature IDs and device extensions:** future assignments must be registered append-only. The v0.1 optional sets are intentionally empty; see [feature IDs](../registries/feature-ids.md) and [device extensions](../registries/device-extensions.md).
 - **Memory properties flags:** `memory_properties_flags` MUST be zero in v0.1 until a registry definition is explicitly assigned; see [memory properties](memory-buffers.md#52-getphysicaldevicememoryproperties).
 - **Physical Device UUID and Driver UUID:** both are opaque 16-byte `BYTE_ARRAY` properties. The server preserves Vulkan-returned bytes exactly and MUST NOT fabricate unavailable UUIDs; see the [property registry](../registries/physical-device-properties.md).
