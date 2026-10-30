@@ -520,6 +520,33 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
         self.assert_atomic_rejection(state, SubmitRequest(token=7), "BadValue")
 
+    def test_optional_fence_xid_is_resolved_before_device_state_and_mutable_checks(self) -> None:
+        state = self.state(
+            device_lost=True,
+            fence_xid_valid=False,
+            fence_state_valid=False,
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(attach_fence=True), "BadValue"
+        )
+
+    def test_zero_fence_xid_does_not_require_fence_resolution(self) -> None:
+        state = self.state(fence_xid_valid=False, fence_state_valid=False)
+        self.assert_atomic_rejection(
+            state, SubmitRequest(attach_fence=False), "SUCCESS"
+        )
+
+    def test_device_unavailable_precedes_mutable_submission_state(self) -> None:
+        state = self.state(
+            device_unavailable=True,
+            command_buffers=[CommandBufferModel(
+                lifecycle=CommandBufferLifecycle.RECORDING
+            )],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(), "DEVICE_UNAVAILABLE"
+        )
+
     def test_bad_command_buffer_index_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True)
         self.assert_atomic_rejection(
