@@ -645,7 +645,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
         self.assertIn("If the device is lost, `WriteBuffer` fails with `DEVICE_LOST` and MUST NOT send a successful reply.", memory)
         self.assertIn("A failed upload likewise MUST NOT produce a successful reply; the destination contents are then not guaranteed.", memory)
-        self.assertIn("Bei einem fehlgeschlagenen `WriteBuffer` gilt die erfolgreiche Upload-Garantie nicht", memory)
+        self.assertIn("If `WriteBuffer` fails, the successful-upload guarantee does not apply", memory)
         self.assertIn("deferred requests are then processed in normal request order.", memory.lower())
 
 
@@ -654,13 +654,13 @@ class GoldenSelectEventsTests(unittest.TestCase):
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
-        self.assertIn("vor diesem Request angenommenen `QueueSubmit`-Submissions", read)
+        self.assertIn("earlier accepted `QueueSubmit` submissions", read)
         self.assertIn("vor diesem Request eingereihten `WriteBuffer`-Transfers", read)
         self.assertIn("Eine bloße logische Terminalisierung reicht nicht aus", read)
         self.assertIn("späteren `QueueSubmit`-Requests", read)
         self.assertIn("Daten-Snapshot", read)
         self.assertIn("`ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply", read)
-        self.assertIn("Ein fehlgeschlagener `ReadBuffer` verspricht keinen Snapshot", read)
+        self.assertIn("A failed `ReadBuffer` does not promise a snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Detected dependency cycle while waiting for earlier GPU work: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`", errors)
