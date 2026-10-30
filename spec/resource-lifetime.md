@@ -70,6 +70,7 @@ Other relationships are dependencies, not automatic ownership relationships:
 - Pipeline ↔ Pipeline Layout
 - Pipeline ↔ Shader Module während der Erstellung
 - Pipeline Layout ↔ Descriptor Set Layout während der Erstellung
+- Descriptor Set → Descriptor Set Layout (retained layout definition/backend identity for the lifetime of the allocated set)
 - Command buffer ↔ resources used by recorded commands
 
 The implementation MUST NOT assume that every object whose handle was used to create another object must remain alive indefinitely. The applicable Vulkan lifetime rules determine the required lifetime.
