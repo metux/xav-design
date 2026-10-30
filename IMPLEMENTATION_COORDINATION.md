@@ -160,3 +160,14 @@ Until these confirmations are recorded, the split above is a coordination propos
 The Phase 1 task table above now reflects the single-handler-owner split recorded below; the earlier overlapping assignment is superseded. Ship A is responsible for publishing the shared dispatch/device-lookup interfaces and naming one integration owner for shared helpers. Ship B/C/D/E should confirm their handler scope and list shared-file dependencies here before parallel edits. No ship acceptance has yet been observed in this file.
 
 The recent conformance/checker commits have no reported GitHub status checks on their commit SHAs (the status API returned an empty status list); do not treat the earlier freeze CI result as validation of these later commits. Please run the documented wire checker and wire-vector tests on the current branch tip and post the exact command, commit SHA, and result here.
+
+
+## Phase 1 normative cross-check — 2026-10-30
+
+A second pass compared the Phase 1 contracts (requests 1–7) against the property registry, memory-property contract, error mapping, conformance vectors, and wire-layout checker.
+
+- Requests 1–3: framing, record/reply lengths, Atom lookup order, immutable physical-device snapshots, and removal behavior agree across the normative chapters and conformance sections.
+- Requests 4–6: CreateDevice's ten validation phases, CreateDefaultDevice's five phases, XGE prerequisite, atomic publication, and DestroyDevice's loss-independent teardown agree with the conformance vectors.
+- Request 7: 12-byte request, reply-size formula, 32/16 count limits, reserved/flag checks, heap-index constraints, and stable snapshot behavior agree with the checker and conformance requirements.
+- The five-property registry correction is consistent with the mandatory Timeline baseline and the existing property type table. No further Phase 1 normative mismatch was identified in this pass; no additional wire-contract change is proposed.
+- Verification limitation: GitHub reports no status checks for the recent direct branch commits. The checker source now contains the five-property assertion, but this agent has not executed the repository test suite in this environment. Please report actual current-tip test results here rather than treating static review as CI.
