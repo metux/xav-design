@@ -25,6 +25,45 @@ Evidence from the checked branch:
 - The asynchronous tests exercise Python reference models, not callback
   entrypoints compiled into or registered by a live backend.
 
+## QueueSubmit backend validation-order audit — blocked
+
+The normative six-phase order is specified in `spec/queue-submission.md`,
+and the Python `queue_submit` reference model follows that order for the
+validation classes it represents. This checkout does **not** contain a native
+`QueueSubmit` request handler or Vulkan queue-submission backend, so no claim
+about the actual runtime validation order can be made.
+
+When the implementation is available, trace the real handler from request
+framing through the acceptance commit and record the first failing operation
+for each mixed-failure pair. At minimum, instrument and verify this order:
+
+1. Exact request length/count arithmetic and complete payload framing.
+2. Scalar syntax, reserved fields, token uniqueness, duplicate command-buffer
+   and semaphore XIDs, and syntactically invalid wait-stage masks.
+3. XID lookup in wire order: Device, optional Fence, Command Buffers in array
+   order, Wait Semaphores in array order, Signal Semaphores in array order.
+4. Live resource type, client/Device ownership, and queue-family/index
+   association, only after all required XIDs have resolved.
+5. Device availability/loss, before mutable submission-state checks.
+6. Mutable state: Fence, Command Buffers, Wait entries, Signal entries; within
+   each semaphore entry, typed numeric values precede stage-family validation
+   (wait only), which precedes operation/reservation state.
+
+The native regression must inject paired failures at every adjacent phase
+boundary and at representative intra-phase ordering boundaries. It must assert
+the returned X11/Vulkan status, that no backend queue call or acceptance commit
+occurred on rejection, and that token, Fence, Command Buffer, semaphore
+reservations/counters, and retained references are unchanged. For successful
+acceptance, assert exactly one backend queue submission and one atomic
+publication of all reservations. Include out-of-order XID failures in each
+resource array and Device Loss paired with invalid type/ownership and mutable
+state.
+
+The reference-model tests added alongside this audit cover unknown Wait- and
+Signal-Semaphore XIDs against later type/ownership/queue failures. They remain
+model regressions, not native-handler evidence. The existing source-free CI
+gate's `SKIP` result must not be interpreted as a backend validation pass.
+
 ## Required checks when backend sources are available
 
 For every backend callback registration and entrypoint, the audit must trace
