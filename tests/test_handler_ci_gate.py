@@ -98,8 +98,6 @@ def main():
         source = async_root / "src" / "xav_handler.c"
         source.parent.mkdir()
         source.write_text(
-            "int ProcAsyncReq(ClientPtr client) { return 0; }\\n"
-            "static int (*RequestVector[])(ClientPtr) = { ProcAsyncReq };\\n"
             "void on_done(void *ctx) { finish_submit(ctx); }\\n"
             "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\\n",
             encoding="utf-8",
@@ -119,8 +117,6 @@ def main():
         source = async_root_ok / "src" / "xav_handler.c"
         source.parent.mkdir()
         source.write_text(
-            "int ProcAsyncReq(ClientPtr client) { return 0; }\\n"
-            "static int (*RequestVector[])(ClientPtr) = { ProcAsyncReq };\\n"
             "/* XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation */\\n"
             "/* XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation */\\n"
             "void on_done(void *ctx) { if (device_generation != current_device_generation) return; }\\n"
