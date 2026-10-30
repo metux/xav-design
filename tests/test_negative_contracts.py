@@ -517,7 +517,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn("unknown feature ID takes precedence over target-XID occupancy", section)
         self.assertIn("target-XID validation precedes physical-device lookup", section)
-        self.assertIn("every syntactically valid extension name is unregistered", section)
+        self.assertIn("In v0.1 every syntactically valid client extension name is unregistered", section)
         checker = read("tools/check-wire-layout.py")
         self.assertIn("def check_create_device_precedence", checker)
         self.assertIn("check_create_device_precedence(c)", checker)
