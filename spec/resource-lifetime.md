@@ -51,7 +51,7 @@ The following transitions are normative:
 
 An object in `DESTROY_PENDING` cannot be addressed or destroyed again using its old XID. A reused XID identifies a new internal resource identity and MUST NOT inherit references to the old object. `RELEASED` is terminal.
 
-Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, parent-child ownership, and active server operations. Removing a public XID does not automatically remove references held by an accepted submission. On successful ordinary destruction, all required command-buffer invalidations and internal reference updates MUST occur atomically with public invalidation.
+Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, DescriptorSet-to-DescriptorSetLayout associations, parent-child ownership, and active server operations. A DescriptorSet retains the immutable layout definition and the backend layout identity needed for descriptor validation and updates until that set is freed and all backend accesses have ended. Removing a public XID does not automatically remove references held by an accepted submission or a live dependent object. On successful ordinary destruction, all required command-buffer invalidations and internal reference updates MUST occur atomically with public invalidation.
 
 ## Ownership Hierarchy
 
