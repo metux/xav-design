@@ -56,4 +56,4 @@ The proposed family organization is:
 
 These family numbers are an organizational structure, **not assigned subopcodes**.
 
-See the [Specification Language and Layout Style Guide](style-guide.md) for the mandatory English-language and layout conventions.
+See the [Specification Language and Layout Style Guide](style-guide.md) for the language and layout conventions.
