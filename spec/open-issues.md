@@ -6,7 +6,7 @@ This file separates specification design gaps from implementation acceptance tes
 
 The request and event registries define 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation requests and event types remain profile-gated; their assignment does not imply support in the initial compute-only implementation.
 
-The current audited evidence checkpoint is commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8`, verified by [CI run 41067862556](https://github.com/metux/xav-design/actions/runs/41067862556): 4,688 wire-layout/documentation checks and all 655 Python tests passed; every required CI step ran and passed. The run is recorded in [the request audit](request-audit.md) and [freeze checklist](freeze-checklist.md). A new run is required for the eventual freeze commit.
+The current content-audit evidence checkpoint is commit `a6c9a8fb04d56e0630121ccf52756dc250d79486`, verified by [CI run 41069851593](https://github.com/metux/xav-design/actions/runs/41069851593): 4,688 wire-layout/documentation checks, 72 Timeline regression tests, all 656 Python tests, and the required-check presence audit passed. The run is recorded in [the request audit](request-audit.md) and [freeze checklist](freeze-checklist.md). A new run is required for the eventual freeze commit.
 
 **Editorial note (not a protocol blocker).** Some normative and explanatory prose remains German while other chapters are English. This is a consistency/readability issue, not evidence of a protocol-design gap. Translation is deferred unless mixed-language wording makes a requirement ambiguous; content reviews must still verify the exact normative meaning regardless of language.
 
