@@ -1061,7 +1061,7 @@ def check_request_document_coverage(c: Check) -> None:
               "field errors take precedence over target/pool/entry XID errors" in command_recording and
               "takes precedence over command-buffer state and entry/resource compatibility checks" in command_recording and
               "ABORT" in command_recording and
-              "takes precedence over Buffer state" in errors,
+              "before Buffer state or resource-dependent command-entry compatibility" in errors,
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
     c.require("`CommandBufferData` error precedence: malformed request/entry structure" in conformance and
               "an invalid flag combination combined with an invalid target XID returns `BadValue`" in conformance and
