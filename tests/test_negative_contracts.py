@@ -570,7 +570,7 @@ class CommandBufferEmbeddedXidPrecedenceTests(unittest.TestCase):
         self.assertIn("then every resource XID embedded in command entries in entry order and field order", command)
         self.assertIn("CMD_BIND_DESCRIPTOR_SETS", command)
         self.assertIn("resolves its Pipeline-Layout XID followed by Descriptor-Set XIDs in array order", command)
-        self.assertIn("all required XIDs have been resolved", errors)
+        self.assertIn("every required XID has been resolved", errors)
         self.assertIn("embedded command-entry XIDs in entry order and field order", errors)
         self.assertIn("Resolve all required XIDs before checking live resource types", conformance)
         self.assertIn("Device state, which precedes command-buffer state and resource-dependent entry compatibility", conformance)
