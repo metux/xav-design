@@ -1528,6 +1528,34 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(wait_indices=(0,)), "INVALID_SYNCHRONIZATION_STATE"
         )
 
+    def test_concurrent_submission_cannot_reuse_pending_command_buffer(self) -> None:
+        state = self.state()
+        self.assertEqual(queue_submit(
+            state, SubmitRequest(token=320)
+        ), "SUCCESS")
+        before = copy.deepcopy(state)
+        self.assertEqual(queue_submit(
+            state, SubmitRequest(token=321)
+        ), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+
+    def test_concurrent_submission_cannot_reuse_pending_fence(self) -> None:
+        state = self.state(
+            command_buffers=[
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE),
+                CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE),
+            ],
+        )
+        self.assertEqual(queue_submit(
+            state, SubmitRequest(token=322, command_buffer_indices=(0,), attach_fence=True)
+        ), "SUCCESS")
+        before = copy.deepcopy(state)
+        self.assertEqual(queue_submit(
+            state, SubmitRequest(token=323, command_buffer_indices=(1,), attach_fence=True)
+        ), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(state, before)
+        self.assertEqual(state.pending_fence_submissions, [322])
+
     def test_fence_state_precedes_command_buffer_state(self) -> None:
         state = self.state(
             fence_state_valid=False,
