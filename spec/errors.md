@@ -24,6 +24,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Device lost | `DEVICE_LOST` |
 | Execution failure as an X11 error | `EXECUTION_FAILED` is assigned in the error registry but is not emitted by any v0.1 request; `WaitForFence` reports execution failure as a normal reply status, and accepted `QueueSubmit` reports it through terminal events and synchronization state |
 | Logical device normally destroyed while a host wait is open (`WaitSemaphores`) | `DEVICE_DESTROYED` as an X11 error; `WaitForFence` instead uses the normal reply status `DEVICE_DESTROYED = 4` |
+| Logical device destroyed while an earlier `WriteBuffer` operation remains open | `DEVICE_DESTROYED` as an X11 error, unless the write's success or another failure was committed first |
 | Invalid synchronization state | `INVALID_SYNCHRONIZATION_STATE` |
 | Synchronous transfer failure | `TRANSFER_FAILED` |
 | Synchronous allocation failure | `ALLOCATION_FAILED` |
@@ -92,6 +93,7 @@ Normative precedence: (1) total length with checked count/overflow arithmetic an
 - Unknown/non-live XAverius XID: `BadValue`
 - Wrong type, wrong Device, unbound Buffer, missing `TRANSFER_DST`, or range outside the Buffer: `BadMatch`
 - Unavailable/lost Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
+- If Device Loss or `DestroyDevice` terminalizes an already-open `WriteBuffer`, the request reports `DEVICE_LOST` or `DEVICE_DESTROYED`, respectively, unless another terminal outcome was committed first.
 - Synchronous transfer failure: `TRANSFER_FAILED`
 - Staging allocation failure: `ALLOCATION_FAILED`
 - Detected dependency cycle while waiting for earlier GPU work, including a deferred GPU signal that is the only candidate to satisfy an earlier wait: `DEPENDENCY_FAILED`. Only an already-accepted signal operation eligible under the Timeline wait-ordering rules counts as a possible release; a later signal on the same queue cannot satisfy an earlier wait.
