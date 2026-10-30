@@ -460,3 +460,10 @@ No conflicting phase order was found in the reviewed request-specific contracts.
 
 The automated checks here are specification/contract regression checks, not execution against a live X11 server. Server-side runtime tests must still exercise the same mixed-failure cases when an implementation exists.
 
+
+
+## Freeze-checklist evidence refresh — 2026-10-30
+
+The current working-branch commit `2f34416ebd665fa83f6c19c571ddf07110dccecb` was checked by GitHub Actions run [41065436558](https://github.com/metux/xav-design/actions/runs/41065436558). The `wire-layout` job completed successfully: `tools/check-wire-layout.py` reported 4,685 checks, the Timeline semaphore regression step passed, and the complete Python suite ran 655 tests with result `OK`. The final required-check audit also succeeded, confirming that every required step ran and returned success.
+
+This evidence covers static specification/layout/registry consistency and executable reference-model/fixture regressions on that exact commit. It does **not** establish interoperability with a live X11/XGE server, behavior of a native XAverius server, Vulkan backend conformance, real GPU execution, or runtime concurrency/failure behavior. The tested commit is an evidence checkpoint, not the final freeze commit; the final edited candidate must receive its own successful run.
