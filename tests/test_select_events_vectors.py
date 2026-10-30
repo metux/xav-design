@@ -586,11 +586,11 @@ class GoldenSelectEventsTests(unittest.TestCase):
             submission,
         )
         self.assertIn(
-            "Jede Wait-/Signal-Reservierung, Fence-Zuordnung, Pending-Referenz und Pending-Markierung des Command Buffers wird höchstens einmal freigegeben beziehungsweise abgeschlossen.",
+            "each wait/signal reservation, fence association, pending reference, and command-buffer pending marker is released or completed at most once",
             submission,
         )
         self.assertIn(
-            "Event-Zustellung ist ein nachgelagerter Effekt der terminalen Entscheidung und kann diese weder zurückrollen noch wiederholen.",
+            "Event delivery is a downstream effect of the terminal decision and cannot roll it back or repeat it",
             submission,
         )
 
@@ -654,11 +654,11 @@ class GoldenSelectEventsTests(unittest.TestCase):
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
-        self.assertIn("earlier accepted `QueueSubmit` submissions", read)
-        self.assertIn("vor diesem Request eingereihten `WriteBuffer`-Transfers", read)
-        self.assertIn("Eine bloße logische Terminalisierung reicht nicht aus", read)
-        self.assertIn("späteren `QueueSubmit`-Requests", read)
-        self.assertIn("Daten-Snapshot", read)
+        self.assertIn("earlier accepted `QueueSubmit`", read)
+        self.assertIn("earlier enqueued `WriteBuffer` transfers", read)
+        self.assertIn("Logical terminalization alone is insufficient", read)
+        self.assertIn("later `QueueSubmit` requests", read)
+        self.assertIn("stable data snapshot", read)
         self.assertIn("`ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply", read)
         self.assertIn("A failed `ReadBuffer` does not promise a snapshot", read)
         self.assertIn("`DEVICE_LOST`", errors)
