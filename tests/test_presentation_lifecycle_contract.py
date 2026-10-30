@@ -89,7 +89,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
     def test_acquire_present_are_serialized_against_swapchain_and_device_destroy(self) -> None:
         destroy = self.presentation.split(
             "## 5.4 Serialization with Swapchain and Device destruction", 1
-        )[1].split("\\n## ", 1)[0]
+        )[1].split("\n## ", 1)[0]
         for phrase in (
             "DestroySwapchain",
             "DestroyDevice",
