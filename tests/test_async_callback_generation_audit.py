@@ -29,7 +29,7 @@ def setup(root, body, filename="backend.c"):
     source = root / "src" / filename
     source.parent.mkdir(parents=True)
     source.write_text(body, encoding="utf-8")
-    git(root, "add", "src/backend.c")
+    git(root, "add", str(source.relative_to(root)))
     return source
 
 
