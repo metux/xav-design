@@ -131,7 +131,7 @@ CARD16 command_id;
 CARD16 entry_length; /* 32-bit words, including header and padding */
 ```
 
-Maximum entry size: 65535 words (262140 bytes). Every entry MUST fit entirely within one X11 request.
+Maximum entry size: 65531 words (262124 bytes). `CommandBufferData` has a 16-byte fixed request header (four 32-bit words), and the maximum ordinary X11 request is 65535 words (262140 bytes); therefore a single entry can occupy at most the remaining 65531 words. `entry_length` is a 16-bit word count, but its representable maximum MUST NOT be mistaken for the permitted wire maximum. Every entry MUST fit entirely within one X11 request, and the sum of the fixed header plus all entries in a chunk MUST NOT exceed 65535 words.
 
 Command IDs are numerically defined in the [Command Entry Registry](../registries/command-entries.md). They are XAverius wire IDs and MUST NOT be interpreted as native Vulkan command IDs.
 
