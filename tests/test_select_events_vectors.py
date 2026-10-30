@@ -643,7 +643,8 @@ class GoldenSelectEventsTests(unittest.TestCase):
     def test_write_buffer_device_loss_never_claims_upload_visibility(self):
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         queue = (ROOT / "spec" / "queue-submission.md").read_text(encoding="utf-8")
-        self.assertIn("If Device Loss commits first, the request fails with X11 error `DEVICE_LOST`; neither outcome may produce a successful reply or establish the upload visibility guarantee.", memory)
+        self.assertIn("If Device Loss commits first, the request fails with X11 error `DEVICE_LOST`;", memory)
+        self.assertIn("Neither outcome may produce a successful reply or establish the upload visibility guarantee.", memory)
         self.assertIn("A failed upload likewise MUST NOT produce a successful reply; the destination contents are then not guaranteed.", memory)
         self.assertIn("If `WriteBuffer` fails, the successful-upload guarantee does not apply", memory)
         self.assertIn("deferred requests are then processed in normal request order.", memory.lower())
