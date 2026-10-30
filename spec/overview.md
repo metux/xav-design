@@ -1,7 +1,7 @@
 # XAverius Protocol Specification
 
 **Version:** 0.1 — frozen protocol specification  
-**Status:** Specification frozen at content commit `38587be1b70868224e8f8941750a7c1aa1e19dd7` (verified by [CI run 41088183365](https://github.com/metux/xav-design/actions/runs/41088183365))  
+**Status:** Specification frozen at content commit `0e0ced45371a2548031c4b9d1370c1dead69d724` (verified by [CI run 41109805393](https://github.com/metux/xav-design/actions/runs/41109805393))  
 **Transport:** X11 extension  
 **Backend:** Vulkan  
 **Initial implementation target:** Xvfb, compute-only  
@@ -11,7 +11,7 @@
 
 ## 0. Status and normative language
 
-This document is the frozen XAverius v0.1 protocol specification. The chapters under `spec/` and central registries under `registries/` are authoritative; historical material under `wip/` is non-normative. The compute-baseline profile is the initial implementation target. The separately defined presentation-capable profile is optional and MUST NOT be inferred from compute-baseline support.
+This document is the frozen XAverius v0.1 protocol specification. The post-checkpoint normative delta review is recorded in [the audit addendum](../audit/post-freeze-normative-delta-audit-2026-10-30.md). The chapters under `spec/` and central registries under `registries/` are authoritative; historical material under `wip/` is non-normative. The compute-baseline profile is the initial implementation target. The separately defined presentation-capable profile is optional and MUST NOT be inferred from compute-baseline support.
 
 The keywords **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** express normative requirements when used in their defined normative sense.
 
