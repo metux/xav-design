@@ -510,12 +510,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state, before, "rejected submission partially mutated state")
 
     def test_counts_length_precedes_scalar_and_xid_errors(self) -> None:
-        state = self.state(xids_valid=False, scalar_valid=False)
+        state = self.state(device_xid_valid=False, scalar_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(counts_valid=False), "BadLength")
 
     def test_reused_token_precedes_xid_type_and_device_errors(self) -> None:
         state = self.state(
-            accepted_tokens={7}, xids_valid=False, types_and_ownership_valid=False,
+            accepted_tokens={7}, device_xid_valid=False, types_and_ownership_valid=False,
             device_lost=True,
         )
         self.assert_atomic_rejection(state, SubmitRequest(token=7), "BadValue")
@@ -1480,7 +1480,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
 
     def test_reserved_wait_stage_bits_precede_xid_resolution(self) -> None:
-        state = self.state(xids_valid=False)
+        state = self.state(device_xid_valid=False)
         self.assert_atomic_rejection(
             state, SubmitRequest(wait_indices=(0,), wait_stage_masks=(0x10,)), "BadValue"
         )
@@ -1509,7 +1509,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
 
     def test_signal_count_mismatch_is_bad_length(self) -> None:
-        state = self.state(scalar_valid=False, xids_valid=False)
+        state = self.state(scalar_valid=False, device_xid_valid=False)
         self.assert_atomic_rejection(
             state, SubmitRequest(signal_indices=(0,), signal_values=()), "BadLength"
         )
@@ -1556,7 +1556,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assert_atomic_rejection(state, SubmitRequest(), "DEVICE_LOST")
 
     def test_unknown_xid_precedes_device_loss(self) -> None:
-        state = self.state(device_lost=True, xids_valid=False)
+        state = self.state(device_lost=True, device_xid_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadValue")
 
     def test_invalid_command_buffer_does_not_reserve_token_waits_fence_or_signals(self) -> None:
