@@ -21,6 +21,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 
 - [Request catalogue and wire-contract audit](request-audit.md) — reviewed inventory, cross-chapter consistency result, and remaining exclusions.
 - [Specification freeze checklist](freeze-checklist.md) — normative and automated evidence gates for declaring the protocol contract frozen.
+- [Post-freeze normative delta audit](../audit/post-freeze-normative-delta-audit-2026-10-30.md) — cross-chapter review of the later Timeline, host-wait, WriteBuffer, and presentation corrections.
 
 ## Central registries
 
