@@ -1600,7 +1600,7 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(finish_submission(producer, 333, success=True), "SUCCESS")
         self.assertEqual(shared.status, "FAILED")
         self.assertIsNone(shared.pending_token)
-        self.assertIsNone(shared.pending_owner())
+        self.assertIsNone(shared.pending_owner)
 
     def test_concurrent_submission_cannot_reuse_pending_fence(self) -> None:
         state = self.state(
