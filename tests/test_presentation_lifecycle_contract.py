@@ -86,6 +86,31 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("commit-time revalidation", self.races)
         self.assertIn("publishes no target XID or backing resource", self.races)
 
+    def test_acquire_present_are_serialized_against_swapchain_and_device_destroy(self) -> None:
+        destroy = self.presentation.split(
+            "## 5.4 Serialization with Swapchain and Device destruction", 1
+        )[1].split("\\n## ", 1)[0]
+        for phrase in (
+            "DestroySwapchain",
+            "DestroyDevice",
+            "pending acquire",
+            "DEVICE_DESTROYED",
+            "BadValue",
+            "PRESENTATION_FAILED",
+            "backend image access has ended",
+            "DestroyDevice alone MUST NOT rewrite the accepted presentation's terminal result to DEVICE_LOST",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, destroy)
+        for label in (
+            "**DestroySwapchain versus AcquireNextImage:**",
+            "**DestroySwapchain versus QueuePresent:**",
+            "**DestroyDevice versus AcquireNextImage:**",
+            "**DestroyDevice versus QueuePresent:**",
+        ):
+            with self.subTest(vector=label):
+                self.assertIn(label, self.races)
+
     def test_rejected_present_does_not_reserve_or_consume_state(self) -> None:
         rejected = self.races.split("**QueuePresent rejection versus accepted state:**", 1)[1].split("\n-", 1)[0]
         self.assertIn("leaves the image ACQUIRED", rejected)
