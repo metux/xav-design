@@ -3085,10 +3085,20 @@ def check_presentation_profile(c: Check) -> None:
     c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in copy_command,
               "presentation copy path must specify destination and source usage")
     copy_errors = read("spec/errors.md")
+    copy_error_order = (
+        "Error precedence follows the enclosing `CommandBufferData` phases:",
+        "(5) for CREATE, append, and FINAL, check Device state",
+        "(6) check resource-dependent static values",
+        "(7) check the image's mutable state atomically at `QueueSubmit` acceptance",
+    )
     c.require("Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`" in copy_errors and
-              "image_index` außerhalb der Swapchain" in copy_errors and
-              "konkurriert der Submit mit einer Present-Transition" in copy_errors,
-              "presentation copy command: error mapping must cover resource, bounds, and image-state validation")
+              "an `image_index` outside the Swapchain" in copy_errors and
+              "the Submit races a Present transition" in copy_errors and
+              all(term in copy_errors for term in copy_error_order) and
+              [copy_errors.index(term) for term in copy_error_order] == sorted(
+                  copy_errors.index(term) for term in copy_error_order
+              ),
+              "presentation copy command: error mapping must preserve Device-before-compatibility and submission-time image-state precedence")
     c.require("incompatible transfer usage with `BadMatch`" in read("spec/conformance.md") and
               "non-`ACQUIRED` image at submission acceptance with `INVALID_SYNCHRONIZATION_STATE`" in read("spec/conformance.md"),
               "presentation copy command: conformance must cover usage and acquired-image validation")
