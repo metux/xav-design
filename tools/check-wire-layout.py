@@ -2594,7 +2594,7 @@ def check_xge_abi(c: Check) -> None:
         and "except for protocol-required backend dependencies expressly identified by the v0.1 baseline" in read("registries/device-extensions.md")
         and "XAverius.timelineSemaphore = 0" in read("spec/errors.md")
         and "`CreateDevice` with value 0 returns `BadMatch`" in conformance
-        and "Every successful logical Device enables the feature" in conformance,
+        and "every successful logical Device enables the feature" in conformance,
         "device creation: mandatory timeline semaphore baseline, property query, and feature enablement must agree",
     )
     c.require(re.search(r"SelectEvents.*XGE.*framed|XGE.*SelectEvents", conformance, re.I | re.S) is not None,
