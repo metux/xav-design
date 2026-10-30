@@ -2590,6 +2590,8 @@ def check_xge_abi(c: Check) -> None:
         and "`XAverius.timelineSemaphore = 1`" in devices
         and "MUST enable this feature on every successfully created logical Device" in devices
         and "Vulkan `timelineSemaphore` is a mandatory v0.1 baseline capability" in read("registries/feature-ids.md")
+        and "VK_KHR_timeline_semaphore` internally" in read("registries/device-extensions.md")
+        and "except for protocol-required backend dependencies expressly identified by the v0.1 baseline" in read("registries/device-extensions.md")
         and "XAverius.timelineSemaphore = 0" in read("spec/errors.md")
         and "`CreateDevice` with value 0 returns `BadMatch`" in conformance
         and "Every successful logical Device enables the feature" in conformance,
