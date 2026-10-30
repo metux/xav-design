@@ -531,10 +531,11 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         )
 
     def test_zero_fence_xid_does_not_require_fence_resolution(self) -> None:
-        state = self.state(fence_xid_valid=False, fence_state_valid=False)
-        self.assert_atomic_rejection(
-            state, SubmitRequest(attach_fence=False), "SUCCESS"
+        state = self.state(fence_xid_valid=False)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(attach_fence=False)), "SUCCESS"
         )
+        self.assertFalse(state.fence_attached)
 
     def test_device_unavailable_precedes_mutable_submission_state(self) -> None:
         state = self.state(
