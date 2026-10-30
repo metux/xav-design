@@ -3428,11 +3428,11 @@ def check_wait_semaphore_semantics(c: Check) -> None:
         c.require(contract in sync, f"WaitSemaphores normative predicate missing: {contract}")
     c.require(
         "partial counter satisfaction is still open" in lifetime
-        and "partially satisfied `WAIT_ALL`" in devices,
+        and "Partial `WAIT_ALL` progress is not a successful or terminal result" in devices,
         "WaitSemaphores lifecycle: partial WAIT_ALL must remain open for DestroyDevice terminalization",
     )
     c.require(
-        "partial `WAIT_ALL` progress remains open" in errors
+        "A partially satisfied `WAIT_ALL` remains open" in errors
         and "including partially satisfied `WAIT_ALL` registrations" in conformance,
         "WaitSemaphores cross-chapter summary must preserve partial-ALL lifecycle semantics",
     )
