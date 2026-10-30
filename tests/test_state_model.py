@@ -2223,6 +2223,11 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(finish_submission(queue_a, 801, success=True), "SUCCESS")
         self.assertEqual(shared.counter, 9)
         self.assertEqual(shared.pending_signals, [])
+        # Queue B's local mirror is stale; host signaling must compare against
+        # the canonical counter published by Queue B's own prior callback.
+        before = copy.deepcopy((shared, queue_b))
+        self.assertEqual(signal_timeline_host(queue_b, 0, 8), "BadValue")
+        self.assertEqual((shared, queue_b), before)
 
     def test_host_timeline_signal_cannot_cross_another_queues_reservation(self) -> None:
         shared = SharedTimelineSemaphore(counter=3)
