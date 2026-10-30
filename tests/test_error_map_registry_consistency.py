@@ -169,5 +169,29 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         )
 
 
+
+    def test_every_registered_request_has_an_error_mapping_entry(self):
+        table = self.registry.split("| Request | Subopcode | Kind | Responsibility |", 1)[1].split(
+            "## Allocation policy", 1
+        )[0]
+        rows = re.findall(r"^\\| (.+?) \\| (\\d+) \\|", table, re.M)
+        error_section = self.errors.split("## Request-specific error mapping", 1)[1].split(
+            "## Synchronous versus Asynchronous Errors", 1
+        )[0]
+        self.assertEqual(len(rows), 47)
+        marker = chr(96)
+        missing = [name for name, _opcode in rows if marker + name + marker not in error_section]
+        self.assertEqual(missing, [], f"registered requests missing from the error mapping: {missing}")
+
+    def test_every_registered_extension_error_has_a_general_mapping(self):
+        registry = (ROOT / "registries" / "errors.md").read_text(encoding="utf-8")
+        codes = re.findall(r"^\\|\\s*(\\d+)\\s*\\|\\s*([A-Z_]+)\\s*\\|$", registry, re.M)
+        general = self.errors.split("## General Error Classes", 1)[1].split(
+            "## Normative XID Error Rule", 1
+        )[0]
+        self.assertEqual([int(offset) for offset, _symbol in codes], list(range(9)))
+        missing = [symbol for _offset, symbol in codes if symbol not in general]
+        self.assertEqual(missing, [], f"registered error codes missing from general mapping: {missing}")
+
 if __name__ == "__main__":
     unittest.main()
