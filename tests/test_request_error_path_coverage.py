@@ -459,7 +459,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "The Device-state check in step 5, Timeline-type check in step 6, coherent initial counter snapshot, and the decision to reply immediately or install an open registration MUST be serialized as one operation",
             "visible to the initial condition check",
             "observe the installed registration and trigger its reevaluation",
-            "timeout_ns = 0 commits TIMEOUT without installing a registration",
+            "If it is not satisfied and `timeout_ns = 0`, the request commits `TIMEOUT` without installing a registration",
             "no callback can terminalize a cancelled or already-terminal registration",
         ):
             with self.subTest(phrase=phrase):
