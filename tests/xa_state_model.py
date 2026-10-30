@@ -1015,6 +1015,26 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     if any(state.command_buffers[i].lifecycle is not CommandBufferLifecycle.EXECUTABLE
            for i in request.command_buffer_indices):
         return "INVALID_SYNCHRONIZATION_STATE"
+    # Snapshot indirect resources before acceptance. Every accepted token owns
+    # an independent reference set, even when submissions share resources.
+    selected_cbs = [state.command_buffers[i] for i in request.command_buffer_indices]
+    accepted_sets: list[DescriptorSetLifetime] = []
+    for cb in selected_cbs:
+        for descriptor_set in cb.descriptor_sets:
+            if descriptor_set not in accepted_sets:
+                accepted_sets.append(descriptor_set)
+    if any(not descriptor_set.live for descriptor_set in accepted_sets):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    referenced_ids: set[str] = set()
+    for descriptor_set in accepted_sets:
+        referenced_ids.update(descriptor_set.slots.values())
+    for cb in selected_cbs:
+        referenced_ids.update(cb.indirect_buffer_refs)
+    registry = {buffer.identity: buffer for buffer in state.buffer_registry}
+    if state.buffer_registry and any(identity not in registry for identity in referenced_ids):
+        return "INVALID_SYNCHRONIZATION_STATE"
+    accepted_buffers = [registry[identity] for identity in sorted(referenced_ids)
+                        if identity in registry]
     # Validate each wait's typed value before its stage and mutable-state
     # checks, as required by the normative per-entry precedence.
     for pos, index in enumerate(request.wait_indices):
@@ -1095,26 +1115,6 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
                 # change when callbacks for concurrent submissions arrive out
                 # of order, but every non-terminal reservation remains binding.
                 return "INVALID_SYNCHRONIZATION_STATE"
-    # Snapshot indirect resources before acceptance. Every accepted token owns
-    # an independent reference set, even when submissions share resources.
-    selected_cbs = [state.command_buffers[i] for i in request.command_buffer_indices]
-    accepted_sets: list[DescriptorSetLifetime] = []
-    for cb in selected_cbs:
-        for descriptor_set in cb.descriptor_sets:
-            if descriptor_set not in accepted_sets:
-                accepted_sets.append(descriptor_set)
-    if any(not descriptor_set.live for descriptor_set in accepted_sets):
-        return "INVALID_SYNCHRONIZATION_STATE"
-    referenced_ids: set[str] = set()
-    for descriptor_set in accepted_sets:
-        referenced_ids.update(descriptor_set.slots.values())
-    for cb in selected_cbs:
-        referenced_ids.update(cb.indirect_buffer_refs)
-    registry = {buffer.identity: buffer for buffer in state.buffer_registry}
-    if state.buffer_registry and any(identity not in registry for identity in referenced_ids):
-        return "INVALID_SYNCHRONIZATION_STATE"
-    accepted_buffers = [registry[identity] for identity in sorted(referenced_ids)
-                        if identity in registry]
     # A generic dependency failure is the fallback only after all concrete
     # wait and signal entry errors have been ruled out.
     if not state.dependencies_valid:
