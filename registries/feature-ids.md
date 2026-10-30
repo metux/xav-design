@@ -4,7 +4,7 @@ This registry defines the numeric namespace used by `DEVICEFEATUREREQUEST.featur
 
 ## v0.1 assignments
 
-No optional device feature IDs are assigned in v0.1. The initial compute path uses only functionality required by the selected XAverius baseline and does not require an optional `DEVICEFEATUREREQUEST`.
+No optional device feature IDs are assigned in v0.1. The initial compute path uses only functionality required by the selected XAverius baseline and does not require an optional `DEVICEFEATUREREQUEST`. Vulkan `timelineSemaphore` is a mandatory v0.1 baseline capability, not an optional feature ID: the server MUST enable it for every successfully created logical Device, and `CreateDevice` MUST reject a Physical Device that does not support it.
 
 | ID | Symbol | v0.1 status |
 |---:|---|---|
