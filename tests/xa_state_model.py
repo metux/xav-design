@@ -67,7 +67,7 @@ class SharedBinarySemaphore:
 
 
 def _shared_semaphore_objects(state: PresentState | SubmissionModel):
-    return [*state.shared_semaphores, *state.shared_timeline_semaphores]
+    return [*state.shared_semaphores, *getattr(state, "shared_timeline_semaphores", [])]
 
 
 def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
