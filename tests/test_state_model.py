@@ -10,6 +10,7 @@ from xa_state_model import (
     ImageState,
     BinarySignalState,
     SharedBinarySemaphore,
+    SharedFence,
     SharedTimelineSemaphore,
     PresentRequest,
     PresentState,
@@ -1539,6 +1540,62 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(token=321)
         ), "INVALID_SYNCHRONIZATION_STATE")
         self.assertEqual(state, before)
+
+    def test_shared_fence_cannot_be_attached_by_two_queue_models(self) -> None:
+        shared = SharedFence()
+        queue_a = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
+        queue_b = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
+        self.assertEqual(queue_submit(
+            queue_a, SubmitRequest(token=330, attach_fence=True)
+        ), "SUCCESS")
+        self.assertEqual(shared.status, "PENDING")
+        self.assertIs(shared.pending_owner(), queue_a)
+        before = copy.deepcopy((shared, queue_b))
+        self.assertEqual(queue_submit(
+            queue_b, SubmitRequest(token=331, attach_fence=True)
+        ), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual((shared, queue_b), before)
+
+        self.assertEqual(finish_submission(queue_a, 330, success=True), "SUCCESS")
+        self.assertEqual(shared.status, "SIGNALED")
+        self.assertFalse(queue_b.fence_state_valid)
+        # Reset through a different queue model updates every live mirror.
+        self.assertEqual(reset_fence(queue_b), "SUCCESS")
+        self.assertEqual(shared.status, "UNSIGNALED")
+        self.assertEqual(shared.generation, 1)
+        self.assertTrue(queue_a.fence_state_valid)
+        self.assertTrue(queue_b.fence_state_valid)
+        self.assertEqual(queue_submit(
+            queue_b, SubmitRequest(token=332, attach_fence=True)
+        ), "SUCCESS")
+        self.assertIs(shared.pending_owner(), queue_b)
+
+    def test_shared_fence_device_loss_blocks_other_queue_and_late_callback(self) -> None:
+        shared = SharedFence()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
+        observer = SubmissionModel(shared_fence=shared)
+        self.assertEqual(queue_submit(
+            producer, SubmitRequest(token=333, attach_fence=True)
+        ), "SUCCESS")
+        self.assertEqual(mark_device_lost(observer), "SUCCESS")
+        self.assertTrue(shared.device_lost)
+        self.assertTrue(producer.device_lost)
+        self.assertEqual(queue_submit(
+            observer, SubmitRequest(token=334, attach_fence=True)
+        ), "DEVICE_LOST")
+        self.assertEqual(finish_submission(producer, 333, success=True), "SUCCESS")
+        self.assertEqual(shared.status, "PENDING")
+        self.assertEqual(shared.pending_token, 333)
+        self.assertEqual(shared.pending_owner(), producer)
 
     def test_concurrent_submission_cannot_reuse_pending_fence(self) -> None:
         state = self.state(
