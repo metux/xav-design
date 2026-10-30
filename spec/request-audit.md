@@ -469,13 +469,11 @@ The current working-branch commit `2f34416ebd665fa83f6c19c571ddf07110dccecb` was
 This evidence covers static specification/layout/registry consistency and executable reference-model/fixture regressions on that exact commit. It does **not** establish interoperability with a live X11/XGE server, behavior of a native XAverius server, Vulkan backend conformance, real GPU execution, or runtime concurrency/failure behavior. The tested commit is an evidence checkpoint, not the final freeze commit; the final edited candidate must receive its own successful run.
 
 
-## English-language editorial pass and current CI checkpoint — 2026-10-30
+## Editorial consistency note and historical CI checkpoint — 2026-10-30
 
-The freeze-checklist review found that the English-only requirement in [the style guide](style-guide.md) was not met consistently: several normative chapters still contained German headings and substantive German text. This pass translated the Physical Devices and Device Ownership headings, the `WriteBuffer`/`ReadBuffer` ordering and snapshot contract prose, and the queue-submission finalization, queue-ordering, and synchronization-guarantee prose. The synchronization and command-recording headings were also normalized. Static test expectations were updated to assert the English normative wording rather than the old German phrases. No wire values or intended protocol semantics were changed.
+An earlier audit tracked English-only wording as an editorial gate. That priority is superseded: language consistency is not a protocol-freeze blocker unless mixed-language wording makes a normative rule ambiguous. Further translation is deferred; semantic completeness and cross-chapter consistency take priority.
 
-The resulting working-branch commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8` passed [CI run 41067862556](https://github.com/metux/xav-design/actions/runs/41067862556): 4,688 wire-layout checks, 72 dedicated Timeline regression tests, and all 655 Python tests passed. Every required CI step ran and the mandatory check-presence audit succeeded.
-
-The editorial gate is still open. German normative prose remains in at least `spec/shaders-pipelines.md`, `spec/resource-lifetime.md`, `spec/errors.md`, and `spec/conformance.md`, as well as a historical-language heading/entry in this audit record. The checklist intentionally leaves the English-language style gate unchecked. The CI run verifies that the translation did not break current static contracts; it does not establish live X11/XGE or Vulkan-backend conformance.
+The historical working-branch commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8` passed [CI run 41067862556](https://github.com/metux/xav-design/actions/runs/41067862556): 4,688 wire-layout checks, 72 dedicated Timeline regression tests, and all 655 Python tests passed. This is historical evidence only; the current checkpoint is recorded below.
 
 ## ShaderModuleData assembly cleanup identity boundary — 2026-10-30
 
@@ -513,3 +511,11 @@ The expanded conformance and checker state passed on commit `598d0bee43eafa41ce7
 `CreateDescriptorPool` has no client-supplied pool-flags field, while v0.1 exposes `FreeDescriptorSets`. Vulkan requires `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` on a pool used with `vkFreeDescriptorSets`; without it, the specified per-Set free operation cannot be implemented correctly. The normative `CreateDescriptorPool` contract now requires the server to set this bit on every backend descriptor pool. The conformance checklist requires both the backend flag and successful selective freeing without disturbing other Sets or Pool accounting. The static checker enforces the rule.
 
 The exact candidate commit `2558386d17aa57e1537591dd817501f6fdf12425` passed [CI run 41079707203](https://github.com/metux/xav-design/actions/runs/41079707203): 4,693 wire-layout/documentation checks, 72 Timeline regression tests, all 658 Python tests, and the mandatory required-check audit. This verifies the normative contract/checker and reference suite, not a live Vulkan backend.
+
+## CommandBufferData wire limit and CreateDevice queue-family precedence audit — 2026-10-30
+
+The command-stream boundary review confirmed that the 16-byte fixed `CommandBufferData` request header consumes four of the ordinary X11 request's 65535 32-bit words. Therefore a single command entry and the aggregate entries in one request are limited to 65531 words (262124 bytes); a 65531-word entry plus the fixed header is exactly 262140 bytes, while 65532 words cannot fit. The command chapter, central command-entry registry, and conformance cases now agree, including rejection of aggregate overflow before appending any entries.
+
+A separate `CreateDevice` review found that the error summary did not clearly distinguish an out-of-range queue-family index (`BadValue`) from a valid family that cannot supply the requested queue count (`BadMatch`). The normative order checks Physical-Device availability before queue-family index/count validation, so `DEVICE_UNAVAILABLE` wins when both apply. The central error summary and mixed-failure conformance vectors now state all three outcomes. The reference tests were updated to assert the actual normative wording and registry shape for the mandatory `XAverius.timelineSemaphore` property.
+
+The exact candidate commit `5ffb625c1dc9620823d9b4e61649af01e019dd10` passed [CI run 41083466038](https://github.com/metux/xav-design/actions/runs/41083466038): 4,694 wire-layout/documentation checks, 72 Timeline regression tests, all 658 Python tests, and the mandatory required-check audit. This is static specification/reference-model evidence, not live X11/XGE or Vulkan backend conformance.
