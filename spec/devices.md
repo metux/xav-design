@@ -206,6 +206,8 @@ The queue count MUST be at least 1. All priorities MUST be finite and within [0,
 
 `DestroyDevice` is a void request with a fixed total length of 12 bytes; the device XID is at offset 8. The XID MUST identify a logical device owned by this client connection. An unknown or non-live XID results in `BadValue`; a live resource of the wrong type or foreign ownership results in `BadMatch`. Cleanup may continue after device loss according to the lifetime rules.
 
+Normative validation precedence is: (1) exact 12-byte request length (`BadLength`); (2) resolve the Device XID (`BadValue` if unknown or non-live); (3) validate that the live resource is a logical Device owned by this client (`BadMatch` for a wrong live type or foreign ownership); (4) perform the atomic logical teardown. There is no Device-availability phase: Device Loss MUST NOT prevent `DestroyDevice` from cleaning up the logical Device. A later phase MUST NOT override an earlier error.
+
 On success, the public device XID and all public XIDs of its resources become invalid immediately.
 
 All still-open host waits (`WaitSemaphores` and `WaitForFence`) associated with this logical device are terminated when this request is processed: `WaitSemaphores` returns the X11 error `DEVICE_DESTROYED`, while `WaitForFence` returns reply status `DEVICE_DESTROYED`. This also applies to infinite waits. Wait conditions whose successful result was established before `DestroyDevice` was processed retain their normal result. Terminating a wait does not require GPU completion.
