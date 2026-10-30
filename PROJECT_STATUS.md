@@ -4,7 +4,7 @@
 
 The v0.1 protocol specification is frozen; implementation work may now begin against the compute-baseline profile. The optional presentation-capable profile remains separately gated. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains a separately gated profile and is not implied by compute-only support.
 
-The working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The specification-content freeze is commit `38587be1b70868224e8f8941750a7c1aa1e19dd7`, verified by [CI run 41088183365](https://github.com/metux/xav-design/actions/runs/41088183365): 4,695 wire-layout/documentation checks, 72 Timeline regression tests, all 673 Python tests, and the required-check presence audit passed. The final cross-document audit is recorded in [the audit report](audit/final-cross-document-specification-audit-2026-10-30.md).
+The working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The specification-content freeze is commit `0e0ced45371a2548031c4b9d1370c1dead69d724`, verified by [CI run 41109805393](https://github.com/metux/xav-design/actions/runs/41109805393): 4,721 wire-layout/documentation checks, 72 Timeline regression tests, all 673 Python tests, and the required-check presence audit passed. The final cross-document audit and post-checkpoint normative delta audit are recorded in [the final audit](audit/final-cross-document-specification-audit-2026-10-30.md) and [the delta audit](audit/post-freeze-normative-delta-audit-2026-10-30.md).
 
 **Editorial note (not a freeze blocker):** some normative prose remains German while other chapters are English. This will be addressed only where mixed-language wording impairs precision. The final cross-document pass found no unresolved v0.1 wire-design decision or missing request assignment. The normative and automated freeze gates are recorded in the [freeze checklist](spec/freeze-checklist.md).
 
@@ -22,7 +22,7 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
 **Specification baseline:** v0.1 consolidated protocol specification  
 **Initial implementation target:** Xvfb, compute-only  
-**Status:** Specification frozen at content commit `38587be1b70868224e8f8941750a7c1aa1e19dd7`; see [spec/freeze-checklist.md](spec/freeze-checklist.md).
+**Status:** Specification frozen at content commit `0e0ced45371a2548031c4b9d1370c1dead69d724`; see [spec/freeze-checklist.md](spec/freeze-checklist.md).
 
 ## Working rules
 
