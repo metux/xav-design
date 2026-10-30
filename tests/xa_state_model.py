@@ -320,7 +320,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     # Stage 8: queue presentation capability, then accepted-token reuse.
     if not state.present_supported:
         return PresentResult("BadMatch", False)
-    if request.token in state.used_present_tokens:
+    if request.token in state.accepted_tokens or request.token in state.used_present_tokens:
         return PresentResult("BadValue", False)
 
     # Stage 9: image state precedes wait eligibility.
