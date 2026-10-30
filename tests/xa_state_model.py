@@ -37,6 +37,15 @@ class BinarySignalState(str, Enum):
 
 
 @dataclass
+class SharedTimelineSemaphore:
+    """Canonical timeline counter and GPU signal reservations across queues."""
+    device_lost: bool = False
+    counter: int = 0
+    pending_signals: list[tuple[int, int, int]] = field(default_factory=list)
+    owners: list[ReferenceType] = field(default_factory=list, repr=False, compare=False)
+
+
+@dataclass
 class SharedBinarySemaphore:
     """Canonical semaphore state shared by submission and presentation models."""
     device_lost: bool = False
@@ -57,8 +66,12 @@ class SharedBinarySemaphore:
     owners: list[ReferenceType] = field(default_factory=list, repr=False, compare=False)
 
 
+def _shared_semaphore_objects(state: PresentState | SubmissionModel):
+    return [*state.shared_semaphores, *state.shared_timeline_semaphores]
+
+
 def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
-    for shared in state.shared_semaphores:
+    for shared in _shared_semaphore_objects(state):
         # Prune dead weakrefs and deduplicate live owners by object identity.
         # Merely checking whether this state is present leaves pre-existing
         # duplicate refs in place indefinitely, inflating every loss traversal.
@@ -87,7 +100,7 @@ def _unregister_semaphore_owner(state: PresentState | SubmissionModel) -> None:
     accumulate when disconnect cleanup is retried.
     """
     seen_shared_ids: set[int] = set()
-    for shared in state.shared_semaphores:
+    for shared in _shared_semaphore_objects(state):
         if id(shared) in seen_shared_ids:
             continue
         seen_shared_ids.add(id(shared))
@@ -108,14 +121,14 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
     seen_models: set[int] = set()
     models: list[PresentState | SubmissionModel] = []
     shared_seen: set[int] = set()
-    semaphores: list[SharedBinarySemaphore] = []
+    semaphores: list[SharedBinarySemaphore | SharedTimelineSemaphore] = []
     while pending:
         state = pending.pop()
         if id(state) in seen_models:
             continue
         seen_models.add(id(state))
         models.append(state)
-        for shared in state.shared_semaphores:
+        for shared in _shared_semaphore_objects(state):
             if id(shared) not in shared_seen:
                 shared_seen.add(id(shared))
                 semaphores.append(shared)
@@ -929,6 +942,8 @@ class SubmissionModel:
     binary_signal_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
     binary_wait_previous_states: dict[tuple[int, int], BinarySignalState] = field(default_factory=dict)
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
+    # Indexed by semaphore index; canonical timeline state is shared by queues.
+    shared_timeline_semaphores: list[SharedTimelineSemaphore | None] = field(default_factory=list)
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     # (submission token, semaphore index, reserved timeline signal value).
@@ -1102,11 +1117,26 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             counter = state.signal_counters[index] if index < len(state.signal_counters) else 0
             if not 0 <= value <= 0xFFFFFFFFFFFFFFFF:
                 return "BadValue"
+            shared_timeline = (
+                state.shared_timeline_semaphores[index]
+                if index < len(state.shared_timeline_semaphores) else None
+            )
+            counter = max(
+                counter,
+                shared_timeline.counter if shared_timeline is not None else 0,
+            )
             pending_values = [
                 pending_value
                 for _token, pending_index, pending_value in state.pending_timeline_signals
                 if pending_index == index
             ]
+            if shared_timeline is not None:
+                pending_values.extend(
+                    pending_value
+                    for _owner_token, pending_index, pending_value
+                    in shared_timeline.pending_signals
+                    if pending_index == index
+                )
             if value <= counter:
                 return "BadValue"
             if any(value <= pending for pending in pending_values):
@@ -1153,6 +1183,12 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         state.signal_slots[index] = value
         if kind is SemaphoreKind.TIMELINE:
             state.pending_timeline_signals.append((request.token, index, value))
+            shared_timeline = (
+                state.shared_timeline_semaphores[index]
+                if index < len(state.shared_timeline_semaphores) else None
+            )
+            if shared_timeline is not None:
+                shared_timeline.pending_signals.append((request.token, index, value))
         else:
             if index >= len(state.binary_signal_states):
                 state.binary_signal_states.extend(
@@ -1201,16 +1237,35 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
         return "BadValue"
     if value <= state.signal_counters[semaphore_index]:
         return "BadValue"
+    shared_timeline = (
+        state.shared_timeline_semaphores[semaphore_index]
+        if semaphore_index < len(state.shared_timeline_semaphores) else None
+    )
+    if shared_timeline is not None:
+        if shared_timeline.device_lost:
+            _propagate_device_loss(state)
+            return "DEVICE_LOST"
+        state.signal_counters[semaphore_index] = max(
+            state.signal_counters[semaphore_index], shared_timeline.counter
+        )
     pending_values = [
         pending_value
         for _token, index, pending_value in state.pending_timeline_signals
         if index == semaphore_index
     ]
+    if shared_timeline is not None:
+        pending_values.extend(
+            pending_value
+            for _token, index, pending_value in shared_timeline.pending_signals
+            if index == semaphore_index
+        )
     # A host signal may advance a wait to an intermediate value, but must not
     # jump over any still-pending GPU signal reservation.
     if any(value >= pending_value for pending_value in pending_values):
         return "INVALID_SYNCHRONIZATION_STATE"
     state.signal_counters[semaphore_index] = value
+    if shared_timeline is not None:
+        shared_timeline.counter = value
     return "SUCCESS"
 
 
@@ -1234,9 +1289,19 @@ def finish_submission(
     for submission_token, index, value in list(state.pending_timeline_signals):
         if submission_token != token:
             continue
+        shared_timeline = (
+            state.shared_timeline_semaphores[index]
+            if index < len(state.shared_timeline_semaphores) else None
+        )
         if effective_success:
             state.signal_counters[index] = max(state.signal_counters[index], value)
+            if shared_timeline is not None and not shared_timeline.device_lost:
+                shared_timeline.counter = max(shared_timeline.counter, value)
         state.pending_timeline_signals.remove((submission_token, index, value))
+        if shared_timeline is not None:
+            reservation = (submission_token, index, value)
+            if reservation in shared_timeline.pending_signals:
+                shared_timeline.pending_signals.remove(reservation)
         kind = (state.semaphore_kinds[index]
                 if index < len(state.semaphore_kinds) else SemaphoreKind.TIMELINE)
         if kind is SemaphoreKind.TIMELINE:
