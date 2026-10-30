@@ -216,7 +216,7 @@ A command buffer referencing a Swapchain image retains an internal reference to 
 
 The presentation-only command-entry ID is 5. Every new numeric ID must be allocated append-only in the [command-entry registry](../registries/command-entries.md) before an implementation advertises support. It is not part of the current compute-only v0.1 entry set.
 
-## 7.6 Command-Validierung
+## 7.6 Command Validation
 
 The server validates command-buffer state, entry lengths, resource types, device ownership, reserved fields, pipeline and layout compatibility, descriptor bindings, push-constant ranges, and dispatch limits.
 
