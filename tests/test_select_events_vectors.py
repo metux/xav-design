@@ -708,7 +708,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         memory = (ROOT / "spec" / "memory-buffers.md").read_text(encoding="utf-8")
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         free = memory.split("## 5.5 `FreeMemory`", 1)[1].split("## 5.6 ", 1)[0]
-        self.assertIn("Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, DescriptorSet-to-DescriptorSetLayout associations, parent-child ownership, and active server operations.", lifetime)
+        self.assertIn("Internal references are tracked separately for recorded command buffers, accepted submissions, buffer handles in descriptor slots, DescriptorSet-to-DescriptorSetLayout associations, Pipeline-to-PipelineLayout dependencies, parent-child ownership, and active server operations.", lifetime)
         self.assertIn("atomically rejected if any internally live buffer remains bound to this allocation (`BadMatch`)", memory)
         self.assertIn("any internally live buffer remains bound to this allocation", free)
         self.assertIn("public XID has already been invalidated by `DestroyResource`", free)
