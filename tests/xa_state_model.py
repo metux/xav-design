@@ -751,6 +751,12 @@ def retire_command_buffer_backend_hold(
             _retire_command_buffer_refs_if_quiescent(state)
             return "SUCCESS"
         return "INVALID_SYNCHRONIZATION_STATE"
+    # Without the captured epoch, FIFO retirement is ambiguous when callbacks
+    # from multiple recordings (or a retired and current recording) can race.
+    if len(state.retired_recordings) > 1 or (
+        state.retired_recordings and state.backend_holds > 0
+    ):
+        return "INVALID_SYNCHRONIZATION_STATE"
     for recording in state.retired_recordings:
         if recording.backend_holds > 0:
             recording.backend_holds -= 1
