@@ -114,6 +114,12 @@ def audit_file(path):
         if body is None:
             errors.append(f"{path}: {callback}: annotated callback function definition not found")
             continue
+        if len(re.findall(r"\\b" + re.escape(callback) + r"\\b", code)) < 2:
+            errors.append(f"{path}: {callback}: callback symbol is not referenced by a registration/dispatch site")
+        if re.search(r"\\b(?:buffer|memory|fence|semaphore|swapchain|image|resource)\\b", body, re.I) and "resource_generation" not in registered:
+            errors.append(f"{path}: {callback}: resource-bearing callback must capture resource_generation")
+        if re.search(r"\\b(?:command_buffer|recording)\\b", body, re.I) and "recording_epoch" not in registered:
+            errors.append(f"{path}: {callback}: command-buffer callback must capture recording_epoch")
         for generation in sorted(registered):
             if not re.search(r"\b" + re.escape(generation) + r"\b", body):
                 errors.append(f"{path}: {callback}: callback body does not use captured {generation}")
