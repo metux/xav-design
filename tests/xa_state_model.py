@@ -1074,6 +1074,8 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Resolve referenced resource XIDs in wire order before queue/type checks.
     if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
         return "BadValue"
+    if any(not state.command_buffers[i].buffer_live for i in request.command_buffer_indices):
+        return "BadValue"
     if any(i < 0 or i >= len(state.wait_states) for i in request.wait_indices):
         return "BadValue"
     if any(i < 0 or i >= len(state.signal_slots) for i in request.signal_indices):
