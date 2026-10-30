@@ -944,7 +944,6 @@ class SubmissionModel:
     fence_status: str = "UNSIGNALED"
     framing_valid: bool = True
     scalar_valid: bool = True
-    xids_valid: bool = True
     types_and_ownership_valid: bool = True
     dependencies_valid: bool = True
     # Optional lifetime registry enables accepted work to own explicit internal refs.
@@ -986,7 +985,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
         return "BadValue"
-    if not state.device_live or not state.device_xid_valid or not state.xids_valid:
+    if not state.device_live or not state.device_xid_valid:
         return "BadValue"
     # The optional Fence XID is the next wire field after Device. A zero
     # Fence-XID is represented by attach_fence=False and needs no lookup.
