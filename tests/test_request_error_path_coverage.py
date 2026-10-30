@@ -1761,8 +1761,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             self.assertIn(request, errors)
             self.assertIn("DEVICE_UNAVAILABLE", errors)
             self.assertIn("ALLOCATION_FAILED", errors)
-        self.assertIn("nonzero Binary initial value", errors)
-        self.assertIn("nonzero value", errors)
+        self.assertIn("type-dependent initial value", errors)
+        self.assertIn("create flags and reserved fields", errors)
 
     def test_no_unassigned_reset_command_pool_request_in_conformance(self):
         self.assertNotIn("`ResetCommandPool`", self.conformance)
