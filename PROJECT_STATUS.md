@@ -1,14 +1,14 @@
 # Project status
 
-## Current specification-finalization status — 2026-10-28
+## Current specification-finalization status — 2026-10-30
 
-The project is in the final specification-audit phase, not yet at a declared protocol freeze. The central registry contains 47 assigned request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains outside the initial compute-only implementation target unless the server explicitly implements that profile.
+The project is focused exclusively on completing and freezing the protocol specification. No implementation work is in scope until the normative and automated freeze gates are satisfied. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains a separately gated profile and is not implied by compute-only support.
 
-The current branch is `docs/restructure-2026-10-21`; `master` remains untouched. The latest verified successful wire-layout run at the time of this status update is [run 40854433046](https://github.com/metux/xav-design/actions/runs/40854433046), on commit `2ebe6143aab9726db756f86603934de28d9978fc`: the checker passed 4,575 assertions and the Python suite passed all 549 tests. This run verifies translated CommandBufferData, QueueSubmit, descriptor-layout, command-pool, and descriptor-update conformance cases with synchronized checker and regression-test expectations. Subsequent changes to the audit/status records are documentation-only and still receive normal CI; verify the current branch tip before declaring the freeze commit.
+The working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The latest verified evidence checkpoint is commit `2f34416ebd665fa83f6c19c571ddf07110dccecb`, [CI run 41065436558](https://github.com/metux/xav-design/actions/runs/41065436558): `tools/check-wire-layout.py` passed 4,685 checks, the full Python suite passed all 655 tests, and the mandatory audit confirmed that every required CI step ran successfully. The evidence and limitations are recorded in [the request audit](spec/request-audit.md).
 
-The new [specification freeze checklist](spec/freeze-checklist.md) separates normative completeness and static evidence from implementation acceptance. The immediate goal is to finish the cross-chapter consistency audit, run the full suite on the exact freeze candidate, and record any remaining design ambiguity as either resolved or explicitly deferred. Passing static tests does not prove live X11/XGE interoperability or Vulkan backend conformance.
+**Normative editorial blocker:** the style guide requires English throughout `spec/` and `registries/`, but several normative chapters still contain German headings and substantive German prose. Those passages must be translated without semantic changes before the editorial freeze gate can pass. The [freeze checklist](spec/freeze-checklist.md) records the gate status.
 
-**Open implementation acceptance gates:** live X11/XGE interoperability (see [test plan](spec/xge-interoperability-test-plan.md)); real-backend compute ordering, upload visibility, synchronization, readback and teardown; and presentation runtime validation if that profile is implemented. These are not evidence that the written wire contract is incomplete, but they must remain visible until tested against an implementation.
+**Open implementation acceptance gates (not specification-design gaps):** live X11/XGE interoperability; end-to-end compute execution and lifecycle behavior against a real Vulkan backend; and presentation runtime validation if that profile is implemented. Static fixtures and reference models do not prove these runtime properties.
 
 ## Live XGE validation plan — 2026-10-23
 
