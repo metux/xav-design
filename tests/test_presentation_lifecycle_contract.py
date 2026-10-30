@@ -48,6 +48,15 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("Include at least one case per vector with presentation event masks disabled", self.races)
         self.assertIn("Run the vectors in both request byte orders wherever wire parsing is involved.", self.races)
 
+    def test_competing_pending_acquires_assign_each_released_image_once(self) -> None:
+        self.assertIn("assign the image to exactly one still-open registration", self.presentation)
+        self.assertIn("MUST NOT expose the image as `AVAILABLE` to a later request", self.presentation)
+        self.assertIn("FIFO order and fairness are not guaranteed", self.presentation)
+        race = self.races.split("**Competing pending acquires for one released image:**", 1)[1].split("\\n-", 1)[0]
+        self.assertIn("exactly one registration to receive SUCCESS", race)
+        self.assertIn("only that registration's supplied objects signaled", race)
+        self.assertIn("other registration remains open", race)
+
     def test_acquire_terminalization_is_first_wins_and_cleanup_is_exactly_once(self) -> None:
         self.assertIn("first terminal result serialized by the server wins", self.presentation)
         self.assertIn("terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`", self.presentation)
