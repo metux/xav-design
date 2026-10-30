@@ -1704,7 +1704,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
     def test_create_command_pool_precedence_matches_normative_chapters(self):
         command = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
-        section = command.split("## 7.1 Command Pools", 1)[1].split("\\n## 7.2", 1)[0]
+        section = command.split("## 7.1 Command Pools", 1)[1].split("\n## 7.2", 1)[0]
         errors = self.errors.split("### Command Pool requests", 1)[1].split(
             "### Synchronization requests", 1
         )[0]
@@ -1748,14 +1748,14 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "### `DestroyResource`", 1
         )[0]
         cases = (
-            ("CreateSemaphore", "exact 28-byte request length", "semaphore_type", "semaphore_xid", "device_xid"),
-            ("CreateFence", "exact 24-byte request length", "create_flags", "fence_xid", "device_xid"),
+            ("CreateSemaphore", "CreateSemaphore validation precedence is normative:", "exact 28-byte request length", "validate `semaphore_type`", "validate `semaphore_xid`", "resolve `device_xid`", "validate live resource type", "check logical-Device state", "create the backend semaphore"),
+            ("CreateFence", "`CreateFence` validation precedence is normative:", "exact 24-byte request length", "validate `create_flags`", "validate `fence_xid`", "resolve `device_xid`", "validate live resource type", "check logical-Device state", "create the backend Fence"),
         )
-        for request, length, scalar, target, device in cases:
-            chapter = synchronization.split("## Creating Semaphores", 1)[1] if request == "CreateSemaphore" else synchronization.split("## `CreateFence`", 1)[1]
-            chapter = chapter.split("\\n## ", 1)[0]
-            # Creation order must be explicit in the normative chapter.
-            positions = [chapter.find(x) for x in (length, scalar, target, device, "Device association", "Device state", "backend")]
+        for request, heading, *phases in cases:
+            chapter = synchronization.split(heading, 1)[1].split(
+                "A later phase MUST NOT override", 1
+            )[0]
+            positions = [chapter.find(phase) for phase in phases]
             self.assertTrue(all(p >= 0 for p in positions), (request, positions))
             self.assertEqual(positions, sorted(positions), request)
             self.assertIn(request, errors)
