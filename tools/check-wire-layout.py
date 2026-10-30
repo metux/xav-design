@@ -3349,7 +3349,7 @@ def check_create_device_precedence(c: Check) -> None:
         "6. Require successful XGE 1.0-or-later negotiation",
         "7. Check physical-device availability",
         "8. Validate every requested queue-family index and queue count",
-        "9. Check requested registry-defined features and extensions",
+        "9. Check the mandatory v0.1 baseline capability",
         "10. Only after all prior checks succeed may backend device creation begin",
     )
     positions = [section.find(phase) for phase in phases]
@@ -3362,7 +3362,7 @@ def check_create_device_precedence(c: Check) -> None:
     c.require(
         "unknown feature ID takes precedence over target-XID occupancy" in section
         and "target-XID validation precedes physical-device lookup" in section
-        and "every syntactically valid extension name is unregistered" in section,
+        and "every syntactically valid client extension name is unregistered" in section,
         "CreateDevice precedence: empty v0.1 registries and create/input XID ordering must remain explicit",
     )
 
