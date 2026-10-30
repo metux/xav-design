@@ -667,6 +667,7 @@ class ShaderChunk:
     final: bool = False
     abort: bool = False
     framing_valid: bool = True
+    fixed_header_present: bool = True
     padding_valid: bool = True
     chunk_valid: bool = True
     allocation_ok: bool = True
@@ -675,19 +676,22 @@ class ShaderChunk:
 
 
 def shader_module_data(state: ShaderAssemblyState, request: ShaderChunk) -> str:
-    """Model ShaderModuleData; a bad chunk discards the whole shader assembly."""
+    """Model ShaderModuleData with cleanup scoped to an identifiable continuation."""
+    def discard_identified_continuation() -> None:
+        if request.fixed_header_present and not request.create:
+            state.assembly_active, state.assembly = False, b""
+
     if not request.framing_valid:
-        state.assembly_active, state.assembly = False, b""
+        discard_identified_continuation()
         return "BadLength"
     if not request.padding_valid or not request.flags_valid:
-        state.assembly_active, state.assembly = False, b""
+        discard_identified_continuation()
         return "BadValue"
-    # These are wire-field rules, so they precede XID resolution. A failed
-    # chunk for this assembly discards the assembly rather than leaving stale
-    # partial bytes addressable.
+    # Wire-field errors precede XID lookup. Only a non-CREATE request with
+    # enough fixed header to identify the target may discard that assembly.
     if ((request.abort and (request.create or request.final or request.data))
             or (not request.abort and not request.data)):
-        state.assembly_active, state.assembly = False, b""
+        discard_identified_continuation()
         return "BadValue"
     if not state.xid_valid:
         return "BadValue"
