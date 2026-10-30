@@ -30,7 +30,7 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         self.assertEqual(destroy_present_device(old), "SUCCESS")
 
         # Same public Device/Swapchain/Semaphore XIDs, but new internal objects
-        # and a new Device generation. The presentation token is reused too.
+        # and a new Device generation. A fresh connection-scoped token is used.
         new_sem = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         new = PresentState(
             valid_wait_xids=(True,), wait_states=[WaitState.READY],
@@ -46,7 +46,7 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
             queue_present(new, PresentRequest(token=78, wait_indices=(0,))).result,
             "SUCCESS",
         )
-        self.assertEqual(new_sem.wait_reservation, ("present", 77))
+        self.assertEqual(new_sem.wait_reservation, ("present", 78))
 
         # Even a matching Swapchain generation and reused token cannot make
         # an old Device callback valid against the replacement Device.
@@ -58,17 +58,17 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         )
         self.assertEqual(
             finish_present_wait(
-                new, 77, 0, consumed=True, generation=2, device_generation=11,
+                new, 78, 0, consumed=True, generation=2, device_generation=11,
             ), "BadValue",
         )
         self.assertEqual(
             finish_present_terminal(
-                new, 77, "DEVICE_LOST", generation=2, device_generation=11,
+                new, 78, "DEVICE_LOST", generation=2, device_generation=11,
             ), "BadValue",
         )
         self.assertEqual(
             finish_present_image_release(
-                new, 77, generation=2, device_generation=11,
+                new, 78, generation=2, device_generation=11,
             ), "BadValue",
         )
         self.assertEqual(
