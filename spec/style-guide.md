@@ -4,11 +4,11 @@ This guide is normative for the editorial structure of every current and future 
 
 ## Language
 
-- Normative specification text MUST be written in English, including headings, prose, table headings, captions, comments in examples, and status descriptions.
+- New or materially revised normative specification text MUST be written in English, including headings, prose, table headings, captions, comments in examples, and status descriptions. Existing legacy German passages may remain during this finalization pass when their normative meaning is unambiguous; a change to such a passage MUST preserve its normative force and must not introduce a second interpretation.
 - Historical source material under `wip/` may remain in its original language, but MUST be clearly marked historical and non-normative.
 - Use the RFC 2119/8174 keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** only when they carry their normative meaning; use uppercase spelling for that meaning.
-- Use one term consistently for each concept. Prefer the terms and spellings already established in the normative chapters and registries; do not alternate between German and English or between synonymous names for the same wire field.
-- Keep explanatory material in English as well. If a German note is useful during migration, move it to a non-normative working note outside the normative specification rather than leaving it in a normative chapter.
+- Use one term consistently for each concept. Prefer the terms and spellings already established in the normative chapters and registries; do not alternate between German and English names for the same wire field within one rule.
+- New explanatory material SHOULD be in English. Existing German explanatory material may remain where it does not obscure a normative requirement; historical working notes belong outside the normative specification.
 
 ## Request chapter structure
 
