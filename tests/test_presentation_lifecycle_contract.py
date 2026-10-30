@@ -51,7 +51,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
     def test_acquire_and_present_share_one_swapchain_serialization_order(self) -> None:
         cross = self.presentation.split(
             "## 5.3 Cross-operation serialization of acquisition and presentation", 1
-        )[1].split("\\n## ", 1)[0]
+        )[1].split("\n## ", 1)[0]
         self.assertIn("one authoritative serialization order per Swapchain", cross)
         self.assertIn("A QueuePresent that serializes before an acquire has assigned the image", cross)
         self.assertIn("A QueuePresent serialized after the acquire-success commit", cross)
