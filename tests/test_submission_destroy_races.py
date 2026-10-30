@@ -15,6 +15,7 @@ from xa_state_model import (
     destroy_command_pool,
     destroy_descriptor_pool,
     finish_submission,
+    free_descriptor_sets,
     queue_submit,
 )
 
@@ -77,6 +78,27 @@ class QueueSubmitDescriptorPoolRaceTests(unittest.TestCase):
         self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.INVALID)
         self.assertEqual(
             queue_submit(state, SubmitRequest(token=2202, command_buffer_indices=(0,))),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state.accepted_tokens, set())
+
+    def test_submit_first_makes_free_descriptor_sets_reject_pending_set(self) -> None:
+        state, _pool, descriptor_set, command_buffer = self.shared_state()
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=2203, command_buffer_indices=(0,))),
+            "SUCCESS",
+        )
+        self.assertEqual(free_descriptor_sets([descriptor_set]), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertTrue(descriptor_set.live)
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.PENDING)
+
+    def test_free_descriptor_sets_first_invalidates_executable_command_buffer(self) -> None:
+        state, _pool, descriptor_set, command_buffer = self.shared_state()
+        self.assertEqual(free_descriptor_sets([descriptor_set]), "SUCCESS")
+        self.assertFalse(descriptor_set.live)
+        self.assertEqual(command_buffer.lifecycle, CommandBufferLifecycle.INVALID)
+        self.assertEqual(
+            queue_submit(state, SubmitRequest(token=2204, command_buffer_indices=(0,))),
             "INVALID_SYNCHRONIZATION_STATE",
         )
         self.assertEqual(state.accepted_tokens, set())
