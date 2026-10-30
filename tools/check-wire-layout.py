@@ -1074,6 +1074,12 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: malformed entry length and unknown command ID errors must be explicit",
     )
     c.require(
+        "entry-local scalar/field syntax are checked next (`BadValue`), before any XID lookup" in conformance
+        and "resource-dependent semantics (after XID, ownership, and Device checks)" in conformance
+        and "semantic entry values, and Device/Buffer state" not in conformance,
+        "CommandBufferData: conformance must distinguish pre-XID entry syntax from post-XID resource semantics",
+    )
+    c.require(
         "Maximum entry size: 65531 words (262124 bytes)" in command_recording
         and "16-byte fixed request header (four 32-bit words)" in command_recording
         and "maximum ordinary X11 request is 65535 words (262140 bytes)" in command_recording
