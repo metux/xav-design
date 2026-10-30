@@ -418,7 +418,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn("invalid/occupied `device_xid` returns `BadIDChoice`", errors)
         self.assertIn("missing XGE negotiation returns `BadMatch`", errors)
-        self.assertIn("no suitable device returns `DEVICE_UNAVAILABLE`", errors)
+        self.assertIn("no compute-capable device with `XAverius.timelineSemaphore = 1` and sufficient queue count returns `DEVICE_UNAVAILABLE`", errors)
 
     def test_signal_semaphore_keeps_xid_checks_before_value_reservation_checks(self):
         sync = read("spec/synchronization.md")
@@ -509,7 +509,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
             "6. Require successful XGE 1.0-or-later negotiation",
             "7. Check physical-device availability",
             "8. Validate every requested queue-family index and queue count",
-            "9. Check requested registry-defined features and extensions",
+            "9. Check the mandatory v0.1 baseline capability",
             "10. Only after all prior checks succeed may backend device creation begin",
         )
         positions = [section.find(phrase) for phrase in phases]
