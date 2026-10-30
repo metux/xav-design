@@ -269,5 +269,55 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("exactly one image-release-or-invalidation transition", race_contract)
 
 
+
+    def test_all_seven_presentation_requests_have_mixed_failure_vectors(self) -> None:
+        matrix = self.conformance.split(
+            "## Seven-request presentation error-precedence matrix", 1
+        )[1]
+        labels = (
+            "**CreateSurface:**",
+            "**DestroySurface:**",
+            "**GetSurfaceCapabilities:**",
+            "**CreateSwapchain:**",
+            "**DestroySwapchain:**",
+            "**AcquireNextImage:**",
+            "**QueuePresent:**",
+        )
+        for label in labels:
+            with self.subTest(request=label):
+                self.assertIn(label, matrix)
+
+        # Pin down the critical stage boundaries where an easy-to-miss
+        # contradiction between the common error chapter and presentation
+        # semantics would change the externally visible result.
+        for phrase in (
+            "BadLength",
+            "BadIDChoice",
+            "BadWindow",
+            "INVALID_SYNCHRONIZATION_STATE",
+            "TEMPORARILY_NOT_PRESENTABLE",
+            "UNSUPPORTED_CONFIGURATION",
+            "DEVICE_DESTROYED",
+            "Device loss wins before queue/index validation",
+            "invalid queue/index values precede Surface status",
+            "checked after Device availability",
+        ):
+            with self.subTest(rule=phrase):
+                self.assertIn(phrase, matrix)
+
+        presentation_status = self.presentation.split(
+            "The status precedence for requests with status replies is deterministic:", 1
+        )[1].split("\\nFor `CreateSurface`", 1)[0]
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        errors_precedence = errors.split(
+            "### Normative validation precedence for the seven presentation requests", 1
+        )[1].split("\\n## Synchronous versus Asynchronous Errors", 1)[0]
+        self.assertIn("DEVICE_LOST", presentation_status)
+        self.assertIn("SURFACE_LOST", presentation_status)
+        self.assertIn("OUT_OF_DATE", presentation_status)
+        self.assertIn("Device loss takes precedence over Surface loss", errors_precedence)
+        self.assertIn("queue/index", errors_precedence)
+        self.assertIn("CreateSwapchain", errors_precedence)
+
 if __name__ == "__main__":
     unittest.main()
