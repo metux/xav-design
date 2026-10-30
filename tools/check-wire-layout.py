@@ -1074,6 +1074,19 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: malformed entry length and unknown command ID errors must be explicit",
     )
     c.require(
+        "Maximum entry size: 65531 words (262124 bytes)" in command_recording
+        and "16-byte fixed request header (four 32-bit words)" in command_recording
+        and "maximum ordinary X11 request is 65535 words (262140 bytes)" in command_recording
+        and "65531 words (262124 bytes)" in read("registries/command-entries.md")
+        and "entry_length = 65531" in conformance
+        and "entry_length = 65532" in conformance
+        and "aggregate exceeds 65531 words" in conformance
+        and 65531 + 4 == 65535
+        and 65531 * 4 + 16 == 262140
+        and 65532 * 4 + 16 > 262140,
+        "CommandBufferData: entry and aggregate limits must account for the fixed X11/XAverius request header",
+    )
+    c.require(
         "A failed FINAL chunk leaves the buffer in `RECORDING`" in read("spec/command-recording.md")
         and "A failed CREATE request leaves neither a command buffer nor a pool-child entry" in read("spec/command-recording.md")
         and "Every rejection leaves previously accepted entries and references unchanged; the current chunk is never partially accepted" in read("spec/command-recording.md"),
