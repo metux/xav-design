@@ -22,6 +22,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Live resource belongs to another client and no sharing path is defined | `BadMatch` |
 | Device unavailable | `DEVICE_UNAVAILABLE` |
 | Device lost | `DEVICE_LOST` |
+| Execution failure as an X11 error | `EXECUTION_FAILED` is assigned in the error registry but is not emitted by any v0.1 request; `WaitForFence` reports execution failure as a normal reply status, and accepted `QueueSubmit` reports it through terminal events and synchronization state |
 | Logical device normally destroyed while a host wait is open (`WaitSemaphores`) | `DEVICE_DESTROYED` as an X11 error; `WaitForFence` instead uses the normal reply status `DEVICE_DESTROYED = 4` |
 | Invalid synchronization state | `INVALID_SYNCHRONIZATION_STATE` |
 | Synchronous transfer failure | `TRANSFER_FAILED` |
