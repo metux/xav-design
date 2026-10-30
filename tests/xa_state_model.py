@@ -85,7 +85,27 @@ def _shared_semaphore_objects(state: PresentState | SubmissionModel):
     return objects
 
 
-def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
+def _sync_shared_fence_owners(shared: SharedFence) -> None:
+    pending_owner = shared.pending_owner() if shared.pending_owner is not None else None
+    live_owners: list[ReferenceType] = []
+    seen: set[int] = set()
+    for owner_ref in shared.owners:
+        owner = owner_ref()
+        if owner is None or id(owner) in seen:
+            continue
+        seen.add(id(owner))
+        live_owners.append(owner_ref)
+        if isinstance(owner, SubmissionModel):
+            owner.fence_status = shared.status
+            owner.fence_attached = owner is pending_owner
+            owner.fence_state_valid = (
+                shared.status == "UNSIGNALED" and shared.pending_token is None
+                and not shared.device_lost
+            )
+    shared.owners[:] = live_owners
+
+
+def _register_semaphore_owner(state: PresentState | SubmissionModel):
     for shared in _shared_semaphore_objects(state):
         # Prune dead weakrefs and deduplicate live owners by object identity.
         # Merely checking whether this state is present leaves pre-existing
@@ -1051,7 +1071,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # then signals. The Fence is not attached until the acceptance commit.
     shared_fence = state.shared_fence
     if request.attach_fence and (
-        not state.fence_state_valid
+        (shared_fence is None and not state.fence_state_valid)
         or (shared_fence is not None and (
             shared_fence.device_lost
             or shared_fence.status != "UNSIGNALED"
@@ -1252,6 +1272,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
             shared_fence.status = "PENDING"
             shared_fence.pending_token = request.token
             shared_fence.pending_owner = ref(state)
+            _sync_shared_fence_owners(shared_fence)
     state.pending_submissions.append(request.token)
     return "SUCCESS"
 
@@ -1537,6 +1558,7 @@ def finish_submission(
             shared_fence.status = state.fence_status
             shared_fence.pending_token = None
             shared_fence.pending_owner = None
+            _sync_shared_fence_owners(shared_fence)
     for submission_token, index in list(state.pending_command_buffers):
         if submission_token != token:
             continue
@@ -1582,6 +1604,7 @@ def reset_fence(state: SubmissionModel) -> str:
     if shared_fence is not None:
         shared_fence.status = "UNSIGNALED"
         shared_fence.generation += 1
+        _sync_shared_fence_owners(shared_fence)
     return "SUCCESS"
 
 
