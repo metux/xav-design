@@ -82,7 +82,7 @@ The implementation MUST NOT assume that every object whose handle was used to cr
 | Device | Invalidates device and children immediately | Internal cleanup is deferred |
 | CommandPool | Atomically invalidates the pool and child command buffers | Reject while any child is pending |
 | CommandBuffer | XID becomes invalid | Reject while pending |
-| DescriptorPool | Atomically invalidates the pool and all child sets | Reject if any child set is pending or referenced by a `RECORDING` command buffer |
+| DescriptorPool | Atomically invalidates the pool and all child sets; non-pending `EXECUTABLE` command buffers referencing any child set become `INVALID` | Reject if any child set is pending or referenced by a `RECORDING` command buffer |
 | DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |
 | Buffer | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used directly/indirectly by accepted work; on successful destruction, non-pending `EXECUTABLE` command buffers with this reference become `INVALID`. Defer internal release while server operations or descriptor slots still reference the object |
 | Memory | Invalidated only after successful validation | Reject `FreeMemory` while any buffer remains bound to it or accepted work uses the allocation |
