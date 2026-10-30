@@ -1786,6 +1786,79 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertIsNone(shared.signal_reservation)
         self.assertFalse(shared.signal_consumed)
 
+    def test_cross_model_wait_uses_canonical_pending_signal_not_stale_local_mirror(self) -> None:
+        shared = SharedBinarySemaphore()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        # A separate queue's model has not mirrored the producer's pending
+        # signal locally. The shared semaphore is the authoritative state.
+        consumer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            producer, SubmitRequest(token=311, signal_indices=(0,), signal_values=(0,))
+        ), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNAL_PENDING)
+        self.assertEqual(queue_submit(
+            consumer, SubmitRequest(token=312, wait_indices=(0,))
+        ), "SUCCESS")
+        self.assertEqual(finish_submission(consumer, 312, success=True), "SUCCESS")
+        self.assertTrue(shared.signal_consumed)
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(finish_submission(producer, 311, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertIsNone(shared.signal_reservation)
+
+    def test_failed_binary_signal_restores_canonical_shared_payload_snapshot(self) -> None:
+        shared = SharedBinarySemaphore()
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.UNSIGNALED],
+            signal_slots=[None],
+            semaphore_kinds=[SemaphoreKind.BINARY],
+            shared_semaphores=[shared],
+        )
+        present = PresentState(
+            valid_wait_xids=(True,),
+            wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNAL_PENDING],
+            shared_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(
+            producer, SubmitRequest(token=313, signal_indices=(0,), signal_values=(0,))
+        ), "SUCCESS")
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=314, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(finish_submission(producer, 313, success=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.SIGNALED)
+        self.assertEqual(finish_present_wait(present, 314, 0, consumed=True), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        # The producer's local mirror is now stale (SIGNALED), while the
+        # canonical semaphore has been consumed and is available again.
+        self.assertEqual(producer.binary_signal_states[0], BinarySignalState.SIGNALED)
+        self.assertEqual(queue_submit(
+            producer, SubmitRequest(token=315, signal_indices=(0,), signal_values=(0,))
+        ), "SUCCESS")
+        self.assertEqual(finish_submission(
+            producer, 315, success=False,
+            binary_payload_unchanged={("signal", 0)},
+        ), "SUCCESS")
+        self.assertEqual(shared.signal_state, BinarySignalState.UNSIGNALED)
+        self.assertEqual(producer.binary_signal_states[0], BinarySignalState.UNSIGNALED)
+
     def test_present_wait_consumption_wins_over_late_submit_signal_callback(self) -> None:
         shared = SharedBinarySemaphore()
         producer = SubmissionModel(
