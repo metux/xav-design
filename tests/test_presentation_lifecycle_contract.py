@@ -86,6 +86,20 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("commit-time revalidation", self.races)
         self.assertIn("publishes no target XID or backing resource", self.races)
 
+    def test_surface_destroy_and_window_loss_serialization_has_both_orders(self) -> None:
+        lifecycle = self.presentation.split(
+            "### Serialization of Window and Surface lifecycle", 1
+        )[1].split("\n### ", 1)[0]
+        for phrase in (
+            "If `DestroySurface` succeeds before Window destruction is processed",
+            "If Window destruction is processed first, the Surface becomes `SURFACE_LOST`",
+            "If any live Swapchain references the Surface, it fails atomically",
+        ):
+            with self.subTest(rule=phrase):
+                self.assertIn(phrase, lifecycle)
+        self.assertIn("**DestroySurface versus underlying Window destruction:**", self.races)
+        self.assertIn("DestroySurface may then succeed only if no live Swapchain references it", self.races)
+
     def test_acquire_present_surface_destroy_is_blocked_by_live_swapchain(self) -> None:
         surface = self.presentation.split(
             "## 5.5 Serialization of presentation operations with Surface destruction", 1
