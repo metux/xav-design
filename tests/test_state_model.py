@@ -1592,11 +1592,15 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(mark_device_lost(observer), "SUCCESS")
         self.assertTrue(shared.device_lost)
         self.assertTrue(producer.device_lost)
+        # Device Loss is the logical terminal outcome immediately; the pending
+        # identity remains only as a backend-cleanup hold until its callback.
+        self.assertEqual(shared.status, "FAILED")
+        self.assertEqual(shared.pending_token, 333)
+        self.assertIs(shared.pending_owner(), producer)
         self.assertEqual(queue_submit(
             observer, SubmitRequest(token=334, attach_fence=True)
         ), "DEVICE_LOST")
-        # The late callback retires its backend hold but cannot publish a
-        # successful signal. The terminal fence outcome is FAILED, not PENDING.
+        # The late callback retires its backend hold but cannot publish success.
         self.assertEqual(finish_submission(producer, 333, success=True), "SUCCESS")
         self.assertEqual(shared.status, "FAILED")
         self.assertIsNone(shared.pending_token)
