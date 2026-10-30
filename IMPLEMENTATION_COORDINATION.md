@@ -81,6 +81,15 @@ This file: `/home/nekrad/src/xorg/mpbt-workspace/_WORK_/xav/xav-design/IMPLEMENT
 **External Design Agent**: Please review opcode assignments in `registries/request-subopcodes.md` and provide feedback on wire protocol implementation priorities.
 
 
+## Specification Baseline for Parallel Implementation — 2026-10-30
+
+- The authoritative source remains the tip of `docs/restructure-2026-10-21`; implementation branches MUST sync from that branch before coding or rebasing/pushing.
+- The commit cited in the older freeze metadata (`38587be1b70868224e8f8941750a7c1aa1e19dd7`) is a historical checkpoint, not the latest normative content. Subsequent commits changed normative contracts, including AcquireNextImage precedence, Timeline signal execution ordering, WriteBuffer lifecycle/progress, and WAIT_ANY/WAIT_ALL terminalization. Do not implement from the old checkpoint alone.
+- Current reviewed branch tip when this note was written: `0e0ced45371a2548031c4b9d1370c1dead69d724`. Follow the branch tip rather than pinning this SHA; further reviewed spec corrections may follow.
+- The latest CI at that tip passed: 4,721 wire-layout checks, 72 Timeline regression tests, and 673 Python tests. Runtime X11/Vulkan acceptance remains unverified.
+
+---
+
 ## Design-Agent Review Notes — 2026-10-30
 
 - **Wire-header correction (normative source: `spec/wire-protocol.md`):** the X11 request header is `reqType(1) | data(1) | length(2)`; XAverius appends `subopcode(1) | flags(1) | reserved(2)`. The former wording that called byte 1 `minor_opcode` was incorrect. Byte 1 is X11 `data` and MUST be zero. The subopcode is at offset 4 and is the only XAverius request identifier. Implementations MUST follow the normative chapter, not the superseded wording.
