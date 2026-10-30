@@ -472,6 +472,8 @@ The `CreateDevice` validation order in [the error mapping](errors.md) is normati
 - Unknown `physical_device_xid` plus missing XGE 1.0 negotiation → `BadValue`.
 - Valid XIDs but missing XGE 1.0 negotiation plus an unsupported queue request or unsupported feature → `BadMatch` from the missing handshake.
 - An unavailable Physical Device plus a well-formed but unsupported queue/feature/extension request → `DEVICE_UNAVAILABLE`.
+- With an available Physical Device, an out-of-range queue-family index → `BadValue`; a valid family with insufficient queue count → `BadMatch`.
+- With an unavailable Physical Device and an out-of-range queue-family index → `DEVICE_UNAVAILABLE`, because availability precedes queue-family validation.
 - An unknown feature ID plus a registered-but-unsupported feature on the same request → `BadValue` for the unknown ID, because feature IDs are checked in wire-array order after earlier validation stages.
 - A syntactically invalid extension name plus a syntactically valid but unsupported extension → `BadValue` for the invalid name, with extension records checked in wire-array order.
 
