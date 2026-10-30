@@ -48,6 +48,19 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("Include at least one case per vector with presentation event masks disabled", self.races)
         self.assertIn("Run the vectors in both request byte orders wherever wire parsing is involved.", self.races)
 
+    def test_acquire_and_present_share_one_swapchain_serialization_order(self) -> None:
+        cross = self.presentation.split(
+            "## 5.3 Cross-operation serialization of acquisition and presentation", 1
+        )[1].split("\\n## ", 1)[0]
+        self.assertIn("one authoritative serialization order per Swapchain", cross)
+        self.assertIn("A QueuePresent that serializes before an acquire has assigned the image", cross)
+        self.assertIn("A QueuePresent serialized after the acquire-success commit", cross)
+        self.assertIn("If release/assignment wins", cross)
+        self.assertIn("**Acquire success versus QueuePresent on the same image:**", self.races)
+        self.assertIn("**QueuePresent acceptance versus a pending acquire:**", self.races)
+        self.assertIn("**Image release versus acquire timeout/lifecycle while QueuePresent is pending:**", self.races)
+        self.assertIn("**Acquire-to-present semaphore handoff:**", self.races)
+
     def test_competing_pending_acquires_assign_each_released_image_once(self) -> None:
         self.assertIn("assign the image to exactly one still-open registration", self.presentation)
         self.assertIn("MUST NOT expose the image as `AVAILABLE` to a later request", self.presentation)
