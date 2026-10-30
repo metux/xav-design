@@ -5801,6 +5801,41 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertFalse(present.device_lost)
         self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
 
+    def test_stale_present_wait_callback_cannot_release_reused_generation_reservation(self):
+        shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
+        present = PresentState(
+            valid_wait_xids=(True,), wait_states=[WaitState.READY],
+            binary_signal_states=[BinarySignalState.SIGNALED],
+            shared_semaphores=[shared],
+        )
+        old_generation = present.swapchain_generation
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=19, wait_indices=(0,))
+        ).accepted)
+        self.assertEqual(finish_present_wait(
+            present, 19, 0, consumed=True, generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(finish_present_terminal(
+            present, 19, "SUCCESS", generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(finish_present_image_release(
+            present, 19, generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
+        self.assertEqual(recreate_present_swapchain(present), "SUCCESS")
+
+        shared.signal_state = BinarySignalState.SIGNALED
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=19, wait_indices=(0,))
+        ).accepted)
+        snapshot = copy.deepcopy((present, shared))
+        self.assertEqual(finish_present_wait(
+            present, 19, 0, consumed=True, generation=old_generation
+        ), "BadValue")
+        self.assertEqual((present, shared), snapshot)
+        self.assertEqual(shared.wait_reservation, ("present", 19))
+        self.assertEqual(present.pending_present_waits, [(19, 0)])
+
     def test_disconnect_keeps_present_callback_holds_until_both_milestones(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         present = PresentState(
