@@ -5772,20 +5772,19 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         ), "SUCCESS")
         self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
 
-        # Same public XID, fresh server-side generation, and deliberately
-        # reused client token. A stale backend callback must be generation-
-        # checked before it can touch the new operation.
+        # Same public XID and a fresh server-side generation. Tokens remain
+        # connection-unique; callbacks must still be checked by generation.
         self.assertEqual(recreate_present_swapchain(present), "SUCCESS")
         self.assertEqual(present.swapchain_generation, old_generation + 1)
         self.assertTrue(queue_present(
-            present, PresentRequest(token=1)
+            present, PresentRequest(token=2)
         ).accepted)
         snapshot = copy.deepcopy(present)
         self.assertEqual(finish_present_terminal(
-            present, 1, "DEVICE_LOST", generation=old_generation
+            present, 2, "DEVICE_LOST", generation=old_generation
         ), "BadValue")
         self.assertEqual(finish_present_image_release(
-            present, 1, reusable=False, generation=old_generation
+            present, 2, reusable=False, generation=old_generation
         ), "BadValue")
         self.assertEqual(present, snapshot)
         self.assertEqual(present.terminal_present_status, {})
@@ -5793,10 +5792,10 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
 
         self.assertEqual(finish_present_terminal(
-            present, 1, "SUCCESS", generation=old_generation + 1
+            present, 2, "SUCCESS", generation=old_generation + 1
         ), "SUCCESS")
         self.assertEqual(finish_present_image_release(
-            present, 1, generation=old_generation + 1
+            present, 2, generation=old_generation + 1
         ), "SUCCESS")
         self.assertEqual(present.image_state, ImageState.AVAILABLE)
 
@@ -5856,15 +5855,15 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
 
         shared.signal_state = BinarySignalState.SIGNALED
         self.assertTrue(queue_present(
-            present, PresentRequest(token=19, wait_indices=(0,))
+            present, PresentRequest(token=20, wait_indices=(0,))
         ).accepted)
         snapshot = copy.deepcopy((present, shared))
         self.assertEqual(finish_present_wait(
-            present, 19, 0, consumed=True, generation=old_generation
+            present, 20, 0, consumed=True, generation=old_generation
         ), "BadValue")
         self.assertEqual((present, shared), snapshot)
-        self.assertEqual(shared.wait_reservation, ("present", 19))
-        self.assertEqual(present.pending_present_waits, [(19, 0)])
+        self.assertEqual(shared.wait_reservation, ("present", 20))
+        self.assertEqual(present.pending_present_waits, [(20, 0)])
 
     def test_disconnect_keeps_present_callback_holds_until_both_milestones(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
