@@ -92,6 +92,50 @@ def main():
         if result.returncode == 0:
             raise SystemExit("compile database without an entry for the tracked source must fail:\n" + result.stdout + result.stderr)
 
+        async_root = Path(temp) / "source-with-unannotated-async-callback"
+        async_root.mkdir()
+        setup_repo(async_root)
+        source = async_root / "src" / "xav_handler.c"
+        source.parent.mkdir()
+        source.write_text(
+            "int ProcAsyncReq(ClientPtr client) { return 0; }\\n"
+            "static int (*RequestVector[])(ClientPtr) = { ProcAsyncReq };\\n"
+            "void on_done(void *ctx) { finish_submit(ctx); }\\n"
+            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\\n",
+            encoding="utf-8",
+        )
+        git(async_root, "add", "src/xav_handler.c")
+        (async_root / "compile_commands.json").write_text(json.dumps([{
+            "directory": str(async_root), "file": str(source),
+            "arguments": ["cc", "-c", str(source), "-o", "xav_handler.o"],
+        }]), encoding="utf-8")
+        result = run_gate(async_root)
+        if result.returncode != 1 or "no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE" not in result.stdout:
+            raise SystemExit("native async callback without generation annotations must fail the integrated gate:\\n" + result.stdout + result.stderr)
+
+        async_root_ok = Path(temp) / "source-with-annotated-async-callback"
+        async_root_ok.mkdir()
+        setup_repo(async_root_ok)
+        source = async_root_ok / "src" / "xav_handler.c"
+        source.parent.mkdir()
+        source.write_text(
+            "int ProcAsyncReq(ClientPtr client) { return 0; }\\n"
+            "static int (*RequestVector[])(ClientPtr) = { ProcAsyncReq };\\n"
+            "/* XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation */\\n"
+            "/* XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation */\\n"
+            "void on_done(void *ctx) { if (device_generation != current_device_generation) return; }\\n"
+            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\\n",
+            encoding="utf-8",
+        )
+        git(async_root_ok, "add", "src/xav_handler.c")
+        (async_root_ok / "compile_commands.json").write_text(json.dumps([{
+            "directory": str(async_root_ok), "file": str(source),
+            "arguments": ["cc", "-c", str(source), "-o", "xav_handler.o"],
+        }]), encoding="utf-8")
+        result = run_gate(async_root_ok)
+        if result.returncode != 0 or "callback generation audit passed" not in result.stdout:
+            raise SystemExit("annotated async callback with generation validation should pass the integrated gate:\\n" + result.stdout + result.stderr)
+
     print("handler CI gate regression tests: PASS")
 
 
