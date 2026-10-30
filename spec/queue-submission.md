@@ -126,9 +126,9 @@ The following rules apply to accepted submissions on the same logical Device:
 - **Explicit dependency:** A GPU dependency across queues MUST be established with a matching semaphore signal and wait. The wait-stage mask determines the supported pipeline stages at which the wait dependency applies; it does not automatically create arbitrary memory dependencies for all resources. Required memory dependencies MUST be covered by supported commands and synchronization operations in accordance with Vulkan rules.
 - **Fence and host wait:** A fence observes the terminal state of the submission to which it is attached. `WaitForFence` and `WaitSemaphores` block the requesting client until the reply, but do not themselves create a GPU dependency between queues. A host wait on a semaphore is not a substitute for a queue-side semaphore wait.
 - **Host signal:** `SignalSemaphore` updates the Timeline counter on the host. A queue waiting for that value may thereby make progress; the host-signal operation does not order other GPU commands that are not connected through that semaphore dependency.
-- **Token und Events:** `submission_token` ist nur ein Korrelationswert. Weder sein Zahlenwert noch die Reihenfolge von Tokens oder Event-Sequence-Nummern legt eine Submission-Reihenfolge fest. Terminal-Events melden Ergebnisse, sie schaffen keine Synchronisation.
+- **Token and events:** `submission_token` is only a correlation value. Neither its numeric value nor the order of tokens or event sequence numbers establishes submission order. Terminal events report outcomes; they do not create synchronization.
 
-Diese Regeln spezifizieren notwendige Vulkan-kompatible Ordnungsgrenzen, nicht Scheduler-Implementierungsdetails. Insbesondere gibt es in v0.1 keine Zusage zu Fairness, maximaler Scheduling-Latenz oder Fortschritt innerhalb einer festen Frist.
+These rules specify required Vulkan-compatible ordering boundaries, not scheduler implementation details. In particular, v0.1 makes no guarantee of fairness, maximum scheduling latency, or progress within a fixed deadline.
 
 # Ordering and Synchronization Guarantees
 
