@@ -180,6 +180,16 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
                 live_owner_refs.append(owner_ref)
                 if id(owner) not in seen_models:
                     pending.append(owner)
+            # A destroyed model is removed from the public owner index, but
+            # its accepted fence operation still owns a backend callback hold.
+            # Keep that exact pending owner in the loss graph until callback
+            # retirement; otherwise loss observed by a surviving queue misses it.
+            if isinstance(shared, SharedFence) and shared.pending_owner is not None:
+                pending_owner = shared.pending_owner()
+                if (pending_owner is not None
+                        and id(pending_owner) not in seen_models
+                        and all(id(pending_owner) != id(item) for item in pending)):
+                    pending.append(pending_owner)
             shared.owners[:] = live_owner_refs
     for state in models:
         state.device_lost = True
