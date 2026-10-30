@@ -21,6 +21,7 @@ from xa_state_model import (
     mark_present_device_lost,
     disconnect_present,
     destroy_present_swapchain,
+    recreate_present_swapchain,
     CommandBufferLifecycle,
     CommandBufferChunk,
     CommandBufferModel,
@@ -5726,6 +5727,79 @@ class MultiWaitPresentDeviceLossRaceTests(unittest.TestCase):
         self.assertEqual(finish_present_terminal(present, 905, "DEVICE_LOST"), "BadValue")
         self.assertEqual(present.pending_present_tokens, set())
 
+
+    def test_stale_present_callbacks_cannot_mutate_reused_swapchain_xid_generation(self):
+        present = PresentState()
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=1)
+        ).accepted)
+        old_generation = present.swapchain_generation
+        self.assertEqual(finish_present_terminal(
+            present, 1, "SUCCESS", generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(finish_present_image_release(
+            present, 1, generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
+
+        # Same public XID, fresh server-side generation, and deliberately
+        # reused client token. A stale backend callback must be generation-
+        # checked before it can touch the new operation.
+        self.assertEqual(recreate_present_swapchain(present), "SUCCESS")
+        self.assertEqual(present.swapchain_generation, old_generation + 1)
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=1)
+        ).accepted)
+        snapshot = copy.deepcopy(present)
+        self.assertEqual(finish_present_terminal(
+            present, 1, "DEVICE_LOST", generation=old_generation
+        ), "BadValue")
+        self.assertEqual(finish_present_image_release(
+            present, 1, reusable=False, generation=old_generation
+        ), "BadValue")
+        self.assertEqual(present, snapshot)
+        self.assertEqual(present.terminal_present_status, {})
+        self.assertEqual(present.image_release_tokens, set())
+        self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
+
+        self.assertEqual(finish_present_terminal(
+            present, 1, "SUCCESS", generation=old_generation + 1
+        ), "SUCCESS")
+        self.assertEqual(finish_present_image_release(
+            present, 1, generation=old_generation + 1
+        ), "SUCCESS")
+        self.assertEqual(present.image_state, ImageState.AVAILABLE)
+
+    def test_old_generation_device_loss_release_cannot_invalidate_new_generation(self):
+        present = PresentState()
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=77)
+        ).accepted)
+        old_generation = present.swapchain_generation
+        self.assertEqual(finish_present_terminal(
+            present, 77, "SUCCESS", generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(finish_present_image_release(
+            present, 77, generation=old_generation
+        ), "SUCCESS")
+        self.assertEqual(destroy_present_swapchain(present), "SUCCESS")
+        self.assertEqual(recreate_present_swapchain(present), "SUCCESS")
+        self.assertTrue(queue_present(
+            present, PresentRequest(token=78)
+        ).accepted)
+        snapshot = copy.deepcopy(present)
+
+        # Delayed loss/release callbacks from the old Swapchain must not
+        # propagate into the new generation or invalidate its acquired image.
+        self.assertEqual(finish_present_terminal(
+            present, 78, "DEVICE_LOST", generation=old_generation
+        ), "BadValue")
+        self.assertEqual(finish_present_image_release(
+            present, 78, reusable=False, generation=old_generation
+        ), "BadValue")
+        self.assertEqual(present, snapshot)
+        self.assertFalse(present.device_lost)
+        self.assertEqual(present.image_state, ImageState.PRESENT_PENDING)
 
     def test_disconnect_keeps_present_callback_holds_until_both_milestones(self):
         shared = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
