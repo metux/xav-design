@@ -540,5 +540,26 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         self.assertIn("def check_command_buffer_reference_retirement", checker)
         self.assertIn("check_command_buffer_reference_retirement(c)", checker)
 
+class CommandBufferEntryRequestLimitTests(unittest.TestCase):
+    def test_maximum_entry_accounts_for_fixed_command_buffer_request_header(self):
+        command = read("spec/command-recording.md")
+        wire = read("spec/wire-protocol.md")
+        registry = read("registries/command-entries.md")
+        conformance = read("spec/conformance.md")
+
+        self.assertIn("Maximum entry size: 65531 words (262124 bytes)", command)
+        self.assertIn("16-byte fixed request header (four 32-bit words)", command)
+        self.assertIn("maximum ordinary request length is 262140 bytes", wire)
+        self.assertIn("at most 65531 words (262124 bytes)", registry)
+        self.assertIn("`entry_length = 65531` words", conformance)
+        self.assertIn("`entry_length = 65532`", conformance)
+        self.assertIn("aggregate exceeds 65531 words", conformance)
+
+        maximum_request_bytes = 16 + 65531 * 4
+        first_unrepresentable_request_bytes = 16 + 65532 * 4
+        self.assertEqual(maximum_request_bytes, 262140)
+        self.assertGreater(first_unrepresentable_request_bytes, 262140)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
