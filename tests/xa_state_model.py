@@ -233,11 +233,29 @@ class PresentResult:
 
 
 def _first_bad_wait(request: PresentRequest, state: PresentState) -> str | None:
+    # Resolve each wait completely before examining the next wire-array entry.
+    # Otherwise a later UNTRUSTED semaphore could incorrectly outrank an
+    # earlier incompatible reservation/payload state.
     for index in request.wait_indices:
         wait_state = state.wait_states[index]
         if wait_state is WaitState.UNTRUSTED:
             return "DEPENDENCY_FAILED"
         if wait_state is not WaitState.READY:
+            return "INVALID_SYNCHRONIZATION_STATE"
+
+        shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
+        signal_state = (
+            shared.signal_state if shared is not None else
+            state.binary_signal_states[index]
+            if index < len(state.binary_signal_states)
+            else BinarySignalState.UNSIGNALED
+        )
+        if signal_state is BinarySignalState.UNTRUSTED:
+            return "DEPENDENCY_FAILED"
+        if ((shared is not None and (
+                    shared.wait_reservation is not None or shared.signal_consumed
+                ))
+                or any(pending_index == index for _token, pending_index in state.pending_present_waits)):
             return "INVALID_SYNCHRONIZATION_STATE"
     return None
 
@@ -301,25 +319,6 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     wait_error = _first_bad_wait(request, state)
     if wait_error:
         return PresentResult(wait_error, False)
-    for index in request.wait_indices:
-        shared = state.shared_semaphores[index] if index < len(state.shared_semaphores) else None
-        signal_state = (
-            shared.signal_state if shared is not None else
-            state.binary_signal_states[index]
-            if index < len(state.binary_signal_states)
-            else BinarySignalState.UNSIGNALED
-        )
-        if signal_state is BinarySignalState.UNTRUSTED:
-            return PresentResult("DEPENDENCY_FAILED", False)
-        if ((shared is not None and (
-                    shared.wait_reservation is not None or shared.signal_consumed
-                ))
-                or any(pending_index == index for _token, pending_index in state.pending_present_waits)):
-            # A prior wait may have consumed a still-pending Submit signal
-            # before that signal's terminal callback retires its reservation.
-            # Do not accept a second waiter against that already-consumed payload.
-            return PresentResult("INVALID_SYNCHRONIZATION_STATE", False)
-
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
     state.pending_present_tokens.add(request.token)
