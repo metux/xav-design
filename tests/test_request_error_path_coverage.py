@@ -1744,9 +1744,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
     def test_semaphore_and_fence_creation_precedence_matches_chapters_and_error_map(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
-        errors = self.errors.split("### Synchronization requests", 1)[1].split(
-            "### `DestroyResource`", 1
-        )[0]
+        errors = self.errors
         cases = (
             ("CreateSemaphore", "`CreateSemaphore` validation precedence is normative:", "exact 28-byte request length", "validate `semaphore_type`", "validate `semaphore_xid`", "resolve `device_xid`", "validate live resource type", "check logical-Device state", "create the backend semaphore"),
             ("CreateFence", "`CreateFence` validation precedence is normative:", "exact 24-byte request length", "validate `create_flags`", "validate `fence_xid`", "resolve `device_xid`", "validate live resource type", "check logical-Device state", "create the backend Fence"),
