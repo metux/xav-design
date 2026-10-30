@@ -1221,7 +1221,9 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
 
 def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: int) -> str:
     """Model SignalSemaphore's counter/reservation validation and atomic update."""
-    if state.device_lost or any(shared.device_lost for shared in state.shared_semaphores):
+    if state.device_lost or any(
+        shared.device_lost for shared in _shared_semaphore_objects(state)
+    ):
         # An observing API call must fan loss out to the rest of the connected
         # semaphore graph, not just update this model's device flag.
         _propagate_device_loss(state)
@@ -1235,8 +1237,6 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
         return "BadMatch"
     if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
         return "BadValue"
-    if value <= state.signal_counters[semaphore_index]:
-        return "BadValue"
     shared_timeline = (
         state.shared_timeline_semaphores[semaphore_index]
         if semaphore_index < len(state.shared_timeline_semaphores) else None
@@ -1248,6 +1248,8 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
         state.signal_counters[semaphore_index] = max(
             state.signal_counters[semaphore_index], shared_timeline.counter
         )
+    if value <= state.signal_counters[semaphore_index]:
+        return "BadValue"
     pending_values = [
         pending_value
         for _token, index, pending_value in state.pending_timeline_signals
