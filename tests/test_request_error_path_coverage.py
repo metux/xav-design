@@ -1648,5 +1648,125 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             self.assertIn(phrase, conformance)
 
+
+    def test_non_presentation_precedence_matrix_covers_compute_baseline(self):
+        matrix = self.conformance.split(
+            "## Non-presentation request error-precedence conformance matrix", 1
+        )[1]
+        for request in (
+            "EnumeratePhysicalDevices",
+            "GetPhysicalDeviceProperty",
+            "GetPhysicalDeviceQueueFamilyProperties",
+            "GetPhysicalDeviceMemoryProperties",
+            "CreateDevice",
+            "CreateDefaultDevice",
+            "DestroyDevice",
+            "CreateBuffer",
+            "GetBufferMemoryRequirements",
+            "AllocateMemory",
+            "FreeMemory",
+            "BindBufferMemory",
+            "WriteBuffer",
+            "ReadBuffer",
+            "ShaderModuleData",
+            "CreateDescriptorSetLayout",
+            "CreateDescriptorPool",
+            "DestroyDescriptorPool",
+            "AllocateDescriptorSets",
+            "UpdateDescriptorSets",
+            "FreeDescriptorSets",
+            "CreatePipelineLayout",
+            "CreateComputePipeline",
+            "CreateCommandPool",
+            "DestroyCommandPool",
+            "ResetCommandBuffer",
+            "CommandBufferData",
+            "QueueSubmit",
+            "CreateSemaphore",
+            "GetSemaphoreCounterValue",
+            "WaitSemaphores",
+            "SignalSemaphore",
+            "DestroySemaphore",
+            "CreateFence",
+            "GetFenceStatus",
+            "WaitForFence",
+            "ResetFence",
+            "DestroyFence",
+            "DestroyResource",
+            "SelectEvents",
+        ):
+            with self.subTest(request=request):
+                self.assertIn("`" + request + "`", matrix)
+
+        self.assertIn("common envelope/header/profile-dispatch checks", matrix)
+        self.assertIn("both byte orders", matrix)
+        self.assertIn("no request-attributable partial allocation", matrix)
+
+    def test_create_command_pool_precedence_matches_normative_chapters(self):
+        command = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        section = command.split("## 7.1 Command Pools", 1)[1].split("\\n## 7.2", 1)[0]
+        errors = self.errors.split("### Command Pool requests", 1)[1].split(
+            "### Synchronization requests", 1
+        )[0]
+        phases = (
+            "exact 24-byte request length",
+            "pool flags and all reserved bits",
+            "validate `command_pool_xid` as a create-XID",
+            "resolve `device_xid`",
+            "validate live resource type, client ownership, and Device association",
+            "check logical-Device state",
+            "validate `queue_family_index`",
+            "create the backend pool",
+        )
+        positions = [section.find(phase) for phase in phases]
+        self.assertTrue(all(p >= 0 for p in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        for expected in (
+            "Device loss wins over an invalid queue-family index",
+            "XID/type/ownership errors win over Device loss",
+            "backend pool",
+            "ALLOCATION_FAILED",
+        ):
+            self.assertIn(expected, section)
+        for expected in (
+            "exakte 24-Byte-Länge",
+            "Flags/reservierte Bits",
+            "Ziel-Pool-XID",
+            "Device-XID",
+            "Typ/Client- und Device-Ownership",
+            "Device-Zustand",
+            "Queue-Family-Index",
+            "Backend-Allokation",
+            "ALLOCATION_FAILED",
+        ):
+            self.assertIn(expected, errors)
+        self.assertIn("Device Loss wins over an invalid queue-family index", self.conformance)
+
+    def test_semaphore_and_fence_creation_precedence_matches_chapters_and_error_map(self):
+        synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
+        errors = self.errors.split("### Synchronization requests", 1)[1].split(
+            "### `DestroyResource`", 1
+        )[0]
+        cases = (
+            ("CreateSemaphore", "exact 28-byte request length", "semaphore_type", "semaphore_xid", "device_xid"),
+            ("CreateFence", "exact 24-byte request length", "create_flags", "fence_xid", "device_xid"),
+        )
+        for request, length, scalar, target, device in cases:
+            chapter = synchronization.split("## Creating Semaphores", 1)[1] if request == "CreateSemaphore" else synchronization.split("## `CreateFence`", 1)[1]
+            chapter = chapter.split("\\n## ", 1)[0]
+            # Creation order must be explicit in the normative chapter.
+            positions = [chapter.find(x) for x in (length, scalar, target, device, "Device association", "Device state", "backend")]
+            self.assertTrue(all(p >= 0 for p in positions), (request, positions))
+            self.assertEqual(positions, sorted(positions), request)
+            self.assertIn(request, errors)
+            self.assertIn("DEVICE_UNAVAILABLE", errors)
+            self.assertIn("ALLOCATION_FAILED", errors)
+        self.assertIn("nonzero Binary initial value", errors)
+        self.assertIn("nonzero value", errors)
+
+    def test_no_unassigned_reset_command_pool_request_in_conformance(self):
+        self.assertNotIn("`ResetCommandPool`", self.conformance)
+        self.assertIn("`ResetCommandBuffer`", self.conformance)
+
 if __name__ == "__main__":
     unittest.main()
