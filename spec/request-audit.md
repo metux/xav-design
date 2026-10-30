@@ -147,7 +147,7 @@ The following matrix is the per-request checklist used for the second pass. Leng
 
 Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
 
-### Presentation-capable profile: provisional request/reply matrix
+### Presentation-capable profile request/reply matrix
 
 The presentation chapter is normative for the presentation-capable profile. Its seven requests are now assigned append-only subopcodes 41–47 and are included in the central request matrix; the separate profile matrix remains as a profile-gating and wire-layout cross-check. Request lengths below include the standard 8-byte XAverius header; reply totals include the standard 32-byte X11 reply header.
 
