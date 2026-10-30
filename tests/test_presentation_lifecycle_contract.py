@@ -167,6 +167,21 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("otherwise the image is invalidated and no release event is emitted", accepted)
         self.assertIn("PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence", self.lifetime)
 
+    def test_overlapping_lifecycle_conditions_use_one_precedence_snapshot(self) -> None:
+        precedence = self.presentation.split(
+            "For AcquireNextImage and the pre-acceptance lifecycle check of QueuePresent", 1
+        )[1].split("\nFor `CreateSurface`", 1)[0]
+        self.assertLess(precedence.index("DEVICE_LOST"), precedence.index("SURFACE_LOST"))
+        self.assertLess(precedence.index("SURFACE_LOST"), precedence.index("OUT_OF_DATE"))
+        self.assertIn("one serialized snapshot", precedence)
+        self.assertIn("first terminal outcome committed", precedence)
+        self.assertIn("MUST NOT rewrite an already committed", precedence)
+        self.assertIn("**Overlapping presentation lifecycle conditions and terminal first-wins:**", self.races)
+        errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
+        stage = errors.split("Resolve lifecycle/capability outcomes before mutable image/semaphore eligibility:", 1)[1].split("\n8.", 1)[0]
+        self.assertIn("one serialized snapshot", stage)
+        self.assertIn("DEVICE_LOST` wins over `SURFACE_LOST`", stage)
+
     def test_status_precedence_is_consistent_across_normative_chapters(self) -> None:
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         presentation_status = self.presentation.split(
