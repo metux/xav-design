@@ -1190,7 +1190,7 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "Pipeline-to-PipelineLayout dependencies" in lifetime
-        and "retains its internal definition/backend identity while any live Pipeline depends on it" in lifetime
+        and "retain its internal definition/backend identity while any live Pipeline depends on it" in lifetime
         and "Existing Pipelines remain live; no new Pipeline may be created through the destroyed XID" in lifetime
         and "Eine erfolgreich erstellte Pipeline behält eine interne Referenz" in read("spec/shaders-pipelines.md")
         and "After creating a Pipeline, destroy its PipelineLayout XID" in conformance
