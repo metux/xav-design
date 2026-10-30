@@ -476,37 +476,6 @@ def destroy_present_device(state: PresentState) -> str:
     return "SUCCESS"
 
 
-def recreate_present_device(
-    state: PresentState, *, shared_semaphores: list[SharedBinarySemaphore] | None = None,
-) -> str:
-    """Create a fresh Device generation after public XID reuse.
-
-    New Device-owned semaphore resources are supplied explicitly; old callback
-    records keep their captured semaphore objects and cannot target replacements.
-    """
-    if state.device_live:
-        return "BadValue"
-    state.device_generation += 1
-    state.swapchain_generation += 1
-    state.device_live = True
-    state.device_lost = False
-    state.swapchain_live = True
-    state.image_state = ImageState.ACQUIRED
-    state.accepted_tokens.clear()
-    state.pending_present_tokens.clear()
-    state.terminal_present_status.clear()
-    state.image_release_tokens.clear()
-    state.image_release_reusable.clear()
-    state.pending_present_waits.clear()
-    state.shared_semaphores = list(shared_semaphores or [])
-    state.wait_states = [WaitState.READY for _ in state.wait_states]
-    state.binary_signal_states = [BinarySignalState.UNSIGNALED for _ in state.binary_signal_states]
-    state.surface_lost = False
-    state.out_of_date = False
-    _register_semaphore_owner(state)
-    return "SUCCESS"
-
-
 def finish_present_wait(
     state: PresentState, token: int, semaphore_index: int, *,
     consumed: bool | None, generation: int | None = None,
