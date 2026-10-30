@@ -163,7 +163,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertEqual(device_positions, sorted(device_positions), "devices.md phase order must be normative")
         for phrase in errors_order:
             self.assertIn(phrase, error_section)
-        self.assertIn("an out-of-range queue-family index returns `BadValue`", error_section)
+        self.assertIn("an out-of-range family index returns `BadValue`", error_section)
         self.assertIn("a valid family unable to supply the requested queue count returns `BadMatch`", error_section)
         for earlier, later in zip(errors_order, errors_order[1:]):
             self.assertLess(error_section.index(earlier), error_section.index(later))
