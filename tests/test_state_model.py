@@ -10,6 +10,7 @@ from xa_state_model import (
     ImageState,
     BinarySignalState,
     SharedBinarySemaphore,
+    SharedTimelineSemaphore,
     PresentRequest,
     PresentState,
     WaitState,
@@ -2180,6 +2181,96 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(state.signal_counters, [11])
         self.assertEqual(state.pending_timeline_signals, [])
         self.assertEqual(state.signal_slots, [None])
+
+    def test_shared_timeline_reservations_are_visible_across_queue_models(self) -> None:
+        shared = SharedTimelineSemaphore(counter=0)
+        queue_a = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[0], signal_slots=[None],
+            shared_timeline_semaphores=[shared],
+        )
+        queue_b = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[0], signal_slots=[None],
+            shared_timeline_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(queue_a, SubmitRequest(
+            token=801, signal_indices=(0,), signal_values=(8,),
+        )), "SUCCESS")
+        self.assertEqual(shared.pending_signals, [(801, 0, 8)])
+
+        # A different queue cannot reserve a value below the outstanding
+        # reservation, but may reserve a strictly greater value.
+        before = copy.deepcopy(shared)
+        self.assertEqual(queue_submit(queue_b, SubmitRequest(
+            token=802, signal_indices=(0,), signal_values=(7,),
+        )), "INVALID_SYNCHRONIZATION_STATE")
+        self.assertEqual(shared, before)
+        self.assertEqual(queue_submit(queue_b, SubmitRequest(
+            token=803, signal_indices=(0,), signal_values=(9,),
+        )), "SUCCESS")
+        self.assertEqual(
+            shared.pending_signals, [(801, 0, 8), (803, 0, 9)]
+        )
+
+        # The higher callback may arrive first. A late lower callback must
+        # neither lower the canonical counter nor erase another queue's state.
+        self.assertEqual(finish_submission(queue_b, 803, success=True), "SUCCESS")
+        self.assertEqual(shared.counter, 9)
+        self.assertEqual(shared.pending_signals, [(801, 0, 8)])
+        self.assertEqual(finish_submission(queue_a, 801, success=True), "SUCCESS")
+        self.assertEqual(shared.counter, 9)
+        self.assertEqual(shared.pending_signals, [])
+
+    def test_host_timeline_signal_cannot_cross_another_queues_reservation(self) -> None:
+        shared = SharedTimelineSemaphore(counter=3)
+        gpu_queue = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3], signal_slots=[None],
+            shared_timeline_semaphores=[shared],
+        )
+        host_queue = SubmissionModel(
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[3], signal_slots=[None],
+            shared_timeline_semaphores=[shared],
+        )
+        self.assertEqual(queue_submit(gpu_queue, SubmitRequest(
+            token=804, signal_indices=(0,), signal_values=(8,),
+        )), "SUCCESS")
+        before = copy.deepcopy((shared, host_queue))
+        self.assertEqual(
+            signal_timeline_host(host_queue, 0, 8),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual((shared, host_queue), before)
+        self.assertEqual(signal_timeline_host(host_queue, 0, 6), "SUCCESS")
+        self.assertEqual(shared.counter, 6)
+        self.assertEqual(shared.pending_signals, [(804, 0, 8)])
+
+    def test_shared_timeline_device_loss_blocks_and_retires_late_signal_callback(self) -> None:
+        shared = SharedTimelineSemaphore(counter=2)
+        producer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            semaphore_kinds=[SemaphoreKind.TIMELINE],
+            signal_counters=[2], signal_slots=[None],
+            shared_timeline_semaphores=[shared],
+        )
+        observer = SubmissionModel(shared_timeline_semaphores=[shared])
+        self.assertEqual(queue_submit(producer, SubmitRequest(
+            token=805, signal_indices=(0,), signal_values=(7,),
+        )), "SUCCESS")
+        self.assertEqual(mark_device_lost(observer), "SUCCESS")
+        self.assertTrue(producer.device_lost)
+        self.assertTrue(shared.device_lost)
+        self.assertEqual(shared.counter, 2)
+        self.assertEqual(shared.pending_signals, [(805, 0, 7)])
+        self.assertEqual(finish_submission(producer, 805, success=True), "SUCCESS")
+        self.assertEqual(shared.counter, 2)
+        self.assertEqual(shared.pending_signals, [])
+        self.assertEqual(signal_timeline_host(observer, 0, 9), "DEVICE_LOST")
 
     def test_lower_timeline_signal_completion_keeps_higher_reservation_and_allows_intermediate_host_signal(self) -> None:
         state = SubmissionModel(
