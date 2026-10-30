@@ -3408,6 +3408,49 @@ def check_create_default_device_precedence(c: Check) -> None:
     c.require("that can supply the requested `queue_count`" in section and "if no such combination is available, it reports `DEVICE_UNAVAILABLE`" in section, "CreateDefaultDevice must require a supported queue count")
 
 
+def check_wait_semaphore_semantics(c: Check) -> None:
+    """Keep WAIT_ANY/WAIT_ALL predicates, partial progress, and lifecycle races normative."""
+    sync = read("spec/synchronization.md")
+    conformance = read("spec/conformance.md")
+    devices = read("spec/devices.md")
+    lifetime = read("spec/resource-lifetime.md")
+    errors = read("spec/errors.md")
+    contracts = (
+        "`WAIT_ANY` is satisfied when at least one entry is satisfied.",
+        "`WAIT_ALL` is satisfied only when every entry is satisfied.",
+        "one coherent snapshot of all listed counters",
+        "A `WAIT_ALL` registration that has only some entries satisfied remains open",
+        "does not consume, reset, reserve, or otherwise modify any Timeline counter",
+        "counter publication and reevaluation of affected waits are one serialized transition",
+        "the complete selected predicate already committed as satisfied returns `SUCCESS`",
+    )
+    for contract in contracts:
+        c.require(contract in sync, f"WaitSemaphores normative predicate missing: {contract}")
+    c.require(
+        "partial counter satisfaction is still open" in lifetime
+        and "partially satisfied `WAIT_ALL`" in devices,
+        "WaitSemaphores lifecycle: partial WAIT_ALL must remain open for DestroyDevice terminalization",
+    )
+    c.require(
+        "partial `WAIT_ALL` progress remains open" in errors
+        and "including partially satisfied `WAIT_ALL` registrations" in conformance,
+        "WaitSemaphores cross-chapter summary must preserve partial-ALL lifecycle semantics",
+    )
+    for vector in (
+        "**`WAIT_ANY` predicate:**",
+        "**`WAIT_ALL` partial progress:**",
+        "**Concurrent Timeline signals and wait reevaluation:**",
+        "**Partial `WAIT_ALL` versus lifecycle:**",
+        "**Zero-timeout predicate snapshot:**",
+    ):
+        c.require(vector in conformance, f"WaitSemaphores conformance matrix missing race vector {vector}")
+    c.require(
+        "one status-only success with no winning index" in conformance
+        and "Reverse callback delivery for strictly ordered increasing signal operations" in conformance,
+        "WaitSemaphores conformance: ANY result and signal callback-order independence must be explicit",
+    )
+
+
 def main() -> int:
     c = Check()
     check_events(c)
@@ -3424,6 +3467,7 @@ def main() -> int:
     check_common_request_error_precedence(c)
     check_create_device_precedence(c)
     check_create_default_device_precedence(c)
+    check_wait_semaphore_semantics(c)
     check_request_specific_precedence_exceptions(c)
     check_request_limit_contract(c)
     check_local_markdown_links(c)
