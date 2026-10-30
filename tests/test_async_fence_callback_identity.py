@@ -53,6 +53,21 @@ class AsyncFenceCallbackIdentityTests(unittest.TestCase):
         self.assertEqual(self.model.reset(self.old), "DEVICE_LOST")
 
 
+    def test_late_device_loss_callback_cannot_mark_recreated_generation_lost(self):
+        old_generation = self.model.device_generations["device-1"]
+        self.assertEqual(self.model.mark_device_lost("device-1"), "SUCCESS")
+        self.model.register_device("device-1")
+        new_generation = self.model.device_generations["device-1"]
+        self.assertGreater(new_generation, old_generation)
+        self.assertEqual(
+            self.model.device_loss_callback("device-1", old_generation), "SUCCESS"
+        )
+        self.assertTrue(self.model.devices["device-1"])
+        self.assertEqual(
+            self.model.device_loss_callback("device-1", new_generation), "SUCCESS"
+        )
+        self.assertFalse(self.model.devices["device-1"])
+
     def test_device_loss_turns_late_success_into_failed_fence(self):
         self.assertEqual(self.model.accept(self.old, 1001), "SUCCESS")
         self.assertEqual(self.model.mark_device_lost("device-1"), "SUCCESS")
