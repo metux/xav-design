@@ -900,6 +900,8 @@ def destroy_resource(state: ResourceDestroyModel) -> str:
 @dataclass
 class SubmissionModel:
     device_lost: bool = False
+    device_generation: int = 1
+    device_live: bool = True
     device_xid_valid: bool = True
     queue_xid_valid: bool = True
     fence_state_valid: bool = True
@@ -974,7 +976,7 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
     # Token reuse is a scalar error and therefore wins over XID resolution.
     if request.token in state.accepted_tokens:
         return "BadValue"
-    if not state.device_xid_valid or not state.xids_valid:
+    if not state.device_live or not state.device_xid_valid or not state.xids_valid:
         return "BadValue"
     # Resolve referenced resource XIDs in wire order before queue/type checks.
     if any(i < 0 or i >= len(state.command_buffers) for i in request.command_buffer_indices):
@@ -1195,8 +1197,11 @@ def signal_timeline_host(state: SubmissionModel, semaphore_index: int, value: in
 def finish_submission(
     state: SubmissionModel, token: int, success: bool, *,
     binary_payload_unchanged: set[tuple[str, int]] | None = None,
+    device_generation: int | None = None,
 ) -> str:
     """Finalize a submission once; Device Loss makes late success callbacks fail."""
+    if device_generation is not None and device_generation != state.device_generation:
+        return "BadValue"
     if token not in state.pending_submissions:
         # Terminal callbacks are idempotently rejected without touching state.
         return "BadValue"
@@ -1404,6 +1409,16 @@ def finish_submission(
             else CommandBufferLifecycle.INVALID
         )
         state.pending_command_buffers.remove((submission_token, index))
+    return "SUCCESS"
+
+
+def destroy_submission_device(state: SubmissionModel) -> str:
+    """Invalidate the public Device without discarding accepted callback holds."""
+    if not state.device_live:
+        return "BadValue"
+    state.device_live = False
+    state.device_xid_valid = False
+    _unregister_semaphore_owner(state)
     return "SUCCESS"
 
 
