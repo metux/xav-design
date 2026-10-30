@@ -1,7 +1,7 @@
 # Asynchronous backend callback generation annotations
 
 The native-backend CI gate runs `tools/check-async-callback-generations.py`
-over every tracked C/C++ source/header file. A source file containing an
+over every tracked C/C++ source/header, Rust `.rs`, and Zig `.zig` file. A source file containing an
 asynchronous submission, wait, completion, fence, semaphore, or callback
 registration signal is not allowed to pass merely because it compiles.
 
@@ -38,6 +38,14 @@ capture `resource_generation`; one that refers to command buffers or recording
 state must capture `recording_epoch`. These checks intentionally fail closed:
 unrecognized callback patterns or missing annotations require explicit review
 and a checker/test update, not a silent pass.
+
+For Rust and Zig, the checker recognizes named `fn` callback definitions and
+language-specific asynchronous signals (including Rust `async fn`, `.await`,
+Tokio/thread spawning, and Zig thread spawning / `@asyncCall`). Callback
+closures and anonymous async blocks are not independently modeled: bind them to
+a named callback function and annotate that function. The scanner is lexical,
+not an AST or borrow-checker analysis, and its signal patterns must be extended
+when a backend adopts a new async runtime or callback convention.
 
 The annotations are an auditable contract, not a formal proof of concurrency
 correctness. Reviewers must still verify that registration captures the actual
