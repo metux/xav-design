@@ -4019,6 +4019,36 @@ class CommandBufferResetPrecedenceAtomicityTests(unittest.TestCase):
         )
         self.assertEqual(state, before)
 
+    def test_callback_without_recording_epoch_is_rejected_when_epochs_overlap(self):
+        state = self._state(
+            lifecycle=CommandBufferLifecycle.EXECUTABLE,
+            entries=[b"old"],
+            backend_holds=1,
+            recording_epoch=20,
+        )
+        old_epoch = state.recording_epoch
+        self.assertEqual(reset_command_buffer(state), "SUCCESS")
+        state.lifecycle = CommandBufferLifecycle.EXECUTABLE
+        state.entries = [b"new"]
+        state.backend_holds = 1
+        new_epoch = state.recording_epoch
+        before = copy.deepcopy(state)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+        self.assertEqual(state, before)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=new_epoch),
+            "SUCCESS",
+        )
+        self.assertEqual(state.retired_recordings[0].epoch, old_epoch)
+        self.assertEqual(
+            retire_command_buffer_backend_hold(state, recording_epoch=old_epoch),
+            "SUCCESS",
+        )
+        self.assertEqual(state.retired_recordings, [])
+
     def test_reset_success_matrix_covers_all_non_pending_lifecycles(self):
         for lifecycle in (
             CommandBufferLifecycle.INITIAL,
