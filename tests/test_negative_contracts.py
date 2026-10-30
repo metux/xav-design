@@ -561,5 +561,20 @@ class CommandBufferEntryRequestLimitTests(unittest.TestCase):
         self.assertGreater(first_unrepresentable_request_bytes, 262140)
 
 
+class CommandBufferEmbeddedXidPrecedenceTests(unittest.TestCase):
+    def test_embedded_entry_xids_are_resolved_before_type_and_device_checks(self):
+        command = read("spec/command-recording.md")
+        errors = read("spec/errors.md")
+        conformance = read("spec/conformance.md")
+
+        self.assertIn("then every resource XID embedded in command entries in entry order and field order", command)
+        self.assertIn("CMD_BIND_DESCRIPTOR_SETS", command)
+        self.assertIn("Pipeline-Layout XID followed by Descriptor-Set XIDs in array order", command)
+        self.assertIn("all required XIDs have been resolved", errors)
+        self.assertIn("embedded command-entry XIDs in entry order and field order", errors)
+        self.assertIn("Resolve all required XIDs before checking live resource types", conformance)
+        self.assertIn("Device state, which precedes command-buffer state and resource-dependent entry compatibility", conformance)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
