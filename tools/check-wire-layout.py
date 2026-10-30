@@ -1189,6 +1189,15 @@ def check_request_document_coverage(c: Check) -> None:
         "DescriptorSetLayout lifetime: public XID destruction must preserve existing allocated sets and their update metadata",
     )
     c.require(
+        "Pipeline-to-PipelineLayout dependencies" in lifetime
+        and "retains its internal definition/backend identity while any live Pipeline depends on it" in lifetime
+        and "Existing Pipelines remain live; no new Pipeline may be created through the destroyed XID" in lifetime
+        and "Eine erfolgreich erstellte Pipeline behält eine interne Referenz" in read("spec/shaders-pipelines.md")
+        and "After creating a Pipeline, destroy its PipelineLayout XID" in conformance
+        and "A later `CreateComputePipeline` using that destroyed layout XID returns `BadValue`" in conformance,
+        "PipelineLayout lifetime: existing Pipelines retain their layout dependency after public XID destruction",
+    )
+    c.require(
         "Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen" in lifetime
         and "bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden" in lifetime
         and "interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen" in lifetime,
@@ -1235,7 +1244,7 @@ def check_request_document_coverage(c: Check) -> None:
         "| DescriptorPool | Atomically invalidates the pool and all child sets; non-pending `EXECUTABLE` command buffers referencing any child set become `INVALID` |" in lifetime
         and "| DescriptorSet | XID becomes invalid | Reject while pending or referenced by a `RECORDING` command buffer; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
         and "| Pipeline | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime
-        and "| PipelineLayout | XID becomes invalid | Reject while referenced by a `RECORDING` command buffer or used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID` |" in lifetime,
+        and "| PipelineLayout | Public XID becomes invalid; retain its internal definition/backend identity while any live Pipeline depends on it | Reject while referenced by a `RECORDING` command buffer or directly used by accepted work; on success, referencing non-pending `EXECUTABLE` command buffers become `INVALID`. Existing Pipelines remain live; no new Pipeline may be created through the destroyed XID |" in lifetime,
         "resource lifetime: DescriptorPool, DescriptorSet, Pipeline, and PipelineLayout matrix rows must match recording/pending and executable-invalidation rules",
     )
     c.require(
