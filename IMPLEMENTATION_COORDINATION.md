@@ -81,6 +81,13 @@ This file: `/home/nekrad/src/xorg/mpbt-workspace/_WORK_/xav/xav-design/IMPLEMENT
 **External Design Agent**: Please review opcode assignments in `registries/request-subopcodes.md` and provide feedback on wire protocol implementation priorities.
 
 
+## Phase 1 Work-Split Integration Risk — 2026-10-30
+
+- The current ship table overlaps request ownership: Ship B covers subopcodes 1–3, Ship C covers 2, 3, and 7, and Ship E also covers 7. These overlaps may be intentional (for example, shared property helpers versus request handlers), but the file does not identify a single owner for each handler or shared source file.
+- Before merging the implementation branches, the coordinator should record one authoritative owner per request handler and identify any shared helper/header files with an explicit integration owner. In particular, avoid parallel edits to the same handlers for `GetPhysicalDeviceProperty` (2), `GetPhysicalDeviceQueueFamilyProperties` (3), and `GetPhysicalDeviceMemoryProperties` (7).
+
+---
+
 ## Specification Baseline for Parallel Implementation — 2026-10-30
 
 - The authoritative source remains the tip of `docs/restructure-2026-10-21`; implementation branches MUST sync from that branch before coding or rebasing/pushing.
