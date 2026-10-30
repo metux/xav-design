@@ -93,11 +93,11 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         for phrase in (
             "same resource-lifecycle serialization order",
             "no live Swapchain references the Surface",
-            "DestroySurface MUST be rejected with INVALID_SYNCHRONIZATION_STATE",
-            "MUST NOT be translated into the SURFACE_LOST status",
+            "`DestroySurface` MUST be rejected with `INVALID_SYNCHRONIZATION_STATE`",
+            "MUST NOT be translated into the `SURFACE_LOST` status",
             "no valid Swapchain can remain",
             "retirement of every referencing Swapchain before Surface invalidation",
-            "Window destruction is a separate asynchronous transition to SURFACE_LOST",
+            "Window destruction is a separate asynchronous transition to `SURFACE_LOST`",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, surface)
