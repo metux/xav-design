@@ -1766,5 +1766,33 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertNotIn("`ResetCommandPool`", self.conformance)
         self.assertIn("`ResetCommandBuffer`", self.conformance)
 
+    def test_destroy_device_precedence_matches_normative_chapters(self):
+        devices = (ROOT / "spec/devices.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        chapter = devices.split("`DestroyDevice` is a void request", 1)[1].split("\n\nOn success", 1)[0]
+        phases = (
+            "exact 12-byte request length (`BadLength`)",
+            "resolve the Device XID (`BadValue` if unknown or non-live)",
+            "validate that the live resource is a logical Device owned by this client",
+            "There is no Device-availability phase",
+        )
+        positions = [chapter.index(phase) for phase in phases]
+        self.assertEqual(positions, sorted(positions))
+        error = errors.split("- `DestroyDevice`:", 1)[1].split("\n\n", 1)[0]
+        for phrase in (
+            "exact 12-byte length (`BadLength`)",
+            "Device-XID resolution (`BadValue` for unknown/non-live)",
+            "live resource type and client ownership (`BadMatch`",
+            "There is no Device-availability phase",
+        ):
+            self.assertIn(phrase, error)
+        for vector in (
+            "malformed length with unknown/wrong-type Device XID (`BadLength` wins)",
+            "unknown/non-live Device XID combined with a live wrong-type/foreign-owned resource returns `BadValue`",
+            "live wrong-type or foreign-owned resource returns `BadMatch`",
+            "Device Loss is not an additional blocker for logical teardown",
+        ):
+            self.assertIn(vector, conformance)
 if __name__ == "__main__":
     unittest.main()
