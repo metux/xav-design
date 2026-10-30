@@ -542,6 +542,33 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             state, SubmitRequest(command_buffer_indices=(99,)), "BadValue"
         )
 
+    def test_unknown_wait_semaphore_xid_precedes_type_and_queue_mismatch(self) -> None:
+        state = self.state(
+            queue_xid_valid=False,
+            types_and_ownership_valid=False,
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(99,)), "BadValue"
+        )
+
+    def test_unknown_signal_semaphore_xid_precedes_type_and_ownership_mismatch(self) -> None:
+        state = self.state(types_and_ownership_valid=False)
+        self.assert_atomic_rejection(
+            state,
+            SubmitRequest(signal_indices=(99,), signal_values=(0,)),
+            "BadValue",
+        )
+
+    def test_wait_xid_resolution_precedes_device_loss_and_mutable_state(self) -> None:
+        state = self.state(
+            device_lost=True,
+            queue_supported_stage_mask=0,
+            wait_states=[WaitState.UNTRUSTED, WaitState.READY],
+        )
+        self.assert_atomic_rejection(
+            state, SubmitRequest(wait_indices=(99,)), "BadValue"
+        )
+
     def test_type_ownership_precedes_device_loss(self) -> None:
         state = self.state(device_lost=True, types_and_ownership_valid=False)
         self.assert_atomic_rejection(state, SubmitRequest(), "BadMatch")
