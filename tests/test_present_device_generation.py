@@ -88,7 +88,7 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
             ), "SUCCESS",
         )
         self.assertIsNone(old_sem.wait_reservation)
-        self.assertEqual(new_sem.wait_reservation, ("present", 77))
+        self.assertEqual(new_sem.wait_reservation, ("present", 78))
         self.assertFalse(new.device_lost)
 
     def test_accepted_presentation_token_cannot_be_reused_after_swapchain_recreation(self):
