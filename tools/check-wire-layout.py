@@ -3093,7 +3093,7 @@ def check_presentation_profile(c: Check) -> None:
     )
     c.require("Presentation-only `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`" in copy_errors and
               "an `image_index` outside the Swapchain" in copy_errors and
-              "the Submit races a Present transition" in copy_errors and
+              "konkurriert der Submit mit einer Present-Transition" in copy_errors and
               all(term in copy_errors for term in copy_error_order) and
               [copy_errors.index(term) for term in copy_error_order] == sorted(
                   copy_errors.index(term) for term in copy_error_order
