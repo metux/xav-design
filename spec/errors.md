@@ -128,7 +128,7 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 
   Normative precedence for `CreateDefaultDevice`: (1) exact/formula-based request length using checked arithmetic (`BadLength`); (2) `queue_count`, reserved field, and all priorities (`BadValue`); (3) target XID `device_xid` (`BadIDChoice`); (4) successful XGE 1.0 negotiation (`BadMatch`); (5) selection of a suitable Physical Device and compute queue (`DEVICE_UNAVAILABLE`). All checks occur before publishing a logical Device; on any error, the target XID remains unallocated.
 - Both requests are void requests; success produces no normal reply.
-- `DestroyDevice`: incorrect length returns `BadLength`; an unknown/non-live XAverius XID returns `BadValue`; foreign Device ownership returns `BadMatch`.
+- `DestroyDevice`: normative precedence is exact 12-byte length (`BadLength`) > Device-XID resolution (`BadValue` for unknown/non-live) > live resource type and client ownership (`BadMatch` for wrong type or foreign ownership) > atomic logical teardown. There is no Device-availability phase; Device Loss does not block cleanup. A later phase MUST NOT override an earlier error.
 
 ### `SelectEvents`
 
