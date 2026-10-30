@@ -1068,8 +1068,8 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             with self.subTest(write_boundary=phrase):
                 self.assertIn(phrase, write)
         for phrase in (
-            "alle vor diesem Request angenommenen `QueueSubmit`-Submissions",
-            "stabilen Daten-Snapshot",
+            "every earlier accepted `QueueSubmit` submission",
+            "stable data snapshot",
             "MUST NOT send a successful data reply",
         ):
             with self.subTest(read_boundary=phrase):
