@@ -182,6 +182,43 @@ class QueuePresentStateModelTests(unittest.TestCase):
             state, PresentRequest(wait_indices=(0,)), "INVALID_SYNCHRONIZATION_STATE"
         )
 
+    def test_present_wait_errors_follow_wire_array_order(self) -> None:
+        reserved_first = self.state(
+            wait_states=[WaitState.READY, WaitState.UNTRUSTED],
+            shared_semaphores=[
+                SharedBinarySemaphore(
+                    signal_state=BinarySignalState.SIGNALED,
+                    wait_reservation=("submit", 77),
+                ),
+                SharedBinarySemaphore(
+                    signal_state=BinarySignalState.UNTRUSTED,
+                ),
+            ],
+        )
+        self.assert_rejected_atomically(
+            reserved_first,
+            PresentRequest(token=82, wait_indices=(0, 1)),
+            "INVALID_SYNCHRONIZATION_STATE",
+        )
+
+        untrusted_first = self.state(
+            wait_states=[WaitState.READY, WaitState.UNTRUSTED],
+            shared_semaphores=[
+                SharedBinarySemaphore(
+                    signal_state=BinarySignalState.SIGNALED,
+                    wait_reservation=("submit", 77),
+                ),
+                SharedBinarySemaphore(
+                    signal_state=BinarySignalState.UNTRUSTED,
+                ),
+            ],
+        )
+        self.assert_rejected_atomically(
+            untrusted_first,
+            PresentRequest(token=83, wait_indices=(1, 0)),
+            "DEPENDENCY_FAILED",
+        )
+
     def test_untrusted_wait_fails_without_reserving_anything(self) -> None:
         state = self.state(wait_states=[WaitState.READY, WaitState.UNTRUSTED])
         self.assert_rejected_atomically(
