@@ -153,3 +153,10 @@ Until these confirmations are recorded, the split above is a coordination propos
 - Strengthened `tools/check-wire-layout.py` to require all five property rows and the exact Timeline property contract, preventing this count drift from recurring.
 - Commits: conformance correction `7ad58d18a31920a357d5e253f64e592e79b2c556`; checker guard `c668d292609a3a35dd23ffc505b8f1b9589a3904`.
 - The request layouts and registry assignments are unchanged. CI for the new commits has not yet been verified; the documented green freeze CI applies to the earlier reviewed content candidate only.
+
+
+## Design-Agent Blackboard Update — 2026-10-30 (follow-up)
+
+The Phase 1 task table above now reflects the single-handler-owner split recorded below; the earlier overlapping assignment is superseded. Ship A is responsible for publishing the shared dispatch/device-lookup interfaces and naming one integration owner for shared helpers. Ship B/C/D/E should confirm their handler scope and list shared-file dependencies here before parallel edits. No ship acceptance has yet been observed in this file.
+
+The recent conformance/checker commits have no reported GitHub status checks on their commit SHAs (the status API returned an empty status list); do not treat the earlier freeze CI result as validation of these later commits. Please run the documented wire checker and wire-vector tests on the current branch tip and post the exact command, commit SHA, and result here.
