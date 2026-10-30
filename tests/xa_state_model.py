@@ -207,6 +207,7 @@ class PresentState:
     binary_signal_states: list[BinarySignalState] = field(default_factory=list)
     pending_binary_waits: list[tuple[int, int]] = field(default_factory=list)
     accepted_tokens: set[int] = field(default_factory=set)
+    used_present_tokens: set[int] = field(default_factory=set)
     pending_present_waits: list[tuple[int, int]] = field(default_factory=list)
     pending_present_tokens: set[int] = field(default_factory=set)
     terminal_present_status: dict[int, str] = field(default_factory=dict)
@@ -319,7 +320,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     # Stage 8: queue presentation capability, then accepted-token reuse.
     if not state.present_supported:
         return PresentResult("BadMatch", False)
-    if request.token in state.accepted_tokens:
+    if request.token in state.used_present_tokens:
         return PresentResult("BadValue", False)
 
     # Stage 9: image state precedes wait eligibility.
@@ -330,6 +331,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         return PresentResult(wait_error, False)
     # Commit point: all acceptance-visible changes happen together.
     state.accepted_tokens.add(request.token)
+    state.used_present_tokens.add(request.token)
     state.pending_present_tokens.add(request.token)
     for index in request.wait_indices:
         state.wait_states[index] = WaitState.RESERVED
@@ -1969,12 +1971,20 @@ class AsyncSubmissionEventRegistry:
         return "SUCCESS"
 
     def mark_device_lost(self, device_identity: str) -> str:
+        """Synchronous lookup path; callbacks use the captured-object entrypoint."""
         device = self.live_devices.get(device_identity)
         if device is None or not device.live:
             return "BadValue"
-        device.lost = True
+        return self.device_loss_callback(device)
+
+    def device_loss_callback(self, captured_device: AsyncDeviceIdentity) -> str:
+        """Apply loss only to the exact Device generation captured by the callback."""
+        if (not captured_device.live
+                or self.live_devices.get(captured_device.identity) is not captured_device):
+            return "SUCCESS"
+        captured_device.lost = True
         for registration in self.wait_registrations.values():
-            if registration.captured_device is device and registration.terminal_status is None:
+            if registration.captured_device is captured_device and registration.terminal_status is None:
                 registration.terminal_status = "DEVICE_LOST"
         return "SUCCESS"
 
@@ -2091,6 +2101,14 @@ class AsyncFenceCallbackModel:
     def mark_device_lost(self, identity: str) -> str:
         if not self.devices.get(identity, False):
             return "DEVICE_LOST"
+        return self.device_loss_callback(identity, self.device_generations[identity])
+
+    def device_loss_callback(self, identity: str, captured_generation: int) -> str:
+        """Ignore delayed loss notifications from a retired Device generation."""
+        if self.device_generations.get(identity, 0) != captured_generation:
+            return "SUCCESS"
+        if not self.devices.get(identity, False):
+            return "SUCCESS"
         self.devices[identity] = False
         return "SUCCESS"
 
