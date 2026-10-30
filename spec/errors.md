@@ -116,7 +116,7 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 - `ABORT` without a matching active upload assembly: `INVALID_SYNCHRONIZATION_STATE`
 - Invalid SPIR-V or a SPIR-V module that does not satisfy the v0.1 validation rules: `BadValue`; no Shader Module remains live, and the assembly is discarded
 - Vulkan creation failure: the specific backend error, such as `DEVICE_LOST`, `ALLOCATION_FAILED`, or `INTERNAL_SERVER_ERROR`; no Shader Module remains live, and the assembly is discarded
-- A malformed chunk discards the entire associated assembly. The X11 error for that chunk is synchronous and leaves no partial Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
+- A failed continuation or `FINAL` chunk discards the matching assembly only when the complete fixed header identifies its `shader_module_xid` and `CREATE=0`. A request truncated before that XID is available cannot identify or mutate an assembly. A rejected `CREATE=1` attempt never discards an existing assembly reserved under the same XID. The X11 error for the failed chunk is synchronous and leaves no partial Shader Module. Errors during `ShaderModuleData` upload MUST NOT generate `ASYNC_ERROR`; Device loss is reported only through the general Device-loss path, not through an additional upload-specific event.
 
 ### Device discovery and Device creation
 
