@@ -243,7 +243,7 @@ Für alle fünf Requests gilt: Fehler vor Annahme werden synchron als X11-Fehler
 ### Ressourcenzerstörung und Memory-Freigabe
 
 - Destroy einer Ressource, die von einem `RECORDING`-Command-Buffer referenziert wird: `INVALID_SYNCHRONIZATION_STATE`.
-- Destroy eines pending Command Buffers, Descriptor Sets, Buffers, einer Pipeline oder eines Pipeline Layouts: `INVALID_SYNCHRONIZATION_STATE`.
+- Destroy eines pending Command Buffers, Descriptor Sets, Buffers oder einer Pipeline: `INVALID_SYNCHRONIZATION_STATE`. Für ein Pipeline Layout gilt dies bei direkter Pending-Verwendung; eine Pipeline-interne Layout-Abhängigkeit blockiert die öffentliche XID-Invalidierung nicht, hält aber die interne Backend-Ressource bis zur Zerstörung der Pipeline am Leben.
 - `DestroyCommandPool`: `INVALID_SYNCHRONIZATION_STATE`, wenn mindestens ein Kind-Command-Buffer pending ist.
 - `DestroyDescriptorPool` oder `FreeDescriptorSets`: `INVALID_SYNCHRONIZATION_STATE`, wenn ein betroffenes Set pending verwendet oder von einem `RECORDING`-Command-Buffer referenziert wird.
 - `DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`, solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene `WaitForFence`-Registrierung genau diese interne Fence-Identität referenziert.
