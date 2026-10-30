@@ -202,6 +202,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         self.assertEqual([offset for offset, _symbol in codes], list(range(9)))
         missing = [symbol for _offset, symbol in codes if tick + symbol + tick not in general]
         self.assertEqual(missing, [], f"registered error codes missing from general mapping: {missing}")
+        self.assertIn("is not emitted by any v0.1 request", general)
 
 if __name__ == "__main__":
     unittest.main()
