@@ -995,6 +995,12 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: CreateDescriptorPool must define device-state errors and atomic create-XID behavior",
     )
     c.require(
+        "MUSS der Server jeden Backend-`VkDescriptorPool` mit `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` erzeugen" in read("spec/shaders-pipelines.md")
+        and "verify that the server creates every backend descriptor pool with `VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT` set" in conformance
+        and "successful `FreeDescriptorSets` frees only the selected Sets" in conformance,
+        "descriptor pools: backend must enable individual descriptor-set freeing because v0.1 exposes FreeDescriptorSets",
+    )
+    c.require(
         "`CreateSemaphore`:" in errors and "`CreateFence`:" in errors
         and "wrong live resource type or foreign Device ownership `BadMatch`" in errors
         and "unavailable or lost Device `DEVICE_UNAVAILABLE` / `DEVICE_LOST`" in errors
