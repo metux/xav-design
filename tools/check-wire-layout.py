@@ -175,8 +175,11 @@ def check_events(c: Check) -> None:
     c.require(
         "Rennen zwischen erfolgreichem `WriteBuffer`-Commit, Device Loss und `DestroyDevice`" in conformance
         and "Client-Disconnect während des Upload-Wartezustands" in conformance
-        and "Disconnect vor einem späteren `SignalSemaphore`" in conformance,
-        "WriteBuffer: conformance must cover Device Loss, DestroyDevice, and disconnect races",
+        and "Disconnect vor einem späteren `SignalSemaphore`" in conformance
+        and "Während `WriteBuffer` offen ist, konkurrieren ein gültiges `SignalSemaphore`, Device Loss und `DestroyDevice`" in conformance
+        and "Gleichzeitig offene `WriteBuffer`- und `WaitSemaphores`-Operationen" in conformance
+        and "Ein bereits vor Device Loss oder `DestroyDevice` terminalisierter `WriteBuffer`-Fehler" in conformance,
+        "WriteBuffer: conformance must cover Device Loss, DestroyDevice, disconnect, and concurrent host-signal/wait terminalization",
     )
     c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independently of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
               "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
