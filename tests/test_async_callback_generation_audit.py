@@ -22,11 +22,11 @@ def run(root):
                           stderr=subprocess.PIPE, check=False)
 
 
-def setup(root, body):
+def setup(root, body, filename="backend.c"):
     git(root, "init", "-q")
     git(root, "config", "user.email", "callback-audit@example.invalid")
     git(root, "config", "user.name", "Callback audit test")
-    source = root / "src" / "backend.c"
+    source = root / "src" / filename
     source.parent.mkdir(parents=True)
     source.write_text(body, encoding="utf-8")
     git(root, "add", "src/backend.c")
@@ -102,6 +102,61 @@ void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(o
         result = run(no_annotations)
         if result.returncode != 1 or "no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE" not in result.stdout:
             raise SystemExit("unannotated async callback path must fail:\n" + result.stdout + result.stderr)
+
+
+        # Rust async tasks and named completion callbacks are part of the same
+        # tracked-source audit, not silently skipped as non-C/C++ files.
+        rust = Path(temp) / "rust-backend"
+        rust.mkdir()
+        setup(rust, """
+// XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation; resource_generation
+// XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation; resource_generation
+fn on_done(ctx: &Context) {
+    if ctx.device_generation != current_device_generation() { return; }
+    let resource = ctx.resource;
+    if ctx.resource_generation != current_resource_generation(resource) { return; }
+}
+fn submit() { tokio::spawn(async move { register_callback(on_done); }); }
+""", "backend.rs")
+        result = run(rust)
+        if result.returncode != 0 or "PASS" not in result.stdout:
+            raise SystemExit("annotated Rust async callback should pass:\\n" + result.stdout + result.stderr)
+
+        rust_missing = Path(temp) / "rust-missing"
+        rust_missing.mkdir()
+        setup(rust_missing, """
+fn on_done(ctx: &Context) { finish(ctx); }
+fn submit() { tokio::spawn(async move { register_callback(on_done); }); }
+""", "backend.rs")
+        result = run(rust_missing)
+        if result.returncode != 1 or "no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE" not in result.stdout:
+            raise SystemExit("unannotated Rust async callback must fail:\\n" + result.stdout + result.stderr)
+
+        zig = Path(temp) / "zig-backend"
+        zig.mkdir()
+        setup(zig, """
+// XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation; resource_generation
+// XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation; resource_generation
+fn on_done(ctx: *Context) void {
+    if (ctx.device_generation != current_device_generation()) return;
+    const resource = ctx.resource;
+    if (ctx.resource_generation != current_resource_generation(resource)) return;
+}
+fn submit() void { _ = std.Thread.spawn(.{}, on_done, .{ctx}); }
+""", "backend.zig")
+        result = run(zig)
+        if result.returncode != 0 or "PASS" not in result.stdout:
+            raise SystemExit("annotated Zig async callback should pass:\\n" + result.stdout + result.stderr)
+
+        zig_missing = Path(temp) / "zig-missing"
+        zig_missing.mkdir()
+        setup(zig_missing, """
+fn on_done(ctx: *Context) void { finish(ctx); }
+fn submit() void { _ = std.Thread.spawn(.{}, on_done, .{ctx}); }
+""", "backend.zig")
+        result = run(zig_missing)
+        if result.returncode != 1 or "no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE" not in result.stdout:
+            raise SystemExit("unannotated Zig async callback must fail:\\n" + result.stdout + result.stderr)
 
         source_free = Path(temp) / "no-native"
         source_free.mkdir()
