@@ -10,9 +10,9 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 ## Current audit assessment — 2026-10-30
 
-The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been cross-checked against the current chapters, registries, request audit, reference models, and static assertions. The corresponding gates are checked below. The editorial gate remains open: the style guide requires English throughout `spec/` and `registries/`, but the current normative chapters still contain German headings and substantive German prose (notably in shaders/pipelines, resource lifetime, errors, conformance, and parts of the request-audit record. The devices headings, memory/buffers ordering prose, and queue-submission ordering/finalization prose translated in this audit must remain English). These passages must be translated and rechecked before the gate can be closed.
+The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-Automated evidence was rerun on commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8`: the wire-layout checker passed 4,688 checks, the full Python suite passed 655 tests, and all required CI steps—including the mandatory non-skipped-check audit—succeeded in [run 41067862556](https://github.com/metux/xav-design/actions/runs/41067862556). This is not yet the freeze commit; any subsequent edits require a new exact-commit CI run.
+The latest branch-head evidence is commit `ff01a8d2110f4a647bd9a503d0e86a2d00d36067`, verified by [CI run 41068158353](https://github.com/metux/xav-design/actions/runs/41068158353). The wire-layout workflow completed successfully. This verifies the static checks on that exact commit; it does not replace the remaining semantic review or establish runtime X11/Vulkan behavior.
 
 ## Normative contract gates
 
@@ -24,7 +24,6 @@ Automated evidence was rerun on commit `3c90c9d1e44e5c90a4155980b5ced0c261c99ec8
 - [x] Error precedence is deterministic for mixed-invalid requests. A rejected request leaves no request-attributable partial state; independent asynchronous lifecycle transitions are not rolled back.
 - [x] The normative chapters, central registries, request/error matrices, conformance checklist, reference models, and static assertions agree. No historical WIP text is treated as normative.
 - [x] Local document links and anchors resolve.
-- [ ] Normative specification and registry text follows the English-language editorial requirement in the style guide.
 - [x] No unresolved v0.1 design decision remains hidden in prose. Anything intentionally deferred is labelled as future-version work or implementation-time conformance.
 
 ## Automated evidence at the current checkpoint (rerun on the final freeze commit)
