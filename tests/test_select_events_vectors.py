@@ -655,7 +655,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         read = memory.split("## 5.8 `ReadBuffer`", 1)[1]
         self.assertIn("earlier accepted `QueueSubmit`", read)
-        self.assertIn("earlier enqueued `WriteBuffer` transfers", read)
+        self.assertIn("every earlier enqueued `WriteBuffer` transfer", read)
         self.assertIn("Logical terminalization alone is insufficient", read)
         self.assertIn("later `QueueSubmit` requests", read)
         self.assertIn("stable data snapshot", read)
