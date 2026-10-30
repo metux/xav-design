@@ -1179,6 +1179,15 @@ def check_request_document_coverage(c: Check) -> None:
         "conformance: generic and specialized destruction paths must be explicit",
     )
     c.require(
+        "DescriptorSet-to-DescriptorSetLayout associations" in lifetime
+        and "immutable layout definition and the backend layout identity" in lifetime
+        and "Existing sets remain valid and updateable" in lifetime
+        and "no new set may be allocated through the destroyed XID" in lifetime
+        and "existing Set remains valid and can still be updated" in conformance
+        and "later `UpdateDescriptorSets`-Requests for these Sets allein wegen der ungültigen Layout-XID ablehnen" in read("spec/shaders-pipelines.md"),
+        "DescriptorSetLayout lifetime: public XID destruction must preserve existing allocated sets and their update metadata",
+    )
+    c.require(
         "Descriptor Sets, die den Buffer enthalten, bleiben als Objekte bestehen" in lifetime
         and "bis alle betroffenen Descriptor-Slots mit gültigen Buffer-Referenzen aktualisiert wurden oder die Sets freigegeben wurden" in lifetime
         and "interne Bindungsreferenz auf die Memory-Allokation bleibt während dieser gesamten Zeit bestehen" in lifetime,
