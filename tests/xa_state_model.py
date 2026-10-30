@@ -217,6 +217,7 @@ class PresentState:
     # retire accepted backend work or its resource holds.
     connection_live: bool = True
     swapchain_live: bool = True
+    swapchain_generation: int = 1
 
     def __post_init__(self) -> None:
         _register_semaphore_owner(self)
@@ -282,7 +283,7 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
         return PresentResult("BadValue", False)
 
     # Stage 3: XID resolution in wire order: Device, Swapchain, then waits.
-    if not state.valid_device_xid or not state.valid_swapchain_xid:
+    if not state.valid_device_xid or not state.valid_swapchain_xid or not state.swapchain_live:
         return PresentResult("BadValue", False)
     if any(
         index < 0 or index >= len(state.valid_wait_xids)
@@ -336,8 +337,12 @@ def queue_present(state: PresentState, request: PresentRequest) -> PresentResult
     return PresentResult("SUCCESS", True)
 
 
-def finish_present_terminal(state: PresentState, token: int, status: str) -> str:
+def finish_present_terminal(
+    state: PresentState, token: int, status: str, *, generation: int | None = None,
+) -> str:
     """Commit one terminal outcome for an accepted QueuePresent exactly once."""
+    if generation is not None and generation != state.swapchain_generation:
+        return "BadValue"
     if token not in state.pending_present_tokens:
         return "BadValue"
     if status not in {
@@ -376,8 +381,11 @@ def finish_present_terminal(state: PresentState, token: int, status: str) -> str
 
 def finish_present_image_release(
     state: PresentState, token: int, *, reusable: bool = True,
+    generation: int | None = None,
 ) -> str:
     """Commit the independent backend image-release milestone exactly once."""
+    if generation is not None and generation != state.swapchain_generation:
+        return "BadValue"
     if token not in state.accepted_tokens or token in state.image_release_tokens:
         return "BadValue"
     state.image_release_tokens.add(token)
@@ -422,6 +430,29 @@ def destroy_present_swapchain(state: PresentState) -> str:
         return "INVALID_SYNCHRONIZATION_STATE"
     state.swapchain_live = False
     state.image_state = ImageState.INVALID
+    return "SUCCESS"
+
+
+def recreate_present_swapchain(state: PresentState) -> str:
+    """Reuse the public XID only with a fresh, monotonically increasing generation."""
+    if state.swapchain_live:
+        return "BadValue"
+    state.swapchain_generation += 1
+    state.swapchain_live = True
+    state.image_state = ImageState.ACQUIRED
+    state.accepted_tokens.clear()
+    state.pending_present_tokens.clear()
+    state.terminal_present_status.clear()
+    state.image_release_tokens.clear()
+    state.image_release_reusable.clear()
+    state.pending_present_waits.clear()
+    state.wait_states = [WaitState.READY for _ in state.wait_states]
+    state.binary_signal_states = [
+        BinarySignalState.UNSIGNALED for _ in state.binary_signal_states
+    ]
+    state.device_lost = False
+    state.surface_lost = False
+    state.out_of_date = False
     return "SUCCESS"
 
 
