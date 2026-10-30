@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Require explicit generation capture/validation for asynchronous backend callbacks.
+"""Require generation capture/validation for asynchronous native callbacks.
 
-The audit uses source annotations as a reviewable contract because callback
-registration APIs vary across C/C++ backends. It also checks that annotations
-refer to real callback symbols and that callback bodies consume generation
-values in validation expressions.
+C/C++, Rust and Zig are scanned using language-specific function discovery.
+Annotations remain a reviewable contract because callback registration APIs
+and ownership models differ between backends.
 """
 import re
+import subprocess
 import sys
 from pathlib import Path
 
-SOURCE_SUFFIXES = {".c", ".h", ".cc", ".hh", ".cpp", ".hpp", ".cxx", ".hxx"}
+SOURCE_SUFFIXES = {
+    ".c", ".h", ".cc", ".hh", ".cpp", ".hpp", ".cxx", ".hxx", ".rs", ".zig",
+}
 SKIP_PARTS = {
     ".git", "build", "build-debug", "build-release", "out", "target",
     "vendor", "third_party", "third-party", "generated", "autogen",
@@ -19,7 +21,10 @@ SKIP_PARTS = {
 ASYNC_SIGNAL = re.compile(
     r"\b(?:vkQueueSubmit2?|vkQueuePresentKHR|vkWaitForFences|"
     r"vkWaitSemaphores|vkGetSemaphoreCounterValue|vkDeviceWaitIdle|"
-    r"std::async|dispatch_async|async_submit|submit_async|"
+    r"std::async|std::thread::spawn|thread::spawn|tokio::spawn|"
+    r"spawn_blocking|JoinHandle|Future|async\s+fn|\.await|"
+    r"@asyncCall|Thread\.spawn|std\.Thread\.spawn|"
+    r"dispatch_async|async_submit|submit_async|"
     r"register_callback|set_callback|add_callback|completion_callback|"
     r"on_complete|on_completion|callback|completion|"
     r"fence|semaphore|queue_submit|queue_present)\b",
@@ -33,10 +38,10 @@ IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def tracked_sources(root):
-    import subprocess
     result = subprocess.run(
         ["git", "-C", str(root), "ls-files", "-z", "--",
-         "*.c", "*.h", "*.cc", "*.hh", "*.cpp", "*.hpp", "*.cxx", "*.hxx"],
+         "*.c", "*.h", "*.cc", "*.hh", "*.cpp", "*.hpp", "*.cxx", "*.hxx",
+         "*.rs", "*.zig"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
     )
     if result.returncode:
@@ -53,13 +58,32 @@ def tracked_sources(root):
 
 
 def strip_comments_and_literals(source):
-    pattern = re.compile(r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', re.S)
+    # Preserve newlines and offsets sufficiently for brace-based body scanning.
+    pattern = re.compile(
+        r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'",
+        re.S,
+    )
     return pattern.sub(lambda m: "\n" * m.group(0).count("\n"), source)
 
 
-def function_body(source, name):
-    # Locate a definition, not a prototype, then balance braces.
-    for match in re.finditer(r"\b" + re.escape(name) + r"\s*\([^;{}]*\)\s*\{", source, re.S):
+def function_body(source, name, suffix):
+    escaped = re.escape(name)
+    if suffix == ".rs":
+        definition = re.compile(
+            r"\b(?:pub\s+)?(?:unsafe\s+)?(?:async\s+)?fn\s+" + escaped
+            + r"\s*(?:<[^>{}]*>)?\s*\([^{};]*\)[^{;]*\{", re.S,
+        )
+    elif suffix == ".zig":
+        definition = re.compile(
+            r"\b(?:pub\s+)?fn\s+" + escaped
+            + r"\s*\([^{};]*\)[^{;]*\{", re.S,
+        )
+    else:
+        definition = re.compile(
+            r"\b" + escaped + r"\s*\([^;{}]*\)\s*\{", re.S,
+        )
+    for match in definition.finditer(source):
         start = source.find("{", match.start())
         depth = 0
         for i in range(start, len(source)):
@@ -72,11 +96,6 @@ def function_body(source, name):
     return None
 
 
-def parse_names(raw):
-    names = [item.strip() for item in raw.split(";")]
-    return names
-
-
 def audit_file(path):
     raw = path.read_text(encoding="utf-8", errors="replace")
     code = strip_comments_and_literals(raw)
@@ -85,10 +104,12 @@ def audit_file(path):
     annotations = {}
     for match in ANNOTATION.finditer(raw):
         kind, callback, values = match.groups()
-        names = parse_names(values)
+        names = [item.strip() for item in values.split(";")]
         if not names or any(not IDENT.fullmatch(x) for x in names):
             return [f"{path}: malformed {kind} annotation for {callback}"]
-        annotations.setdefault(callback, {})[kind] = set(names)
+        if kind in annotations.setdefault(callback, {}):
+            return [f"{path}: duplicate {kind} annotation for {callback}"]
+        annotations[callback][kind] = set(names)
 
     if not annotations:
         return [f"{path}: asynchronous callback path detected but no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE annotations found"]
@@ -110,7 +131,7 @@ def audit_file(path):
         missing = registered - validated
         if missing:
             errors.append(f"{path}: {callback}: captured generations not validated: {', '.join(sorted(missing))}")
-        body = function_body(code, callback)
+        body = function_body(code, callback, path.suffix)
         if body is None:
             errors.append(f"{path}: {callback}: annotated callback function definition not found")
             continue
@@ -125,8 +146,8 @@ def audit_file(path):
                 errors.append(f"{path}: {callback}: callback body does not use captured {generation}")
                 continue
             if not re.search(
-                r"(?:\b" + re.escape(generation) + r"\b[^;{}]{0,100}(?:==|!=)|"
-                r"(?:==|!=)[^;{}]{0,100}\b" + re.escape(generation) + r"\b|"
+                r"(?:\b" + re.escape(generation) + r"\b[^;{}]{0,160}(?:==|!=)|"
+                r"(?:==|!=)[^;{}]{0,160}\b" + re.escape(generation) + r"\b|"
                 r"(?:validate|check|matches|is_current)[A-Za-z0-9_]*\s*\([^;]*\b"
                 + re.escape(generation) + r"\b)",
                 body, re.I,
@@ -146,11 +167,13 @@ def main(argv):
     errors = []
     for path in sources:
         try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+            asynchronous = bool(ASYNC_SIGNAL.search(strip_comments_and_literals(source)))
             file_errors = audit_file(path)
         except OSError as error:
             errors.append(f"{path}: cannot read source: {error}")
             continue
-        if ASYNC_SIGNAL.search(strip_comments_and_literals(path.read_text(encoding="utf-8", errors="replace"))):
+        if asynchronous:
             checked += 1
         errors.extend(file_errors)
     if errors:
