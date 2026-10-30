@@ -37,11 +37,15 @@
 
 | Ship | Task | Target | Branch |
 |------|------|--------|--------|
-| **Ship A** | Wire Protocol + Dispatch Framework | `Xext/xaverius/` | `rfc/xaverius-core-protocol` |
-| **Ship B** | Device Enumeration (1-3) | `Xext/xaverius/` | `rfc/xaverius-devices` |
-| **Ship C** | Device Properties (2, 3, 7) | `Xext/xaverius/` | `rfc/xaverius-device-props` |
+| **Ship A** | Common wire framing and dispatch integration (no ownership of device request handlers) | `Xext/xaverius/` | `rfc/xaverius-core-protocol` |
+| **Ship B** | `EnumeratePhysicalDevices` (subopcode 1) only | `Xext/xaverius/` | `rfc/xaverius-devices` |
+| **Ship C** | `GetPhysicalDeviceProperty` (2) and `GetPhysicalDeviceQueueFamilyProperties` (3) only | `Xext/xaverius/` | `rfc/xaverius-device-props` |
 | **Ship D** | Device Lifecycle (4, 5, 6) | `Xext/xaverius/` | `rfc/xaverius-device-lifecycle` |
-| **Ship E** | Memory Properties (7) | `Xext/xaverius/` | `rfc/xaverius-memory-props` |
+| **Ship E** | `GetPhysicalDeviceMemoryProperties` (subopcode 7) only | `Xext/xaverius/` | `rfc/xaverius-memory-props` |
+
+### Shared integration ownership (must be confirmed before shared-file edits)
+
+The request-handler split above is the coordination baseline. It does not assign ownership of shared helpers. Ship A must name the integration owner and publish/agree the interfaces for common dispatch, Physical-Device XID lookup, client ownership checks, and shared device metadata before ships make overlapping changes. Until that owner/interface is recorded, ships MUST NOT independently modify the same shared helper or header; submit the required interface in this file first.
 
 ### Wire Protocol Requirements
 - Complete fixed request header is 8 bytes: X11 header `reqType(1) | data(1) | length(2)`, followed by XAverius header `subopcode(1) | flags(1) | reserved(2)`. `data` MUST be zero; it is NOT a minor opcode. The subopcode is exclusively at offset 4.
