@@ -593,12 +593,12 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         # The normative six-phase order and the finer mutable-state order
         # must be represented by explicit mixed-failure conformance vectors.
         phases = (
-            "malformed count/length/overflow",
-            "token zero/reuse",
-            "Device, optional Fence, Command Buffer, wait Semaphore, and signal Semaphore XIDs in wire order",
-            "all XIDs resolve before type/ownership/queue checks",
-            "Device Unavailable/Loss",
-            "mutable Fence/Command Buffer/wait/signal preconditions",
+            "incorrect total length",
+            "submission_token = 0",
+            "required XIDs are resolved in wire order",
+            "only then are resource type",
+            "an unavailable or lost device",
+            "mutable preconditions are checked in wire order",
         )
         positions = [queue.index(phrase) for phrase in phases]
         self.assertEqual(positions, sorted(positions))
