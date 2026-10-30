@@ -37,6 +37,17 @@ class BinarySignalState(str, Enum):
 
 
 @dataclass
+class SharedFence:
+    """Canonical fence state shared by submissions from multiple queues."""
+    device_lost: bool = False
+    status: str = "UNSIGNALED"
+    pending_token: int | None = None
+    pending_owner: ReferenceType | None = field(default=None, repr=False, compare=False)
+    generation: int = 0
+    owners: list[ReferenceType] = field(default_factory=list, repr=False, compare=False)
+
+
+@dataclass
 class SharedTimelineSemaphore:
     """Canonical timeline counter and GPU signal reservations across queues."""
     device_lost: bool = False
@@ -67,7 +78,11 @@ class SharedBinarySemaphore:
 
 
 def _shared_semaphore_objects(state: PresentState | SubmissionModel):
-    return [*state.shared_semaphores, *getattr(state, "shared_timeline_semaphores", [])]
+    objects = [*state.shared_semaphores, *getattr(state, "shared_timeline_semaphores", [])]
+    shared_fence = getattr(state, "shared_fence", None)
+    if shared_fence is not None:
+        objects.append(shared_fence)
+    return objects
 
 
 def _register_semaphore_owner(state: PresentState | SubmissionModel) -> None:
@@ -121,7 +136,7 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
     seen_models: set[int] = set()
     models: list[PresentState | SubmissionModel] = []
     shared_seen: set[int] = set()
-    semaphores: list[SharedBinarySemaphore | SharedTimelineSemaphore] = []
+    semaphores: list[SharedBinarySemaphore | SharedTimelineSemaphore | SharedFence] = []
     while pending:
         state = pending.pop()
         if id(state) in seen_models:
@@ -174,7 +189,7 @@ def _propagate_device_loss(origin: PresentState | SubmissionModel) -> None:
             # reached its terminal milestone but backend release is still open.
             state.image_state = ImageState.INVALID
     for shared in semaphores:
-        if isinstance(shared, SharedTimelineSemaphore):
+        if isinstance(shared, (SharedTimelineSemaphore, SharedFence)):
             # Timeline counters are monotonic and remain readable, but no
             # further signal operation or callback publication is trusted.
             continue
@@ -950,6 +965,8 @@ class SubmissionModel:
     shared_semaphores: list[SharedBinarySemaphore] = field(default_factory=list)
     # Indexed by semaphore index; canonical timeline state is shared by queues.
     shared_timeline_semaphores: list[SharedTimelineSemaphore | None] = field(default_factory=list)
+    # Optional canonical fence object shared by queue-model instances.
+    shared_fence: SharedFence | None = None
     # Accepted timeline waits may target future values and coexist.
     pending_timeline_waits: list[tuple[int, int, int]] = field(default_factory=list)
     # (submission token, semaphore index, reserved timeline signal value).
@@ -1032,7 +1049,15 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         return "DEVICE_UNAVAILABLE"
     # Normative mutable-state order: optional Fence, Command Buffers, waits,
     # then signals. The Fence is not attached until the acceptance commit.
-    if request.attach_fence and not state.fence_state_valid:
+    shared_fence = state.shared_fence
+    if request.attach_fence and (
+        not state.fence_state_valid
+        or (shared_fence is not None and (
+            shared_fence.device_lost
+            or shared_fence.status != "UNSIGNALED"
+            or shared_fence.pending_token is not None
+        ))
+    ):
         return "INVALID_SYNCHRONIZATION_STATE"
     if any(state.command_buffers[i].lifecycle is not CommandBufferLifecycle.EXECUTABLE
            for i in request.command_buffer_indices):
@@ -1223,6 +1248,10 @@ def queue_submit(state: SubmissionModel, request: SubmitRequest) -> str:
         state.fence_state_valid = False
         state.fence_status = "PENDING"
         state.pending_fence_submissions.append(request.token)
+        if shared_fence is not None:
+            shared_fence.status = "PENDING"
+            shared_fence.pending_token = request.token
+            shared_fence.pending_owner = ref(state)
     state.pending_submissions.append(request.token)
     return "SUCCESS"
 
@@ -1500,6 +1529,14 @@ def finish_submission(
         state.pending_fence_submissions.remove(token)
         state.fence_attached = False
         state.fence_status = "SIGNALED" if effective_success else "FAILED"
+        shared_fence = state.shared_fence
+        if (shared_fence is not None
+                and shared_fence.pending_token == token
+                and shared_fence.pending_owner is not None
+                and shared_fence.pending_owner() is state):
+            shared_fence.status = state.fence_status
+            shared_fence.pending_token = None
+            shared_fence.pending_owner = None
     for submission_token, index in list(state.pending_command_buffers):
         if submission_token != token:
             continue
@@ -1530,12 +1567,21 @@ def mark_device_lost(state: SubmissionModel) -> str:
 
 def reset_fence(state: SubmissionModel) -> str:
     """Model ResetFence state eligibility and atomic state transition."""
-    if state.device_lost:
+    shared_fence = state.shared_fence
+    if state.device_lost or (shared_fence is not None and shared_fence.device_lost):
+        _propagate_device_loss(state)
         return "DEVICE_LOST"
-    if state.fence_status not in {"SIGNALED", "FAILED"} or state.fence_attached:
+    status = shared_fence.status if shared_fence is not None else state.fence_status
+    pending = shared_fence.pending_token if shared_fence is not None else (
+        state.pending_fence_submissions[0] if state.pending_fence_submissions else None
+    )
+    if status not in {"SIGNALED", "FAILED"} or pending is not None or state.fence_attached:
         return "INVALID_SYNCHRONIZATION_STATE"
     state.fence_status = "UNSIGNALED"
     state.fence_state_valid = True
+    if shared_fence is not None:
+        shared_fence.status = "UNSIGNALED"
+        shared_fence.generation += 1
     return "SUCCESS"
 
 
