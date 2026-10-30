@@ -94,7 +94,7 @@ Normative precedence: (1) total length with checked count/overflow arithmetic an
 - Unavailable/lost Device: `DEVICE_UNAVAILABLE` / `DEVICE_LOST`
 - Synchronous transfer failure: `TRANSFER_FAILED`
 - Staging allocation failure: `ALLOCATION_FAILED`
-- Detected dependency cycle while waiting for earlier GPU work: `DEPENDENCY_FAILED`
+- Detected dependency cycle while waiting for earlier GPU work, including a deferred GPU signal that is the only candidate to satisfy an earlier wait: `DEPENDENCY_FAILED`. Only an already-accepted signal operation eligible under the Timeline wait-ordering rules counts as a possible release; a later signal on the same queue cannot satisfy an earlier wait.
 
 ### `ReadBuffer`
 
