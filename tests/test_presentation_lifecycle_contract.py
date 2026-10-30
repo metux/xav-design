@@ -86,6 +86,28 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("commit-time revalidation", self.races)
         self.assertIn("publishes no target XID or backing resource", self.races)
 
+    def test_acquire_present_surface_destroy_is_blocked_by_live_swapchain(self) -> None:
+        surface = self.presentation.split(
+            "## 5.5 Serialization of presentation operations with Surface destruction", 1
+        )[1].split("\n## ", 1)[0]
+        for phrase in (
+            "same resource-lifecycle serialization order",
+            "no live Swapchain references the Surface",
+            "DestroySurface MUST be rejected with INVALID_SYNCHRONIZATION_STATE",
+            "MUST NOT be translated into the SURFACE_LOST status",
+            "no valid Swapchain can remain",
+            "retirement of every referencing Swapchain before Surface invalidation",
+            "Window destruction is a separate asynchronous transition to SURFACE_LOST",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, surface)
+        for label in (
+            "**DestroySurface versus AcquireNextImage:**",
+            "**DestroySurface versus QueuePresent:**",
+        ):
+            with self.subTest(vector=label):
+                self.assertIn(label, self.races)
+
     def test_acquire_present_are_serialized_against_swapchain_and_device_destroy(self) -> None:
         destroy = self.presentation.split(
             "## 5.4 Serialization with Swapchain and Device destruction", 1
