@@ -12,7 +12,7 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The latest branch-head evidence is commit `ff01a8d2110f4a647bd9a503d0e86a2d00d36067`, verified by [CI run 41068158353](https://github.com/metux/xav-design/actions/runs/41068158353). The wire-layout workflow completed successfully. This verifies the static checks on that exact commit; it does not replace the remaining semantic review or establish runtime X11/Vulkan behavior.
+The latest content-audit checkpoint is commit `a6c9a8fb04d56e0630121ccf52756dc250d79486`, verified by [CI run 41069851593](https://github.com/metux/xav-design/actions/runs/41069851593): 4,688 wire-layout checks, 72 Timeline regression tests, all 656 Python tests, and the required-check presence audit passed. This checkpoint includes a clarified `ShaderModuleData` assembly-cleanup boundary and its regression/conformance vectors. Static checks do not replace the remaining semantic review or establish runtime X11/Vulkan behavior.
 
 ## Normative contract gates
 
