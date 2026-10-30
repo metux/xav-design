@@ -419,6 +419,11 @@ Presentation lifecycle race tests MUST also cover the following serialized outco
 - Reuse a token after a rejected status reply and after a synchronous validation error (both permitted), then reuse it after an accepted presentation (must fail with `BadValue`). Verify that a status reply does not hide higher-priority malformed-wire, scalar, XID, Device, queue/index, or lifecycle errors.
 - Destroy the Swapchain after an acquired-but-idle image, after accepted presentation work, and while backend access is possible. The first case may succeed once GPU references are drained; the latter cases must reject atomically until all relevant references and accesses are terminal.
 
+- Disconnect after QueuePresent acceptance but before either callback: detach event delivery and connection-owned semaphore-owner links immediately, but retain the accepted presentation record, wait reservations, image backing, and backend-access hold until their owning callbacks retire them. A late terminal or release callback may perform internal cleanup but MUST NOT enqueue an event to the disconnected connection.
+- Race disconnect with terminal SUCCESS, terminal DEVICE_LOST, and image release in both callback orders. The first terminal result remains immutable; Device Loss invalidates the image even if SUCCESS was already terminal, and release after loss only drains backend access without making the image reusable. A duplicate or stale callback is mutation-free.
+- Race DestroySwapchain against an accepted QueuePresent and each callback milestone. Destruction MUST reject atomically while terminalization or backend image release remains outstanding. It may succeed only after both milestones have drained; successful destruction invalidates the image. Delayed duplicate callbacks after destruction MUST NOT resolve a reused XID or alter a new Swapchain generation.
+- Repeat the disconnect/device-loss/resource-destroy permutations with shared binary wait semaphores. Disconnect MUST NOT steal a callback-owned wait reservation; Device Loss may quarantine the canonical semaphore state, and the late wait callback may retire only its exact reservation without restoring a trusted payload or releasing it twice.
+
 These are state-machine conformance tests; golden-wire tests alone cannot establish them.
 
 
