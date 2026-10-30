@@ -14,11 +14,13 @@ from xa_state_model import (
 
 class QueuePresentDeviceGenerationTests(unittest.TestCase):
     def test_old_callbacks_cannot_mutate_replacement_device_or_semaphores(self):
+        connection_tokens = set()
         old_sem = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         old = PresentState(
             valid_wait_xids=(True,), wait_states=[WaitState.READY],
             binary_signal_states=[BinarySignalState.SIGNALED],
             shared_semaphores=[old_sem], device_generation=11,
+            used_present_tokens=connection_tokens,
         )
         self.assertEqual(
             queue_present(old, PresentRequest(token=77, wait_indices=(0,))).result,
@@ -34,10 +36,10 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
             valid_wait_xids=(True,), wait_states=[WaitState.READY],
             binary_signal_states=[BinarySignalState.SIGNALED],
             shared_semaphores=[new_sem], device_generation=12,
-            swapchain_generation=2,
+            swapchain_generation=2, used_present_tokens=connection_tokens,
         )
         self.assertEqual(
-            queue_present(new, PresentRequest(token=77, wait_indices=(0,))).result,
+            queue_present(new, PresentRequest(token=78, wait_indices=(0,))).result,
             "SUCCESS",
         )
         self.assertEqual(new_sem.wait_reservation, ("present", 77))
@@ -98,10 +100,12 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         self.assertEqual(queue_present(state, PresentRequest(token=902)).result, "SUCCESS")
 
     def test_late_old_device_loss_does_not_propagate_to_new_device(self):
+        connection_tokens = set()
         old_sem = SharedBinarySemaphore(signal_state=BinarySignalState.SIGNALED)
         old = PresentState(
             valid_wait_xids=(True,), wait_states=[WaitState.READY],
             shared_semaphores=[old_sem], device_generation=21,
+            used_present_tokens=connection_tokens,
         )
         self.assertEqual(queue_present(old, PresentRequest(token=88)).result, "SUCCESS")
         self.assertEqual(destroy_present_device(old), "SUCCESS")
@@ -110,9 +114,9 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         new = PresentState(
             valid_wait_xids=(True,), wait_states=[WaitState.READY],
             shared_semaphores=[new_sem], device_generation=22,
-            swapchain_generation=2,
+            swapchain_generation=2, used_present_tokens=connection_tokens,
         )
-        self.assertEqual(queue_present(new, PresentRequest(token=88)).result, "SUCCESS")
+        self.assertEqual(queue_present(new, PresentRequest(token=89)).result, "SUCCESS")
 
         self.assertEqual(
             finish_present_terminal(
@@ -124,7 +128,7 @@ class QueuePresentDeviceGenerationTests(unittest.TestCase):
         self.assertFalse(new.device_lost)
         self.assertFalse(new_sem.device_lost)
         self.assertEqual(new.image_state, ImageState.PRESENT_PENDING)
-        self.assertEqual(new.pending_present_tokens, {88})
+        self.assertEqual(new.pending_present_tokens, {89})
 
 
 if __name__ == "__main__":
