@@ -220,7 +220,7 @@ Internal Vulkan objects are released only when Vulkan lifetime rules and all out
 
 Successful destruction does not mean that GPU work has completed or that the device has been redirected to another physical device.
 
-## Physische Devices
+## Physical Devices
 
 Physical-device XIDs are assigned by the server.
 
@@ -230,7 +230,7 @@ Physical-device XIDs are assigned by the server.
 - Visibility of a physical device does not guarantee that a logical device can be created on it.
 - Permission to use the device is checked separately.
 
-## Device-Ownership
+## Device Ownership
 
 Every logical-device resource belongs to exactly one logical device.
 
