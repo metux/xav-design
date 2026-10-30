@@ -65,9 +65,16 @@ def main(argv):
     if result.returncode:
         print("handler CI gate: ERROR: compile-database handler audit failed", file=sys.stderr)
         return result.returncode
+    generation_checker = Path(__file__).with_name("check-async-callback-generations.py")
+    generation_result = subprocess.run(
+        [sys.executable, str(generation_checker), str(root)], cwd=root, check=False,
+    )
+    if generation_result.returncode:
+        print("handler CI gate: ERROR: asynchronous callback generation audit failed", file=sys.stderr)
+        return generation_result.returncode
     print(
         f"handler CI gate: PASS ({len(sources)} tracked C/C++ source file(s), "
-        f"{len(databases)} compile database(s))"
+        f"{len(databases)} compile database(s), callback generation audit passed)"
     )
     return 0
 
