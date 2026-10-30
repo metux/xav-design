@@ -162,6 +162,22 @@ def check_events(c: Check) -> None:
               "Client disconnect: accepted submissions must retain their internal terminal outcome")
     c.require(re.search(r"(?:Resources that the backend may still access remain alive until those accesses are proven to have ended|interne Vulkan-Objekte bleiben bis zum Ende aller Backend-Zugriffe erhalten)", lifetime, re.S) is not None,
               "Client disconnect/device loss: backend resources must remain alive while accesses are possible")
+    memory = read("spec/memory-buffers.md")
+    devices = read("spec/devices.md")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "If destruction wins while the write is still open, the write is terminalized with the X11 error `DEVICE_DESTROYED`" in lifetime
+        and "A `WriteBuffer` operation belonging to a disconnected connection is cancelled" in lifetime
+        and "A successful `DestroyDevice` is a lifecycle-control request and MUST remain processable while `WriteBuffer` is waiting" in memory
+        and "Any open `WriteBuffer` operation for this Device is also terminalized" in devices,
+        "WriteBuffer: Device destruction and disconnect must terminalize an open write without losing backend references",
+    )
+    c.require(
+        "Rennen zwischen erfolgreichem `WriteBuffer`-Commit, Device Loss und `DestroyDevice`" in conformance
+        and "Client-Disconnect während des Upload-Wartezustands" in conformance
+        and "Disconnect vor einem späteren `SignalSemaphore`" in conformance,
+        "WriteBuffer: conformance must cover Device Loss, DestroyDevice, and disconnect races",
+    )
     c.require(re.search(r"(?:`ASYNC_ERROR` and `DEVICE_LOST` are unmaskable.*independently of `SelectEvents`|`ASYNC_ERROR` und `DEVICE_LOST` sind nicht maskierbar und werden unabhängig von `SelectEvents` zugestellt)", event_doc, re.S) is not None,
               "XGE delivery: ASYNC_ERROR and DEVICE_LOST must be unmaskable")
     c.require(re.search(r"(?:`DEVICE_STATUS_CHANGED` is delivered only through the Connection mask|`DEVICE_STATUS_CHANGED` wird nur über die Connection-Maske zugestellt)", event_doc) is not None,
