@@ -1582,7 +1582,10 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
             command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
             shared_fence=shared,
         )
-        observer = SubmissionModel(shared_fence=shared)
+        observer = SubmissionModel(
+            command_buffers=[CommandBufferModel(lifecycle=CommandBufferLifecycle.EXECUTABLE)],
+            shared_fence=shared,
+        )
         self.assertEqual(queue_submit(
             producer, SubmitRequest(token=333, attach_fence=True)
         ), "SUCCESS")
@@ -1592,10 +1595,12 @@ class QueueSubmitAtomicityTests(unittest.TestCase):
         self.assertEqual(queue_submit(
             observer, SubmitRequest(token=334, attach_fence=True)
         ), "DEVICE_LOST")
+        # The late callback retires its backend hold but cannot publish a
+        # successful signal. The terminal fence outcome is FAILED, not PENDING.
         self.assertEqual(finish_submission(producer, 333, success=True), "SUCCESS")
-        self.assertEqual(shared.status, "PENDING")
-        self.assertEqual(shared.pending_token, 333)
-        self.assertEqual(shared.pending_owner(), producer)
+        self.assertEqual(shared.status, "FAILED")
+        self.assertIsNone(shared.pending_token)
+        self.assertIsNone(shared.pending_owner())
 
     def test_concurrent_submission_cannot_reuse_pending_fence(self) -> None:
         state = self.state(
