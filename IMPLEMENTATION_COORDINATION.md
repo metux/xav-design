@@ -141,3 +141,11 @@ Ship A owns the common request framing/dispatch integration and should coordinat
 - Ship D: confirm ownership of subopcodes 4–6 and report any shared device-lifecycle helper files.
 
 Until these confirmations are recorded, the split above is a coordination proposal, not evidence that the ships have accepted it. A ship needing a shared-file change should coordinate the interface first and avoid simultaneous edits to that file. Each implementation branch must continue to sync from `docs/restructure-2026-10-21`; the superseded `wip/001` branch is not a specification source.
+
+
+## Phase 1 contract review follow-up — 2026-10-30
+
+- The Phase 1 review found a stale conformance sentence claiming that `GetPhysicalDeviceProperty` accepts four canonical Atom names. The authoritative property registry contains five, including the mandatory `XAverius.timelineSemaphore` property. Updated `spec/conformance.md` to say five and name the Timeline property explicitly.
+- Strengthened `tools/check-wire-layout.py` to require all five property rows and the exact Timeline property contract, preventing this count drift from recurring.
+- Commits: conformance correction `7ad58d18a31920a357d5e253f64e592e79b2c556`; checker guard `c668d292609a3a35dd23ffc505b8f1b9589a3904`.
+- The request layouts and registry assignments are unchanged. CI for the new commits has not yet been verified; the documented green freeze CI applies to the earlier reviewed content candidate only.
