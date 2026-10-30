@@ -1555,7 +1555,9 @@ def finish_submission(
                 and shared_fence.pending_token == token
                 and shared_fence.pending_owner is not None
                 and shared_fence.pending_owner() is state):
-            shared_fence.status = state.fence_status
+            shared_fence.status = (
+                "FAILED" if shared_fence.device_lost else state.fence_status
+            )
             shared_fence.pending_token = None
             shared_fence.pending_owner = None
             _sync_shared_fence_owners(shared_fence)
