@@ -458,9 +458,11 @@ def recreate_present_swapchain(state: PresentState) -> str:
 
 def finish_present_wait(
     state: PresentState, token: int, semaphore_index: int, *,
-    consumed: bool | None,
+    consumed: bool | None, generation: int | None = None,
 ) -> str:
     """Finalize one QueuePresent binary wait; None means payload outcome unknown."""
+    if generation is not None and generation != state.swapchain_generation:
+        return "BadValue"
     reservation = (token, semaphore_index)
     if reservation not in state.pending_present_waits:
         return "BadValue"
