@@ -3421,7 +3421,7 @@ def check_wait_semaphore_semantics(c: Check) -> None:
         "one coherent snapshot of all listed counters",
         "A `WAIT_ALL` registration that has only some entries satisfied remains open",
         "does not consume, reset, reserve, or otherwise modify any Timeline counter",
-        "counter publication and reevaluation of affected waits are one serialized transition",
+        "signal publication and reevaluation of affected waits are one serialized transition",
         "the complete selected predicate already committed as satisfied returns `SUCCESS`",
     )
     for contract in contracts:
