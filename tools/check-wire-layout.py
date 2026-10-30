@@ -1052,20 +1052,20 @@ def check_request_document_coverage(c: Check) -> None:
         "CommandBufferData: ABORT must validate exact command-pool ownership",
     )
     c.require(
-        "validates the target XID before the pool XID" in errors
+        "resolves XIDs in wire order: target command-buffer XID, pool XID, then embedded command-entry XIDs" in errors
         and "an invalid or already allocated target XID results in `BadIDChoice`" in errors
         and "an unknown or non-live Buffer XID results in `BadValue`" in errors,
         "CommandBufferData: target-XID error precedence must distinguish CREATE from input lookup",
     )
     c.require("### Error Precedence for `CommandBufferData`" in command_recording and
-              "field errors take precedence over target/pool XID errors" in command_recording and
-              "DEVICE_UNAVAILABLE`/`DEVICE_LOST` takes precedence over a buffer-state error" in command_recording and
+              "field errors take precedence over target/pool/entry XID errors" in command_recording and
+              "takes precedence over command-buffer state and entry/resource compatibility checks" in command_recording and
               "ABORT" in command_recording and
-              "takes precedence over an incompatible Buffer state" in errors,
+              "takes precedence over Buffer state" in errors,
               "CommandBufferData: syntax/XID/ownership/device/state precedence and ABORT exception must agree")
     c.require("`CommandBufferData` error precedence: malformed request/entry structure" in conformance and
               "an invalid flag combination combined with an invalid target XID returns `BadValue`" in conformance and
-              "`ABORT` is the defined exception to phase 5" in command_recording,
+              "`ABORT` is the defined exception to phases 5–7" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
         "an entry whose declared length exceeds the request boundary" in errors
@@ -1089,8 +1089,8 @@ def check_request_document_coverage(c: Check) -> None:
         "chunked shader upload: failed/interrupted assemblies must be discarded and chunk errors must stay synchronous",
     )
     c.require(
-        "For CREATE, append, and FINAL, the associated device state is checked" in command_recording
-        and "`ABORT` is the defined exception to phase 5" in command_recording
+        "For CREATE, append, and FINAL, check the associated device state" in command_recording
+        and "`ABORT` is the defined exception to phases 5–7" in command_recording
         and "`ABORT` is the explicit logical exception" in errors
         and "For CREATE/Append/FINAL on a lost Device, `DEVICE_LOST` takes precedence" in conformance,
         "CommandBufferData: device-loss failures must preserve accepted chunks while ABORT remains logical cleanup",
@@ -1574,7 +1574,7 @@ def check_request_specific_precedence_exceptions(c: Check) -> None:
           "Atomarer Commit und Rollback")),
         ("CommandBufferData", request_section(command, "CommandBufferData"),
          ("wire-structure errors take precedence over field errors",
-          "field errors take precedence over target/pool XID errors",
+          "field errors take precedence over target/pool/entry XID errors",
           "target XID is checked before the pool XID")),
         ("QueueSubmit", request_section(queue, "QueueSubmit"),
          ("incorrect total length", "syntactic fields are checked",
