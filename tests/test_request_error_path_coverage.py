@@ -456,10 +456,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         wait = synchronization.split("## `WaitSemaphores`", 1)[1].split("\n## ", 1)[0]
         for phrase in (
-            "initial condition check and installation of the open wait registration MUST be one atomic operation",
+            "The Device-state check in step 5, Timeline-type check in step 6, coherent initial counter snapshot, and the decision to reply immediately or install an open registration MUST be serialized as one operation",
             "visible to the initial condition check",
             "observe the installed registration and trigger its reevaluation",
-            "MUST NOT install a wait registration",
+            "timeout_ns = 0 commits TIMEOUT without installing a registration",
             "no callback can terminalize a cancelled or already-terminal registration",
         ):
             with self.subTest(phrase=phrase):
@@ -706,13 +706,13 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "WaitSemaphores",
             "WaitForFence",
             "DEVICE_DESTROYED",
-            "Wait conditions whose successful result was established before `DestroyDevice` was processed",
+            "A `WaitSemaphores` predicate whose complete `WAIT_ANY`/`WAIT_ALL` condition was committed as satisfied before `DestroyDevice` was processed retains `SUCCESS`",
             "Internal Vulkan objects are released only when Vulkan lifetime rules",
         ):
             with self.subTest(device_rule=phrase):
                 self.assertIn(phrase, devices)
         for phrase in (
-            "The first terminal outcome detected wins",
+            "the first terminal outcome committed while the registration is open wins",
             "Device loss",
             "DestroyDevice",
             "without a reply",
@@ -977,7 +977,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "Request: exactly 24 bytes",
             "resolve Device XID, then Fence XID in wire order (`BadValue` for unknown or non-live XIDs)",
             "Device loss yields the normal reply status `DEVICE_LOST`",
-            "`DEVICE_DESTROYED` is returned",
+            "If `DestroyDevice` is processed while the registration remains open and Device Loss has not already won, return `DEVICE_DESTROYED`",
         ):
             with self.subTest(fence_wait_contract=phrase):
                 self.assertIn(phrase, fence_wait)
@@ -1669,7 +1669,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "request-field order",
             "`DEVICE_LOST` takes precedence",
             "`SURFACE_LOST` precedes `OUT_OF_DATE`",
-            "ineligible state or conflicting pending acquire is `INVALID_SYNCHRONIZATION_STATE`",
+            "an ineligible state or conflicting pending acquire returns `INVALID_SYNCHRONIZATION_STATE`",
             "initial check and open-registration installation",
             "first committed terminal outcome wins",
         ):
