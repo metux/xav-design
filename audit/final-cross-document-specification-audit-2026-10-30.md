@@ -27,4 +27,4 @@ These gates must remain explicitly open until tested against an actual server/ba
 
 ## Verification
 
-This audit record is added before the final full CI run. The freeze checklist and open-issues checkpoint must name the exact resulting commit and its successful run after CI completes. The final freeze decision is conditional on that exact-commit verification; no implementation acceptance gate is claimed as passed.
+The final candidate commit `38587be1b70868224e8f8941750a7c1aa1e19dd7` passed [CI run 41088183365](https://github.com/metux/xav-design/actions/runs/41088183365): 4,695 wire-layout/documentation checks, 72 Timeline regression tests, 673 Python tests, and the required-check presence audit all succeeded. The specification-content freeze is recorded at that commit. No implementation acceptance gate is claimed as passed.
