@@ -1193,7 +1193,9 @@ def check_request_document_coverage(c: Check) -> None:
         and "retain its internal definition/backend identity while any live Pipeline depends on it" in lifetime
         and "Existing Pipelines remain live; no new Pipeline may be created through the destroyed XID" in lifetime
         and "Eine erfolgreich erstellte Pipeline behält eine interne Referenz" in read("spec/shaders-pipelines.md")
-        and "After creating a Pipeline, destroy its PipelineLayout XID" in conformance
+        and "After creating a Pipeline, destroy its PipelineLayout XID while the Pipeline is live and while a submission uses only that Pipeline" in conformance
+        and "public XID destruction succeeds, the Pipeline/submission remain live" in conformance
+        and "direct accepted pending use blocks destruction" in conformance
         and "A later `CreateComputePipeline` using that destroyed layout XID returns `BadValue`" in conformance,
         "PipelineLayout lifetime: existing Pipelines retain their layout dependency after public XID destruction",
     )
