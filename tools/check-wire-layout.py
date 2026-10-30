@@ -3432,7 +3432,7 @@ def check_wait_semaphore_semantics(c: Check) -> None:
         "WaitSemaphores lifecycle: partial WAIT_ALL must remain open for DestroyDevice terminalization",
     )
     c.require(
-        "A partially satisfied `WAIT_ALL` remains open" in errors
+        "partial `WAIT_ALL` progress remains open" in errors
         and "including partially satisfied `WAIT_ALL` registrations" in conformance,
         "WaitSemaphores cross-chapter summary must preserve partial-ALL lifecycle semantics",
     )
