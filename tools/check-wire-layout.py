@@ -1182,7 +1182,7 @@ def check_request_document_coverage(c: Check) -> None:
         "DescriptorSet-to-DescriptorSetLayout associations" in lifetime
         and "immutable layout definition and the backend layout identity" in lifetime
         and "Existing sets remain valid and updateable" in lifetime
-        and "no new set may be allocated through the destroyed XID" in lifetime
+        and "no new PipelineLayout or Set may be created through the destroyed XID" in lifetime
         and "existing Set remains valid and can still be updated" in conformance
         and "later `UpdateDescriptorSets`-Requests for these Sets allein wegen der ungültigen Layout-XID ablehnen" in read("spec/shaders-pipelines.md"),
         "DescriptorSetLayout lifetime: public XID destruction must preserve existing allocated sets and their update metadata",
