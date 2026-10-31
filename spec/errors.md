@@ -170,7 +170,7 @@ The following individual mappings are retained as explicit error summaries and M
 - Unknown pool flags or nonzero reserved bits result in `BadValue`; an invalid or already allocated pool XID results in `BadIDChoice`.
 - An unknown or non-live Device XID results in `BadValue`; a live resource of the wrong type or foreign Device ownership results in `BadMatch`.
 - An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively.
-- A `queue_family_index` that does not identify a family for which this Device requested at least one queue (`queue_count > 0`) results in `BadValue`. This is the sole queue-family eligibility test for pool creation: all Vulkan queue families support command-buffer submission, and v0.1 defines no separate command-buffer-support capability or flag. `CMD_DISPATCH` recorded into a pool whose family lacks the `COMPUTE` queue flag is incompatible and returns `BadMatch` during resource-dependent `CommandBufferData` validation. Backend allocation failure results in `ALLOCATION_FAILED`.
+- A `queue_family_index` that does not identify a family for which this Device requested at least one queue (`queue_count > 0`) results in `BadValue`. This is the sole queue-family eligibility test for pool creation: all Vulkan queue families support command-buffer submission, and v0.1 defines no separate command-buffer-support capability or flag. Any compute command entry (`CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH`, or `CMD_PUSH_CONSTANTS`, IDs 1–4) recorded into a pool whose family lacks the `COMPUTE` queue flag is incompatible and returns `BadMatch` during resource-dependent `CommandBufferData` validation. Backend allocation failure results in `ALLOCATION_FAILED`.
 - On rejection, the pool XID remains unallocated.
 
 ### `CommandPool` and `CommandBufferData`
@@ -183,7 +183,7 @@ The following individual mappings are retained as explicit error summaries and M
 - `ResetCommandBuffer` with an incorrect request length results in `BadLength`; unknown or non-live Device/Buffer XIDs result in `BadValue`; a live resource of the wrong type, foreign ownership, or cross-device use results in `BadMatch`.
 - After successful XID/ownership validation, an unavailable or lost logical Device returns `DEVICE_UNAVAILABLE` or `DEVICE_LOST` before the pool reset flag or Buffer state is checked.
 - `ResetCommandBuffer` without the `RESET_COMMAND_BUFFER` pool flag or with a pending Buffer is rejected with `INVALID_SYNCHRONIZATION_STATE`.
-- `CMD_DISPATCH` recorded into a Command Buffer whose parent Command Pool queue family lacks the `COMPUTE` flag returns `BadMatch` during resource-dependent `CommandBufferData` validation, after XID/type/ownership and Device-state phases; the current chunk is not appended.
+- Any compute command entry (`CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH`, or `CMD_PUSH_CONSTANTS`, IDs 1–4) recorded into a Command Buffer whose parent Command Pool queue family lacks the `COMPUTE` flag returns `BadMatch` during resource-dependent `CommandBufferData` validation, after XID/type/ownership and Device-state phases; the current chunk is not appended.
 
 ### `CMD_PUSH_CONSTANTS`
 
