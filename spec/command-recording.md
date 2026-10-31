@@ -172,7 +172,7 @@ Total length: 16 bytes.
 - Offset 8: `CARD32 group_count_y`
 - Offset 12: `CARD32 group_count_z`
 
-Dispatch values MUST be within the limits supported by the device. The command buffer's parent Command Pool queue family MUST include the `COMPUTE` bit in the Queue Flag Registry; otherwise the `CMD_DISPATCH` entry is incompatible with that pool and the `CommandBufferData` chunk is rejected with `BadMatch` during resource-dependent command validation. This check is independent of the numeric dispatch limits.
+Dispatch values MUST be within the limits supported by the device. As a member of the compute command-entry set (IDs 1–4), `CMD_DISPATCH` requires the parent Command Pool queue family to include the `COMPUTE` bit; this is enforced by the common compute-entry capability rule during resource-dependent `CommandBufferData` validation. The check is independent of the numeric dispatch limits.
 
 ### `CMD_PUSH_CONSTANTS`
 
