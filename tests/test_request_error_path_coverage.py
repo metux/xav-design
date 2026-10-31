@@ -1775,7 +1775,25 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "ALLOCATION_FAILED",
         ):
             self.assertIn(expected, errors)
+        error_detail = errors.split("### `CreateCommandPool`", 1)[1].split("### `CommandPool`", 1)[0]
+        error_phases = (
+            "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`",
+            "A `queue_family_index` that does not identify a family",
+            "Backend allocation failure results in `ALLOCATION_FAILED`",
+        )
+        error_positions = [error_detail.index(phase) for phase in error_phases]
+        self.assertEqual(error_positions, sorted(error_positions))
+        self.assertIn("no separate command-buffer-support capability or flag", error_detail)
         self.assertIn("Device Loss wins over an invalid queue-family index", self.conformance)
+
+    def test_destroy_command_pool_serializes_with_child_operations(self):
+        command = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        conformance = self.conformance
+        self.assertIn("`DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`", command)
+        self.assertIn("**`DestroyCommandPool` versus child operations:**", conformance)
+        self.assertIn("no child may be published after its parent pool is invalidated", conformance)
+        self.assertIn("If pool destruction commits first", conformance)
+        self.assertIn("If the child operation/reset commits first", conformance)
 
     def test_semaphore_and_fence_creation_precedence_matches_chapters_and_error_map(self):
         synchronization = (ROOT / "spec/synchronization.md").read_text(encoding="utf-8")
