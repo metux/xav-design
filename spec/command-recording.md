@@ -194,7 +194,7 @@ The data bytes are opaque. Wire padding is not part of the push-constant range.
 
 ### `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` (presentation-capable profile only)
 
-This entry is a minimal pixel-production path for the first on-screen presentation profile; it does not add general Vulkan Image resources or graphics pipelines. It copies a tightly or explicitly row-pitched rectangle from a Buffer into one acquired Swapchain image. The entry is valid only when the source Buffer has `TRANSFER_SRC` usage, the selected Swapchain was created with `TRANSFER_DST` image usage, and the referenced image is currently `ACQUIRED` at the point the command is validated for submission.
+This entry is a minimal pixel-production path for the first on-screen presentation profile; it does not add general Vulkan Image resources or graphics pipelines. It copies a tightly or explicitly row-pitched rectangle from a Buffer into one acquired Swapchain image. The entry is valid only when the source Buffer has `TRANSFER_SRC` usage, the selected Swapchain was created with `TRANSFER_DST` image usage, and the referenced image is currently `ACQUIRED` at the point the command is validated for submission. Its parent Command Pool's queue family MUST support transfer commands: at least one of `GRAPHICS`, `COMPUTE`, or `TRANSFER` MUST be set in the Queue Flag Registry. Vulkan graphics- and compute-capable queue families support transfer commands even when the native `VK_QUEUE_TRANSFER_BIT` is not set; a transfer-only family is represented by `TRANSFER`. A family with none of these three capabilities is incompatible with this entry.
 
 Assigned command ID: 5 (presentation-capable profile only; not part of the compute-only v0.1 entry set).
 
