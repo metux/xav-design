@@ -588,6 +588,8 @@ def check_other_numeric_registries(c: Check) -> None:
         and "interval `[first_set, first_set + descriptor_set_count)` MUST lie within" in command_pool_contract
         and "binding-number mappings are identical" in command_pool_contract
         and "`CMD_DISPATCH` requires a Pipeline to have been bound earlier in the same recording context" in command_pool_contract
+        and "Each execution of an `EXECUTABLE` command buffer replays its entries from a fresh empty binding context" in command_pool_contract
+        and "each replay begins with an empty binding context" in descriptor_conformance
         and "A missing required set or slot returns `INVALID_SYNCHRONIZATION_STATE`" in command_pool_contract
         and "PipelineLayout used by a `CMD_BIND_DESCRIPTOR_SETS` entry for set index N is compatible" in command_pool_contract
         and "`descriptor_set_count = 0` or 32-bit overflow" in descriptor_errors
