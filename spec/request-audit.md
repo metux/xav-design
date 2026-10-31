@@ -576,3 +576,19 @@ The audit of compute-baseline subopcodes 24–30 found that CreateCommandPool re
 The audit of subopcodes 31–40 rechecked WAIT_ANY/WAIT_ALL, SignalSemaphore ordering, host-wait terminalization, Fence state/generation transitions, DestroyResource lifetime blockers, and SelectEvents scope/mask/XGE behavior. The only normative gap found was that DestroySemaphore did not state its Device-XID-before-Semaphore-XID validation order as explicitly as DestroyFence. The synchronization chapter and central error map now state exact length → Device XID → Semaphore XID → type/ownership/Device association → exact-identity lifetime blockers. Conformance now includes mixed unknown-XID, Device Loss, active-host-operation, and terminal-wait/reply-pending cases. No wire assignment or layout changed.
 
 These Phase 4–5 reviews are source/specification audits. GitHub returned no status checks or workflow runs for the new commits; the checker, wire vectors, and Python suite have not been executed on the updated branch. The historical CI checkpoint remains evidence only for its exact commit.
+## Presentation profile cross-device and transfer-capability audit — 2026-10-31
+
+The presentation-profile cross-check found two implementation ambiguities and one contradictory error classification:
+
+- A Surface is connection-owned and explicitly not Device-owned. `GetSurfaceCapabilities` may query the same Surface against multiple logical Devices. The `CreateSwapchain` error summary and a conformance vector nevertheless described a Device/Surface pair mismatch as cross-Device `BadMatch`. Corrected the mapping: a valid pair that simply cannot present returns `UNSUPPORTED_CONFIGURATION`; `BadMatch` remains for wrong type/foreign connection ownership or actual cross-Device use of Device-owned resources. Added an explicit same-Surface/two-Device negotiation vector and checker guard.
+- `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` had source/destination usage checks but no queue-family transfer-capability rule. Added a normative requirement that the parent pool family support transfer commands: any `GRAPHICS`, `COMPUTE`, or `TRANSFER` capability suffices. The Queue Flag Registry now explains Vulkan's implicit transfer support on graphics/compute families even when native `VK_QUEUE_TRANSFER_BIT` is absent. Families with only `SPARSE_BINDING` and/or `PROTECTED` reject the entry with `BadMatch` during resource-dependent command validation. Added mixed Device-loss and family-capability vectors and checker assertions.
+
+Files/commits:
+- spec/errors.md: 0112ec91855b43e58de528c732d28ea2f8b4a1dd
+- spec/presentation.md: 61e43eb82795a07e1f4f5794c61792bc5f720e33
+- spec/conformance.md: 004e569de35898226c6dccf923b033d945e650a7 and 5f77ce48f781055f6eee935ad7eae0df0f74e41c
+- spec/command-recording.md: 6df36d238720c9b5812b81ef2a4f37a94c1ef682
+- registries/queue-flags.md: e7b85b55f6bcfa5378f48ab71b2514dd2b5673ec
+- tools/check-wire-layout.py: bf841861b86b380d9d8717c587cbe52b6795a91a and e5f464e3631eb6073819112f6912180687c0d795
+
+Source-level checks confirm the explicit pair semantics and all three transfer-capable queue-family cases are represented in normative text and conformance. The checker has not been executed; runtime Vulkan queue-family behavior remains an implementation acceptance test.
