@@ -487,3 +487,13 @@ Exact-tip CI is pending for these changes. Runtime X11/XGE event delivery and Vu
 The exact tip `00b56d0a2ff11f68cbb9c8d3c9a5a97385b5ea6f` completed workflow run [41235359899](https://github.com/metux/xav-design/actions/runs/41235359899) successfully. All steps passed: syntax checks, request/reply/XGE validation (**4,759 checks**), Timeline semaphore regressions, complete Python suite (**675 tests**), and required-check audit. This includes the non-blocking `WaitForFence` rule, explicit QueuePresent/AcquireNextImage semaphore destroy blockers, and Physical-Device status/logical-Device-loss separation. Intermediate failures were limited to checker insertion/wording mismatches; those were fixed, and no normative requirements were weakened.
 
 Group 31–40 audit is complete at the normative/conformance/static-check level. Runtime X11/XGE delivery, Vulkan semaphore/fence behavior, and backend callback/reference-retirement remain implementation acceptance gates. Phase 1 agent ship confirmations and a named shared integration-interface owner are still outstanding.
+## Final specification-content readiness — 2026-10-31
+
+All 47 registered request contracts (compute baseline 1–40 and presentation profile 41–47) have completed the final cross-request normative/error/conformance audit. The latest normative content candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576` passed exact CI run [41235437766](https://github.com/metux/xav-design/actions/runs/41235437766): 4,759 wire-layout/documentation checks, 72 Timeline regression tests, 675 Python tests, and required-check audit. `spec/freeze-checklist.md`, `spec/open-issues.md`, `README.md`, and `PROJECT_STATUS.md` now record that the v0.1 normative content is freeze-ready; later status/audit metadata edits do not alter protocol rules and are being rechecked by CI.
+
+### Still open — implementation coordination and runtime acceptance
+
+- Phase 1 Ship A–E confirmations and the named shared integration-interface owner have not yet been posted here. Ship A must continue to own common framing/dispatch integration only; the device request ownership split remains as recorded above.
+- Runtime acceptance remains open: live X11/XGE interoperability; compute backend upload/dispatch/readback and synchronization; callback/reference retirement under Device Loss/disconnect; and presentation WSI/resize/image-release behavior if the optional profile is implemented.
+
+Normative design gaps are not currently known. This does not claim that runtime conformance or integration ownership is complete.
