@@ -231,6 +231,11 @@ def check_events(c: Check) -> None:
               "DestroySemaphore: must reject while a host wait registration references the semaphore")
     c.require(re.search(r"terminal result.*serialized by the server.*reply not yet sent does not block destruction", sync, re.S) is not None,
               "DestroySemaphore: a completed wait must stop blocking destruction before reply delivery")
+    c.require("accepted `QueueSubmit` or `QueuePresent` wait" in sync
+              and "open `AcquireNextImage` signal reservation" in sync
+              and "`DestroySemaphore` and `ResetFence` MUST return `INVALID_SYNCHRONIZATION_STATE` while their exact signal reservation is open" in conformance
+              and "DestroySemaphore` MUST fail with `INVALID_SYNCHRONIZATION_STATE`" in conformance,
+              "DestroySemaphore: accepted QueuePresent waits and pending AcquireNextImage signal reservations must block exact-identity destruction")
     c.require(re.search(r"`DestroySemaphore`.*exact 16-byte request length.*resolve the Device XID, then the Semaphore XID.*validate live resource types.*check lifetime blockers", sync, re.S | re.I) is not None
               and re.search(r"`DestroySemaphore`: normative precedence is exact 16-byte length.*resolve Device XID, then Semaphore XID.*lifetime blockers", errors, re.S | re.I) is not None
               and "require the Device XID's `BadValue` first" in conformance,
