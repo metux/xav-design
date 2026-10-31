@@ -235,6 +235,7 @@ Physical-device XIDs are assigned by the server.
 - The identity remains stable if the device is removed or fails; its status changes.
 - Visibility of a physical device does not guarantee that a logical device can be created on it.
 - Permission to use the device is checked separately.
+- Physical-Device status (`AVAILABLE`, `UNAVAILABLE`, or `REMOVED`) governs discovery, property availability, and eligibility for creating new logical Devices. A status transition alone does not mutate an already-created logical Device or synthesize `DEVICE_LOST`; each logical Device follows its own backend Device-Loss state machine. If the backend reports that a logical Device on the affected Physical Device is lost, the normal Device-Loss transition is committed independently and exactly once. `REMOVED` is final for the Physical-Device XID and prevents future logical-Device creation, but the server-owned XID and stored metadata remain queryable under the metadata-query rules.
 
 ## Device Ownership
 
