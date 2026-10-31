@@ -446,3 +446,8 @@ Two further implementation semantics are now explicit:
 Commits: spec/command-recording.md `4d6e558a8eefc4d81f61d22eab35cc2e80685df5`; spec/conformance.md `8527836ea78423ef93d24a7fc674c3ea15ac84b5` and `ac123d2c633d63c6d114c7a91a1a94e0cf14cae6`; spec/queue-submission.md `f52ccbb68cfaf63102099dc46b456f36f93b108a`; tools/check-wire-layout.py `b2ff755971631d366c8be87ce4179f6102b76dbc` and `f31f656a882bd4f11fbbc0962e3e67d433a78cbb`.
 
 These additions do not change the QueueSubmit request wire formula or any opcode. Exact-tip CI is pending.
+### Exact-tip verification — request group 24–30 and command-recording addenda
+
+The latest branch tip `415e02e10e489fc4eab5697debb2f23c127a3cb8` completed workflow run [41234267087](https://github.com/metux/xav-design/actions/runs/41234267087) successfully. All steps passed: wire-layout/XGE validation (4,754 checks), Timeline semaphore regressions, full Python suite (675 tests), and required-check audit. This includes the compute-entry queue-family rule, descriptor-set bounds/layout compatibility, ordered command-buffer binding context, fresh state on every replay, and zero-count/empty QueueSubmit semantics.
+
+Remaining implementation acceptance gates: runtime Vulkan validation of queue-family command support, descriptor/pipeline-layout compatibility and dispatch state; runtime callback/reference-retirement behavior; X11/XGE interoperability. Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding in this coordination file.
