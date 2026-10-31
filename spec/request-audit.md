@@ -729,3 +729,8 @@ Commits: spec/synchronization.md `5e313e6b27cccb96bc1bc8821a7d7f70948382e2`; spe
 - SelectEvents scope fields, profile-specific mask bits, XGE negotiation, atomic replacement, DestroyDevice mask removal, and milestone-time event-mask sampling remain consistent with the XGE event layouts.
 
 Exact-tip CI is pending for these changes. Runtime X11/XGE event delivery and Vulkan synchronization/callback acceptance remain implementation gates.
+### Exact-tip verification — request group 31–40
+
+The exact tip `00b56d0a2ff11f68cbb9c8d3c9a5a97385b5ea6f` completed workflow run [41235359899](https://github.com/metux/xav-design/actions/runs/41235359899) successfully. All steps passed: syntax checks, request/reply/XGE validation (**4,759 checks**), Timeline semaphore regressions, complete Python suite (**675 tests**), and required-check audit. This includes the non-blocking `WaitForFence` rule, explicit QueuePresent/AcquireNextImage semaphore destroy blockers, and Physical-Device status/logical-Device-loss separation. Intermediate failures were limited to checker insertion/wording mismatches; those were fixed, and no normative requirements were weakened.
+
+Group 31–40 audit is complete at the normative/conformance/static-check level. Runtime X11/XGE delivery, Vulkan semaphore/fence behavior, and backend callback/reference-retirement remain implementation acceptance gates. Phase 1 agent ship confirmations and a named shared integration-interface owner are still outstanding.
