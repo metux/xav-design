@@ -2994,7 +2994,7 @@ def check_presentation_profile(c: Check) -> None:
     presentation_error_contracts = (
         "`CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`",
         "`DestroySurface`: unknown/non-live Surface XID is `BadValue`",
-        "`GetSurfaceCapabilities`: unknown/non-live Device or Surface XID is `BadValue`",
+        "resolve `device_xid` and then `surface_xid` in request-field order; an unknown/non-live XID is `BadValue`",
         "resolve `device_xid` and then `surface_xid` in request-field order",
         "resolve `device_xid`, then `swapchain_xid`, then each wait-semaphore XID in array order",
         "A Surface is not Device-owned, so querying the same live Surface with different owned Devices is valid",
@@ -3002,7 +3002,7 @@ def check_presentation_profile(c: Check) -> None:
         "`CreateSwapchain`: invalid/already allocated target `swapchain_xid` is `BadIDChoice`",
         "`DestroySwapchain`: unknown/non-live Swapchain XID is `BadValue`",
         "`AcquireNextImage`: unknown/non-live Device or Swapchain XID is `BadValue`",
-        "`QueuePresent`: unknown/non-live Device, Swapchain, or wait-semaphore XID is `BadValue`",
+        "resolve `device_xid`, then `swapchain_xid`, then each wait-semaphore XID in array order; an unknown/non-live XID is `BadValue`",
         "An acquired-but-idle image alone does not block destruction.",
         "Any rejected `QueuePresent` leaves the image state as it was immediately before that request, leaves wait-semaphore state unchanged, and does not reserve its presentation token.",
         "Token uniqueness is checked against previously accepted presentations and recorded atomically with acceptance.",
