@@ -3256,9 +3256,11 @@ def check_presentation_profile(c: Check) -> None:
         c.require(contract in presentation or contract in lifetime,
                   f"presentation lifecycle: normative lifecycle contract missing: {contract}")
     c.require(
-        "IMAGE_RELEASED is permitted only when backend access has ended" in conformance and
-        "otherwise the image is invalidated and no release event is emitted" in conformance,
-        "presentation lifecycle conformance: image release must be gated on backend quiescence and reusability",
+        "A lifecycle invalidation that commits before image release MUST prevent `IMAGE_RELEASED`" in conformance and
+        "if release committed earlier while reusable, its event decision remains final" in conformance and
+        "any `IMAGE_RELEASED` event already queued at the earlier release milestone remains queued and MUST NOT be retracted" in conformance and
+        "If image release committed first while the image was reusable, its release record and event-enqueue decision are immutable" in presentation,
+        "presentation lifecycle conformance: release event decision is immutable after release and suppressed when invalidation wins first",
     )
     c.require(
         "It must never silently reset a semaphore to `UNSIGNALED`" in presentation and
