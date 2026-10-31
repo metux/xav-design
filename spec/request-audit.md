@@ -630,3 +630,15 @@ Commits: presentation.md c4aa9ef0d48a46ed7d82cec71830d96ad90aab41 and b3672f82e1
 Exact current branch tip `3ba8641fc8457446ed55aacfabeac4806ad5d3cd` passed workflow run 41219811208: request/reply/XGE validation, Timeline regressions, all 673 Python tests, and required-check presence audit. Earlier intermediate failures were stale test expectations and were corrected; do not treat those failed SHAs as current status.
 
 Remaining implementation gates: real X11/XGE interoperability, Vulkan WSI/backend validation of release-versus-terminal callbacks, and runtime tests for disconnect/Device-loss generation safety. Phase 1 ship confirmations and the named shared integration-interface owner still need to be posted by implementation agents.
+## Presentation reply/event/lifecycle cross-review addendum — 2026-10-31
+
+A final cross-read of the presentation reply ABI, XGE event definitions, event-selection serialization, conformance vectors, and resource-lifetime summary found two residual normative contradictions:
+
+1. `spec/events.md` described `PRESENTATION_COMPLETE` as reporting only a 'terminal failure', although its event status registry and event-layout section include `SUCCESS = 0`, and the main event contract correctly defines it as the unique terminal outcome. Corrected the shared presentation-event paragraph to state explicitly that the event reports either `SUCCESS` or a failure status.
+2. The earlier release-first correction had not been propagated to two older summary/test statements: `spec/conformance.md` said lifecycle terminal failures never emit `IMAGE_RELEASED` and that an invalidated image never emits it; `spec/resource-lifetime.md` likewise said lifecycle-forced failure always suppresses it. Those statements were overbroad when image release committed first while the image was still reusable. They now distinguish invalidation-before-release (no event) from release-before-invalidation (immutable release record/event decision; later invalidation affects only future use).
+
+Updated: spec/events.md 0940e4e47d36f6486967a04ac10df47dae6ba5d7; spec/conformance.md bfb98e51c29d466ade3427ff7e9b3cdb3028f25e and fa97283e3a5e9eea46c3dd0698ef447b7aaeda94; spec/resource-lifetime.md 04984de871953504b9a8657b8af938faadcbd52f; tools/check-wire-layout.py 30d31f31d80542fb10c64c39870f052a020c9e36.
+
+The fixed reply ABI was rechecked: `GetSurfaceCapabilities` has a 64-byte fixed base plus checked variable records and `reply.length = 8 + 2*format_pair_count + present_mode_count + 2*queue_family_count`; all non-success statuses are exactly 64 bytes with zero capability fields. `CreateSwapchain` is 40 bytes (`reply.length=2`), `AcquireNextImage` 44 bytes (`reply.length=3`), and `QueuePresent` 36 bytes (`reply.length=1`), with zero unused reply-header data bytes and explicit non-success payload rules. No wire offsets, lengths, status IDs, or request subopcodes changed.
+
+Static checker guard now requires the success-inclusive terminal event wording and the release-first lifecycle rule in both conformance and resource-lifetime chapters. Exact-tip CI remains pending for these new commits.
