@@ -3011,6 +3011,10 @@ def check_presentation_profile(c: Check) -> None:
     c.require("a queue not belonging to the Device is `BadMatch`" not in errors and
               "same live Surface may be queried with two different owned Devices" in conformance,
               "presentation error map: preserve Device-independent Surface ownership and BadValue queue-index mapping")
+    c.require("a valid Device/Surface pair that cannot present returns `UNSUPPORTED_CONFIGURATION` rather than `BadMatch`" in errors
+              and "valid but non-present-capable Device/Surface pair and require `UNSUPPORTED_CONFIGURATION`, not `BadMatch`" in conformance
+              and "Surface is owned by the X11 connection, not by a logical Device" in presentation,
+              "CreateSwapchain: a valid non-presentable Device/Surface pair is unsupported configuration, not cross-device BadMatch")
     c.require("owned by the requesting X11 client connection" in presentation and
               "a live Window owned by another X11 client is `BadMatch`" in errors and
               "a live Window owned by another X11 client with `BadMatch`" in conformance,
