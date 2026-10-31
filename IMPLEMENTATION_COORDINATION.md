@@ -354,3 +354,21 @@ Remaining: inspect presentation wire-reply boundary and lifecycle/event cross-co
 Clarified a lifecycle edge case: Device Loss invalidates Swapchain/image usability but does not itself invalidate the public Swapchain XID. `DestroySwapchain` remains a permitted logical cleanup request on the still-live lost Device once all blockers clear; it must still reject while accepted operations or possible backend access can reference images. Successful `DestroyDevice` is different because the cascade already invalidates the Swapchain XID, making a later destroy `BadValue`. Added matching error-map, conformance, and checker contracts.
 
 Commits: spec/presentation.md dc5c1a21d5bcb58558848fdd6ecb9c0775411438; spec/errors.md a231e737df4d01edb52c79562a995a5651512e01; spec/conformance.md 28151e73d42bbc716142d05012bfe84990e4289b; tools/check-wire-layout.py 0b4a966f0e846a8220100267e3bed89bde13dacd; request-audit record 79165fd5b70f0f3537edcde2e75ff8c65d66e3d2.
+## CI diagnosis and presentation cross-audit addenda — 2026-10-31
+
+### Automated verification recovered on an intermediate tip
+
+Direct GitHub Actions inspection exposed the push-triggered wire-layout workflow; the earlier commit-status helper did not surface these runs. The initial failing run 41205023918 on `aef3e426...` exposed stale checker/test text anchors after normative edits. The checker assertions and regression expectations were updated to match the current normative language, while the actual CreateDescriptorSetLayout device-limit phase was added to errors.md to remove a genuine cross-document omission.
+
+Run 41205782690 on exact SHA `9c7c8e876458cb22226d161228d29e2a2ce6df5e` completed successfully: wire-layout/request-reply/XGE validation, Timeline semaphore regressions, all 673 Python tests, and required-check presence audit passed. Run 41206737160 on exact SHA `6e8a787781cc20e323e183b0bc6d26c81ff41864` also completed successfully with all required steps green and `Ran 673 tests ... OK`. This second successful run includes the pending-acquire Fence state-machine additions and checker guards. These results apply only to those exact SHAs; later presentation-event and request-audit commits still require a fresh exact-tip run.
+
+### Further presentation cross-contract findings
+
+- A live `InputOnly` Window is a valid Window XID but is not a drawable presentation target. `CreateSurface` now returns `BadMatch` for live InputOnly/non-drawable Window classes, while unknown/destroyed/non-Window XIDs remain `BadWindow`. Backend inability to present to an otherwise valid drawable Window remains a capability/`UNSUPPORTED_CONFIGURATION` result. The 16-byte `CreateSurface` request has no request-specific scalar/reserved fields; conformance and checker contracts no longer invent such a phase.
+- `GetSurfaceCapabilities` XID order is now explicitly Device then Surface; `QueuePresent` is Device, Swapchain, then wait Semaphore XIDs in array order. Mixed-unknown-XID conformance vectors pin down those winners.
+- Pending `AcquireNextImage` Fence reservations now use the shared Fence `PENDING` state; status queries and waits can observe it, conflicting signal/reset/destroy operations are blocked, success signals once, and non-success terminalization returns it to `UNSIGNALED` without `FAILED`.
+- Presentation terminal and image-release milestones now share the same serialized event-decision domain as `SelectEvents` and `DestroyDevice`. Each event independently samples its queue mask at its own milestone; added both-order race vectors.
+
+Latest audit commits after the last fully green exact SHA: `events.md` 40c331a8fdbc410580fd08af9ecb469ad63e0299; `conformance.md` b2ce60e430ef182c9be90d67c65257905f856f96; `tools/check-wire-layout.py` 281dafdc268250c0d46896951fbfded871133fb9; `synchronization.md` 67b6e2ef97197aec724840bb4403133306a742e5; request-audit note 45b23c00e3afd659f080535af6ae8cc2ff0f91c4.
+
+Remaining: run the full required workflow on the latest exact branch tip after these deltas; finish the presentation wire-reply/event/lifecycle cross-review; collect implementation-agent ship confirmations and a named shared integration-interface owner. Runtime X11/XGE and Vulkan WSI/queue-family validation remains a separate implementation acceptance gate.
