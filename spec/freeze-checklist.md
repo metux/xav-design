@@ -26,11 +26,12 @@ The last fully CI-verified specification-content checkpoint is the historical co
 - [x] Local document links and anchors resolve.
 - [x] No unresolved v0.1 design decision remains hidden in prose. Anything intentionally deferred is labelled as future-version work or implementation-time conformance.
 
-## Automated evidence at the current checkpoint (rerun on the final freeze commit)
+## Automated evidence at the historical checkpoint (rerun on the final freeze commit)
 
-- [x] `tools/check-wire-layout.py` passes against the exact candidate commit named in the audit record; rerun on the final freeze commit.
-- [x] The complete Python test suite passes on the exact candidate commit, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts; rerun on the final freeze commit.
-- [x] CI explicitly runs all required checks and fails if a required check is skipped or missing.
+- [x] `tools/check-wire-layout.py` passed against the historical candidate commit named in the audit record; this does not cover later Phase 3–5 commits.
+- [x] The complete Python test suite passed against that historical candidate, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts; this does not cover later Phase 3–5 commits.
+- [x] CI explicitly ran all required checks and failed if a required check was skipped or missing at that historical candidate.
+- [ ] Rerun the checker, wire vectors, complete Python suite, and required-check presence audit on one exact current-tip candidate after the final cross-request review.
 - [x] The audit record names the commit tested and describes what the checks do **not** establish.
 - [x] Project status, open issues, registry counts, profile boundaries, and the test plan describe the same current state.
 
