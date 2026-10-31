@@ -683,3 +683,13 @@ Added matching error and conformance vectors, including count/overflow-before-XI
 Commits: spec/command-recording.md `43211375f29662174083dc707c0d96064aaf2be0`; spec/errors.md `5f6cd628b1fdc181b8f79927c5d6a5e4f86ea509`; spec/conformance.md `5aab284bdea36f6f2f7d74adea83a1f390785bb9`; tools/check-wire-layout.py `ecf3c97b39215fe412a8d56e3778193cd910cae7`.
 
 Exact-tip CI is pending for this addendum. This does not change request/reply wire layouts.
+### Command recording replay and empty QueueSubmit addendum — 2026-10-31
+
+Two further implementation semantics are now explicit:
+
+- The command-buffer binding context is a recording-time validation view across accepted chunks and FINAL, but each execution/replay of an EXECUTABLE command buffer starts from a fresh empty binding context and reconstructs Pipeline, DescriptorSet, and push-constant state from the recorded entries. No state leaks between submissions. Added a conformance vector that submits the same executable buffer more than once.
+- `QueueSubmit` counts C/W/S are independently allowed to be zero. Semaphore-only/fence-only submissions and a fully empty 40-byte submission are valid; the empty submission still consumes its unique token at acceptance, participates in the addressed queue order, and has the ordinary terminal outcome/event behavior. Empty arrays create no associated references/reservations. Added vectors for each zero-count combination and the all-zero case.
+
+Commits: spec/command-recording.md `4d6e558a8eefc4d81f61d22eab35cc2e80685df5`; spec/conformance.md `8527836ea78423ef93d24a7fc674c3ea15ac84b5` and `ac123d2c633d63c6d114c7a91a1a94e0cf14cae6`; spec/queue-submission.md `f52ccbb68cfaf63102099dc46b456f36f93b108a`; tools/check-wire-layout.py `b2ff755971631d366c8be87ce4179f6102b76dbc` and `f31f656a882bd4f11fbbc0962e3e67d433a78cbb`.
+
+These additions do not change the QueueSubmit request wire formula or any opcode. Exact-tip CI is pending.
