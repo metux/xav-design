@@ -596,11 +596,11 @@ def check_other_numeric_registries(c: Check) -> None:
     presentation = read("spec/presentation.md")
     lifetime = read("spec/resource-lifetime.md")
     c.require("open `AcquireNextImage` registration with a supplied Fence → `PENDING`" in synchronization
-              and "a pending acquire that succeeds commits `PENDING` → `SIGNALED`" in synchronization
-              and "a pending acquire terminates without acquiring an image" in synchronization
+              and "A pending acquire that succeeds commits `PENDING` → `SIGNALED`" in synchronization
+              and "if it terminates without acquiring an image, its reservation is released" in synchronization
               and "the Fence becomes `PENDING` atomically with the registration" in presentation
               and "pending `AcquireNextImage` signal reservation" in descriptor_errors
-              and "through an open `AcquireNextImage` registration as a `PENDING`-signal target" in lifetime
+              and "durch eine offene `AcquireNextImage`-Registrierung als `PENDING`-Signalziel reserviert ist" in lifetime
               and "AcquireNextImage Fence reservation" in descriptor_conformance,
               "AcquireNextImage Fence reservation must share Fence pending state, WaitForFence, QueueSubmit, and destroy blockers")
     command_recording = read("spec/command-recording.md")
