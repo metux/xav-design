@@ -1779,7 +1779,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "ALLOCATION_FAILED",
         ):
             self.assertIn(expected, errors)
-        error_detail = errors.split("### `CreateCommandPool`", 1)[1].split("### `CommandPool`", 1)[0]
+        error_detail = self.errors.split("### `CreateCommandPool`", 1)[1].split("### `CommandPool`", 1)[0]
         error_phases = (
             "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`",
             "A `queue_family_index` that does not identify a family",
@@ -1796,7 +1796,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("`DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`", command)
         self.assertIn("**`DestroyCommandPool` versus child operations:**", conformance)
         self.assertIn("no child can be published after its parent pool is invalidated", conformance)
-        self.assertIn("If pool destruction commits first", conformance)
+        self.assertIn("If destruction commits first", conformance)
         self.assertIn("If the child operation/reset commits first", conformance)
 
     def test_semaphore_and_fence_creation_precedence_matches_chapters_and_error_map(self):
@@ -1824,7 +1824,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         errors = self.errors
         conformance = self.conformance
         self.assertIn("A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`", command)
-        self.assertIn("Required allocation of command-buffer object/storage or retained resource references", errors)
+        self.assertIn("required allocation of command-buffer object/storage or retained resource references", errors)
         error_section = errors.split("### `CommandPool` and `CommandBufferData`", 1)[1].split("### `CMD_PUSH_CONSTANTS`", 1)[0]
         phases = (
             "Without CREATE, the Buffer must then be in `RECORDING`",
