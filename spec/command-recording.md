@@ -187,7 +187,7 @@ Entry length: `5 + ceil(data_length / 4)` words.
 
 For v0.1, `stage_flags` MUST equal exactly the `COMPUTE` bit defined in the [Shader Stage Registry](../registries/shader-stages.md). `offset` and `data_length` MUST be multiples of four. `data_length` MUST be positive.
 
-The range MUST fit within `maxPushConstantsSize` and be covered by a compatible push-constant range in the specified pipeline layout.
+The range MUST fit within `maxPushConstantsSize` and be covered by a compatible push-constant range in the specified pipeline layout. The complete half-open byte interval `[offset, offset + data_length)` MUST be contained in one single declared range whose `stage_flags` includes `COMPUTE`; adjacent ranges MUST NOT be combined to provide coverage. Since v0.1 supports only `COMPUTE` and overlapping ranges are forbidden in a Pipeline Layout, this coverage is unambiguous.
 
 The data bytes are opaque. Wire padding is not part of the push-constant range.
 
