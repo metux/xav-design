@@ -2817,6 +2817,8 @@ def check_presentation_profile(c: Check) -> None:
               "An `IMAGE_RELEASED` event is queued exactly when" in event_docs.get("IMAGE_RELEASED", "") and
               "queue mask bit 2" in event_docs.get("IMAGE_RELEASED", ""),
               "IMAGE_RELEASED: internal release cardinality and conditional event delivery must be explicit")
+    c.require("unique terminal outcome, whether `SUCCESS` or a failure status" in event_docs.get("PRESENTATION_COMPLETE", ""),
+              "PRESENTATION_COMPLETE: event definition must cover both successful and failed terminal outcomes")
     c.require("unique internal terminal outcome of each accepted presentation operation" in event_docs.get("PRESENTATION_COMPLETE", "") and
               "After `DestroyDevice` has been processed successfully, no new events" in event_docs.get("PRESENTATION_COMPLETE", "") and
               "queue mask bit 3" in event_docs.get("PRESENTATION_COMPLETE", ""),
@@ -2829,6 +2831,9 @@ def check_presentation_profile(c: Check) -> None:
               and "if `DestroyDevice` successfully linearizes first, no new event for its destroyed Device XID is queued" in events
               and "Race a successful `SelectEvents` mask replacement against each milestone in both serialized orders" in conformance,
               "presentation event delivery: SelectEvents and DestroyDevice must serialize with both independent presentation milestones")
+    c.require("If image release committed first while the image and Swapchain were reusable, its release record and event decision remain final" in lifetime
+              and "These lifecycle failures invalidate the affected image/Swapchain. If the lifecycle invalidation commits before image release" in conformance,
+              "presentation release-first event decision must survive later lifecycle invalidation across conformance and lifetime chapters")
     c.require("Accepted presentation failures set the internal terminal status" in presentation_spec and
               "Queue mask bit 3" in presentation_spec and "Queue mask bit 2" in presentation_spec,
               "presentation: internal terminal cleanup and independently masked event delivery must be explicit")
