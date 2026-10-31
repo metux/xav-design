@@ -283,7 +283,7 @@ def check_events(c: Check) -> None:
               "synchronization: host waits must not block later signals or submissions on the same connection")
     c.require(re.search(r"`WaitForFence` MUST NOT synchronously block the X11 request dispatcher", sync) is not None
               and "a later `QueueSubmit` carrying that Fence can make the wait complete" in sync
-              and "issue an infinite `WaitForFence` before a later `QueueSubmit` on the same connection" in conformance,
+              and "issue an infinite `WaitForFence` before a later `QueueSubmit` on the same connection" in read("spec/conformance.md"),
               "WaitForFence: nonzero waits must register asynchronously and allow later same-connection submissions")
     c.require(re.search(r"The timeout deadline starts when the wait request is taken for execution and continues to run", sync) is not None,
               "synchronization: wait timeout must continue while later requests are processed")
@@ -1392,8 +1392,9 @@ def check_request_document_coverage(c: Check) -> None:
         "`DestroyFence`: `INVALID_SYNCHRONIZATION_STATE`" in errors
         and "`DestroySemaphore`: `INVALID_SYNCHRONIZATION_STATE`" in errors
         and "solange die Fence einer nicht-terminalen Submission zugeordnet ist oder eine offene" in errors
-        and "angenommener Queue-Wait/-Signal" in errors
-        and "eine andere laufende Host-Operation die Semaphore verwendet" in errors,
+        and "angenommener `QueueSubmit`-/`QueuePresent`-Wait" in errors
+        and "offene `AcquireNextImage`-Signalreservierung" in errors
+        and "eine andere laufende Host-Operation genau diese interne Semaphore-Identität verwendet" in errors,
         "error mapping: fence/semaphore destruction must preserve pending-use guards",
     )
 
@@ -1428,7 +1429,7 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         re.search(r"an open `WaitForFence` registration references that exact internal Fence identity", errors, re.I) is not None
-        and re.search(r"an open `WaitSemaphores` registration for that exact internal Semaphore identity", errors, re.I) is not None
+        and re.search(r"an open `WaitSemaphores` registration.*exact internal Semaphore identity", errors, re.I) is not None
         and re.search(r"even if its reply has not yet been sent", errors, re.I) is not None,
         "error mapping: summary must agree with specialized fence/semaphore destroy rules",
     )
@@ -1440,8 +1441,9 @@ def check_request_document_coverage(c: Check) -> None:
     )
     c.require(
         "`DestroySemaphore`: falsche Länge `BadLength`" in errors
-        and "offene `WaitSemaphores`-Registrierung für genau diese interne Semaphore-Identität" in errors
-        and "andere laufende Host-Operation" in errors
+        and "offene `WaitSemaphores`-Registrierung" in errors
+        and "offene `AcquireNextImage`-Signalreservierung" in errors
+        and "andere laufende Host-Operation genau diese interne Semaphore-Identität" in errors
         and "Device Loss allein invalidiert keine öffentlichen XIDs" in errors
         and "wenn anschließend `DestroyDevice` verarbeitet wird" in errors,
         "error mapping: DestroySemaphore must cover length, host waits, identity, and device-loss teardown",
