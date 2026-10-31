@@ -165,7 +165,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("A lifecycle invalidation that commits before image release MUST prevent IMAGE_RELEASED", accepted)
         self.assertIn("if release committed first while reusable, its event decision is immutable", accepted)
         self.assertIn("A reusable image may be released only after backend quiescence", accepted)
-        self.assertIn("PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence", self.lifetime)
+        self.assertIn("`PRESENTATION_FAILED` permits image release only after backend quiescence and confirmation that the Swapchain remains usable", self.lifetime)
 
     def test_overlapping_lifecycle_conditions_use_one_precedence_snapshot(self) -> None:
         precedence = self.presentation.split(
