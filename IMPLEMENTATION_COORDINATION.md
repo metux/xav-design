@@ -317,3 +317,14 @@ Reviewed subopcodes 31–40 (WaitSemaphores, SignalSemaphore, DestroySemaphore, 
 - Runtime validation remains outstanding for real host/GPU semaphore interaction, Fence reuse under delayed callbacks, event-mask/DestroyDevice/completion races, and live X11/XGE delivery.
 - Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding. No implementation ownership or shared-helper edits should be inferred from the spec audit.
 - Next: final cross-request freeze review across subopcodes 1–40 and presentation-profile 41–47, including registry/error/conformance/checker drift and implementation-readiness checklist closure.
+## Freeze metadata and registry-drift follow-up — 2026-10-31
+
+The cross-request freeze pass found one stale historical count in spec/request-audit.md: it said the physical-device property registry had four properties although the current registry and conformance contract define five. Corrected to five.
+
+Updated spec/freeze-checklist.md and spec/open-issues.md so commit 0e0ced45371a2548031c4b9d1370c1dead69d724 is described only as the historical exact-commit CI checkpoint. Phase 3–5 normative deltas are later commits and have no verified status checks/workflow runs; therefore the current branch is explicitly not re-frozen. The checklist now has a separate unchecked requirement to rerun the checker, wire vectors, full Python suite, and required-check presence audit on one exact current-tip candidate.
+
+Registry drift spot-check: 47 request assignments remain 1–40 compute baseline and 41–47 presentation-profile-only; error offsets remain 0–8; compute event IDs remain 0–6 with presentation IDs 7–8; command-entry IDs remain 1–5 with entry 5 presentation-only; descriptor types remain 0/1; queue flags remain five defined bits; optional feature and extension registries remain intentionally empty; the physical-device property registry contains five properties. No numeric assignment changed.
+
+Commits: request-audit property count de81269a5dee156cb17e6d1a11298e68f2b92ddc; freeze checklist 338a2d46265d0cffdadb9b0609748b69b604ab22 and 654138ef6b60dd71cb9e0af6ddc2d4c1bb025676; open issues 8a83d6f11f568e3c9ccc2cdb8c44b0a45be98407; request audit Phase 4–5 entries 38f29c9f882e7230a89aa50ab7330104978fa469.
+
+Remaining before declaring the current branch frozen: finish the cross-request drift pass, get implementation-agent confirmations/shared interface owner onto this board, and run the full required CI/test set against the exact final tip. Runtime X11/XGE and Vulkan backend acceptance remains a separate implementation gate.
