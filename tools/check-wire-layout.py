@@ -558,11 +558,18 @@ def check_other_numeric_registries(c: Check) -> None:
         and re.search(r"`DEVICE_UNAVAILABLE`.*`DEVICE_LOST`", descriptor_conformance) is not None,
         "ResetCommandBuffer: device-state errors must be specified consistently across normative, error, and conformance chapters",
     )
+    command_pool_contract = read("spec/command-recording.md")
+    queue_submit_contract = read("spec/queue-submission.md")
     c.require(
-        "A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`" in descriptor_errors
-        and "A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`" in descriptor_errors
-        and "The queue-family index MUST identify a queue family of the logical device that supports command buffers" in read("spec/command-recording.md"),
-        "error mapping: CreateCommandPool must consistently reject invalid or command-buffer-incompatible queue families with BadValue",
+        "queue_family_index` that is not configured for the logical Device with a positive requested queue count results in `BadValue`" in descriptor_errors
+        and "Every queue family exposed by Vulkan supports command-buffer submission" in command_pool_contract
+        and "v0.1 defines no separate command-buffer-support flag" in command_pool_contract
+        and "`COMPUTE` bit in the Queue Flag Registry" in command_pool_contract
+        and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
+        and "command buffer from one queue family MUST NOT be submitted" in queue_submit_contract
+        and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in errors
+        and "two queue families on one Device" in conformance,
+        "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
     )
     command_recording = read("spec/command-recording.md")
     decisions = read("DECISIONS.md")
