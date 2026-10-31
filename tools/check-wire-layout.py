@@ -3141,6 +3141,15 @@ def check_presentation_profile(c: Check) -> None:
                   f"presentation copy command: missing bounds/alignment/ID contract: {contract}")
     c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in copy_command,
               "presentation copy path must specify destination and source usage")
+    queue_flags_registry = read("registries/queue-flags.md")
+    c.require("at least one of `GRAPHICS`, `COMPUTE`, or `TRANSFER` MUST be set" in copy_command
+              and "a family with none of these three capabilities is incompatible" in copy_command
+              and "effective transfer-command support is present when any of `GRAPHICS`, `COMPUTE`, or `TRANSFER` is set" in queue_flags_registry,
+              "presentation copy command: transfer capability must include Vulkan implicit graphics/compute support")
+    c.require("lacking all of `GRAPHICS`, `COMPUTE`, and `TRANSFER` returns `BadMatch`" in copy_errors
+              and "graphics-only, compute-only, and transfer-only families accept the entry" in conformance
+              and "only `SPARSE_BINDING` and/or `PROTECTED` rejects it with `BadMatch`" in conformance,
+              "presentation copy command: queue-family capability error mapping and mixed-failure vectors must agree")
     copy_errors = read("spec/errors.md")
     copy_error_order = (
         "Error precedence follows the enclosing `CommandBufferData` phases:",
