@@ -1821,7 +1821,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
         self.assertIn("A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`", command)
         self.assertIn("Required allocation of command-buffer object/storage or retained resource references", errors)
-        self.assertIn("CREATE leaves no command-buffer XID or pool-child entry", command)
+        self.assertIn("For CREATE, no command-buffer XID or pool-child entry is published", command)
         self.assertIn("append/FINAL preserve the prior recording", errors)
         self.assertIn("**`CommandBufferData` allocation rollback:**", conformance)
         self.assertIn("ABORT performs no allocation", conformance)
