@@ -1142,6 +1142,13 @@ def check_request_document_coverage(c: Check) -> None:
               "`ABORT` is the defined exception to phases 5–7" in command_recording,
               "CommandBufferData: error precedence edge cases must be covered by conformance")
     c.require(
+        "A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`" in command_recording
+        and "Required allocation of command-buffer object/storage or retained resource references" in errors
+        and "**`CommandBufferData` allocation rollback:**" in conformance
+        and "ABORT performs no allocation" in conformance,
+        "CommandBufferData: allocation failure must be a final atomic preparation phase and ABORT must remain allocation-free",
+    )
+    c.require(
         "an entry whose declared length exceeds the request boundary" in errors
         and "invalid entry lengths (especially zero or less than the entry header)" in errors
         and "unknown command IDs" in errors,
