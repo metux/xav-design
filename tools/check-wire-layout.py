@@ -567,7 +567,7 @@ def check_other_numeric_registries(c: Check) -> None:
         and "`COMPUTE` bit in the Queue Flag Registry" in command_pool_contract
         and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
         and "command buffer from one queue family MUST NOT be submitted" in queue_submit_contract
-        and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in errors
+        and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in descriptor_errors
         and "CMD_DISPATCH" in descriptor_errors
         and "family lacks the `COMPUTE` flag" in descriptor_errors
         and "Command-entry queue capability" in conformance
