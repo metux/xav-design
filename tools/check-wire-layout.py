@@ -3507,10 +3507,10 @@ def check_shader_descriptor_pipeline_contract(c: Check) -> None:
     c.require(
         "Normative Pool-Kapazität" in shaders
         and "max_sets" in shaders
-        and "per-type descriptor capacity" in shaders
-        and "unzulängliche Set-/Typ-Kapazität" in shaders
+        and "per-type descriptor capacities" in shaders
+        and "unzureichende Set-/Typ-Kapazität" in shaders
         and "ALLOCATION_FAILED" in shaders
-        and "Successful `FreeDescriptorSets`" in shaders,
+        and "Erfolgreiches `FreeDescriptorSets` gibt die Kapazität" in shaders,
         "Descriptor pools: set and per-type capacities must be accounted atomically and returned on free",
     )
     c.require(
