@@ -224,6 +224,7 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `QueueSubmit`: Timeline signal value exceeds the observable counter but conflicts with an already reserved pending GPU signal value | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: a Command Buffer is not `EXECUTABLE`, a Fence is not submit-eligible, a Semaphore state is invalid, or a syntactically valid wait-stage mask contains a stage unsupported by the addressed queue family | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: Abhängigkeit verhindert die Annahme, ohne dass eine speziellere Zustandsregel greift | `DEPENDENCY_FAILED` |
+| `QueueSubmit`: required submission/reservation/reference preparation allocation fails after all validation phases pass | `ALLOCATION_FAILED` |
 | `QueueSubmit`: synchronous error before acceptance | no state changes; the token remains unused, command buffers remain `EXECUTABLE`, Fence/Semaphore states and internal references remain unchanged; no submission event or `ASYNC_ERROR` is emitted |
 | `ResetFence`: falsche Länge | `BadLength` |
 | `ResetFence`: Device- oder Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
