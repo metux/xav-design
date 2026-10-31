@@ -349,3 +349,8 @@ Updated files: spec/errors.md, spec/presentation.md, spec/conformance.md, spec/c
 Latest Phase 6 audit record commit: c6d6f92f496555e8339fcff87e3a879b7e50dfa1. Checker updates include bf841861b86b380d9d8717c587cbe52b6795a91a and e5f464e3631eb6073819112f6912180687c0d795; the checker has not been executed.
 
 Remaining: inspect presentation wire-reply boundary and lifecycle/event cross-contracts for any further drift; run exact-tip checker, golden wire vectors, full Python suite, and required-check audit. Runtime X11/XGE and Vulkan WSI/queue-family acceptance remains separate. Phase 1 agent ship confirmations/shared integration-interface owner are still not posted here.
+### Phase 6 lifecycle addendum — DestroySwapchain after Device Loss
+
+Clarified a lifecycle edge case: Device Loss invalidates Swapchain/image usability but does not itself invalidate the public Swapchain XID. `DestroySwapchain` remains a permitted logical cleanup request on the still-live lost Device once all blockers clear; it must still reject while accepted operations or possible backend access can reference images. Successful `DestroyDevice` is different because the cascade already invalidates the Swapchain XID, making a later destroy `BadValue`. Added matching error-map, conformance, and checker contracts.
+
+Commits: spec/presentation.md dc5c1a21d5bcb58558848fdd6ecb9c0775411438; spec/errors.md a231e737df4d01edb52c79562a995a5651512e01; spec/conformance.md 28151e73d42bbc716142d05012bfe84990e4289b; tools/check-wire-layout.py 0b4a966f0e846a8220100267e3bed89bde13dacd; request-audit record 79165fd5b70f0f3537edcde2e75ff8c65d66e3d2.
