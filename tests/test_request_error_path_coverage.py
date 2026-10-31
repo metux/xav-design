@@ -1750,7 +1750,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             "resolve `device_xid`",
             "validate live resource type, client ownership, and Device association",
             "check logical-Device state",
-            "validate `queue_family_index`",
+            "require `queue_family_index` to identify a family with `queue_count > 0`",
             "create the backend pool",
         )
         positions = [section.find(phase) for phase in phases]
@@ -1791,7 +1791,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
         self.assertIn("`DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`", command)
         self.assertIn("**`DestroyCommandPool` versus child operations:**", conformance)
-        self.assertIn("no child may be published after its parent pool is invalidated", conformance)
+        self.assertIn("no child can be published after its parent pool is invalidated", conformance)
         self.assertIn("If pool destruction commits first", conformance)
         self.assertIn("If the child operation/reset commits first", conformance)
 
