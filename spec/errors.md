@@ -169,7 +169,7 @@ The following individual mappings are retained as explicit error summaries and M
 - An incorrect request length results in `BadLength`.
 - Unknown pool flags or nonzero reserved bits result in `BadValue`; an invalid or already allocated pool XID results in `BadIDChoice`.
 - An unknown or non-live Device XID results in `BadValue`; a live resource of the wrong type or foreign Device ownership results in `BadMatch`.
-- A queue-family index outside the Device profile, or a queue family without command-buffer support, results in `BadValue`.
+- A `queue_family_index` that is not configured for the logical Device with a positive requested queue count results in `BadValue`. All Vulkan queue families support command-buffer submission; v0.1 defines no separate command-buffer-support flag. `CMD_DISPATCH` recorded into a pool whose family lacks the `COMPUTE` queue flag is incompatible and returns `BadMatch` during resource-dependent `CommandBufferData` validation.
 - An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; backend allocation failure results in `ALLOCATION_FAILED`.
 - On rejection, the pool XID remains unallocated.
 
@@ -217,8 +217,8 @@ Die Prüfung erfolgt in dieser Reihenfolge: Wire-Länge und strukturelle Integri
 | `QueueSubmit`: falsche Länge, inkonsistente Counts oder Längenberechnung läuft über | `BadLength` |
 | `QueueSubmit`: Token ist null oder auf derselben Verbindung bereits verwendet; reservierte Felder, syntaktisch ungültige Wait-Stage-Maske (0 oder reservierte Bits), ungültige typunabhängige Feldwerte, doppelte rohe Wait-/Signal-Semaphore-XIDs oder dieselbe Semaphore in beiden Arrays | `BadValue` |
 | `QueueSubmit`: Device-, Command-Buffer-, Semaphore- oder nicht-null Fence-XID ungültig/nicht live | `BadValue` für unbekannte/nicht-live XIDs; `BadMatch` für einen falschen live Ressourcentyp |
-| `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership oder angegebene Queue wurde nicht für dieses Device erstellt | `BadMatch` |
-| `QueueSubmit`: Device unavailable/lost after successful XID/type/ownership/queue validation and before mutable submission-state checks | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
+| `QueueSubmit`: falscher Ressourcentyp, fremde Client-/Device-Ownership, angegebene Queue wurde nicht für dieses Device erstellt oder ein Command Buffer stammt aus einem Command Pool einer anderen Queue-Family | `BadMatch` |
+| `QueueSubmit`: Device unavailable/lost after successful XID/type/ownership/queue-family validation and before mutable submission-state checks | `DEVICE_UNAVAILABLE` / `DEVICE_LOST` |
 | `QueueSubmit`: type-dependent Binary value is nonzero or Timeline signal value is not greater than the observable counter, after XID, type, and Device-state checks | `BadValue` |
 | `QueueSubmit`: Timeline signal value exceeds the observable counter but conflicts with an already reserved pending GPU signal value | `INVALID_SYNCHRONIZATION_STATE` |
 | `QueueSubmit`: a Command Buffer is not `EXECUTABLE`, a Fence is not submit-eligible, a Semaphore state is invalid, or a syntactically valid wait-stage mask contains a stage unsupported by the addressed queue family | `INVALID_SYNCHRONIZATION_STATE` |
@@ -307,7 +307,7 @@ For both requests, an earlier framing/scalar/XID/type/ownership error takes prec
 ### Command Pool requests
 
 - `CreateCommandPool`: normative Präzedenz: exakte 24-Byte-Länge (`BadLength`); Flags/reservierte Bits (`BadValue`); Ziel-Pool-XID (`BadIDChoice`); Device-XID (`BadValue`); Typ/Client- und Device-Ownership (`BadMatch`); Device-Zustand (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); Queue-Family-Index und Command-Buffer-Unterstützung (`BadValue`); Backend-Allokation (`ALLOCATION_FAILED`). Device Loss gewinnt damit gegen einen ungültigen Queue-Family-Index, aber nicht gegen frühere XID-/Ownership-Fehler. Bei jedem Fehler bleibt die Pool-XID unangelegt.
-- `DestroyCommandPool`: falsche Länge `BadLength`; unbekannte/nicht-live XID `BadValue`; falscher Typ oder Cross-Device-Ownership `BadMatch`; mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`. Device Loss allein ist kein Ablehnungsgrund; sobald betroffene Submissions terminalisiert und ihre Command Buffer nicht mehr pending sind, bleibt die logische Pool-Bereinigung zulässig. Ablehnung ist atomar.
+- `DestroyCommandPool`: normative Präzedenz: exakte 16-Byte-Länge (`BadLength`); Device-XID, dann Command-Pool-XID in Wire-Reihenfolge auflösen (`BadValue` für unbekannte/nicht-live XIDs); live Ressourcentyp, Client-Ownership und Device-Zuordnung prüfen (`BadMatch`); anschließend alle Kind-Command-Buffer auf `PENDING` prüfen (`INVALID_SYNCHRONIZATION_STATE`). Device Loss allein ist kein Ablehnungsgrund; sobald betroffene Submissions terminalisiert und ihre Command Buffer nicht mehr pending sind, bleibt die logische Pool-Bereinigung zulässig. Ablehnung ist atomar; bei Erfolg werden Pool und alle Kind-XIDs gemeinsam invalidiert.
 
 ### Synchronization requests
 
