@@ -171,3 +171,34 @@ A second pass compared the Phase 1 contracts (requests 1–7) against the proper
 - Request 7: 12-byte request, reply-size formula, 32/16 count limits, reserved/flag checks, heap-index constraints, and stable snapshot behavior agree with the checker and conformance requirements.
 - The five-property registry correction is consistent with the mandatory Timeline baseline and the existing property type table. No further Phase 1 normative mismatch was identified in this pass; no additional wire-contract change is proposed.
 - Verification limitation: GitHub reports no status checks for the recent direct branch commits. The checker source now contains the five-property assertion, but this agent has not executed the repository test suite in this environment. Please report actual current-tip test results here rather than treating static review as CI.
+
+
+## Phase 2 normative audit — Buffer and Memory requests 8–14 — 2026-10-31
+
+Reviewed subopcodes 8–14 (`CreateBuffer`, `GetBufferMemoryRequirements`, `AllocateMemory`, `FreeMemory`, `BindBufferMemory`, `WriteBuffer`, `ReadBuffer`) against the normative memory chapter, central error mapping, resource lifetime, device teardown, conformance matrix, request registry, and static wire-layout checker.
+
+### Finding corrected: ReadBuffer did not serialize later WriteBuffer requests
+
+The previous snapshot rule held the read data stable before later `QueueSubmit` writes, but did not include a later direct `WriteBuffer` request. A later upload could therefore modify the requested range before the earlier ReadBuffer had captured its snapshot. This was a real request-ordering ambiguity.
+
+The normative rule now places both later `QueueSubmit` and later `WriteBuffer` operations behind the ReadBuffer snapshot boundary. Deferred requests do not start work or reserve/commit accepted-operation state, and are processed in original request order after snapshot success or read failure. Host `SignalSemaphore` and independent `WaitSemaphores` remain available to make earlier work progress. The ReadBuffer operation now also has an explicit snapshot linearization point and first-terminal-outcome behavior against Device Loss, `DestroyDevice`, and disconnect; backend references are retained/quarantined until safe quiescence.
+
+### Files and commits
+
+- `spec/memory-buffers.md`: `c74756ac623ea6ca932c53fae3f90f9cda662be7`
+- `spec/errors.md`: `8a3d7ff8298173405521a7bdfaa65c3f3bf63cab`
+- `spec/devices.md`: `8f23e6b0b7c918b00c8342550e4f508a3c476765`
+- `spec/resource-lifetime.md`: `bb8083812e9c3bca39b8d472a01e53b368755c80`
+- `spec/conformance.md`: `cf6a800148303a1d20b517036b564ba5eff9a0cc`
+- `tools/check-wire-layout.py`: `66f6fa30f85c09d1266b7b76f1c3b8ce27d63839`
+
+### Other review results
+
+The remaining request contracts in this group were cross-checked without finding another normative contradiction: CreateBuffer/AllocateMemory create-XID and Device-state precedence; stored buffer-requirement snapshots after Device Loss; memory-type index/mask and alignment/bounds checks; FreeMemory's internal Buffer-binding and backend-access blockers; and WriteBuffer's upload barrier, dependency-cycle handling, and lifecycle terminalization. Existing conformance entries cover their major validation and atomicity cases. No opcode or wire-layout changes were needed.
+
+### Verification and open points
+
+- Static source review only. The newly added checker assertions and repository tests have **not** been executed in this environment.
+- Please run `python3 tools/check-wire-layout.py && python3 tests/test_wire_vectors.py` and the full Python test suite on the resulting branch tip; report exact SHA and results here.
+- Runtime X11/XGE and Vulkan backend behavior remain unverified, including injected transfer/allocation failures and real backend quiescence.
+- Phase 1 agent confirmations and shared integration-interface ownership remain outstanding unless a ship posts an update below.
