@@ -377,7 +377,7 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         cases = (
             (memory, "## 5.1 `CreateBuffer`", ("exact request length", "`size`, `usage_flags`, and `reserved", "target `buffer_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "backend buffer creation")),
             (memory, "## 5.4 `AllocateMemory`", ("exact request length", "`allocation_size`, `memory_type_index`, and `reserved", "target `memory_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "backend allocation")),
-            (shaders, "## 6.2 Descriptor Set Layout", ("exact count-consistent request length", "flags, binding records, counts, unique binding numbers", "target `descriptor_set_layout_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "device-limit/descriptor support checks", "backend allocation")),
+            (shaders, "## 6.2 Descriptor Set Layout", ("exact count-consistent request length", "flags, binding records, counts, unique binding numbers", "target `descriptor_set_layout_xid` as a create-XID", "`device_xid` lookup", "resource type and client/device ownership", "logical-device state", "descriptor-count/device-limit checks", "backend allocation")),
             (shaders, "## 6.3 Descriptor Pool", ("exakte count-konsistente Request-Länge", "positive Counts, doppelte Pool-Size-Typen", "Ziel-Pool-XID als Create-XID", "Device-XID (`BadValue` bei unbekannter/nicht-live XID)", "Ressourcentyp und Client-/Device-Ownership", "Device-Zustand", "Backend-Allokation")),
         )
         for document, heading, phrases in cases:
@@ -390,8 +390,8 @@ class RequestSpecificPrecedenceExceptionTests(unittest.TestCase):
         shaders = read("spec/shaders-pipelines.md")
         cases = (
             ("## 6.1 Shader Modules", ("exact total length `20 + pad4(data_length)`", "request-specific flag combination", "for `CREATE`, validate `shader_module_xid` as a create-XID", "resolve `device_xid`", "resource type and client/device ownership", "logical-device state", "upload-assembly state and chunk-size/aggregate-size limits", "on `FINAL`, validate the assembled SPIR-V")),
-            ("## 6.7 `CreatePipelineLayout`", ("exakte, count-konsistente Wire-Länge", "reservierte Felder, nicht unterstützte Stage-Bits", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")),
-            ("## 6.8 Compute Pipeline", ("exakte Wire-Länge", "positiven Entry-Point-Count", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
+            ("## 6.7 `CreatePipelineLayout`", ("exakte, count-konsistente Wire-Länge", "feldlokale Range-Syntax", "Ziel-XID (`BadIDChoice`)", "Device- und Set-Layout-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "geräteabhängige Limits und Vulkan-Kompatibilität", "Backend-Erstellung")),
+            ("## 6.8 Compute Pipeline", ("exakte Wire-Länge", "`entry_point_length > 0`", "Ziel-Pipeline-XID (`BadIDChoice`)", "Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge", "Ressourcentyp, Ownership und Cross-Device-Zuordnung", "Device-Zustand", "Backend-Pipeline-Erstellung")),
         )
         for heading, phrases in cases:
             with self.subTest(request=heading):
