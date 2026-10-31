@@ -286,7 +286,7 @@ class SelectEventsContractTests(unittest.TestCase):
             "one shared serialized server state",
             "A successful `SelectEvents` request takes effect at its linearization point",
             "the Queue mask then in effect",
-            "are atomic with respect to `DestroyDevice`",
+            "are atomic with respect to both `SelectEvents` and `DestroyDevice`",
             "no new event for its destroyed Device XID is queued",
             "MUST NOT retroactively change this decision",
             "For each accepted submission, `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED` must never both be delivered",
