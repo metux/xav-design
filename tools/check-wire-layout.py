@@ -597,6 +597,13 @@ def check_other_numeric_registries(c: Check) -> None:
         and "CMD_DISPATCH` without a prior `CMD_BIND_PIPELINE`" in descriptor_conformance,
         "command recording: descriptor-set range, layout compatibility, binding state, and dispatch prerequisites must be normative and tested",
     )
+    c.require(
+        "`C`, `W`, and `S` are independently permitted to be zero" in queue_submit_contract
+        and "all three counts zero is a valid empty queue submission" in queue_submit_contract
+        and "all three counts zero" in descriptor_conformance
+        and "40-byte request" in descriptor_conformance,
+        "QueueSubmit: zero-count arrays and empty-submission semantics must be explicit and tested",
+    )
     synchronization = read("spec/synchronization.md")
     c.require(
         "validate `semaphore_type` and the type-dependent `initial_value` (`BadValue`" in synchronization
