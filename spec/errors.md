@@ -155,6 +155,7 @@ The following individual mappings are retained as explicit error summaries and M
 - An invalid or already allocated create XID returns `BadIDChoice`.
 - An unknown/non-live Device XID returns `BadValue`; a live resource of the wrong type, foreign Device ownership, or a cross-Device resource returns `BadMatch`.
 - An unavailable/lost Device returns `DEVICE_UNAVAILABLE` / `DEVICE_LOST`; a synchronous backend allocation failure returns `ALLOCATION_FAILED`.
+- A syntactically valid binding count that exceeds the selected Device's descriptor limits returns `BadMatch`, after the Device-state phase and before backend allocation.
 - Every error leaves the Descriptor Set Layout uncreated; partial results are not permitted.
 
 ### `CreateCommandPool`
