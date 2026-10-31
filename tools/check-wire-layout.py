@@ -3413,6 +3413,7 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
     command = read("spec/command-recording.md")
     lifetime = read("spec/resource-lifetime.md")
     queue = read("spec/queue-submission.md")
+    errors = read("spec/errors.md")
     contracts = (
         "A successful ResetCommandBuffer is a single state transition from the prior non-pending state to INITIAL.",
         "retires the command buffer's recorded-resource reference edges exactly once",
