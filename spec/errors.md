@@ -183,6 +183,7 @@ The following individual mappings are retained as explicit error summaries and M
 - `ResetCommandBuffer` with an incorrect request length results in `BadLength`; unknown or non-live Device/Buffer XIDs result in `BadValue`; a live resource of the wrong type, foreign ownership, or cross-device use results in `BadMatch`.
 - After successful XID/ownership validation, an unavailable or lost logical Device returns `DEVICE_UNAVAILABLE` or `DEVICE_LOST` before the pool reset flag or Buffer state is checked.
 - `ResetCommandBuffer` without the `RESET_COMMAND_BUFFER` pool flag or with a pending Buffer is rejected with `INVALID_SYNCHRONIZATION_STATE`.
+- `CMD_DISPATCH` recorded into a Command Buffer whose parent Command Pool queue family lacks the `COMPUTE` flag returns `BadMatch` during resource-dependent `CommandBufferData` validation, after XID/type/ownership and Device-state phases; the current chunk is not appended.
 
 ### `CMD_PUSH_CONSTANTS`
 
