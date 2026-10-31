@@ -3008,6 +3008,11 @@ def check_presentation_profile(c: Check) -> None:
     for contract in presentation_error_contracts:
         c.require(contract in errors,
                   f"presentation request error map: missing invariant: {contract}")
+    c.require("a live `InputOnly`/otherwise non-drawable Window, is `BadMatch`" in errors
+              and "live `InputOnly`/otherwise non-drawable Window with `BadMatch`" in conformance
+              and "this 16-byte request has no request-specific scalar or reserved fields" in conformance
+              and "`CreateSurface`, `DestroySurface`, and `DestroySwapchain` have no request-specific scalar or reserved fields" in errors,
+              "CreateSurface: map live non-drawable Windows and do not invent scalar fields absent from its wire layout")
     c.require("Device Loss alone does not reject this logical cleanup request" in errors
               and "Device Loss alone does not invalidate the public Swapchain XID" in presentation
               and "with all blockers absent and require logical destruction to succeed" in conformance
