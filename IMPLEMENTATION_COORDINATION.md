@@ -335,3 +335,17 @@ Found stale current-status claims in README.md and PROJECT_STATUS.md that still 
 Commits: README.md 7821365838c115b40753752f496bbf82e2976d60; PROJECT_STATUS.md 9b4c4498112f5088183e900831138225c5f18217; spec/README.md a50fccbf3a3553690d472e858808974904041048; checker variable-scope correction cc53bd3451904bfc54939a6a44e706d8798c2011.
 
 Request inventory cross-check on this branch: 47 registry rows and 47 request-audit rows match exactly by subopcode, name, and request kind; all 47 names appear in the error and conformance chapters; all 47 map to one of eight defining chapters. This is a source-level comparison, not execution of the repository checker or tests.
+## Phase 6 presentation-profile cross-audit — 2026-10-31
+
+Reviewed subopcodes 41–47, presentation event IDs 7–8, QueuePresent event delivery, capability/format registries, command-entry ID 5, request/error precedence, reference lifetimes, and the presentation conformance matrix.
+
+### Findings corrected
+
+1. `CreateSwapchain` incorrectly listed a Device/Surface 'cross-device combination' as `BadMatch`. This conflicts with the normative Surface ownership model: a Surface belongs to the X11 connection, not a logical Device, and may be queried with multiple Devices. A valid Device/Surface pair that cannot present now explicitly returns `UNSUPPORTED_CONFIGURATION`; `BadMatch` is reserved for wrong type/foreign connection ownership or actual cross-Device use of Device-owned resources. Added a same-Surface/two-Device and unsupported-pair creation vector.
+2. `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` required transfer usage on resources but did not define queue-family capability. It now requires the parent pool family to support transfer commands. Any GRAPHICS, COMPUTE, or TRANSFER queue capability is sufficient; graphics/compute queues have Vulkan's implicit transfer support even if native `VK_QUEUE_TRANSFER_BIT` is absent. A family with only SPARSE_BINDING and/or PROTECTED is incompatible (`BadMatch`). Added Device-loss precedence and queue-family conformance vectors.
+
+Updated files: spec/errors.md, spec/presentation.md, spec/conformance.md, spec/command-recording.md, registries/queue-flags.md, tools/check-wire-layout.py, spec/request-audit.md.
+
+Latest Phase 6 audit record commit: c6d6f92f496555e8339fcff87e3a879b7e50dfa1. Checker updates include bf841861b86b380d9d8717c587cbe52b6795a91a and e5f464e3631eb6073819112f6912180687c0d795; the checker has not been executed.
+
+Remaining: inspect presentation wire-reply boundary and lifecycle/event cross-contracts for any further drift; run exact-tip checker, golden wire vectors, full Python suite, and required-check audit. Runtime X11/XGE and Vulkan WSI/queue-family acceptance remains separate. Phase 1 agent ship confirmations/shared integration-interface owner are still not posted here.
