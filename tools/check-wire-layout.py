@@ -3008,6 +3008,11 @@ def check_presentation_profile(c: Check) -> None:
     for contract in presentation_error_contracts:
         c.require(contract in errors,
                   f"presentation request error map: missing invariant: {contract}")
+    c.require("Device Loss alone does not reject this logical cleanup request" in errors
+              and "Device Loss alone does not invalidate the public Swapchain XID" in presentation
+              and "with all blockers absent and require logical destruction to succeed" in conformance
+              and "successful `DestroyDevice`: its cascade invalidates the Swapchain XID" in conformance,
+              "DestroySwapchain: distinguish Device Loss cleanup from DestroyDevice cascade and preserve backend blockers")
     c.require("a queue not belonging to the Device is `BadMatch`" not in errors and
               "same live Surface may be queried with two different owned Devices" in conformance,
               "presentation error map: preserve Device-independent Surface ownership and BadValue queue-index mapping")
