@@ -26,7 +26,7 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
 **Specification baseline:** v0.1 consolidated protocol specification  
 **Initial implementation target:** Xvfb, compute-only  
-**Status:** Historical CI-verified checkpoint at `0e0ced45371a2548031c4b9d1370c1dead69d724`; current branch not yet re-frozen. See [spec/freeze-checklist.md](spec/freeze-checklist.md).
+**Status:** Normative v0.1 content is freeze-ready at candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576` (exact CI run 41235437766 green). Runtime acceptance and implementation coordination remain separate open gates. See [spec/freeze-checklist.md](spec/freeze-checklist.md).
 
 ## Working rules
 
