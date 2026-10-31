@@ -3026,7 +3026,7 @@ def check_presentation_profile(c: Check) -> None:
               and "Surface is owned by the X11 connection, not by a logical Device" in presentation,
               "CreateSwapchain: a valid non-presentable Device/Surface pair is unsupported configuration, not cross-device BadMatch")
     c.require("owned by the requesting X11 client connection" in presentation and
-              "a live Window owned by another X11 client is `BadMatch`" in errors and
+              "a live Window owned by another X11 client, or a live `InputOnly`/otherwise non-drawable Window, is `BadMatch`" in errors and
               "a live Window owned by another X11 client or a live `InputOnly`/otherwise non-drawable Window with `BadMatch`" in conformance,
               "CreateSurface: Window identity must be client-owned and cross-client references rejected")
     c.require("resolve `device_xid`, validate the target `swapchain_xid` as a create-XID, then resolve `surface_xid`" in errors and
