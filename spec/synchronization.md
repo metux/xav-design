@@ -145,7 +145,7 @@ Transitions:
 - asynchronous submission execution failure → `FAILED`
 - non-success terminalization of a pending acquisition (`NOT_READY` is never registered; `TIMEOUT`, `OUT_OF_DATE`, `SURFACE_LOST`, or `DEVICE_LOST`) → `UNSIGNALED`
 - reset from `SIGNALED` or `FAILED` → `UNSIGNALED`
-- rejected submission or rejected/immediate non-registering acquisition → state remains unchanged
+- rejected submission or rejected/immediate non-success acquisition → state remains unchanged
 
 `PENDING` represents one outstanding asynchronous signal operation on the Fence: either an accepted `QueueSubmit` carrying that Fence or an open `AcquireNextImage` registration that reserved it as an acquisition signal. The Fence cannot be attached to another submission, reserved by another acquire, reset, or destroyed while `PENDING`. `GetFenceStatus` reports `PENDING`, and `WaitForFence` may register against it. A pending acquire that succeeds commits `PENDING` → `SIGNALED`; if it terminates without acquiring an image, its reservation is released and the Fence returns to `UNSIGNALED` without passing through `FAILED`, because no queue submission failed. An immediate acquire success transitions `UNSIGNALED` directly to `SIGNALED`; a zero-timeout `NOT_READY` poll does not reserve or change the Fence.
 
