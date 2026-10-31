@@ -661,7 +661,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("later `QueueSubmit` requests", read)
         self.assertIn("stable data snapshot", read)
         self.assertIn("`ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply", read)
-        self.assertIn("A failed `ReadBuffer` does not promise a snapshot", read)
+        self.assertIn("A failed `ReadBuffer` does not establish a snapshot boundary", read)
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Detected dependency cycle while waiting for earlier GPU work, including a deferred GPU signal that is the only candidate to satisfy an earlier wait: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`", errors)
