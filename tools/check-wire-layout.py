@@ -3436,6 +3436,13 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
         and "backend hold still needed to protect a possible in-flight access remains retained" in queue,
         "command-buffer reference retirement: submission terminalization must not release backend holds early",
     )
+    c.require(
+        "A required server-side allocation failure in this preparation phase returns `ALLOCATION_FAILED`" in queue
+        and "all fallible preparation allocations succeed" in queue
+        and "QueueSubmit`: required submission/reservation/reference preparation allocation fails" in errors
+        and "Inject allocation failure while preparing the submission record" in read("spec/conformance.md"),
+        "QueueSubmit: pre-acceptance allocation failure must be synchronous and fully atomic",
+    )
     # The transition matrix must cover both invalidation paths and the only legal
     # recovery path; checking only reset would miss stale executable recordings.
     for contract in (
