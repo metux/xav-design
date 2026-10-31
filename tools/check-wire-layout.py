@@ -1144,6 +1144,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`" in command_recording
         and "Required allocation of command-buffer object/storage or retained resource references" in errors
+        and errors.index("Without CREATE, the Buffer must then be in `RECORDING`") < errors.index("After Buffer-state and all resource-dependent semantic checks pass")
         and "**`CommandBufferData` allocation rollback:**" in conformance
         and "ABORT performs no allocation" in conformance,
         "CommandBufferData: allocation failure must be a final atomic preparation phase and ABORT must remain allocation-free",
