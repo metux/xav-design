@@ -582,6 +582,19 @@ def check_other_numeric_registries(c: Check) -> None:
         and "two queue families on one Device" in descriptor_conformance,
         "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
     )
+    c.require(
+        "`descriptor_set_count` MUST be greater than zero" in command_pool_contract
+        and "sum `first_set + descriptor_set_count` MUST be representable as an unsigned 32-bit value" in command_pool_contract
+        and "interval `[first_set, first_set + descriptor_set_count)` MUST lie within" in command_pool_contract
+        and "binding-number mappings are identical" in command_pool_contract
+        and "`CMD_DISPATCH` requires a Pipeline to have been bound earlier in the same recording context" in command_pool_contract
+        and "A missing required set or slot returns `INVALID_SYNCHRONIZATION_STATE`" in command_pool_contract
+        and "PipelineLayout used by a `CMD_BIND_DESCRIPTOR_SETS` entry for set index N is compatible" in command_pool_contract
+        and "`descriptor_set_count = 0` or 32-bit overflow" in descriptor_errors
+        and "reject `descriptor_set_count = 0` and 32-bit overflow" in descriptor_conformance
+        and "CMD_DISPATCH` without a prior `CMD_BIND_PIPELINE`" in descriptor_conformance,
+        "command recording: descriptor-set range, layout compatibility, binding state, and dispatch prerequisites must be normative and tested",
+    )
     synchronization = read("spec/synchronization.md")
     c.require(
         "validate `semaphore_type` and the type-dependent `initial_value` (`BadValue`" in synchronization
