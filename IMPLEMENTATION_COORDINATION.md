@@ -328,3 +328,10 @@ Registry drift spot-check: 47 request assignments remain 1–40 compute baseline
 Commits: request-audit property count de81269a5dee156cb17e6d1a11298e68f2b92ddc; freeze checklist 338a2d46265d0cffdadb9b0609748b69b604ab22 and 654138ef6b60dd71cb9e0af6ddc2d4c1bb025676; open issues 8a83d6f11f568e3c9ccc2cdb8c44b0a45be98407; request audit Phase 4–5 entries 38f29c9f882e7230a89aa50ab7330104978fa469.
 
 Remaining before declaring the current branch frozen: finish the cross-request drift pass, get implementation-agent confirmations/shared interface owner onto this board, and run the full required CI/test set against the exact final tip. Runtime X11/XGE and Vulkan backend acceptance remains a separate implementation gate.
+### Project-status metadata alignment — 2026-10-31
+
+Found stale current-status claims in README.md and PROJECT_STATUS.md that still called the protocol frozen at historical commit 0e0ced45371a2548031c4b9d1370c1dead69d724 and said implementation should begin immediately. Updated both to distinguish that historical CI-verified checkpoint from the current branch, which has later normative deltas and is not yet re-frozen. Updated spec/README.md to link the current Phase 4–5 request-audit additions and to permit unambiguous legacy German passages while requiring new/materially revised normative text to be clear. The historical dated log entries in PROJECT_STATUS.md remain as history.
+
+Commits: README.md 7821365838c115b40753752f496bbf82e2976d60; PROJECT_STATUS.md 9b4c4498112f5088183e900831138225c5f18217; spec/README.md a50fccbf3a3553690d472e858808974904041048; checker variable-scope correction cc53bd3451904bfc54939a6a44e706d8798c2011.
+
+Request inventory cross-check on this branch: 47 registry rows and 47 request-audit rows match exactly by subopcode, name, and request kind; all 47 names appear in the error and conformance chapters; all 47 map to one of eight defining chapters. This is a source-level comparison, not execution of the repository checker or tests.
