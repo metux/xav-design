@@ -2,7 +2,7 @@
 
 ## Current specification-finalization status — 2026-10-31
 
-The current branch is in final specification review; it is **not yet re-frozen**. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains separately gated and is not implied by compute-only support.
+The normative v0.1 content is **freeze-ready** at candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576`, with exact CI run 41235437766 green. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains separately gated and is not implied by compute-only support. Formal implementation coordination still awaits Phase 1 ship confirmations and a named shared integration-interface owner.
 
 The authoritative working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The last fully CI-verified specification checkpoint is the historical commit `0e0ced45371a2548031c4b9d1370c1dead69d724`, verified by [CI run 41109805393](https://github.com/metux/xav-design/actions/runs/41109805393): 4,721 wire-layout/documentation checks, 72 Timeline regression tests, all 673 Python tests, and the required-check presence audit passed on that exact commit. Later Phase 3–5 audits corrected requests 15–40 and updated their error/conformance/checker contracts. GitHub currently reports no status checks or workflow runs for those later commits, and the test suite has not been rerun on the current branch tip. The historical CI result must not be treated as verification of the current branch.
 
