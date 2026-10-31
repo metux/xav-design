@@ -162,9 +162,9 @@ class PresentationLifecycleContractTests(unittest.TestCase):
     def test_image_release_requires_quiescent_reusable_image(self) -> None:
         accepted = self.races.split("**Accepted presentation versus resize/Surface loss/Device loss:**", 1)[1].split("\n-", 1)[0]
         self.assertIn("exactly one terminal status wins", accepted)
-        self.assertIn("IMAGE_RELEASED is permitted only when backend access has ended", accepted)
-        self.assertIn("image remains reusable in a usable Swapchain", accepted)
-        self.assertIn("otherwise the image is invalidated and no release event is emitted", accepted)
+        self.assertIn("A lifecycle invalidation that commits before image release MUST prevent IMAGE_RELEASED", accepted)
+        self.assertIn("if release committed first while reusable, its event decision is immutable", accepted)
+        self.assertIn("A reusable image may be released only after backend quiescence", accepted)
         self.assertIn("PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence", self.lifetime)
 
     def test_overlapping_lifecycle_conditions_use_one_precedence_snapshot(self) -> None:
@@ -244,7 +244,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("no later mask change retroactively adds or removes", race_contract)
         self.assertIn("regardless of event masking or delivery suppression", race_contract)
 
-    def test_invalidated_images_never_emit_release_event(self) -> None:
+    def test_invalidation_before_release_suppresses_event_but_later_invalidation_cannot_retract(self) -> None:
         event_contract = self.presentation.split(
             "## 6. Completion is three different things", 1
         )[1].split("\n## ", 1)[0]
@@ -255,9 +255,9 @@ class PresentationLifecycleContractTests(unittest.TestCase):
             "**Accepted presentation versus resize/Surface loss/Device loss:**", 1
         )[1].split("\n-", 1)[0]
         self.assertIn("if not, it invalidates that image and the Swapchain instead", event_contract)
-        self.assertIn("no `IMAGE_RELEASED` is emitted", lifecycle_contract)
-        self.assertIn("otherwise the image is invalidated and no release event is emitted", race_contract)
-        self.assertIn("terminal failure that invalidates the image MUST NOT emit `IMAGE_RELEASED`", self.conformance)
+        self.assertIn("if the lifecycle invalidation commits before image release, the image is invalidated and no `IMAGE_RELEASED` event is queued", lifecycle_contract)
+        self.assertIn("A lifecycle invalidation that commits before image release MUST prevent IMAGE_RELEASED", race_contract)
+        self.assertIn("if release committed first while reusable, its event decision is immutable", self.conformance)
 
     def test_reacquisition_requires_internal_release_not_event_delivery(self) -> None:
         race_contract = self.conformance.split(
