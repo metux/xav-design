@@ -670,3 +670,16 @@ Commits: spec/command-recording.md updated (latest command-recording commit reco
 - `CreateSemaphore`'s mandatory Timeline feature is backed by the logical-Device baseline. `GetSemaphoreCounterValue` correctly returns an X11 `DEVICE_LOST` error with no reply after loss, while its Binary-type `BadMatch` is later in precedence; conformance covers both.
 
 Exact-tip CI for the newly added compute-entry capability rule is pending. Runtime Vulkan validation must still confirm queue-family command support and callback/lifetime behavior.
+### Command-buffer entry semantics addendum — descriptor binding and dispatch context — 2026-10-31
+
+A second pass over subopcode 27 found that the wire layout for `CMD_BIND_DESCRIPTOR_SETS` did not define positive count, `first_set` arithmetic/range bounds, or the precise immutable layout comparison. More broadly, the spec named pipeline/layout compatibility and descriptor binding checks without defining the recording context or the prerequisite state for dispatch. This left implementers to infer state persistence across chunks and how a bound Pipeline relates to the layouts used by descriptor/push-constant entries.
+
+Defined the v0.1 behavior:
+- `descriptor_set_count` is positive; checked `first_set + count` overflow is `BadValue`; the resulting interval must fit the specified PipelineLayout's set slots (`BadMatch`). Each DescriptorSet layout must match its indexed PipelineLayout slot by binding number/type/count/stage flags, independent of source record order.
+- Recording context is ordered and persists across accepted chunks. Pipeline binding replaces the current Pipeline; descriptor-set binding replaces only the specified slots; push constants replace only the specified byte interval. Failed chunks leave context unchanged; ABORT/reset clear it; FINAL preserves it.
+- Dispatch requires a previously bound Pipeline and every statically used descriptor set/slot initialized (`INVALID_SYNCHRONIZATION_STATE`). At dispatch, descriptor binding PipelineLayouts are checked against the Pipeline's layout using the v0.1 Vulkan-compatible prefix rule (identical push ranges and identical set-layout definitions through the used set index); push-constant layouts require identical push-range definitions. Public PipelineLayout XIDs need not be identical.
+Added matching error and conformance vectors, including count/overflow-before-XID, exact range boundary, layout mismatch, differing lower-prefix versus higher-unused set layouts, missing pipeline/descriptor state, persistence across chunks, failed-chunk rollback, reset/abort clearing, and current DescriptorSet contents after update.
+
+Commits: spec/command-recording.md `43211375f29662174083dc707c0d96064aaf2be0`; spec/errors.md `5f6cd628b1fdc181b8f79927c5d6a5e4f86ea509`; spec/conformance.md `5aab284bdea36f6f2f7d74adea83a1f390785bb9`; tools/check-wire-layout.py `ecf3c97b39215fe412a8d56e3778193cd910cae7`.
+
+Exact-tip CI is pending for this addendum. This does not change request/reply wire layouts.
