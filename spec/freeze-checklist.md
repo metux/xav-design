@@ -31,7 +31,7 @@ The latest exact specification-content candidate is `7ffd9c5b17cc706d0810d6c8fdb
 - [x] `tools/check-wire-layout.py` passed against the historical candidate commit named in the audit record; this does not cover later Phase 3–5 commits.
 - [x] The complete Python test suite passed against that historical candidate, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts; this does not cover later Phase 3–5 commits.
 - [x] CI explicitly ran all required checks and failed if a required check was skipped or missing at that historical candidate.
-- [ ] Rerun the checker, wire vectors, complete Python suite, and required-check presence audit on one exact current-tip candidate after the final cross-request review.
+- [x] Reran the checker, wire vectors, complete Python suite, and required-check presence audit on exact candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576` in [CI run 41235437766](https://github.com/metux/xav-design/actions/runs/41235437766): 4,759 checks, 72 Timeline regression tests, 675 Python tests, and all required checks passed.
 - [x] The audit record names the commit tested and describes what the checks do **not** establish.
 - [x] Project status, open issues, registry counts, profile boundaries, and the test plan describe the same current state.
 
