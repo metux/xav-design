@@ -48,7 +48,7 @@ A Surface creation failure must leave the target Surface XID unallocated and mus
 
 ## 3. Window relationship and lifecycle
 
-The referenced window MUST be a valid X11 Window on the same X server connection. A non-window XID, an unknown XID, or a window that is not usable for presentation must be rejected using the eventual request-specific X11 error mapping. Presentation requests MUST NOT silently create a window or change ordinary X11 window-management policy.
+The referenced window MUST be a valid X11 Window on the same X server connection. A non-window XID, an unknown XID, or a destroyed XID is rejected with core X11 `BadWindow`. A live `InputOnly` Window is not a drawable presentation target and is rejected with `BadMatch`; the same applies to any live Window whose X11 class makes it non-drawable. Backend inability to present a particular otherwise valid drawable Window is not a `CreateSurface` error: it is reported through the Device/Surface capability result and, if applicable, `CreateSwapchain`'s `UNSUPPORTED_CONFIGURATION`. Presentation requests MUST NOT silently create a window or change ordinary X11 window-management policy.
 
 The Surface holds a server-side reference to the X11 window identity, not merely its numeric XID. If the window is destroyed and its XID later reused, the existing Surface MUST NOT begin referring to the new window. This follows the internal-identity rule in [resource lifetime](resource-lifetime.md).
 
