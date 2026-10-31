@@ -287,3 +287,33 @@ Reviewed subopcodes 24–30 (CreateCommandPool, DestroyCommandPool, ResetCommand
 - Extended the static wire-layout checker to guard queue-family identity, CMD_DISPATCH's COMPUTE-family requirement, CreateSemaphore scalar-before-target precedence, and GetSemaphoreCounterValue snapshot/Device-loss semantics.
 - Additional checker commits: 9d2d5248c5c3e8965a15c6e675a62da3ff4067d5; ac0599ce173e6dd865faf7d834d67f1d54588361.
 - GitHub status and workflow-run queries for ac0599ce173e6dd865faf7d834d67f1d54588361 returned empty collections. The checker has still not been executed locally or in CI; no passing result is claimed.
+## Phase 5 normative audit — Host synchronization, fences, generic destruction, and event selection requests 31–40 — 2026-10-31
+
+Reviewed subopcodes 31–40 (WaitSemaphores, SignalSemaphore, DestroySemaphore, CreateFence, GetFenceStatus, WaitForFence, ResetFence, DestroyFence, DestroyResource, SelectEvents) against synchronization, queue submission, events, resource lifetime, error mapping, event/request registries, conformance vectors, and the XGE/wire-layout checker.
+
+### Finding corrected
+
+- DestroySemaphore previously described its length, XID/type errors, and lifetime blockers, but did not itself state the exact validation phase order as explicitly as DestroyFence. The normative request text and error map now require exact length → Device XID → Semaphore XID → live type/ownership/Device association → exact-identity lifetime blockers. Device Loss alone does not block logical destruction, but does not override an active blocker. Added mixed-failure vectors for Device-versus-Semaphore XID order, Device Loss, active host operations, and already-terminal waits whose replies are still queued.
+
+### Cross-document review results
+
+- WaitSemaphores WAIT_ANY/WAIT_ALL predicates, coherent snapshots, lost-wakeup prevention, timeout deadlines, first-terminal-outcome rules, disconnect cancellation, and WriteBuffer/host-signal dispatch interactions agree across synchronization, errors, conformance, and lifetime rules.
+- SignalSemaphore host/GPU Timeline reservation ordering, value monotonicity, request-order execution, WriteBuffer exception, Device-loss handling, and ASYNC_ERROR origin/token rules remain consistent with QueueSubmit and event definitions.
+- Fence creation, status query, wait, reset, and destruction agree on exact request/reply layouts, status namespaces, Device-loss behavior, use generations, callback identity, and the rule that a terminal wait no longer blocks destruction merely because its reply has not yet been sent.
+- DestroyResource remains a single-XID request with explicit allowed types, dedicated synchronization destruction paths, type-specific recording/pending blockers, atomic public invalidation, and internal reference retention. No cross-chapter contradiction was found in the audited lifetime matrix.
+- SelectEvents scope fields, scope-specific masks, presentation-profile gating, XGE negotiation, error precedence, atomic per-scope replacement, unmaskable ASYNC_ERROR/DEVICE_LOST delivery, and event-mask sampling at terminal linearization points agree with the event registry and conformance vectors.
+
+### Files and commits
+
+- spec/synchronization.md: f4f7be06f27a74a5012f15d810c02e39fd940d08
+- spec/conformance.md: 089a6411e98f611b0b3539353ba1bbf0718fc5f3
+- spec/errors.md: 4331ae845e0eec2e9ca30f197bd52f7d63403844
+- tools/check-wire-layout.py: 76bcc721de50181817921514134516d8752f8022
+
+### Verification and remaining open points
+
+- GitHub status and workflow-run queries for 76bcc721de50181817921514134516d8752f8022 returned empty collections. This is not evidence of a passing CI run.
+- The static checker, wire vectors, and Python suite have not been executed in this environment. Run python3 tools/check-wire-layout.py && python3 tests/test_wire_vectors.py and the full Python test suite on the current branch tip; report the exact SHA and output.
+- Runtime validation remains outstanding for real host/GPU semaphore interaction, Fence reuse under delayed callbacks, event-mask/DestroyDevice/completion races, and live X11/XGE delivery.
+- Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding. No implementation ownership or shared-helper edits should be inferred from the spec audit.
+- Next: final cross-request freeze review across subopcodes 1–40 and presentation-profile 41–47, including registry/error/conformance/checker drift and implementation-readiness checklist closure.
