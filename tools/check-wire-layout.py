@@ -2817,9 +2817,9 @@ def check_presentation_profile(c: Check) -> None:
               "An `IMAGE_RELEASED` event is queued exactly when" in event_docs.get("IMAGE_RELEASED", "") and
               "queue mask bit 2" in event_docs.get("IMAGE_RELEASED", ""),
               "IMAGE_RELEASED: internal release cardinality and conditional event delivery must be explicit")
-    c.require("unique terminal outcome, whether `SUCCESS` or a failure status" in event_docs.get("PRESENTATION_COMPLETE", ""),
+    c.require("unique internal terminal outcome, whether `SUCCESS` or a failure status" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "PRESENTATION_COMPLETE: event definition must cover both successful and failed terminal outcomes")
-    c.require("unique internal terminal outcome of each accepted presentation operation" in event_docs.get("PRESENTATION_COMPLETE", "") and
+    c.require("unique internal terminal outcome, whether `SUCCESS` or a failure status, of each accepted presentation operation" in event_docs.get("PRESENTATION_COMPLETE", "") and
               "After `DestroyDevice` has been processed successfully, no new events" in event_docs.get("PRESENTATION_COMPLETE", "") and
               "queue mask bit 3" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "PRESENTATION_COMPLETE: terminal outcome, queue mask, and DestroyDevice suppression must be explicit")
