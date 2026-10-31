@@ -698,3 +698,8 @@ These additions do not change the QueueSubmit request wire formula or any opcode
 The latest branch tip `415e02e10e489fc4eab5697debb2f23c127a3cb8` completed workflow run [41234267087](https://github.com/metux/xav-design/actions/runs/41234267087) successfully. All steps passed: wire-layout/XGE validation (4,754 checks), Timeline semaphore regressions, full Python suite (675 tests), and required-check audit. This includes the compute-entry queue-family rule, descriptor-set bounds/layout compatibility, ordered command-buffer binding context, fresh state on every replay, and zero-count/empty QueueSubmit semantics.
 
 Remaining implementation acceptance gates: runtime Vulkan validation of queue-family command support, descriptor/pipeline-layout compatibility and dispatch state; runtime callback/reference-retirement behavior; X11/XGE interoperability. Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding in this coordination file.
+### Recording-context chunk atomicity clarification — 2026-10-31
+
+Clarified that entries within a `CommandBufferData` chunk are evaluated in wire order against a tentative copy of the current recording context, and the context commits only with the entire accepted chunk. A valid bind earlier in a rejected chunk cannot leak into the previously accepted recording context. Added the matching conformance vector and checker guard.
+
+Commits: spec/command-recording.md `ec1d978a73d34cf7d30cc0863ce6f7aa76d9a8a1`; spec/conformance.md `6805c30913a4b2c1d3b10843c4a153f65b252f69`; tools/check-wire-layout.py `7b286420a1d0e0813033bb9d30ee3443f442bfbd`. Exact-tip CI pending.
