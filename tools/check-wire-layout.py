@@ -282,7 +282,7 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"WaitSemaphores` MUST NOT synchronously block the X11 request dispatcher", sync) is not None,
               "synchronization: host waits must not block later signals or submissions on the same connection")
     c.require(re.search(r"`WaitForFence` MUST NOT synchronously block the X11 request dispatcher", sync) is not None
-              and "a later `QueueSubmit` carrying that Fence can make the wait complete" in sync
+              and "a later `QueueSubmit` carrying the Fence can make the wait complete" in sync
               and "issue an infinite `WaitForFence` before a later `QueueSubmit` on the same connection" in read("spec/conformance.md"),
               "WaitForFence: nonzero waits must register asynchronously and allow later same-connection submissions")
     c.require(re.search(r"The timeout deadline starts when the wait request is taken for execution and continues to run", sync) is not None,
