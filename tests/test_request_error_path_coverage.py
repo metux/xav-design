@@ -1821,6 +1821,14 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         conformance = self.conformance
         self.assertIn("A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`", command)
         self.assertIn("Required allocation of command-buffer object/storage or retained resource references", errors)
+        error_section = errors.split("### `CommandPool` and `CommandBufferData`", 1)[1].split("### `CMD_PUSH_CONSTANTS`", 1)[0]
+        phases = (
+            "Without CREATE, the Buffer must then be in `RECORDING`",
+            "After Buffer-state and all resource-dependent semantic checks pass",
+            "failure returns `ALLOCATION_FAILED` before commit",
+        )
+        positions = [error_section.index(phase) for phase in phases]
+        self.assertEqual(positions, sorted(positions))
         self.assertIn("For CREATE, no command-buffer XID or pool-child entry is published", command)
         self.assertIn("append/FINAL preserve the prior recording", errors)
         self.assertIn("**`CommandBufferData` allocation rollback:**", conformance)
