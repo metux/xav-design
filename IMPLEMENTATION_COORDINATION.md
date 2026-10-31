@@ -403,3 +403,23 @@ Test correction commit: `tests/test_presentation_lifecycle_contract.py` 746ba80a
 The branch tip `0bbb543faf2ab1046d8a1729ca845bf86bd22a70` completed workflow run [41233370197](https://github.com/metux/xav-design/actions/runs/41233370197) successfully. Every required step passed: checker syntax, request/reply/XGE validation (4,754 checks), Timeline semaphore regressions, full Python suite (**675 tests, OK**), and required-check presence audit. This supersedes the intermediate failed runs caused by the checker wording mismatch and one stale lifecycle-test expectation; both were corrected without weakening normative requirements.
 
 The presentation wire reply layouts remain unchanged. Remaining acceptance gates are runtime X11/XGE interoperability and Vulkan WSI/backend lifecycle validation. Phase 1 ship confirmations and a named shared integration-interface owner are still outstanding in the blackboard.
+## Request group 24–30 audit — command-pool/recording and queue/synchronization boundary — 2026-10-31
+
+Reviewed subopcodes 24–30 (`CreateCommandPool`, `DestroyCommandPool`, `ResetCommandBuffer`, `CommandBufferData`, `QueueSubmit`, `CreateSemaphore`, `GetSemaphoreCounterValue`) across command recording, queue submission, synchronization, error precedence, resource lifetime, registries, and conformance.
+
+### Normative gap corrected
+
+The command-pool rule said only `CMD_DISPATCH` required a COMPUTE-capable queue family. However, the registry defines IDs 1–4 as compute command entries: `CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH`, and `CMD_PUSH_CONSTANTS`. Binding a compute pipeline/set or issuing compute-stage push constants into a command buffer from a non-COMPUTE family was not explicitly rejected. The common resource-dependent validation rule now requires COMPUTE for every entry ID 1–4, including chunks with no dispatch. Presentation copy ID 5 retains its separate GRAPHICS/COMPUTE/TRANSFER rule. Pool creation itself remains permitted for any requested queue family; empty/non-compute command buffers retain the documented family-local submission path.
+
+Added error mapping and conformance vectors for each of the four compute entries on a non-COMPUTE family, with valid resources; require `BadMatch`, no chunk/reference append, and `DEVICE_LOST` precedence after valid identity checks. The checker now cross-checks the common rule, error mapping, and all-entry conformance vector.
+
+Commits: spec/command-recording.md updated (latest command-recording commit recorded in the branch history); spec/errors.md `04978de064f6fb52780d5dbe6e160488a52600b1`; spec/conformance.md `54581d42bbccd84e4c759379b2b6579a3833ae9a`; tools/check-wire-layout.py `db35fc5b8d29e999885026bdbd0e3a4894520c86`.
+
+### Cross-checks with no further changes in this pass
+
+- Command Pool creation uses requested `queue_count > 0` only; it does not invent a command-buffer-support flag. Destroy/Reset/CommandBufferData pool identity and child-XID ordering are serialized consistently.
+- `CommandBufferData` structural/scalar/XID/type/ownership/Device/buffer-state/resource-compatibility/preparation phases agree with the central error map; ABORT remains the only post-loss logical exception and is bound to the exact parent Pool.
+- `QueueSubmit` count formula, 16-bit count fields, checked total length, token scope/uniqueness, XID order, type-dependent semaphore values, wait-stage support, mutable-state order, all-or-nothing acceptance, destruction races, and callback-generation/reservation rules remain mutually consistent in this pass.
+- `CreateSemaphore`'s mandatory Timeline feature is backed by the logical-Device baseline. `GetSemaphoreCounterValue` correctly returns an X11 `DEVICE_LOST` error with no reply after loss, while its Binary-type `BadMatch` is later in precedence; conformance covers both.
+
+Exact-tip CI for the newly added compute-entry capability rule is pending. Runtime Vulkan validation must still confirm queue-family command support and callback/lifetime behavior.
