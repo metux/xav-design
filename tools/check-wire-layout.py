@@ -428,6 +428,7 @@ def check_reason_code_registry(c: Check) -> None:
     c.require("append-only" in registry.lower() and "MUST NOT be renumbered" in registry,
               "device reason-code registry must explicitly be append-only and prohibit renumbering")
     events = read("spec/events.md")
+    conformance = read("spec/conformance.md")
     event_registry = read("registries/event-types.md")
     for source_name, source in (("spec/events.md", events),
                                 ("registries/event-types.md", event_registry)):
