@@ -1097,13 +1097,17 @@ def check_request_document_coverage(c: Check) -> None:
         and "Ziel-Pipeline-XID (`BadIDChoice`)" in read("spec/shaders-pipelines.md"),
         "error mapping: CreateComputePipeline must define device-state and atomic creation behavior",
     )
+    create_pool_errors = errors.split("### `CreateCommandPool`", 1)[1].split("### `CommandPool`", 1)[0]
+    create_pool_recording = read("spec/command-recording.md")
     c.require(
-        "### `CreateCommandPool`" in errors
-        and "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in errors
-        and "backend allocation failure results in `ALLOCATION_FAILED`" in errors
-        and "On rejection, the pool XID remains unallocated" in errors
-        and "Creation is atomic: on any failure, the pool XID remains unallocated" in read("spec/command-recording.md"),
-        "error mapping: CreateCommandPool must define device-state and atomic creation behavior",
+        "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in create_pool_errors
+        and "backend allocation failure results in `ALLOCATION_FAILED`" in create_pool_errors
+        and "On rejection, the pool XID remains unallocated" in create_pool_errors
+        and "Creation is atomic: on any failure, the pool XID remains unallocated" in create_pool_recording
+        and "This is the sole queue-family eligibility test for pool creation" in create_pool_recording
+        and "no separate command-buffer-support capability or flag" in create_pool_recording
+        and create_pool_errors.index("An unavailable or lost Device") < create_pool_errors.index("A `queue_family_index`"),
+        "error mapping: CreateCommandPool must order Device state before the sole requested-queue-family eligibility test",
     )
     command_recording = read("spec/command-recording.md")
     c.require(
@@ -1303,6 +1307,12 @@ def check_request_document_coverage(c: Check) -> None:
         and "alle Kind-Command-Buffer auf `PENDING` prüfen (`INVALID_SYNCHRONIZATION_STATE`)" in errors
         and "Ablehnung ist atomar" in errors,
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
+    )
+    c.require(
+        "DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`" in read("spec/command-recording.md")
+        and "**`DestroyCommandPool` versus child operations:**" in conformance
+        and "no child may be published after its parent pool is invalidated" in conformance,
+        "command-pool lifecycle: pool destruction must serialize with child creation, recording, reset, and submission",
     )
     c.require(
         re.search(r"Device loss alone does not prevent `DestroyCommandPool`", read("spec/command-recording.md"), re.I) is not None
