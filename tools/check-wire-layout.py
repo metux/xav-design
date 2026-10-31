@@ -574,6 +574,21 @@ def check_other_numeric_registries(c: Check) -> None:
         and "two queue families on one Device" in conformance,
         "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
     )
+    synchronization = read("spec/synchronization.md")
+    c.require(
+        "validate `semaphore_type` and the type-dependent `initial_value` (`BadValue`" in synchronization
+        and "CreateSemaphore type and type-dependent initial-value syntax remains before target-XID collision" in conformance
+        and "unknown `semaphore_type`" in conformance
+        and "BINARY` with nonzero `initial_value`" in conformance
+        and "backend allocation failure only after Device identity/ownership and Device-state checks pass" in conformance,
+        "CreateSemaphore: type-dependent syntax, target-XID precedence, and allocation rollback need conformance coverage",
+    )
+    c.require(
+        "Device-state check and counter snapshot are serialized against Device Loss" in synchronization
+        and "complete counter value before publication or the complete value after publication" in conformance
+        and "no normal reply" in conformance,
+        "GetSemaphoreCounterValue: snapshot linearization and Device-loss reply suppression must remain explicit",
+    )
     command_recording = read("spec/command-recording.md")
     decisions = read("DECISIONS.md")
     c.require(
