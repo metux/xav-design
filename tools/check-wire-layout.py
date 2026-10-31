@@ -1309,7 +1309,7 @@ def check_request_document_coverage(c: Check) -> None:
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
     c.require(
-        "DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`" in read("spec/command-recording.md")
+        "`DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`" in read("spec/command-recording.md")
         and "**`DestroyCommandPool` versus child operations:**" in conformance
         and "no child may be published after its parent pool is invalidated" in conformance,
         "command-pool lifecycle: pool destruction must serialize with child creation, recording, reset, and submission",
