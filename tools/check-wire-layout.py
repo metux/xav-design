@@ -2804,6 +2804,11 @@ def check_presentation_profile(c: Check) -> None:
     c.require("queue mask bit 2" in event_docs.get("IMAGE_RELEASED", "") and
               "queue mask bit 3" in event_docs.get("PRESENTATION_COMPLETE", ""),
               "presentation events: queue mask must be sampled independently at each event milestone")
+    c.require("both presentation milestones (presentation terminalization and image release) MUST be ordered by one shared serialized server state" in events
+              and "if `SelectEvents` linearizes first, the new mask governs the later milestone" in events
+              and "if `DestroyDevice` successfully linearizes first, no new event for its destroyed Device XID is queued" in events
+              and "Race a successful `SelectEvents` mask replacement against each milestone in both serialized orders" in conformance,
+              "presentation event delivery: SelectEvents and DestroyDevice must serialize with both independent presentation milestones")
     c.require("Accepted presentation failures set the internal terminal status" in presentation_spec and
               "Queue mask bit 3" in presentation_spec and "Queue mask bit 2" in presentation_spec,
               "presentation: internal terminal cleanup and independently masked event delivery must be explicit")
