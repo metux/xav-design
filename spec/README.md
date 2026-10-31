@@ -22,6 +22,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 - [Request catalogue and wire-contract audit](request-audit.md) — reviewed inventory, cross-chapter consistency result, and remaining exclusions.
 - [Specification freeze checklist](freeze-checklist.md) — normative and automated evidence gates for declaring the protocol contract frozen.
 - [Post-freeze normative delta audit](../audit/post-freeze-normative-delta-audit-2026-10-30.md) — cross-chapter review of the later Timeline, host-wait, WriteBuffer, and presentation corrections.
+- [Current request audit](request-audit.md) — includes the Phase 4–5 reviews of requests 24–40 and the latest error/conformance deltas.
 
 ## Central registries
 
@@ -34,7 +35,7 @@ The chapters are ordered here; filenames intentionally do not repeat chapter num
 
 ## Editorial conventions
 
-- Follow the [Specification Language and Layout Style Guide](style-guide.md): all normative and explanatory text in specification chapters and registries is English, and request field tables use the canonical headers and structure defined there.
+- Follow the [Specification Language and Layout Style Guide](style-guide.md): new or materially revised normative text should be English; clear legacy German passages may remain until translation is useful, provided language mixing does not make a requirement ambiguous. Request field tables use the canonical headers and structure defined there.
 - Define generic framing, byte order, padding, and length rules once in the wire-protocol chapter.
 - Request descriptions focus on request-specific payload and behavior; describe generic headers once.
 - Do not list offsets when field order and explicit types make them unambiguous.
