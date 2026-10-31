@@ -141,7 +141,7 @@ Transitions:
 - Creation → `UNSIGNALED`
 - accepted submission with a fence → `PENDING`
 - open `AcquireNextImage` registration with a supplied Fence → `PENDING`
-- successful submission completion or successful pending acquisition → `SIGNALED`
+- immediate successful acquisition with a supplied Fence, successful submission completion, or successful pending acquisition → `SIGNALED`
 - asynchronous submission execution failure → `FAILED`
 - non-success terminalization of a pending acquisition (`NOT_READY` is never registered; `TIMEOUT`, `OUT_OF_DATE`, `SURFACE_LOST`, or `DEVICE_LOST`) → `UNSIGNALED`
 - reset from `SIGNALED` or `FAILED` → `UNSIGNALED`
