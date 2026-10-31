@@ -486,15 +486,27 @@ class GoldenSelectEventsTests(unittest.TestCase):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
         self.assertIn(
-            "Processing a successful `SelectEvents`, successful processing of `DestroyDevice`, and a Submission's terminal transition—including the decision about its terminal event—MUST be ordered by one shared serialized server state",
+            "Processing a successful `SelectEvents`, successful processing of `DestroyDevice`, a Submission's terminal transition, and both presentation milestones",
             events,
         )
         self.assertIn(
-            "A successful `SelectEvents` request takes effect at its linearization point; submission completion evaluates the Queue mask then in effect.",
+            "MUST be ordered by one shared serialized server state.",
             events,
         )
         self.assertIn(
-            "if submission completion linearizes first and queues the event, that queued event remains unaffected; if `DestroyDevice` successfully linearizes first, no new event for its destroyed Device XID is queued.",
+            "A successful `SelectEvents` request takes effect at its linearization point.",
+            events,
+        )
+        self.assertIn(
+            "Submission completion evaluates the Queue mask then in effect; presentation terminalization independently samples Queue mask bit 3, and image release independently samples Queue mask bit 2",
+            events,
+        )
+        self.assertIn(
+            "The transition and the decision to queue or suppress its event in the X11 output stream are atomic with respect to both `SelectEvents` and `DestroyDevice`",
+            events,
+        )
+        self.assertIn(
+            "if a milestone linearizes first and queues its event, that queued event remains unaffected by a later mask change or Device destruction; if `SelectEvents` linearizes first, the new mask governs the later milestone; if `DestroyDevice` successfully linearizes first, no new event for its destroyed Device XID is queued.",
             events,
         )
         self.assertIn(
