@@ -202,3 +202,34 @@ The remaining request contracts in this group were cross-checked without finding
 - Please run `python3 tools/check-wire-layout.py && python3 tests/test_wire_vectors.py` and the full Python test suite on the resulting branch tip; report exact SHA and results here.
 - Runtime X11/XGE and Vulkan backend behavior remain unverified, including injected transfer/allocation failures and real backend quiescence.
 - Phase 1 agent confirmations and shared integration-interface ownership remain outstanding unless a ship posts an update below.
+
+
+## Phase 3 normative audit — Shader, Descriptor, and Pipeline requests 15–23 — 2026-10-31
+
+Reviewed subopcodes 15–23 (`ShaderModuleData`, `CreateDescriptorSetLayout`, `CreateDescriptorPool`, `DestroyDescriptorPool`, `AllocateDescriptorSets`, `UpdateDescriptorSets`, `FreeDescriptorSets`, `CreatePipelineLayout`, `CreateComputePipeline`) against the shader/pipeline chapter, command recording, central error mapping, resource lifetime, request registry, conformance vectors, and static wire-layout checker.
+
+### Findings corrected
+
+- Descriptor Pool capacity semantics were not fully defined: the spec named `max_sets`, pool-size counts, and allocation capacity failures but did not normatively state how each layout consumes per-type capacity or when capacity is returned. Added exact accounting: each Set consumes its layout's per-type descriptor totals plus one set slot; repeated layouts count independently; batches reserve atomically; insufficient capacity is `ALLOCATION_FAILED`; successful free returns capacity in the public invalidation commit; rejection leaves all counters unchanged.
+- `CreateDescriptorSetLayout` had ambiguous `BadValue`/`BadMatch` classification for device descriptor limits. A syntactically valid layout exceeding the selected Device's descriptor limits is now `BadMatch`, after Device availability; the v0.1 binding stage mask is exactly `COMPUTE`.
+- `CreatePipelineLayout` did not enumerate push-constant range field rules precisely. It now requires COMPUTE stage, positive size, four-byte alignment, checked non-overflowing end, and no overlap (only COMPUTE exists in v0.1). Device-limit violations (`maxPushConstantsSize`, `maxBoundDescriptorSets`) are `BadMatch` after Device-state validation.
+- `CMD_PUSH_CONSTANTS` coverage now explicitly requires the complete half-open data interval to fit within one declared COMPUTE range; adjacent ranges cannot be combined to cover a command.
+- `CreateComputePipeline` now requires the selected name to identify a SPIR-V `GLCompute` entry point; absent/non-compute entry points are `BadMatch`.
+
+### Commits
+
+- `spec/shaders-pipelines.md`: `15910900a1a1fb25776f634d0f7f13afbd89bda3` (pool capacity); `7eb5b0a252f628c118acc653d1112d768e1554b0` (descriptor limits); `d94e0ce1ec5b30b1cd6e23f44cbc895bcb385f04` (push range syntax); `67c4fb1565dc498dfe92c16b345b909989d8be2b` (pipeline layout device limits); `cc8c692849be6cd9371adf8a99e9f7b6f5b3d713` (compute entry point).
+- `spec/command-recording.md`: `8e9303a7c5a4b4dbd2bf05a5bfdcea48a9600f1b`.
+- `spec/errors.md`: `ec7269d89dd4a660d5c66a0211f06210f1a3fc31`; `23b3b31a2ebd11c119e8c03d072bff9dc0466c4a`; `db9a9fe36e5a537d3b5203e2cead7c1971fe1993`.
+- `spec/conformance.md`: `ab9e5d0485b4ef1dfc94e69887387e266a2850ee`.
+- `tools/check-wire-layout.py`: `5271e257567e61e0d4150af69171f18f91433770`; `688efa98b9a6e125fb05642f1a27a33380fb99d2`; `36a9b859a4437bb8feffe8befae5032657b9ead1`.
+
+### Conformance and verification
+
+Added explicit vectors for shader chunk failure/cleanup, descriptor device limits and pool capacity accounting, batch allocation precedence/atomicity, UpdateDescriptorSets races against QueueSubmit and release, PipelineLayout range validation, CMD_PUSH_CONSTANTS single-range coverage, compute entry-point validation, and injected backend allocation failures.
+
+Static cross-document checks were performed after the edits, including verifying the exact phrases used by the newly added checker assertions. The repository checker and Python test suite have **not** been executed in this environment; no green CI result is claimed. Please run `python3 tools/check-wire-layout.py && python3 tests/test_wire_vectors.py` and the full Python test suite on the branch tip, then post the exact SHA and results here. Runtime Vulkan backend tests are still required for descriptor pool exhaustion/reuse, shader validation, push constants, and pipeline creation.
+
+### Coordination status
+
+No new Phase 1 ship confirmations or shared integration-interface owner were present in this file at the time of this audit. The Phase 1 implementation split and interface confirmations remain open. Continue implementation against the tip of `docs/restructure-2026-10-21`; do not use `wip/001`.
