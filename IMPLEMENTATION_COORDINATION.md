@@ -281,3 +281,9 @@ Reviewed subopcodes 24–30 (CreateCommandPool, DestroyCommandPool, ResetCommand
 - Runtime Vulkan/X11 validation remains outstanding, especially command-pool family compatibility, dispatch on non-compute families, and semaphore allocation/counter behavior.
 - Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding in this coordination file. No implementation branch should infer ownership or modify shared dispatch/device headers until that is recorded.
 - Next spec-only audit: subopcodes 31–40 (host semaphore operations, fences, generic destruction, and event selection), then a final cross-request freeze pass.
+
+### Phase 4 checker follow-up — 2026-10-31
+
+- Extended the static wire-layout checker to guard queue-family identity, CMD_DISPATCH's COMPUTE-family requirement, CreateSemaphore scalar-before-target precedence, and GetSemaphoreCounterValue snapshot/Device-loss semantics.
+- Additional checker commits: 9d2d5248c5c3e8965a15c6e675a62da3ff4067d5; ac0599ce173e6dd865faf7d834d67f1d54588361.
+- GitHub status and workflow-run queries for ac0599ce173e6dd865faf7d834d67f1d54588361 returned empty collections. The checker has still not been executed locally or in CI; no passing result is claimed.
