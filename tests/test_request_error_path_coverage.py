@@ -923,7 +923,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             self.assertIn(phrase, tests)
         for phrase in (
             "Model both callback orders explicitly",
-            "preserve an already committed terminal SUCCESS",
+            "For order (b), insert those lifecycle transitions before release: preserve terminal SUCCESS",
             "A duplicate release callback is mutation-free",
         ):
             self.assertIn(phrase, conformance)
