@@ -158,6 +158,12 @@ The following individual mappings are retained as explicit error summaries and M
 - A syntactically valid binding count that exceeds the selected Device's descriptor limits returns `BadMatch`, after the Device-state phase and before backend allocation.
 - Every error leaves the Descriptor Set Layout uncreated; partial results are not permitted.
 
+### `CreateDescriptorPool`, `AllocateDescriptorSets`, and descriptor capacity
+
+- `CreateDescriptorPool` retains its ordered length, scalar, target-XID, Device-XID, ownership, Device-state, and backend-allocation phases. Pool Size entries with zero counts, duplicate or unsupported descriptor types, or nonzero reserved fields return `BadValue`.
+- `AllocateDescriptorSets` returns `BadMatch` for a Pool/Layout Device or resource compatibility mismatch. Exhausted `max_sets`, a missing pool-size type, or insufficient remaining descriptor capacity for the complete requested batch returns `ALLOCATION_FAILED`. Capacity is computed by summing each allocated Set Layout's descriptor counts by type; every Set in the batch contributes independently. No capacity or Set is committed unless the entire batch succeeds.
+- Successful `FreeDescriptorSets` returns the selected Sets' logical set and per-type capacity to the Pool in the same serialized commit that invalidates their XIDs. A rejected free changes neither capacity nor membership. `DestroyDescriptorPool` invalidates all child Sets and ends the Pool's capacity accounting atomically.
+
 ### `CreateCommandPool`
 
 - An incorrect request length results in `BadLength`.
