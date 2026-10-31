@@ -169,8 +169,8 @@ The following individual mappings are retained as explicit error summaries and M
 - An incorrect request length results in `BadLength`.
 - Unknown pool flags or nonzero reserved bits result in `BadValue`; an invalid or already allocated pool XID results in `BadIDChoice`.
 - An unknown or non-live Device XID results in `BadValue`; a live resource of the wrong type or foreign Device ownership results in `BadMatch`.
-- A `queue_family_index` that does not identify a family for which this Device requested at least one queue (`queue_count > 0`) results in `BadValue`. This is the sole queue-family eligibility test for pool creation: all Vulkan queue families support command-buffer submission, and v0.1 defines no separate command-buffer-support capability or flag. `CMD_DISPATCH` recorded into a pool whose family lacks the `COMPUTE` queue flag is incompatible and returns `BadMatch` during resource-dependent `CommandBufferData` validation.
-- An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively; backend allocation failure results in `ALLOCATION_FAILED`.
+- An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`, respectively.
+- A `queue_family_index` that does not identify a family for which this Device requested at least one queue (`queue_count > 0`) results in `BadValue`. This is the sole queue-family eligibility test for pool creation: all Vulkan queue families support command-buffer submission, and v0.1 defines no separate command-buffer-support capability or flag. `CMD_DISPATCH` recorded into a pool whose family lacks the `COMPUTE` queue flag is incompatible and returns `BadMatch` during resource-dependent `CommandBufferData` validation. Backend allocation failure results in `ALLOCATION_FAILED`.
 - On rejection, the pool XID remains unallocated.
 
 ### `CommandPool` and `CommandBufferData`
