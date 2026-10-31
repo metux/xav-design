@@ -566,9 +566,9 @@ def check_other_numeric_registries(c: Check) -> None:
     command_pool_contract = read("spec/command-recording.md")
     queue_submit_contract = read("spec/queue-submission.md")
     c.require(
-        "queue_family_index` that is not configured for the logical Device with a positive requested queue count results in `BadValue`" in descriptor_errors
-        and "Every queue family exposed by Vulkan supports command-buffer submission" in command_pool_contract
-        and "v0.1 defines no separate command-buffer-support flag" in command_pool_contract
+        "A `queue_family_index` that does not identify a family for which this Device requested at least one queue" in descriptor_errors
+        and "every queue family exposed by Vulkan supports command-buffer submission" in command_pool_contract
+        and "v0.1 defines no separate command-buffer-support capability or flag" in command_pool_contract
         and "`COMPUTE` bit in the Queue Flag Registry" in command_pool_contract
         and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
         and "A command buffer created from one queue family MUST NOT be submitted to a queue from another family" in queue_submit_contract
@@ -1101,7 +1101,7 @@ def check_request_document_coverage(c: Check) -> None:
     create_pool_recording = read("spec/command-recording.md")
     c.require(
         "An unavailable or lost Device results in `DEVICE_UNAVAILABLE` or `DEVICE_LOST`" in create_pool_errors
-        and "backend allocation failure results in `ALLOCATION_FAILED`" in create_pool_errors
+        and "Backend allocation failure results in `ALLOCATION_FAILED`" in create_pool_errors
         and "On rejection, the pool XID remains unallocated" in create_pool_errors
         and "Creation is atomic: on any failure, the pool XID remains unallocated" in create_pool_recording
         and "This is the sole queue-family eligibility test for pool creation" in create_pool_recording
@@ -1311,7 +1311,7 @@ def check_request_document_coverage(c: Check) -> None:
     c.require(
         "`DestroyCommandPool` MUST also serialize atomically with `CommandBufferData`" in read("spec/command-recording.md")
         and "**`DestroyCommandPool` versus child operations:**" in conformance
-        and "no child may be published after its parent pool is invalidated" in conformance,
+        and "no child can be published after its parent pool is invalidated" in conformance,
         "command-pool lifecycle: pool destruction must serialize with child creation, recording, reset, and submission",
     )
     c.require(
