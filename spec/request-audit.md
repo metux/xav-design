@@ -592,3 +592,8 @@ Files/commits:
 - tools/check-wire-layout.py: bf841861b86b380d9d8717c587cbe52b6795a91a and e5f464e3631eb6073819112f6912180687c0d795
 
 Source-level checks confirm the explicit pair semantics and all three transfer-capable queue-family cases are represented in normative text and conformance. The checker has not been executed; runtime Vulkan queue-family behavior remains an implementation acceptance test.
+### Presentation lifecycle addendum — Device Loss versus DestroySwapchain — 2026-10-31
+
+A further lifecycle review found that Device Loss invalidates Swapchain/image usability but, unlike successful `DestroyDevice`, does not itself invalidate public resource XIDs. The presentation request error map did not say whether `DestroySwapchain` remains a permitted logical cleanup operation on a still-live lost Device. Clarified that Device Loss alone does not reject `DestroySwapchain`; it may succeed after all recording/pending/presentation/backend-access blockers have cleared. It remains atomically rejected while backend access may still reference the image. Successful `DestroyDevice` is distinct: its cascade already invalidates the Swapchain XID, so a later destroy returns `BadValue`. Added conformance and checker assertions.
+
+Commits: spec/presentation.md dc5c1a21d5bcb58558848fdd6ecb9c0775411438; spec/errors.md a231e737df4d01edb52c79562a995a5651512e01; spec/conformance.md 28151e73d42bbc716142d05012bfe84990e4289b; tools/check-wire-layout.py 0b4a966f0e846a8220100267e3bed89bde13dacd.
