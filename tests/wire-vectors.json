@@ -657,6 +657,32 @@
         "timeout_ns": 72623859790382848
       },
       "wire_hex": "900000062400000001020304a0b0c0d00102030405060700"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-little-endian",
+      "byte_order": "little",
+      "request": "GetPhysicalDeviceMemoryProperties",
+      "major_opcode": 144,
+      "subopcode": 7,
+      "flags": 0,
+      "length_bytes": 12,
+      "fields": {
+        "physical_device_xid": 16909060
+      },
+      "wire_hex": "900003000700000004030201"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-big-endian",
+      "byte_order": "big",
+      "request": "GetPhysicalDeviceMemoryProperties",
+      "major_opcode": 144,
+      "subopcode": 7,
+      "flags": 0,
+      "length_bytes": 12,
+      "fields": {
+        "physical_device_xid": 16909060
+      },
+      "wire_hex": "900000030700000001020304"
     }
   ]
 }

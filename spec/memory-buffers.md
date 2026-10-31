@@ -36,16 +36,23 @@ For the initial compute test:
 
 ## 5.2 `GetPhysicalDeviceMemoryProperties`
 
-Request: physical-device XID at offset 8; total length 12 bytes. This request explicitly uses a physical-device XID, not a logical-device XID.
+Request:
+
+- Offset 8: Physical-Device-XID
+- Total length: 12 bytes
+
+This request explicitly uses a physical-device XID, not a logical-device XID.
 
 The reply contains the following after the 32-byte header:
 
-- `CARD32 memory_type_count`
-- `CARD32 memory_heap_count`
-- `CARD32 memory_properties_flags`
-- `CARD32 reserved = 0`
-- `MEMORYTYPEINFO[]`
-- `MEMORYHEAPINFO[]`
+| Offset | Type | Field |
+|---:|---|---|
+| 8 | `CARD32` | `memory_type_count` |
+| 12 | `CARD32` | `memory_heap_count` |
+| 16 | `CARD32` | `memory_properties_flags` |
+| 20 | `CARD32` | `reserved = 0` |
+| 32 | `MEMORYTYPEINFO[]` | memory type records |
+| `32 + 8 * memory_type_count` | `MEMORYHEAPINFO[]` | memory heap records |
 
 `MEMORYTYPEINFO` is 8 bytes:
 

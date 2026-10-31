@@ -134,6 +134,8 @@ def encode_request(vector: dict) -> bytes:
             fields["device_xid"], fields["buffer_xid"], fields["memory_xid"],
             fields["memory_offset"],
         ))
+    elif request == "GetPhysicalDeviceMemoryProperties":
+        data.extend(struct.pack(endian + "I", fields["physical_device_xid"]))
     else:
         raise ValueError(f"no reference encoder for {request}")
 
@@ -256,6 +258,10 @@ class GoldenWireVectorTests(unittest.TestCase):
                            (16, "XID", "memory_xid"), (20, "CARD64", "memory_offset")],
                 "length": 28,
             },
+            "GetPhysicalDeviceMemoryProperties": {
+                "fields": [(8, "XID", "physical_device_xid")],
+                "length": 12,
+            },
             "CreateCommandPool": {
                 "fields": [(8, "XID", "device_xid"), (12, "XID", "command_pool_xid"),
                            (16, "CARD32", "queue_family_index"), (20, "CARD32", "flags")],
@@ -339,6 +345,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "semaphore_xid": "Semaphore-XID",
                             "command_buffer_xid": "Command-Buffer-XID",
                             "fence_xid": "Fence-XID",
+                            "physical_device_xid": "Physical-Device-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     else:
@@ -424,6 +431,9 @@ class GoldenWireVectorTests(unittest.TestCase):
                 (12, "XID", "buffer_xid", "I"),
                 (16, "XID", "memory_xid", "I"),
                 (20, "CARD64", "memory_offset", "Q"),
+            ],
+            "GetPhysicalDeviceMemoryProperties": [
+                (8, "XID", "physical_device_xid", "I"),
             ],
             "CreateCommandPool": [
                 (8, "XID", "device_xid", "I"),
@@ -524,6 +534,7 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "semaphore_xid": "Semaphore-XID",
                             "command_buffer_xid": "Command-Buffer-XID",
                             "fence_xid": "Fence-XID",
+                            "physical_device_xid": "Physical-Device-XID",
                         }[field]
                         prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
                     self.assertTrue(
