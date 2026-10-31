@@ -3141,6 +3141,7 @@ def check_presentation_profile(c: Check) -> None:
                   f"presentation copy command: missing bounds/alignment/ID contract: {contract}")
     c.require("TRANSFER_DST" in formats and "TRANSFER_SRC" in copy_command,
               "presentation copy path must specify destination and source usage")
+    copy_errors = read("spec/errors.md")
     queue_flags_registry = read("registries/queue-flags.md")
     c.require("at least one of `GRAPHICS`, `COMPUTE`, or `TRANSFER` MUST be set" in copy_command
               and "a family with none of these three capabilities is incompatible" in copy_command
