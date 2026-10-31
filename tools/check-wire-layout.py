@@ -3439,7 +3439,7 @@ def check_command_buffer_reference_retirement(c: Check) -> None:
     c.require(
         "A required server-side allocation failure in this preparation phase returns `ALLOCATION_FAILED`" in queue
         and "all fallible preparation allocations succeed" in queue
-        and "QueueSubmit`: required submission/reservation/reference preparation allocation fails" in errors
+        and "`QueueSubmit`: required submission/reservation/reference preparation allocation fails" in errors
         and "Inject allocation failure while preparing the submission record" in read("spec/conformance.md"),
         "QueueSubmit: pre-acceptance allocation failure must be synchronous and fully atomic",
     )
