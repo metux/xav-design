@@ -1,14 +1,18 @@
 # Project status
 
-## Current specification-finalization status — 2026-10-30
+## Current specification-finalization status — 2026-10-31
 
-The v0.1 protocol specification is frozen; implementation work may now begin against the compute-baseline profile. The optional presentation-capable profile remains separately gated. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains a separately gated profile and is not implied by compute-only support.
+The current branch is in final specification review; it is **not yet re-frozen**. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains separately gated and is not implied by compute-only support.
 
-The working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The specification-content freeze is commit `0e0ced45371a2548031c4b9d1370c1dead69d724`, verified by [CI run 41109805393](https://github.com/metux/xav-design/actions/runs/41109805393): 4,721 wire-layout/documentation checks, 72 Timeline regression tests, all 673 Python tests, and the required-check presence audit passed. The final cross-document audit and post-checkpoint normative delta audit are recorded in [the final audit](audit/final-cross-document-specification-audit-2026-10-30.md) and [the delta audit](audit/post-freeze-normative-delta-audit-2026-10-30.md).
+The authoritative working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The last fully CI-verified specification checkpoint is the historical commit `0e0ced45371a2548031c4b9d1370c1dead69d724`, verified by [CI run 41109805393](https://github.com/metux/xav-design/actions/runs/41109805393): 4,721 wire-layout/documentation checks, 72 Timeline regression tests, all 673 Python tests, and the required-check presence audit passed on that exact commit. Later Phase 3–5 audits corrected requests 15–40 and updated their error/conformance/checker contracts. GitHub currently reports no status checks or workflow runs for those later commits, and the test suite has not been rerun on the current branch tip. The historical CI result must not be treated as verification of the current branch.
 
-**Editorial note (not a freeze blocker):** some normative prose remains German while other chapters are English. This will be addressed only where mixed-language wording impairs precision. The final cross-document pass found no unresolved v0.1 wire-design decision or missing request assignment. The normative and automated freeze gates are recorded in the [freeze checklist](spec/freeze-checklist.md).
+**Recent specification work:** subopcodes 15–23 had descriptor capacity, pipeline-limit, push-constant, and compute-entry-point contracts tightened; subopcodes 24–30 now explicitly bind command buffers to queue-family identity and require COMPUTE for CMD_DISPATCH; subopcodes 31–40 now have explicit DestroySemaphore validation order and additional lifecycle/error conformance vectors. A stale physical-device property count in the request audit was corrected from four to five. The [request audit](spec/request-audit.md), [freeze checklist](spec/freeze-checklist.md), and [coordination board](IMPLEMENTATION_COORDINATION.md) record the changes and remaining verification.
 
-**Open implementation acceptance gates (not specification-design gaps):** live X11/XGE interoperability; end-to-end compute execution and lifecycle behavior against a real Vulkan backend; and presentation runtime validation if that profile is implemented. Static fixtures and reference models do not prove these runtime properties.
+**Editorial note (not a freeze blocker):** some existing normative prose remains German while other chapters are English. Translation is deferred unless mixed-language wording makes a requirement ambiguous; content correctness takes priority.
+
+**Open specification-finalization tasks:** complete the final cross-request drift pass, obtain implementation-agent ship confirmations and a named owner for shared integration interfaces on the coordination board, then run the checker, wire vectors, full Python suite, and required-check presence audit on one exact current-tip commit.
+
+**Open implementation acceptance gates (separate from specification completeness):** live X11/XGE interoperability; end-to-end compute execution and lifecycle behavior against a real Vulkan backend; and presentation runtime validation if that profile is implemented. Static fixtures and reference models do not prove these runtime properties.
 
 ## Live XGE validation plan — 2026-10-23
 
@@ -22,7 +26,7 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 **Project:** XAverius — an X11 extension for network-transparent Vulkan access  
 **Specification baseline:** v0.1 consolidated protocol specification  
 **Initial implementation target:** Xvfb, compute-only  
-**Status:** Specification frozen at content commit `0e0ced45371a2548031c4b9d1370c1dead69d724`; see [spec/freeze-checklist.md](spec/freeze-checklist.md).
+**Status:** Historical CI-verified checkpoint at `0e0ced45371a2548031c4b9d1370c1dead69d724`; current branch not yet re-frozen. See [spec/freeze-checklist.md](spec/freeze-checklist.md).
 
 ## Working rules
 
@@ -38,8 +42,10 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 
 ## Immediate next steps
 
-- Begin the initial compute-baseline implementation against the frozen protocol contract.
-- Keep live X11/XGE interoperability and real Vulkan backend acceptance tracked as implementation gates; do not infer them from static CI.
+- Finish the final cross-request specification drift review and resolve any remaining normative inconsistencies before implementation handoff.
+- Obtain Phase 1 ship confirmations and the shared integration-interface owner in IMPLEMENTATION_COORDINATION.md.
+- Rerun the static wire-layout checker, golden wire vectors, full Python suite, and required-check presence audit on the exact final freeze commit.
+- Keep live X11/XGE interoperability and real Vulkan backend acceptance tracked as separate implementation gates; do not infer them from static CI.
 - Keep the automated wire-layout checker and golden vectors as static contract guards. A passing run does not prove runtime interoperability or full Vulkan conformance.
 - Numeric registries and request assignments are already centrally checked; add values append-only and do not renumber existing assignments.
 - The shared `DEVICE_STATUS_CHANGED.reason_code` / `DEVICE_LOST.reason_code` registry is defined in [reason-codes](registries/reason-codes.md) and is not an open design item.
