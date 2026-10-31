@@ -574,23 +574,23 @@ def check_other_numeric_registries(c: Check) -> None:
         and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in descriptor_errors
         and "CMD_DISPATCH" in descriptor_errors
         and "family lacks the `COMPUTE` flag" in descriptor_errors
-        and "Command-entry queue capability" in conformance
-        and "two queue families on one Device" in conformance,
+        and "Command-entry queue capability" in descriptor_conformance
+        and "two queue families on one Device" in descriptor_conformance,
         "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
     )
     synchronization = read("spec/synchronization.md")
     c.require(
         "validate `semaphore_type` and the type-dependent `initial_value` (`BadValue`" in synchronization
-        and "CreateSemaphore type and type-dependent initial-value syntax remains before target-XID collision" in conformance
-        and "unknown `semaphore_type`" in conformance
-        and "BINARY` with nonzero `initial_value`" in conformance
-        and "backend allocation failure only after Device identity/ownership and Device-state checks pass" in conformance,
+        and "CreateSemaphore type and type-dependent initial-value syntax remains before target-XID collision" in descriptor_conformance
+        and "unknown `semaphore_type`" in descriptor_conformance
+        and "BINARY` with nonzero `initial_value`" in descriptor_conformance
+        and "backend allocation failure only after Device identity/ownership and Device-state checks pass" in descriptor_conformance,
         "CreateSemaphore: type-dependent syntax, target-XID precedence, and allocation rollback need conformance coverage",
     )
     c.require(
         "Device-state check and counter snapshot are serialized against Device Loss" in synchronization
-        and "complete counter value before publication or the complete value after publication" in conformance
-        and "no normal reply" in conformance,
+        and "complete counter value before publication or the complete value after publication" in descriptor_conformance
+        and "no normal reply" in descriptor_conformance,
         "GetSemaphoreCounterValue: snapshot linearization and Device-loss reply suppression must remain explicit",
     )
     command_recording = read("spec/command-recording.md")
