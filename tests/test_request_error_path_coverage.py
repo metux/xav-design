@@ -1815,6 +1815,17 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("type-dependent initial value", errors)
         self.assertIn("create flags and reserved fields", errors)
 
+    def test_command_buffer_data_allocation_failure_is_atomic(self):
+        command = (ROOT / "spec/command-recording.md").read_text(encoding="utf-8")
+        errors = self.errors
+        conformance = self.conformance
+        self.assertIn("A server/backend allocation failure in this preparation phase returns `ALLOCATION_FAILED`", command)
+        self.assertIn("Required allocation of command-buffer object/storage or retained resource references", errors)
+        self.assertIn("CREATE leaves no command-buffer XID or pool-child entry", command)
+        self.assertIn("append/FINAL preserve the prior recording", errors)
+        self.assertIn("**`CommandBufferData` allocation rollback:**", conformance)
+        self.assertIn("ABORT performs no allocation", conformance)
+
     def test_no_unassigned_reset_command_pool_request_in_conformance(self):
         self.assertNotIn("`ResetCommandPool`", self.conformance)
         self.assertIn("`ResetCommandBuffer`", self.conformance)
