@@ -3498,6 +3498,51 @@ def check_read_buffer_ordering_and_lifecycle(c: Check) -> None:
     )
 
 
+def check_shader_descriptor_pipeline_contract(c: Check) -> None:
+    """Keep subopcodes 15–23 capacity, range, and entry-point rules cross-document consistent."""
+    shaders = read("spec/shaders-pipelines.md")
+    command = read("spec/command-recording.md")
+    errors = read("spec/errors.md")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "Normative Pool-Kapazität" in shaders
+        and "max_sets" in shaders
+        and "per-type descriptor capacity" in shaders
+        and "unzulängliche Set-/Typ-Kapazität" in shaders
+        and "ALLOCATION_FAILED" in shaders
+        and "Successful `FreeDescriptorSets`" in shaders,
+        "Descriptor pools: set and per-type capacities must be accounted atomically and returned on free",
+    )
+    c.require(
+        "stage_flags` value is exactly `0x00000001`" in shaders
+        and "descriptor-count/device-limit checks (`BadMatch`" in shaders
+        and "A syntactically valid binding count that exceeds the selected Device's descriptor limits returns `BadMatch`" in errors,
+        "CreateDescriptorSetLayout: compute stage and Device descriptor-limit classification must be normative",
+    )
+    c.require(
+        "`stage_flags` MUSS exakt `COMPUTE` sein" in shaders
+        and "Ranges mit überlappenden Byte-Intervallen sind unzulässig" in shaders
+        and "offset` und `size` MÜSSEN Vielfache von vier sein" in shaders
+        and "maxPushConstantsSize` überschreitet" in shaders
+        and "maxBoundDescriptorSets`" in shaders
+        and "The complete half-open byte interval" in command,
+        "CreatePipelineLayout/CMD_PUSH_CONSTANTS: range alignment, overlap, limits, and single-range coverage must agree",
+    )
+    c.require(
+        "Ein fehlender Entry-Point oder ein Entry-Point mit anderem Execution Model" in shaders
+        and "Execution Model ungleich `GLCompute` `BadMatch`" in errors
+        and "CreateComputePipeline entry point" in conformance,
+        "CreateComputePipeline: selected entry point must exist and use GLCompute",
+    )
+    c.require(
+        "Shader, Descriptor, and Pipeline request vectors (subopcodes 15–23)" in conformance
+        and "Descriptor Pool capacity accounting" in conformance
+        and "UpdateDescriptorSets versus submission/release" in conformance
+        and "CreatePipelineLayout push-constant ranges" in conformance
+        and "Create/allocate atomicity under backend failure" in conformance,
+        "Conformance: shader, descriptor, and pipeline requests need explicit capacity, race, range, and failure vectors",
+    )
+
 def main() -> int:
     c = Check()
     check_events(c)
@@ -3516,6 +3561,7 @@ def main() -> int:
     check_create_default_device_precedence(c)
     check_wait_semaphore_semantics(c)
     check_read_buffer_ordering_and_lifecycle(c)
+    check_shader_descriptor_pipeline_contract(c)
     check_request_specific_precedence_exceptions(c)
     check_request_limit_contract(c)
     check_local_markdown_links(c)
