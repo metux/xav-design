@@ -124,6 +124,11 @@ def check_events(c: Check) -> None:
     c.require(re.search(r"After an event.*new_status = REMOVED.*MUST NOT send another.*DEVICE_STATUS_CHANGED", doc_sections.get("DEVICE_STATUS_CHANGED", ""), re.I) is not None,
               "DEVICE_STATUS_CHANGED: REMOVED must prohibit subsequent status events for that XID")
     c.require(re.search(r"After emitting.*new_status = REMOVED.*MUST NOT emit another.*DEVICE_STATUS_CHANGED", registry, re.I) is not None,
+    device_contract = read("spec/devices.md")
+    c.require("Physical-Device status (`AVAILABLE`, `UNAVAILABLE`, or `REMOVED`)" in device_contract
+              and "A status transition alone does not mutate an already-created logical Device or synthesize `DEVICE_LOST`" in device_contract
+              and "existing logical Device must not be marked lost solely by the status event" in read("spec/conformance.md"),
+              "Physical-Device status changes must be distinct from logical Device-Loss transitions")
               "event registry: REMOVED must prohibit subsequent status events for that XID")
     c.require(re.search(r"heap_index.*UINT32_MAX.*less than.*memory_heap_count", doc_sections.get("DEVICE_MEMORY_PRESSURE", ""), re.I) is not None,
               "DEVICE_MEMORY_PRESSURE: heap_index must be a valid heap index or UINT32_MAX")
