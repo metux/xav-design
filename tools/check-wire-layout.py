@@ -2793,6 +2793,7 @@ def check_presentation_profile(c: Check) -> None:
               "presentation events: compute-only profile must reject presentation queue mask bits")
     event_docs = dict(sections(events))
     presentation_spec = read("spec/presentation.md")
+    conformance = read("spec/conformance.md")
     lifetime = read("spec/resource-lifetime.md")
     c.require("This release transition may occur at most once per accepted presentation operation" in event_docs.get("IMAGE_RELEASED", "") and
               "An `IMAGE_RELEASED` event is queued exactly when" in event_docs.get("IMAGE_RELEASED", "") and
@@ -3002,7 +3003,6 @@ def check_presentation_profile(c: Check) -> None:
               "each supplied synchronization object is signaled exactly once" in presentation,
               "AcquireNextImage: optional semaphore/fence combination and success signaling must be explicit")
     lifetime = read("spec/resource-lifetime.md")
-    conformance = read("spec/conformance.md")
     errors = read("spec/errors.md")
 
     # Keep the provisional presentation error map cross-checked against the
