@@ -708,3 +708,24 @@ Commits: spec/command-recording.md `ec1d978a73d34cf7d30cc0863ce6f7aa76d9a8a1`; s
 The exact branch tip `6f35e8c0eddb0753ce8cdb8debc14c5980d7a224` completed workflow run [41234397601](https://github.com/metux/xav-design/actions/runs/41234397601) successfully. All steps passed: checker syntax, request/reply/XGE validation, Timeline regressions, complete Python suite (675 tests), and required-check audit. This includes the final chunk-atomic recording-context clarification and the fresh-empty-context-per-replay rule.
 
 Group 24–30 audit is complete at the normative/conformance/static-check level. Runtime Vulkan behavior remains an implementation acceptance requirement. Phase 1 agent ship confirmations/shared integration-interface owner remain outstanding.
+## Request group 31–40 audit — host synchronization, fences, generic destruction, and event selection — 2026-10-31
+
+Reviewed `WaitSemaphores`, `SignalSemaphore`, `DestroySemaphore`, `CreateFence`, `GetFenceStatus`, `WaitForFence`, `ResetFence`, `DestroyFence`, `DestroyResource`, and `SelectEvents` against synchronization state, Device Loss/DestroyDevice, resource lifetime, event masks/XGE layouts, and conformance.
+
+### Findings corrected
+
+1. `WaitForFence` defined an open registration and atomic completion/timeout/lifecycle races, but unlike `WaitSemaphores` did not explicitly prohibit blocking the X11 request dispatcher. This could deadlock when the later request on the same connection is the `QueueSubmit` that carries the Fence. It now MUST register asynchronously and continue processing later requests; the timeout continues independently, including while an earlier `WriteBuffer` is pending and a dependent QueueSubmit is deferred. Added same-connection and deferred-upload conformance vectors and a checker guard.
+2. `DestroySemaphore` referred generically to accepted queue waits and other host operations, but the precise relationship to presentation waits and pending `AcquireNextImage` signal reservations was implicit, and the conformance matrix did not test both. The blocker now explicitly includes `QueueSubmit`/`QueuePresent` waits, `QueueSubmit` signals, open `WaitSemaphores` registrations, and open `AcquireNextImage` signal reservations. It also states that presentation terminal/release milestones alone do not keep the Semaphore alive after its own wait/backend holds have retired. Added both commit-order and post-terminalization vectors; aligned the English/German error maps and resource-lifetime chapter.
+3. `DEVICE_STATUS_CHANGED` described Physical-Device availability/removal, while the effect on already-created logical Devices was unspecified. Clarified that Physical-Device status governs discovery/property/new-device eligibility and does not itself synthesize logical `DEVICE_LOST`; existing logical Devices follow their own backend Device-Loss state machine. `REMOVED` remains final for the Physical-Device XID and blocks future creation while stored metadata remains queryable. Added status-versus-logical-loss conformance and checker guard.
+
+Commits: spec/synchronization.md `5e313e6b27cccb96bc1bc8821a7d7f70948382e2`; spec/conformance.md `a7f4a08bda0c1ad192ec9ca3777b8d51361da1a9` and `e4b5155a2528b2fe77ccd2e74f87564508266ceb`; spec/errors.md `70dc682943f098dd9b16bee40c123f701a685803`, `a4bc5f0d063d164f8651ccbf63b993535b75d176`, `e9ea44564a2a24c3320f2f0810a117a89f6eea0d`; spec/resource-lifetime.md `9438044045fe131670a55b9dae3af835569449d5`; spec/devices.md `cd9f3eecd33ae02d791de7a8d608e3f53ff88082`; spec/conformance.md `1a32c6d3c8fb87820bd5f7594df7233c5fe0d95a`; tools/check-wire-layout.py `71fdb0daf225280f592d977d28e1cb7bc97fb709` and `d61882aa7da37fd232211a0692ccda4706509e0a`.
+
+### Cross-checks with no further change in this pass
+
+- WAIT_ANY/WAIT_ALL coherent snapshots, zero/finite/infinite timeout, first-terminal-wins races, counter publication order, and disconnect cancellation remain consistent.
+- Host SignalSemaphore reservation/order rules, including the WriteBuffer progress exception, remain consistent with QueueSubmit deferred dependency rules.
+- Fence state transitions across QueueSubmit and AcquireNextImage, WaitForFence/GetFenceStatus/ResetFence precedence, and exact-identity DestroyFence blockers agree.
+- DestroyResource's allowed/excluded resource types, logical cleanup after Device Loss, command-buffer invalidation, and deferred internal reference release agree with the resource-lifetime rules.
+- SelectEvents scope fields, profile-specific mask bits, XGE negotiation, atomic replacement, DestroyDevice mask removal, and milestone-time event-mask sampling remain consistent with the XGE event layouts.
+
+Exact-tip CI is pending for these changes. Runtime X11/XGE event delivery and Vulkan synchronization/callback acceptance remain implementation gates.
