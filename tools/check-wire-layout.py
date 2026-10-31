@@ -571,7 +571,7 @@ def check_other_numeric_registries(c: Check) -> None:
         and "`COMPUTE` bit in the Queue Flag Registry" in command_pool_contract
         and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
         and "command buffer from one queue family MUST NOT be submitted" in queue_submit_contract
-        and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in descriptor_errors
+        and "ein Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in descriptor_errors
         and "CMD_DISPATCH" in descriptor_errors
         and "family lacks the `COMPUTE` flag" in descriptor_errors
         and "Command-entry queue capability" in descriptor_conformance
@@ -581,7 +581,7 @@ def check_other_numeric_registries(c: Check) -> None:
     synchronization = read("spec/synchronization.md")
     c.require(
         "validate `semaphore_type` and the type-dependent `initial_value` (`BadValue`" in synchronization
-        and "CreateSemaphore type and type-dependent initial-value syntax remains before target-XID collision" in descriptor_conformance
+        and "unknown `semaphore_type` and, separately, `BINARY` with nonzero `initial_value` with an occupied target XID" in descriptor_conformance
         and "unknown `semaphore_type`" in descriptor_conformance
         and "BINARY` with nonzero `initial_value`" in descriptor_conformance
         and "backend allocation failure only after Device identity/ownership and Device-state checks pass" in descriptor_conformance,
@@ -1288,8 +1288,8 @@ def check_request_document_coverage(c: Check) -> None:
     )
 
     c.require(
-        "`DestroyCommandPool`: falsche Länge `BadLength`" in errors
-        and "mindestens ein pending Kind-Command-Buffer `INVALID_SYNCHRONIZATION_STATE`" in errors
+        "`DestroyCommandPool`: normative Präzedenz: exakte 16-Byte-Länge (`BadLength`)" in errors
+        and "alle Kind-Command-Buffer auf `PENDING` prüfen (`INVALID_SYNCHRONIZATION_STATE`)" in errors
         and "Ablehnung ist atomar" in errors,
         "error mapping: DestroyCommandPool must define length, pending-child, and atomicity outcomes",
     )
@@ -3149,7 +3149,7 @@ def check_presentation_profile(c: Check) -> None:
     copy_errors = read("spec/errors.md")
     queue_flags_registry = read("registries/queue-flags.md")
     c.require("at least one of `GRAPHICS`, `COMPUTE`, or `TRANSFER` MUST be set" in copy_command
-              and "a family with none of these three capabilities is incompatible" in copy_command
+              and "A family with none of these three capabilities is incompatible" in copy_command
               and "effective transfer-command support is present when any of `GRAPHICS`, `COMPUTE`, or `TRANSFER` is set" in queue_flags_registry,
               "presentation copy command: transfer capability must include Vulkan implicit graphics/compute support")
     c.require("lacking all of `GRAPHICS`, `COMPUTE`, and `TRANSFER` returns `BadMatch`" in copy_errors
