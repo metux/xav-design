@@ -26,7 +26,7 @@ The latest exact specification-content candidate is `7ffd9c5b17cc706d0810d6c8fdb
 - [x] Local document links and anchors resolve.
 - [x] No unresolved v0.1 design decision remains hidden in prose. Anything intentionally deferred is labelled as future-version work or implementation-time conformance.
 
-## Automated evidence at the historical checkpoint (rerun on the final freeze commit)
+## Automated evidence
 
 - [x] `tools/check-wire-layout.py` passed against the historical candidate commit named in the audit record; this does not cover later Phase 3–5 commits.
 - [x] The complete Python test suite passed against that historical candidate, including golden wire vectors in both byte orders, negative request/reply cases, state models, callback identity, device-loss cleanup, semaphore reservation races, and presentation-profile contracts; this does not cover later Phase 3–5 commits.
