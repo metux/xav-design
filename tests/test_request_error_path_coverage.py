@@ -570,7 +570,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertIn("`QueueSubmit`", section)
         for outcome in (
             "BadLength", "BadValue", "BadMatch", "DEVICE_UNAVAILABLE",
-            "DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE", "DEPENDENCY_FAILED",
+            "DEVICE_LOST", "INVALID_SYNCHRONIZATION_STATE", "DEPENDENCY_FAILED", "ALLOCATION_FAILED",
         ):
             with self.subTest(outcome=outcome):
                 self.assertIn(outcome, queue)
@@ -594,6 +594,10 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         ):
             with self.subTest(atomicity=phrase):
                 self.assertIn(phrase, queue + section)
+        self.assertIn("A required server-side allocation failure in this preparation phase returns `ALLOCATION_FAILED`", queue)
+        self.assertIn("all fallible preparation allocations succeed", queue)
+        self.assertIn("Inject allocation failure while preparing the submission record", section)
+        self.assertIn("no terminal or `ASYNC_ERROR` event", section)
         # The normative six-phase order and the finer mutable-state order
         # must be represented by explicit mixed-failure conformance vectors.
         phases = (
