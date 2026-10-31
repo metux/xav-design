@@ -1131,7 +1131,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for request_section, ordered_phases in (
             (layout, (
                 "(1) exakte, count-konsistente Wire-Länge",
-                "(2) reservierte Felder, nicht unterstützte Stage-Bits",
+                "(2) feldlokale Range-Syntax",
                 "(3) Ziel-XID",
                 "(4) Device- und Set-Layout-XIDs in Wire-Reihenfolge",
                 "(5) Ressourcentyp, Ownership und Cross-Device-Zuordnung",
@@ -1140,7 +1140,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
             )),
             (pipeline, (
                 "(1) exakte Wire-Länge",
-                "(2) positiven Entry-Point-Count",
+                "(2) `entry_point_length > 0`",
                 "(3) Ziel-Pipeline-XID",
                 "(4) Device-, Pipeline-Layout- und Shader-Module-XIDs in Wire-Reihenfolge",
                 "(5) Ressourcentyp, Ownership und Cross-Device-Zuordnung",
