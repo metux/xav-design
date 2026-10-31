@@ -372,3 +372,14 @@ Run 41205782690 on exact SHA `9c7c8e876458cb22226d161228d29e2a2ce6df5e` complete
 Latest audit commits after the last fully green exact SHA: `events.md` 40c331a8fdbc410580fd08af9ecb469ad63e0299; `conformance.md` b2ce60e430ef182c9be90d67c65257905f856f96; `tools/check-wire-layout.py` 281dafdc268250c0d46896951fbfded871133fb9; `synchronization.md` 67b6e2ef97197aec724840bb4403133306a742e5; request-audit note 45b23c00e3afd659f080535af6ae8cc2ff0f91c4.
 
 Remaining: run the full required workflow on the latest exact branch tip after these deltas; finish the presentation wire-reply/event/lifecycle cross-review; collect implementation-agent ship confirmations and a named shared integration-interface owner. Runtime X11/XGE and Vulkan WSI/queue-family validation remains a separate implementation acceptance gate.
+### Phase 6 completion addendum — presentation milestone/event ordering — 2026-10-31
+
+A cross-contract contradiction was found in the release-first callback order. The event registry semantics sample the IMAGE_RELEASED queue mask and delivery eligibility at the image-release linearization point, and later mask/Device changes cannot retract an already queued event. Some lifecycle prose and conformance vectors nevertheless implied that any later resize/Surface loss/Device loss invalidated the image and suppressed IMAGE_RELEASED even when release had already committed.
+
+Corrected the contract: invalidation before release prevents the release milestone/event; release first while reusable commits its release record and event decision permanently. A later lifecycle transition can invalidate the image/Swapchain for subsequent use but cannot retract the event or rewrite the separate terminal status. Clarified `PRESENTATION_FAILED` and `DestroyDevice` races. Updated tests to cover both milestone orders; no wire ABI values changed.
+
+Files: spec/presentation.md, spec/events.md, spec/conformance.md, tools/check-wire-layout.py, tests/test_presentation_lifecycle_contract.py, tests/test_request_error_path_coverage.py.
+
+Verification: exact branch tip `3ba8641fc8457446ed55aacfabeac4806ad5d3cd`; workflow run 41219811208 SUCCESS. All workflow steps passed, including request/reply/XGE layout validation, Timeline semaphore regressions, all 673 Python tests, and required-check audit.
+
+Still open: runtime X11/XGE and Vulkan WSI validation, especially callback ordering, backend image-reuse guarantees, and disconnect/Device-loss generation isolation. Phase 1 agent ship confirmations and a named shared integration-interface owner remain outstanding.
