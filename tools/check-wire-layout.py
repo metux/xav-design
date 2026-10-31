@@ -568,6 +568,9 @@ def check_other_numeric_registries(c: Check) -> None:
         and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
         and "command buffer from one queue family MUST NOT be submitted" in queue_submit_contract
         and "a Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in errors
+        and "CMD_DISPATCH" in descriptor_errors
+        and "family lacks the `COMPUTE` flag" in descriptor_errors
+        and "Command-entry queue capability" in conformance
         and "two queue families on one Device" in conformance,
         "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
     )
