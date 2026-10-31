@@ -10,7 +10,7 @@ The authoritative working branch is `docs/restructure-2026-10-21`; `master` rema
 
 **Editorial note (not a freeze blocker):** some existing normative prose remains German while other chapters are English. Translation is deferred unless mixed-language wording makes a requirement ambiguous; content correctness takes priority.
 
-**Open specification-finalization tasks:** complete the final cross-request drift pass, obtain implementation-agent ship confirmations and a named owner for shared integration interfaces on the coordination board, then run the checker, wire vectors, full Python suite, and required-check presence audit on one exact current-tip commit.
+**Specification status:** the final cross-request audit covers all 47 requests. Exact candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576` passed [CI run 41235437766](https://github.com/metux/xav-design/actions/runs/41235437766): 4,759 static checks, 72 Timeline regressions, 675 Python tests, and required-check audit. Normative content is freeze-ready. **Remaining coordination task:** obtain implementation-agent Phase 1 ship confirmations and name the shared integration-interface owner on the coordination board.
 
 **Open implementation acceptance gates (separate from specification completeness):** live X11/XGE interoperability; end-to-end compute execution and lifecycle behavior against a real Vulkan backend; and presentation runtime validation if that profile is implemented. Static fixtures and reference models do not prove these runtime properties.
 
