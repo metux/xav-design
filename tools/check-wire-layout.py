@@ -3458,6 +3458,46 @@ def check_wait_semaphore_semantics(c: Check) -> None:
     )
 
 
+def check_read_buffer_ordering_and_lifecycle(c: Check) -> None:
+    """Keep the readback snapshot boundary ahead of every later writer and lifecycle transition."""
+    memory = read("spec/memory-buffers.md")
+    devices = read("spec/devices.md")
+    lifetime = read("spec/resource-lifetime.md")
+    errors = read("spec/errors.md")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "both later `QueueSubmit` requests and later `WriteBuffer` requests" in memory
+        and "MUST be deferred until the snapshot has been captured" in memory
+        and "begin a transfer" in memory
+        and "processed in their original request order" in memory,
+        "ReadBuffer: all later write paths must remain behind the stable snapshot boundary",
+    )
+    c.require(
+        "successful stable-snapshot capture and completion of required host-visibility/cache operations" in memory
+        and "If Device Loss commits first" in memory
+        and "if `DestroyDevice` commits first" in memory
+        and "A later Device Loss or `DestroyDevice` MUST NOT rewrite a success already committed" in memory,
+        "ReadBuffer: snapshot commit and Device lifecycle terminalization must have one deterministic winner",
+    )
+    c.require(
+        "Any open `ReadBuffer` operation for this Device is likewise terminalized" in devices
+        and "A `ReadBuffer` operation belonging to a disconnected connection is cancelled" in lifetime
+        and "if its stable snapshot has not already been committed" in lifetime,
+        "ReadBuffer: Device destruction and disconnect must preserve snapshot terminalization and backend references",
+    )
+    c.require(
+        "If Device Loss or `DestroyDevice` terminalizes an open read before snapshot commit" in errors
+        and "Client disconnect before snapshot commit cancels the read without a reply" in errors,
+        "ReadBuffer: error mapping must include lifecycle and disconnect outcomes",
+    )
+    c.require(
+        "stabilisiert seinen Snapshot vor späteren `QueueSubmit`- und `WriteBuffer`-Schreibzugriffen" in conformance
+        and "Rennen zwischen Snapshot-Commit, Device Loss und `DestroyDevice`" in conformance
+        and "Client-Disconnect vor Snapshot-Commit" in conformance,
+        "ReadBuffer: conformance must cover later writers, lifecycle races, and disconnect",
+    )
+
+
 def main() -> int:
     c = Check()
     check_events(c)
@@ -3475,6 +3515,7 @@ def main() -> int:
     check_create_device_precedence(c)
     check_create_default_device_precedence(c)
     check_wait_semaphore_semantics(c)
+    check_read_buffer_ordering_and_lifecycle(c)
     check_request_specific_precedence_exceptions(c)
     check_request_limit_contract(c)
     check_local_markdown_links(c)
