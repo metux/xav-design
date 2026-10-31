@@ -2995,6 +2995,8 @@ def check_presentation_profile(c: Check) -> None:
         "`CreateSurface`: invalid/already allocated target `surface_xid` is `BadIDChoice`",
         "`DestroySurface`: unknown/non-live Surface XID is `BadValue`",
         "`GetSurfaceCapabilities`: unknown/non-live Device or Surface XID is `BadValue`",
+        "resolve `device_xid` and then `surface_xid` in request-field order",
+        "resolve `device_xid`, then `swapchain_xid`, then each wait-semaphore XID in array order",
         "A Surface is not Device-owned, so querying the same live Surface with different owned Devices is valid",
         "nonexistent queue-family/index or image index outside the Swapchain is `BadValue`",
         "`CreateSwapchain`: invalid/already allocated target `swapchain_xid` is `BadIDChoice`",
@@ -3025,6 +3027,10 @@ def check_presentation_profile(c: Check) -> None:
               and "valid but non-present-capable Device/Surface pair and require `UNSUPPORTED_CONFIGURATION`, not `BadMatch`" in conformance
               and "Surface is owned by the X11 connection, not by a logical Device" in presentation,
               "CreateSwapchain: a valid non-presentable Device/Surface pair is unsupported configuration, not cross-device BadMatch")
+    c.require("require the Device `BadValue` first" in conformance
+              and "require the Swapchain `BadValue`" in conformance
+              and "require the first unknown wait in array order" in conformance,
+              "presentation conformance: GetSurfaceCapabilities and QueuePresent must pin XID resolution order")
     c.require("owned by the requesting X11 client connection" in presentation and
               "a live Window owned by another X11 client, or a live `InputOnly`/otherwise non-drawable Window, is `BadMatch`" in errors and
               "a live Window owned by another X11 client or a live `InputOnly`/otherwise non-drawable Window with `BadMatch`" in conformance,
