@@ -573,8 +573,11 @@ def check_other_numeric_registries(c: Check) -> None:
         and "parent Command Pool's `queue_family_index` MUST equal" in queue_submit_contract
         and "A command buffer created from one queue family MUST NOT be submitted to a queue from another family" in queue_submit_contract
         and "ein Command Buffer stammt aus einem Command Pool einer anderen Queue-Family" in descriptor_errors
-        and "CMD_DISPATCH" in descriptor_errors
-        and "family lacks the `COMPUTE` flag" in descriptor_errors
+        and "Any compute command entry (`CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH`, or `CMD_PUSH_CONSTANTS`, IDs 1–4)" in descriptor_errors
+        and "all compute command entries (`CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH`, and `CMD_PUSH_CONSTANTS`, IDs 1–4)" in command_pool_contract
+        and "every supported compute command entry (IDs 1–4)" in command_pool_contract
+        and "independently record each compute entry ID 1–4" in descriptor_conformance
+        and "A non-dispatch/empty command buffer" not in descriptor_conformance
         and "Command-entry queue capability" in descriptor_conformance
         and "two queue families on one Device" in descriptor_conformance,
         "command pools/submission: queue-family identity and per-entry capability rules must be explicit and cross-checked",
