@@ -233,3 +233,16 @@ Static cross-document checks were performed after the edits, including verifying
 ### Coordination status
 
 No new Phase 1 ship confirmations or shared integration-interface owner were present in this file at the time of this audit. The Phase 1 implementation split and interface confirmations remain open. Continue implementation against the tip of `docs/restructure-2026-10-21`; do not use `wip/001`.
+
+
+### Phase 3 audit addendum — 2026-10-31
+
+The final consistency pass also made the `CMD_PUSH_CONSTANTS` error mapping explicit: malformed stage/length/alignment/padding and arithmetic overflow are `BadValue`; a range not contained in one declared COMPUTE range or exceeding `maxPushConstantsSize` is `BadMatch`. The `CreateComputePipeline` scalar check now names `entry_point_length > 0` (there is no entry-point count field). Descriptor-limit text now names the Vulkan limits used for storage-buffer totals.
+
+Additional commits:
+- `spec/shaders-pipelines.md`: `579b00c810eb37d372437b6d74e27fb9c0c1012b`, `c00b9cd90aaced76762b01e02efb4e6dd9909c0b`.
+- `spec/errors.md`: `43a238f18d0cdd6dc8942a02d2d37b5e57ed0bfd`.
+- `spec/conformance.md`: `62e50fc8f9469d7fe7d92e603eb7447b9dd3de52`.
+- `tools/check-wire-layout.py`: `a1e92971573aef0e5ab6ed9e4e0c3396d3635cf3`, `249562ee82a79e33e650db74b231670d89097f81`.
+
+Post-edit static source checks confirm that the newly added checker assertions' expected strings are present in the normative and conformance files. This is not a test execution; no CI pass is claimed.
