@@ -3525,8 +3525,11 @@ def check_shader_descriptor_pipeline_contract(c: Check) -> None:
         and "offset` und `size` MÜSSEN Vielfache von vier sein" in shaders
         and "maxPushConstantsSize` überschreitet" in shaders
         and "maxBoundDescriptorSets`" in shaders
-        and "The complete half-open byte interval" in command,
-        "CreatePipelineLayout/CMD_PUSH_CONSTANTS: range alignment, overlap, limits, and single-range coverage must agree",
+        and "The complete half-open byte interval" in command
+        and "arithmetic overflow of `offset + data_length` returns `BadValue`" in errors
+        and "not contained in one declared COMPUTE range" in errors
+        and "covered only by the union of two adjacent declared ranges" in conformance,
+        "CreatePipelineLayout/CMD_PUSH_CONSTANTS: range alignment, overlap, limits, single-range coverage, and errors must agree",
     )
     c.require(
         "Ein fehlender Entry-Point oder ein Entry-Point mit anderem Execution Model" in shaders
