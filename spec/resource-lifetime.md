@@ -222,7 +222,7 @@ Update-after-bind und Update-unused-while-pending werden nicht angeboten.
 Successful device-wide cascading invalidation is a special rule and is not blocked by normal pending-use rejections.
 
 
-Presentation lifecycle rule: an accepted present has one serialized terminal status and one internal cleanup. A later resize, Surface loss, or Device loss cannot overwrite an already terminal status. If still pending and forced to fail by OUT_OF_DATE, SURFACE_LOST, or DEVICE_LOST, its image is invalidated and IMAGE_RELEASED is not emitted. PRESENTATION_FAILED permits IMAGE_RELEASED only after backend quiescence and confirmation that the Swapchain remains usable. Event suppression never skips internal cleanup.
+Presentation lifecycle rule: an accepted present has one serialized terminal status and one internal cleanup. A later resize, Surface loss, or Device loss cannot overwrite an already terminal status. If such a lifecycle invalidation commits before image release, the image is invalidated and `IMAGE_RELEASED` is not emitted. If image release committed first while the image and Swapchain were reusable, its release record and event decision remain final; a later lifecycle transition may invalidate the image/Swapchain for subsequent operations but cannot retract an already queued event. `PRESENTATION_FAILED` permits image release only after backend quiescence and confirmation that the Swapchain remains usable. Event suppression never skips internal cleanup.
 
 
 
