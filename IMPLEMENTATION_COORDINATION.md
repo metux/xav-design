@@ -246,3 +246,38 @@ Additional commits:
 - `tools/check-wire-layout.py`: `a1e92971573aef0e5ab6ed9e4e0c3396d3635cf3`, `249562ee82a79e33e650db74b231670d89097f81`.
 
 Post-edit static source checks confirm that the newly added checker assertions' expected strings are present in the normative and conformance files. This is not a test execution; no CI pass is claimed.
+
+## Phase 4 normative audit — Command Pools, Command Buffers, QueueSubmit, and Semaphore query requests 24–30 — 2026-10-31
+
+Reviewed subopcodes 24–30 (CreateCommandPool, DestroyCommandPool, ResetCommandBuffer, CommandBufferData, QueueSubmit, CreateSemaphore, GetSemaphoreCounterValue) against command recording, queue submission, synchronization, device queue-family properties/flags, lifetime, error mapping, conformance vectors, and the static wire-layout checker.
+
+### Findings corrected
+
+- Queue-family capability was not implementable as written. CreateCommandPool required a family that “supports command buffers”, but the XAverius queue-flag registry has only the Vulkan graphics/compute/transfer/sparse/protected bits and defines no command-buffer-support flag. The rule now requires a family configured for the logical Device with a positive requested queue count; no extra capability flag is invented. Command buffers inherit the pool's family identity.
+- QueueSubmit lacked explicit command-buffer family matching. A command buffer created from a pool for one queue family could previously be interpreted as submit-eligible on any queue of the same logical Device. The normative phase-4 association check now requires every submitted command buffer's parent pool family to equal the addressed queue family; mismatch is BadMatch, before Device-state/mutable checks and without consuming the token or reserving state.
+- Command-entry capability is distinct from pool validity. CMD_DISPATCH requires the pool family to include the COMPUTE queue flag. A family without COMPUTE may still own command buffers for entries it supports (and synchronization-only submissions), but recording CMD_DISPATCH there is BadMatch in resource-dependent CommandBufferData validation. Added error mapping and vectors, including Device Loss precedence.
+- DestroyCommandPool precedence is now explicit: exact length, Device then Pool XID in wire order, live type/ownership/device association, then all-child pending blockers; success invalidates the pool and child XIDs atomically.
+- Semaphore requests: CreateSemaphore type and type-dependent initial-value syntax remains before target-XID collision; added mixed-failure vectors for unknown type and nonzero Binary initial value against an occupied target, plus backend-allocation rollback. GetSemaphoreCounterValue remains a Device-loss X11-error query with no status reply; added counter-publication/query linearization and delayed-reply race vectors.
+
+### Files and commits
+
+- spec/command-recording.md: c3bb654f3c20dfc19a25c1d695cd96586f5062b9
+- spec/queue-submission.md: 82185b66ecf68c39e2eac0b81554b9148c3cec77
+- spec/errors.md: 61caf95d1674ee88dfd84265fb1e136ddc8430ad, 4382ac6c8206f69146cdf5df0e4edd5750d94c0f
+- spec/conformance.md: b084eae3c057bd77a54200954e4e021d3b4ffa82, 5f9602fbd85cfa5a3e660a535c22a73d2077c9b6, 0aacd422919a06e279036922146a990c19a67790
+- tools/check-wire-layout.py: 37bb22fd60341471d730d6d2d7a1945e16be737d, fa8a68a8660969ad2212d2fda431d02a4daf174a
+
+### Other review results
+
+- CommandBufferData CREATE/append/FINAL/ABORT atomicity, chunk boundaries, entry-length limits, XID order, device-loss handling, and recorded-reference epochs agree with the command-buffer lifecycle rules.
+- QueueSubmit token uniqueness/acceptance commit, resource XID order, device-loss precedence, mutable Fence/Buffer/Semaphore order, reservation rollback, callback terminalization, and serialization against destroy/release remain consistent.
+- CreateSemaphore has the exact 28-byte layout and ordered type/initial-value → target XID → Device → ownership → Device state → backend-allocation phases.
+- GetSemaphoreCounterValue has the exact 16-byte request and 32-byte reply, zero reserved bytes, Device → Semaphore XID order, ownership before Device Loss, and Device Loss before the Timeline-only type check.
+
+### Verification and remaining open points
+
+- GitHub status and workflow-run queries for the latest audit commit returned empty collections. This is not evidence of a green CI run.
+- The repository checker, wire vectors, and Python suite have not been executed in this environment. Run python3 tools/check-wire-layout.py && python3 tests/test_wire_vectors.py and the full Python test suite on the current branch tip; report exact SHA and output.
+- Runtime Vulkan/X11 validation remains outstanding, especially command-pool family compatibility, dispatch on non-compute families, and semaphore allocation/counter behavior.
+- Phase 1 ship confirmations and a named shared integration-interface owner remain outstanding in this coordination file. No implementation branch should infer ownership or modify shared dispatch/device headers until that is recorded.
+- Next spec-only audit: subopcodes 31–40 (host semaphore operations, fences, generic destruction, and event selection), then a final cross-request freeze pass.
