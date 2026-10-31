@@ -456,3 +456,8 @@ Remaining implementation acceptance gates: runtime Vulkan validation of queue-fa
 Clarified that entries within a `CommandBufferData` chunk are evaluated in wire order against a tentative copy of the current recording context, and the context commits only with the entire accepted chunk. A valid bind earlier in a rejected chunk cannot leak into the previously accepted recording context. Added the matching conformance vector and checker guard.
 
 Commits: spec/command-recording.md `ec1d978a73d34cf7d30cc0863ce6f7aa76d9a8a1`; spec/conformance.md `6805c30913a4b2c1d3b10843c4a153f65b252f69`; tools/check-wire-layout.py `7b286420a1d0e0813033bb9d30ee3443f442bfbd`. Exact-tip CI pending.
+### Exact-tip verification — command recording and QueueSubmit semantics
+
+The exact branch tip `6f35e8c0eddb0753ce8cdb8debc14c5980d7a224` completed workflow run [41234397601](https://github.com/metux/xav-design/actions/runs/41234397601) successfully. All steps passed: checker syntax, request/reply/XGE validation, Timeline regressions, complete Python suite (675 tests), and required-check audit. This includes the final chunk-atomic recording-context clarification and the fresh-empty-context-per-replay rule.
+
+Group 24–30 audit is complete at the normative/conformance/static-check level. Runtime Vulkan behavior remains an implementation acceptance requirement. Phase 1 agent ship confirmations/shared integration-interface owner remain outstanding.
