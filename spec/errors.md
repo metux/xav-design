@@ -110,6 +110,8 @@ Normative precedence: (1) exact 28-byte length (`BadLength`); (2) positive `data
 - Synchronous transfer failure: `TRANSFER_FAILED`
 - Staging allocation failure: `ALLOCATION_FAILED`
 - Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`
+- If Device Loss or `DestroyDevice` terminalizes an open read before snapshot commit: X11 error `DEVICE_LOST` or `DEVICE_DESTROYED`, respectively; a previously committed snapshot remains successful.
+- Client disconnect before snapshot commit cancels the read without a reply.
 
 ### `ShaderModuleData`
 
