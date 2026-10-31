@@ -64,7 +64,7 @@ An outdated sentence in `DECISIONS.md` incorrectly included Fence and Semaphore 
 
 ## Known exclusions and unresolved items
 1. `SelectEvents` is included as subopcode 40. Its wire layout, scope semantics, XGE negotiation prerequisite, dynamic `QueryExtension` discovery, extension-opcode range, and event framing are specified and statically checked; only implementation-level interoperability remains.
-2. The v0.1 feature-ID and device-extension registries are explicitly empty, and the physical-device property/Atom-name registry defines four properties. Their basic error mapping and conformance cases are now covered.
+2. The v0.1 feature-ID and device-extension registries are explicitly empty, and the physical-device property/Atom-name registry defines five properties. Their basic error mapping and conformance cases are now covered.
 3. Implementation-level backend conformance remains open as listed in [open issues](open-issues.md); same-queue order, no implicit cross-queue order, explicit semaphore dependencies, and the absence of fairness or bounded-latency guarantees are now specified in [queue submission](queue-submission.md). Timeout semantics for `WaitSemaphores` and `WaitForFence` now define monotonic deadlines, zero/infinite timeout behavior, terminal-state precedence, and device-loss handling. The v0.1 wait-stage mapping, queue-family compatibility rules, and invalid-mask error precedence are also explicit in [queue submission](queue-submission.md), [synchronization](synchronization.md), [error mapping](errors.md), and the conformance checklist.
 ## Host-wait error-versus-reply distinction — 2026-10-22
 
