@@ -267,6 +267,8 @@ This section defines the fixed and variable layouts for the seven presentation-p
 
 ### CreateSurface — Void, 16 bytes
 
+Total length: 16 bytes.
+
 - Offset 8: XID `surface_xid` — client-allocated target XID
 - Offset 12: XID `window_xid` — existing core X11 Window
 
@@ -274,11 +276,15 @@ On success, creates a connection-owned Surface and retains the exact internal Wi
 
 ### DestroySurface — Void, 12 bytes
 
+Total length: 12 bytes.
+
 - Offset 8: XID `surface_xid`
 
 The Device is not part of this request because Surface is connection-owned rather than Device-owned. A live Swapchain referencing the Surface causes atomic rejection.
 
 ### GetSurfaceCapabilities — Request 16 bytes; variable-length Reply
+
+Total length: 16 bytes.
 
 - Offset 8: XID `device_xid`
 - Offset 12: XID `surface_xid`
@@ -308,6 +314,8 @@ Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVIC
 
 ### CreateSwapchain — Request 48 bytes; Reply 40 bytes
 
+Total length: 48 bytes.
+
 - Offset 8: XID `device_xid`
 - Offset 12: XID `swapchain_xid` — client-allocated target XID
 - Offset 16: XID `surface_xid`
@@ -323,11 +331,15 @@ Reply payload at offset 32 is two CARD32 values: `status`, `actual_image_count`;
 
 ### DestroySwapchain — Void, 12 bytes
 
+Total length: 12 bytes.
+
 - Offset 8: XID `swapchain_xid`
 
 Device ownership is inferred from the resource. Destruction is rejected while pending acquisition, queue work, accepted presentation, or backend access can still use its images. Acquired-but-idle images are invalidated with the Swapchain and do not independently prevent destruction.
 
 ### AcquireNextImage — Request 32 bytes; Reply 44 bytes
+
+Total length: 32 bytes.
 
 - Offset 8: XID `device_xid`
 - Offset 12: XID `swapchain_xid`
