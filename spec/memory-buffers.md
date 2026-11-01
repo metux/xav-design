@@ -36,6 +36,8 @@ For the initial compute test:
 
 ## 5.2 `GetPhysicalDeviceMemoryProperties`
 
+Request: physical-device XID at offset 8; total length 12 bytes.
+
 Request:
 
 - Offset 8: Physical-Device-XID
@@ -47,12 +49,12 @@ The reply contains the following after the 32-byte header:
 
 | Offset | Type | Field |
 |---:|---|---|
-| 8 | `CARD32` | `memory_type_count` |
-| 12 | `CARD32` | `memory_heap_count` |
-| 16 | `CARD32` | `memory_properties_flags` |
-| 20 | `CARD32` | `reserved = 0` |
-| 32 | `MEMORYTYPEINFO[]` | memory type records |
-| `32 + 8 * memory_type_count` | `MEMORYHEAPINFO[]` | memory heap records |
+| 8 | CARD32 | `memory_type_count` |
+| 12 | CARD32 | `memory_heap_count` |
+| 16 | CARD32 | `memory_properties_flags` |
+| 20 | CARD32 | `reserved = 0` |
+| 32 | MEMORYTYPEINFO[] | memory type records |
+| `32 + 8 * memory_type_count` | MEMORYHEAPINFO[] | memory heap records |
 
 `MEMORYTYPEINFO` is 8 bytes:
 
@@ -64,6 +66,8 @@ The reply contains the following after the 32-byte header:
 - `CARD64 size`
 - `CARD32 heap_flags`
 - `CARD32 reserved = 0`
+
+`CARD32 memory_type_count` and `CARD32 memory_heap_count` are the first two fixed reply fields. The reply length formula `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count` must be exact. Reserved fields use `` `CARD32 reserved = 0` ``.
 
 The reply payload length is `16 + 8 * memory_type_count + 16 * memory_heap_count` bytes. Accordingly, `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count`.
 

@@ -136,6 +136,37 @@ def encode_request(vector: dict) -> bytes:
         ))
     elif request == "GetPhysicalDeviceMemoryProperties":
         data.extend(struct.pack(endian + "I", fields["physical_device_xid"]))
+    elif request == "CreateSurface":
+        data.extend(struct.pack(endian + "II",
+                                fields["surface_xid"], fields["window_xid"]))
+    elif request == "DestroySurface":
+        data.extend(struct.pack(endian + "I", fields["surface_xid"]))
+    elif request == "GetSurfaceCapabilities":
+        data.extend(struct.pack(endian + "II",
+                                fields["device_xid"], fields["surface_xid"]))
+    elif request == "CreateSwapchain":
+        data.extend(struct.pack(
+            endian + "IIIIIIIIII",
+            fields["device_xid"], fields["swapchain_xid"], fields["surface_xid"],
+            fields["image_count"], fields["format_id"], fields["color_space_id"],
+            fields["width"], fields["height"], fields["present_mode_id"],
+            fields["image_usage_flags"],
+        ))
+    elif request == "DestroySwapchain":
+        data.extend(struct.pack(endian + "I", fields["swapchain_xid"]))
+    elif request == "AcquireNextImage":
+        data.extend(struct.pack(
+            endian + "IIQII",
+            fields["device_xid"], fields["swapchain_xid"],
+            fields["timeout_ns"], fields["semaphore_xid"], fields["fence_xid"],
+        ))
+    elif request == "QueuePresent":
+        data.extend(struct.pack(
+            endian + "6IQ",
+            fields["device_xid"], fields["queue_family_index"], fields["queue_index"],
+            fields["swapchain_xid"], fields["image_index"],
+            fields["wait_semaphore_count"], fields["presentation_token"],
+        ))
     else:
         raise ValueError(f"no reference encoder for {request}")
 
@@ -220,6 +251,13 @@ class GoldenWireVectorTests(unittest.TestCase):
             "GetSemaphoreCounterValue": "synchronization.md",
             "GetFenceStatus": "synchronization.md",
             "WaitForFence": "synchronization.md",
+            "CreateSurface": "presentation.md",
+            "DestroySurface": "presentation.md",
+            "GetSurfaceCapabilities": "presentation.md",
+            "CreateSwapchain": "presentation.md",
+            "DestroySwapchain": "presentation.md",
+            "AcquireNextImage": "presentation.md",
+            "QueuePresent": "presentation.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -261,6 +299,45 @@ class GoldenWireVectorTests(unittest.TestCase):
             "GetPhysicalDeviceMemoryProperties": {
                 "fields": [(8, "XID", "physical_device_xid")],
                 "length": 12,
+            },
+            "CreateSurface": {
+                "fields": [(8, "XID", "surface_xid"), (12, "XID", "window_xid")],
+                "length": 16,
+            },
+            "DestroySurface": {
+                "fields": [(8, "XID", "surface_xid")],
+                "length": 12,
+            },
+            "GetSurfaceCapabilities": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "surface_xid")],
+                "length": 16,
+            },
+            "CreateSwapchain": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "swapchain_xid"),
+                           (16, "XID", "surface_xid"), (20, "CARD32", "image_count"),
+                           (24, "CARD32", "format_id"), (28, "CARD32", "color_space_id"),
+                           (32, "CARD32", "width"), (36, "CARD32", "height"),
+                           (40, "CARD32", "present_mode_id"),
+                           (44, "CARD32", "image_usage_flags")],
+                "length": 48,
+            },
+            "DestroySwapchain": {
+                "fields": [(8, "XID", "swapchain_xid")],
+                "length": 12,
+            },
+            "AcquireNextImage": {
+                "fields": [(8, "XID", "device_xid"), (12, "XID", "swapchain_xid"),
+                           (16, "CARD64", "timeout_ns"), (24, "XID", "semaphore_xid"),
+                           (28, "XID", "fence_xid")],
+                "length": 32,
+            },
+            "QueuePresent": {
+                "fields": [(8, "XID", "device_xid"), (12, "CARD32", "queue_family_index"),
+                           (16, "CARD32", "queue_index"), (20, "XID", "swapchain_xid"),
+                           (24, "CARD32", "image_index"),
+                           (28, "CARD32", "wait_semaphore_count"),
+                           (32, "CARD64", "presentation_token")],
+                "length": "40 + 4 * wait_semaphore_count",
             },
             "CreateCommandPool": {
                 "fields": [(8, "XID", "device_xid"), (12, "XID", "command_pool_xid"),
@@ -346,12 +423,30 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "command_buffer_xid": "Command-Buffer-XID",
                             "fence_xid": "Fence-XID",
                             "physical_device_xid": "Physical-Device-XID",
+                            "swapchain_xid": "Swapchain-XID",
+                            "surface_xid": "Surface-XID",
+                            "window_xid": "Window-XID",
                         }[field]
-                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
+                        prose_row = (
+                            r"(?m)^- Offset " + str(offset) + r": " +
+                            re.escape(label) + r"\s*$"
+                        )
+                        xid_prose_row = (
+                            r"(?m)^- Offset " + str(offset) +
+                            r": XID\s+`" + re.escape(field) + r"`\s*"
+                        )
+                        self.assertTrue(
+                            re.search(table_row, section) or
+                            re.search(prose_row, section) or
+                            re.search(xid_prose_row, section),
+                            f"{request}: {field} must be {wire_type} at offset {offset}",
+                        )
+                        continue
                     else:
                         prose_row = (
-                            r"(?m)^- Offset " + str(offset) + r": `" +
-                            wire_type + r" " + re.escape(field) + r"(?:\s*=\s*0)?`\s*$"
+                            r"(?m)^- Offset " + str(offset) +
+                            r": `?" + wire_type + r"\s+`?" + re.escape(field) +
+                            r"`?(?:\s*=\s*0)?\s*"
                         )
                     self.assertTrue(
                         re.search(table_row, section) or re.search(prose_row, section),
@@ -367,6 +462,9 @@ class GoldenWireVectorTests(unittest.TestCase):
                 for vector in vectors:
                     if isinstance(contract["length"], int):
                         expected_length = contract["length"]
+                    elif request == "QueuePresent":
+                        n = vector["fields"]["wait_semaphore_count"]
+                        expected_length = 40 + 4 * n
                     else:
                         n = vector["fields"]["data_length"]
                         expected_length = 28 + ((n + 3) & ~3)
@@ -389,6 +487,13 @@ class GoldenWireVectorTests(unittest.TestCase):
             "GetSemaphoreCounterValue": "synchronization.md",
             "GetFenceStatus": "synchronization.md",
             "WaitForFence": "synchronization.md",
+            "CreateSurface": "presentation.md",
+            "DestroySurface": "presentation.md",
+            "GetSurfaceCapabilities": "presentation.md",
+            "CreateSwapchain": "presentation.md",
+            "DestroySwapchain": "presentation.md",
+            "AcquireNextImage": "presentation.md",
+            "QueuePresent": "presentation.md",
         }
         spec_text = {
             name: (ROOT / "spec" / path).read_text(encoding="utf-8")
@@ -434,6 +539,48 @@ class GoldenWireVectorTests(unittest.TestCase):
             ],
             "GetPhysicalDeviceMemoryProperties": [
                 (8, "XID", "physical_device_xid", "I"),
+            ],
+            "CreateSurface": [
+                (8, "XID", "surface_xid", "I"),
+                (12, "XID", "window_xid", "I"),
+            ],
+            "DestroySurface": [
+                (8, "XID", "surface_xid", "I"),
+            ],
+            "GetSurfaceCapabilities": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "surface_xid", "I"),
+            ],
+            "CreateSwapchain": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "swapchain_xid", "I"),
+                (16, "XID", "surface_xid", "I"),
+                (20, "CARD32", "image_count", "I"),
+                (24, "CARD32", "format_id", "I"),
+                (28, "CARD32", "color_space_id", "I"),
+                (32, "CARD32", "width", "I"),
+                (36, "CARD32", "height", "I"),
+                (40, "CARD32", "present_mode_id", "I"),
+                (44, "CARD32", "image_usage_flags", "I"),
+            ],
+            "DestroySwapchain": [
+                (8, "XID", "swapchain_xid", "I"),
+            ],
+            "AcquireNextImage": [
+                (8, "XID", "device_xid", "I"),
+                (12, "XID", "swapchain_xid", "I"),
+                (16, "CARD64", "timeout_ns", "Q"),
+                (24, "XID", "semaphore_xid", "I"),
+                (28, "XID", "fence_xid", "I"),
+            ],
+            "QueuePresent": [
+                (8, "XID", "device_xid", "I"),
+                (12, "CARD32", "queue_family_index", "I"),
+                (16, "CARD32", "queue_index", "I"),
+                (20, "XID", "swapchain_xid", "I"),
+                (24, "CARD32", "image_index", "I"),
+                (28, "CARD32", "wait_semaphore_count", "I"),
+                (32, "CARD64", "presentation_token", "Q"),
             ],
             "CreateCommandPool": [
                 (8, "XID", "device_xid", "I"),
@@ -522,9 +669,10 @@ class GoldenWireVectorTests(unittest.TestCase):
                         r"\s*\|\s*`?" + re.escape(field) + r"`?[^|]*\|"
                     )
                     prose_row = (
-                        r"(?m)^- Offset " + str(offset) + r": `?" + wire_type +
-                        r"\s+" + re.escape(field) + r"(?:\s*=\s*0)?`?\s*$"
-                    )
+                            r"(?m)^- Offset " + str(offset) +
+                            r": `?" + wire_type + r"\s+`?" + re.escape(field) +
+                            r"`?(?:\s*=\s*0)?\s*"
+                        )
                     if wire_type == "XID":
                         label = {
                             "device_xid": "Device-XID",
@@ -535,8 +683,25 @@ class GoldenWireVectorTests(unittest.TestCase):
                             "command_buffer_xid": "Command-Buffer-XID",
                             "fence_xid": "Fence-XID",
                             "physical_device_xid": "Physical-Device-XID",
+                            "swapchain_xid": "Swapchain-XID",
+                            "surface_xid": "Surface-XID",
+                            "window_xid": "Window-XID",
                         }[field]
-                        prose_row = r"(?m)^- Offset " + str(offset) + r": " + re.escape(label) + r"\s*$"
+                        prose_row = (
+                            r"(?m)^- Offset " + str(offset) + r": " +
+                            re.escape(label) + r"\s*$"
+                        )
+                        xid_prose_row = (
+                            r"(?m)^- Offset " + str(offset) +
+                            r": XID\s+`" + re.escape(field) + r"`\s*"
+                        )
+                        self.assertTrue(
+                            re.search(table_row, section) or
+                            re.search(prose_row, section) or
+                            re.search(xid_prose_row, section),
+                            f"{request}: {field} must be {wire_type} at offset {offset}",
+                        )
+                        continue
                     self.assertTrue(
                         re.search(table_row, section) or re.search(prose_row, section),
                         f"{request}: normative spec must define {wire_type} {field} at offset {offset}",
