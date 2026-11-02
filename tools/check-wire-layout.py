@@ -2033,6 +2033,12 @@ def check_reply_layouts(c: Check) -> None:
               (reply_names & presentation_reply_names) in (set(), presentation_reply_names),
               f"reply contract inventory mismatch: registry={sorted(reply_names)}, checker={sorted(expected_names)}")
 
+    conformance = read("spec/conformance.md")
+    c.require(len(reply_names) == 16 and
+              "all 16 als `Reply` registrierten Requests" in conformance and
+              "`QueryVersion`, elf weitere Reply-Requests des Compute-Baseline-Profils und vier Reply-Requests des Presentation-Profils" in conformance,
+              "reply contract inventory: conformance must enumerate all 16 replies, including bootstrap QueryVersion")
+
     sources = {
         "devices": read("spec/devices.md"),
         "memory": read("spec/memory-buffers.md"),
