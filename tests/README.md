@@ -2,6 +2,7 @@
 
 The golden fixtures are protocol ABI tests, not tests against a running X server.
 
+- `phase1-request-vectors.json` and `test_phase1_request_vectors.py` cover all seven Phase-1 requests (subopcodes 1–7) in both X11 byte orders, including the common 8-byte header, fixed and variable request lengths, `CreateDevice` queue/extension records, and negative mutations for nonzero `data`, `flags`, common/request-specific reserved fields, zero/mismatched lengths, and truncated/trailing payloads. These are offline reference-wire tests, not live server-handler tests.
 - `wire-vectors.json` covers selected request layouts, including CreateBuffer,
   ReadBuffer and WriteBuffer payload boundaries in both X11 byte orders.
 - `event-vectors.json` covers the seven compute-baseline XGE event types in both
