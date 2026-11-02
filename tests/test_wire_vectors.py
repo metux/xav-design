@@ -563,7 +563,8 @@ class GoldenWireVectorTests(unittest.TestCase):
         self.assertTrue(self.request_opcodes)
         values = list(self.request_opcodes.values())
         self.assertEqual(len(values), len(set(values)), "registry subopcodes must be unique")
-        self.assertNotIn(0, values, "subopcode zero is reserved")
+        self.assertIn(0, values, "QueryVersion must occupy bootstrap subopcode zero")
+        self.assertEqual(self.request_opcodes.get("QueryVersion"), 0)
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
                 self.assertIn(vector["request"], self.request_opcodes)
