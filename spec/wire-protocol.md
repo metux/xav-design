@@ -35,7 +35,7 @@ A malformed request follows the common request-validation precedence. In particu
 
 ## `QueryVersion reply` layout
 
-The successful response is exactly one standard 32-byte X11 reply:
+The successful response is exactly one standard 32-byte X11 reply, with `reply.length = 0`:
 
 | Offset | Type | Field | Required value |
 |---:|---|---|---|
