@@ -249,7 +249,7 @@ class GoldenXGEEventTests(unittest.TestCase):
     def test_sequence_field_is_connection_local_16_bit_and_wraps(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         self.assertIn(
-            "low 16 bits of the X11 request sequence number most recently processed by the server for the recipient connection at the event-enqueue point",
+            "low 16 bits of the X11 request sequence number issued by the recipient client and has been or is currently being processed by the server at the event-enqueue point",
             events,
         )
         self.assertIn("wraps modulo 65536", events)
