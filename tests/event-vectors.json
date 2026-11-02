@@ -244,5 +244,87 @@
       },
       "wire_hex": "2390123400000006000600000000000000000000000000000000000000000000010203040000000100000002000000010102030405060708"
     }
+  ],
+  "presentation_vectors": [
+    {
+      "name": "IMAGE_RELEASED-little-golden",
+      "event": "IMAGE_RELEASED",
+      "event_type": 7,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 64,
+      "xge_length": 8,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "swapchain_xid": 2695938256,
+        "image_index": 3,
+        "reserved": 0,
+        "presentation_token": "72623859790382856"
+      },
+      "wire_hex": "2390341208000000070000000000000000000000000000000000000000000000040302010100000002000000d0c0b0a003000000000000000807060504030201"
+    },
+    {
+      "name": "IMAGE_RELEASED-big-golden",
+      "event": "IMAGE_RELEASED",
+      "event_type": 7,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 64,
+      "xge_length": 8,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "swapchain_xid": 2695938256,
+        "image_index": 3,
+        "reserved": 0,
+        "presentation_token": "72623859790382856"
+      },
+      "wire_hex": "2390123400000008000700000000000000000000000000000000000000000000010203040000000100000002a0b0c0d000000003000000000102030405060708"
+    },
+    {
+      "name": "PRESENTATION_COMPLETE-little-golden",
+      "event": "PRESENTATION_COMPLETE",
+      "event_type": 8,
+      "byte_order": "little",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 64,
+      "xge_length": 8,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "swapchain_xid": 2695938256,
+        "image_index": 3,
+        "status": 4,
+        "presentation_token": "72623859790382856"
+      },
+      "wire_hex": "2390341208000000080000000000000000000000000000000000000000000000040302010100000002000000d0c0b0a003000000040000000807060504030201"
+    },
+    {
+      "name": "PRESENTATION_COMPLETE-big-golden",
+      "event": "PRESENTATION_COMPLETE",
+      "event_type": 8,
+      "byte_order": "big",
+      "extension_opcode": 144,
+      "sequence": 4660,
+      "total_bytes": 64,
+      "xge_length": 8,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 2,
+        "swapchain_xid": 2695938256,
+        "image_index": 3,
+        "status": 4,
+        "presentation_token": "72623859790382856"
+      },
+      "wire_hex": "2390123400000008000800000000000000000000000000000000000000000000010203040000000100000002a0b0c0d000000003000000040102030405060708"
+    }
   ]
 }
