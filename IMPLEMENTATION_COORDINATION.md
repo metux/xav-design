@@ -667,3 +667,11 @@ Exact-tip validation on commit 96bede90c558d8127b07c53d6a009ea52a40f717 succeede
 - Branch-tip monitor 41473068396: success.
 
 The earlier wire-layout failure on intermediate commit 12911c4f was the expected missing static-checker guard; the guard was added in 93480019 and the final branch-tip run passed. No runtime X11/XGE server test or Vulkan backend test was performed.
+
+## Device XID reuse and event-selection isolation — 2026-11-02
+
+The cross-chapter lifecycle audit confirmed that disconnect, DestroyDevice, callback identity, queued-event preservation, and XGE negotiation were already specified. One point was only implicit: although DestroyDevice removed Device/Queue selections, the text did not explicitly state that those selections are keyed by immutable Device identity and cannot be inherited when the public Device XID is reused.
+
+Clarified in spec/events.md: Device/Queue masks belong to the internal Device identity; successful DestroyDevice atomically removes them; a newly created Device using the same numeric XID starts with no Device/Queue selection. The Connection mask survives. Added a conformance case and a static checker guard, plus a regression test in tests/test_select_events_vectors.py.
+
+No event layout, event ID, mask bit, request layout, or runtime behavior was changed. This closes a protocol identity/selection ambiguity and makes the XID-reuse behavior directly testable. Exact-tip CI is required before treating this delta as verified.
