@@ -533,3 +533,19 @@ Verification is pending on the resulting branch tip. Runtime X11 interoperabilit
 ### Migration CI result — 2026-11-02
 
 The first CI run exposed two stale test assertions: the big-endian fixture metadata still carried subopcode 48, and the generic request-vector registry test still asserted that zero was reserved. Both were corrected. The final migration commit `61e4e5517c94074d11cb5319f747528a8fc3f148` passed [CI run 41442418120](https://github.com/metux/xav-design/actions/runs/41442418120): **4,823 wire-layout checks**, **72 Timeline regressions**, **685 Python tests**, and the required-check audit all passed. This verifies the specification/reference tests, not a live X11 server or implementation dispatch table.
+
+## Local-agent WIP integration — 2026-11-02
+
+The local-agent branch `wip/by-local-agent` was reviewed and integrated into `docs/restructure-2026-10-21` through [PR #3](https://github.com/metux/xav-design/pull/3), merged as `a6019f53fbc14f0cf2824889f14d92de6629694d`.
+
+Integrated coverage:
+- `GetPhysicalDeviceMemoryProperties`: little-/big-endian request vectors and normative field-offset/reply-layout documentation.
+- All seven presentation requests (subopcodes 41–47): explicit fixed request lengths and normative field-offset/length tests.
+- `QueuePresent`: reference encoder now serializes the variable wait-semaphore XID list, checks count/list agreement and duplicate XIDs; golden vectors cover zero and two waits in both byte orders.
+- CARD64 fixture metadata was corrected to match the actual encoded wire bytes; JSON number precision must not be used to round these values.
+- Removed duplicate request-layout prose while retaining the compact request contract required by the wire checker.
+
+Verification: PR-head workflow run [41452295432](https://github.com/metux/xav-design/actions/runs/41452295432) passed the wire-layout checker, all **72 Timeline regressions**, the complete **685-test Python suite**, and the required-check audit. Post-merge branch-tip run [41452447103](https://github.com/metux/xav-design/actions/runs/41452447103) also passed; branch-tip audit [41452447172](https://github.com/metux/xav-design/actions/runs/41452447172) passed.
+
+This is spec/reference-test integration only. It does not close the outstanding live X11/XGE or Vulkan runtime acceptance gates, nor the Phase 1 ship ownership confirmations/shared integration-interface owner.
+
