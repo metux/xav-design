@@ -607,3 +607,15 @@ The post-QueryVersion audit found one stale count in the conformance text: it st
 - `tools/check-wire-layout.py` now asserts the total and the profile breakdown against the registry and conformance text: `054ce3a0213e805494be073ef47b1426fd9aa90c`
 
 No request layout, kind, subopcode, or runtime behavior changed. Historical dated audit entries that accurately recorded the pre-QueryVersion inventory remain historical; current normative/conformance inventory is 16. Exact-tip CI remains to be confirmed.
+
+### Freeze/status metadata reconciliation — 2026-11-02
+
+Reconciled current status documents against the actual verified CI baseline and the unverified post-merge audit delta:
+
+- `spec/freeze-checklist.md` now identifies `a6019f53fbc14f0cf2824889f14d92de6629694d` / CI run 41452447103 as the latest verified baseline and explicitly leaves exact-tip CI for the post-merge audit delta unchecked.
+- `PROJECT_STATUS.md` now uses the same baseline, records the 16-Reply inventory, and does not label the current branch tip CI-verified.
+- `README.md` had a mismatched CI URL (label 41442418120 pointed to run 41432690799); the URL now points to 41442418120.
+
+Commits: freeze checklist `8a2dbd1354ccf1a853e6796d6c8dd290b94222db`; project status `a5f1258fce01e0e6cf982470d79cffff5629fb75`; README `6f470ad309cf1b96aae1c2464ca0f388d742aa32`.
+
+These are status/traceability corrections. The latest direct commits still have no visible status checks from the GitHub status endpoint; exact-tip CI remains pending.
