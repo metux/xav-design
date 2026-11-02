@@ -2736,6 +2736,9 @@ def check_xge_abi(c: Check) -> None:
     for pattern, label in expected_masks:
         c.require(re.search(pattern, select_body) is not None, f"SelectEvents: missing {label}")
     for pattern, label in [
+        (r"Device- and Queue-scope selections are bound to the immutable internal Device identity", "selection keyed by immutable Device identity"),
+        (r"Reusing that XID for a newly created logical Device MUST NOT restore or inherit any selection", "no event-mask inheritance on Device XID reuse"),
+        (r"take effect atomically at the successful `DestroyDevice` linearization point", "atomic selection removal on Device destruction"),
         (r"atomically replaces the existing mask", "atomic mask replacement"),
         (r"On any error, the previous selection remains unchanged", "failed request preserves prior mask"),
         (r"`ASYNC_ERROR`.*`DEVICE_LOST`.*unmaskable", "unmaskable events"),
