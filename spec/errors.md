@@ -87,6 +87,10 @@ A later phase MUST NOT override an error from an earlier phase. In particular, m
 
 ## Request-specific error mapping
 
+### `QueryVersion`
+
+`QueryVersion` (subopcode 48) has no request-specific error conditions and performs no state change. It returns the server's fixed protocol-version reply when the exact 8-byte request is valid. Common envelope/header validation remains mandatory: malformed framing returns `BadLength`, and nonzero `data`, `flags`, or common reserved fields return `BadValue`. No XID, ownership, Device-state, XGE-negotiation, or backend checks apply.
+
 ### `WriteBuffer`
 
 Normative precedence: (1) total length with checked count/overflow arithmetic and the X11 request limit (`BadLength`); (2) positive `data_length` and zero padding (`BadValue`); (3) `device_xid`, then `buffer_xid` in wire order (`BadValue` for unknown/non-live XIDs); (4) live resource type, client ownership, and Device association (`BadMatch`); (5) Device state (`DEVICE_UNAVAILABLE` / `DEVICE_LOST`); (6) Buffer binding, `TRANSFER_DST`, and range (`BadMatch`); (7) transfer/synchronization work.
