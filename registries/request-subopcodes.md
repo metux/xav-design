@@ -1,6 +1,6 @@
 # XAverius v0.1 request subopcode registry
 
-Status: **48 defined request contracts assigned; subopcode 48 is the compute-baseline protocol-version query, while 41–47 remain presentation-profile-only**.
+Status: **48 defined request contracts assigned; subopcode 0 is the common bootstrap protocol-version query, 1–40 are compute-baseline, and 41–47 remain presentation-profile-only**.
 
 This file is the central inventory and numeric assignment for XAverius extension requests. It records only requests already named and described in the current specification chapters. The assignments do not imply that the wire protocol is frozen.
 
@@ -8,7 +8,7 @@ This file is the central inventory and numeric assignment for XAverius extension
 
 - Every listed name denotes one XAverius request opcode unless explicitly noted otherwise.
 - Subopcode values are explicit protocol identifiers; clients and servers MUST use the values in this table and MUST NOT infer values from row order, chapter order, or Vulkan enum values.
-- Value `0` is reserved and MUST NOT identify a request. Values `1` through `40` are the compute-baseline assignments. Values `41` through `47` are assigned only for the future presentation-capable profile. Subopcode `48` is the compute-baseline `QueryVersion` request. All assignments are stable and MUST NOT be renumbered; future requests use unused values.
+- Subopcode `0` is assigned to the common bootstrap `QueryVersion` request. Values `1` through `40` are the compute-baseline assignments. Values `41` through `47` are assigned only for the presentation-capable profile. All assignments are stable and MUST NOT be renumbered; future requests use unused values. Every other unassigned value has no implicit meaning.
 - `Void` means a successful request has no normal reply; request validation errors still use the standard X11 error mechanism.
 - `Reply` means the request returns a normal X11 reply. A reply may carry a status rather than reporting that condition as an X11 error.
 - `Void + async events` means no normal reply; later outcomes are reported through the specified events and synchronization state.
@@ -20,6 +20,7 @@ This file is the central inventory and numeric assignment for XAverius extension
 
 | Request | Subopcode | Kind | Responsibility |
 |---|---|---|---|
+| `QueryVersion` | 0 | Reply | Return the server's XAverius protocol version independently of XGE negotiation. [Wire protocol](../spec/wire-protocol.md) |
 | `EnumeratePhysicalDevices` | 1 | Reply | Enumerate server-visible physical devices and return `PHYSICALDEVICEINFO` records. [Devices](../spec/devices.md) |
 | `GetPhysicalDeviceProperty` | 2 | Reply | Query one registered physical-device property by Atom. [Devices](../spec/devices.md) |
 | `GetPhysicalDeviceQueueFamilyProperties` | 3 | Reply | Query queue-family capabilities for a physical device. [Devices](../spec/devices.md) |
@@ -67,10 +68,9 @@ This file is the central inventory and numeric assignment for XAverius extension
 | `DestroySwapchain` | 45 | Void | Retire a Swapchain after blocking references and backend access have drained. [Presentation](../spec/presentation.md) |
 | `AcquireNextImage` | 46 | Reply | Acquire an available Swapchain image with timeout and synchronization signaling. [Presentation](../spec/presentation.md) |
 | `QueuePresent` | 47 | Reply | Accept an acquired image for presentation with explicit binary-semaphore dependencies. [Presentation](../spec/presentation.md) |
-| `QueryVersion` | 48 | Reply | Return the server's XAverius protocol version independently of XGE negotiation. [Wire protocol](../spec/wire-protocol.md) |
 
 ## Allocation policy
 
-The compute-baseline inventory retains explicit assignments 1–40 and includes `QueryVersion` at 48. The presentation-capable profile uses 41–47 without changing any existing value. New request definitions MUST use an unused value; existing values MUST NOT be moved to make room for later requests. The registry is not a frozen v0.1 ABI; additions must follow the stable, append-only allocation rule. A server that advertises only the compute baseline does not thereby advertise support for requests 41–47.
+The common bootstrap inventory assigns `QueryVersion` to subopcode 0, independently of profile negotiation. The compute-baseline inventory uses 1–40 and the presentation-capable profile uses 41–47. All assignments are stable; future requests use unused values without renumbering existing requests. New request definitions MUST use an unused value; existing values MUST NOT be moved to make room for later requests. The registry is not a frozen v0.1 ABI; additions must follow the stable, append-only allocation rule. A server that advertises only the compute baseline does not thereby advertise support for requests 41–47.
 
 Separate numeric namespaces MUST NOT be conflated with request subopcodes. Registries already defined are [descriptor types](descriptor-types.md), [shader stages](shader-stages.md), [device types](device-types.md), [queue flags](queue-flags.md), and [XAverius error codes](errors.md). Registries already defined include [command-buffer entry IDs](command-entries.md) and [event types plus event-local values](event-types.md). The v0.1 feature-ID and device-extension registries are intentionally empty, and the physical-device property registry is defined. Future assignments remain append-only. Final verification of XGE event framing and extension-opcode lookup remains part of the ABI review. Event types are XGE event types, not request subopcodes.
