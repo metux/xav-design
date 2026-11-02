@@ -720,3 +720,16 @@ The specification-compliance checklist above is now checked against the complete
 The canonical non-overlapping handler split is Ship B: subopcode 1; Ship C: 2–3; Ship D: 4–6; Ship E: 7. Ship A coordinates common framing/dispatch and shared helper interfaces. The five required ship confirmations listed below remain outstanding unless a ship posts an explicit confirmation here.
 
 The previous 2026-10-30 baseline references in older coordination-history sections are historical snapshots; follow the current `docs/restructure-2026-10-21` branch and `spec/freeze-checklist.md`, not those old pinned hashes.
+
+
+## Shared client/server protocol headers — 2026-11-02
+
+Added the common C protocol-header package under `protocol/`:
+- `protocol/include/xaverius.h` is the umbrella include.
+- `protocol/include/xaveriusconst.h` defines all 48 request subopcodes, the nine event IDs, error offsets, and the v0.1 wire registries.
+- `protocol/include/xaveriusproto.h` declares request prefixes, variable-tail records, reply layouts, the X11 error packet, and all compute/presentation XGE event layouts.
+- `protocol/README.md` documents the include path, X11 byte order, four-byte wire packing, and checked sizing for variable packets.
+
+Wire XIDs and Atom IDs are represented as CARD32, not the potentially wider client-side Xlib typedefs. The dynamic extension major opcode remains runtime-discovered with QueryExtension. The CI workflow now compiles the shared headers against the X11 protocol headers and retains the existing wire-layout and conformance checks. This package is a projection of spec/ and registries/; those documents remain normative and must be updated first when the ABI changes.
+
+Header package and CI integration are on the authoritative branch; see the current branch tip for the latest compile/test result.
