@@ -1,7 +1,7 @@
 # Xaverius Implementation Coordination
 
-**Status**: Implementation Phase 1 in progress; 48 request contracts assigned
-**Date**: 2026-10-30
+**Status**: Normative specification freeze-ready; Implementation Phase 1 in progress; 48 request contracts assigned
+**Date**: 2026-11-02
 **Coordinator**: Enterprise (this agent)
 **External Design Agent**: Please review opcode assignments and provide feedback
 
@@ -37,11 +37,13 @@
 
 | Ship | Task | Target | Branch |
 |------|------|--------|--------|
-| **Ship A** | Common wire framing and dispatch integration (no ownership of device request handlers) | `Xext/xaverius/` | `rfc/xaverius-core-protocol` |
+| **Ship A** | Common wire framing and dispatch integration; coordinate shared interfaces, no ownership of device request handlers | `Xext/xaverius/` | `rfc/xaverius-core-protocol` |
 | **Ship B** | `EnumeratePhysicalDevices` (subopcode 1) only | `Xext/xaverius/` | `rfc/xaverius-devices` |
 | **Ship C** | `GetPhysicalDeviceProperty` (2) and `GetPhysicalDeviceQueueFamilyProperties` (3) only | `Xext/xaverius/` | `rfc/xaverius-device-props` |
 | **Ship D** | Device Lifecycle (4, 5, 6) | `Xext/xaverius/` | `rfc/xaverius-device-lifecycle` |
 | **Ship E** | `GetPhysicalDeviceMemoryProperties` (subopcode 7) only | `Xext/xaverius/` | `rfc/xaverius-memory-props` |
+
+This is the canonical single-owner request-handler split. The earlier table that assigned requests 2/3 to both B and C and request 7 to both C and E is superseded. Shared helper/header ownership remains separate and must be named by Ship A before overlapping shared-file edits.
 
 ### Shared integration ownership (must be confirmed before shared-file edits)
 
@@ -55,13 +57,15 @@ The request-handler split above is the coordination baseline. It does not assign
 - Subopcode 0 QueryVersion (common bootstrap), 1-40 compute-baseline, 41-47 presentation-profile
 
 ### Spec Compliance Checklist (from xav-design)
-- [ ] Wire protocol framing (8-byte header + payload)
-- [ ] Subopcode dispatch (0-47; QueryVersion is bootstrap request)
-- [ ] Profile gating (41-47 presentation-only)
-- [ ] Error mapping (errors.md + conformance.md)
-- [ ] Chunk upload protocol (ShaderModuleData)
-- [ ] Resource lifetime management
-- [ ] Presentation profile (41-47) profile-gated
+- [x] Wire protocol framing (8-byte header + payload)
+- [x] Subopcode dispatch (0-47; QueryVersion is bootstrap request)
+- [x] Profile gating (41-47 presentation-only)
+- [x] Error mapping (errors.md + conformance.md)
+- [x] Chunk upload protocol (ShaderModuleData)
+- [x] Resource lifetime management
+- [x] Presentation profile (41-47) profile-gated
+
+All seven items are specification-completeness checks, not implementation ship confirmations. Evidence: `spec/freeze-checklist.md`; verified content candidate `0b9c40e0907592f7f96687912d948abf221123d0` passed exact-tip CI run [41476931362](https://github.com/metux/xav-design/actions/runs/41476931362) (4,836 wire-layout checks, 72 Timeline regressions, 692 Python tests). The later status/board metadata tip `dccb0e838e0f2880e3d50865c7c038e7bc0424b7` also passed exact-tip wire-layout CI [41478640475](https://github.com/metux/xav-design/actions/runs/41478640475) and branch-tip monitor [41478640287](https://github.com/metux/xav-design/actions/runs/41478640287).
 
 ### Coordination Notes
 - **External Design Agent**: Opcode assignments are FINAL (registry is append-only, stable)
@@ -109,7 +113,7 @@ This file: `/home/nekrad/src/xorg/mpbt-workspace/_WORK_/xav/xav-design/IMPLEMENT
 
 ---
 
-*Last Updated: 2026-10-30*
+*Last Updated: 2026-11-02*
 *Coordinator: Enterprise (this agent)*
 *External Design Agent: Please review opcode assignments and wire protocol implementation priorities*
 
@@ -707,3 +711,12 @@ Exact-tip CI for the completed post-merge specification audit passed on candidat
 Updated `spec/freeze-checklist.md`, `PROJECT_STATUS.md`, `README.md`, and `spec/open-issues.md` to stop presenting the PR #3 merge baseline or October candidate as the latest verified content. The freeze checklist now marks the post-merge audit CI gate complete. Implementation acceptance remains open: live X11/XGE, Vulkan compute/runtime lifecycle, and optional presentation backend validation. Project coordination still needs Phase 1 ship confirmations and a named shared integration-interface owner.
 
 The checklist/status-only edits themselves are committed separately and must receive their own exact-tip CI result before that later tip is called verified.
+
+
+## Spec freeze and implementation handoff — 2026-11-02
+
+The specification-compliance checklist above is now checked against the completed freeze checklist and exact-tip CI. No remaining normative protocol-design item is known to block starting implementation. This does not mean Phase 1 implementation is complete: the ships still need to confirm their request-handler ownership, Ship A must name the shared integration-interface owner, and the live X11/XGE and Vulkan acceptance gates remain open.
+
+The canonical non-overlapping handler split is Ship B: subopcode 1; Ship C: 2–3; Ship D: 4–6; Ship E: 7. Ship A coordinates common framing/dispatch and shared helper interfaces. The five required ship confirmations listed below remain outstanding unless a ship posts an explicit confirmation here.
+
+The previous 2026-10-30 baseline references in older coordination-history sections are historical snapshots; follow the current `docs/restructure-2026-10-21` branch and `spec/freeze-checklist.md`, not those old pinned hashes.
