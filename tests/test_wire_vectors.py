@@ -161,12 +161,19 @@ def encode_request(vector: dict) -> bytes:
             fields["timeout_ns"], fields["semaphore_xid"], fields["fence_xid"],
         ))
     elif request == "QueuePresent":
+        wait_semaphore_xids = fields["wait_semaphore_xids"]
+        if fields["wait_semaphore_count"] != len(wait_semaphore_xids):
+            raise ValueError("QueuePresent wait_semaphore_count must match wait_semaphore_xids")
+        if len(set(wait_semaphore_xids)) != len(wait_semaphore_xids):
+            raise ValueError("QueuePresent wait semaphore XIDs must be unique")
         data.extend(struct.pack(
             endian + "6IQ",
             fields["device_xid"], fields["queue_family_index"], fields["queue_index"],
             fields["swapchain_xid"], fields["image_index"],
             fields["wait_semaphore_count"], fields["presentation_token"],
         ))
+        for semaphore_xid in wait_semaphore_xids:
+            data.extend(struct.pack(endian + "I", semaphore_xid))
     else:
         raise ValueError(f"no reference encoder for {request}")
 
@@ -710,6 +717,15 @@ class GoldenWireVectorTests(unittest.TestCase):
                     self.assertEqual(value, vector["fields"][field], f"{field}: decoded wire value differs from fixture")
                     self.assertEqual(sizes[wire_type], struct.calcsize(fmt))
                 fields = vector["fields"]
+                if request == "QueuePresent":
+                    wait_xids = fields["wait_semaphore_xids"]
+                    self.assertEqual(fields["wait_semaphore_count"], len(wait_xids))
+                    self.assertEqual(len(wait_xids), len(set(wait_xids)))
+                    decoded_wait_xids = [
+                        struct.unpack_from(endian + "I", wire, 40 + 4 * index)[0]
+                        for index in range(fields["wait_semaphore_count"])
+                    ]
+                    self.assertEqual(decoded_wait_xids, wait_xids)
                 if request == "CreateBuffer":
                     self.assertGreater(fields["size"], 0, "size MUST be positive")
                     self.assertNotEqual(fields["usage_flags"], 0, "usage_flags MUST select at least one usage bit")
