@@ -8,6 +8,10 @@ For an accepted `QueueSubmit`, an execution failure is reported through the subm
 
 XAverius errors use the standard 32-byte X11 error packet and add no XAverius-specific payload bytes. The packet carries the extension major opcode and the sequence number of the request that caused the error. The resource field identifies the affected resource when meaningful; otherwise it is zero. For v0.1, the X11 request-header `data` byte MUST be zero; XAverius `subopcode` is carried at offset 4, and the error packet's `minorCode` is the zero-extended `subopcode`. The error packet's `majorCode` is the extension major opcode.
 
+## `QueryVersion`
+
+`QueryVersion` (subopcode 48) has no request-specific error conditions and performs no state change. It returns the server's fixed protocol-version reply when the exact 8-byte request is valid. Common envelope/header validation remains mandatory: malformed framing returns `BadLength`, and nonzero `data`, `flags`, or common reserved fields return `BadValue`. No XID, ownership, Device-state, XGE-negotiation, or backend checks apply.
+
 ## General Error Classes
 
 | Situation | Result |
