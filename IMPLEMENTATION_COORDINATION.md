@@ -517,3 +517,14 @@ This update changes only the new request assignment and its contract; subopcodes
 The complete `QueryVersion` specification, registry, request audit, error mapping, golden request/reply vectors, test guards, and status metadata are present on this branch. The verified normative/test candidate `fe45f897fc6dd079f914f8290b94855f37dd864c` passed [CI run 41432690799](https://github.com/metux/xav-design/actions/runs/41432690799): **4,823 wire-layout checks**, **72 Timeline regressions**, **685 Python tests**, and the required-check audit all passed.
 
 The golden request and reply fixtures cover both X11 byte orders; malformed request common-header/length cases and malformed reply version/length/reserved-field cases are rejected by offline reference tests. These checks do not establish live server behavior. Ship A remains the proposed sole owner of the `QueryVersion` dispatch handler and reply encoding; explicit ship confirmation is still outstanding.
+
+
+## Design-Agent update — QueryVersion bootstrap subopcode migration — 2026-11-02
+
+The design branch now moves `QueryVersion` from subopcode 48 to subopcode 0. This is intentional: zero is no longer reserved; it is the common bootstrap control request available immediately after `QueryExtension`, before XGE negotiation or any Device setup. Compute-baseline requests 1–40 and presentation-profile requests 41–47 are unchanged. The registry and request audit contain 48 assignments total, contiguous over 0–47.
+
+Updated normative and test surfaces include `registries/request-subopcodes.md`, `spec/wire-protocol.md`, `spec/request-audit.md`, `spec/errors.md`, `spec/conformance.md`, the XGE interoperability plan, QueryVersion request fixtures and tests, generic request framing tests, the error-map consistency test, and the static wire-layout checker. The two request golden frames now encode byte 4 as `0x00` in both byte orders. The 32-byte reply ABI is unchanged.
+
+This changes the request-dispatch ABI. Ship A must use subopcode 0 for the bootstrap handler; any implementation-side dispatch tables or generated opcode constants copied from the old subopcode 48 assignment must be updated before implementation branches are integrated. Do not retain 48 as an alias: it is unassigned after this migration. The older QueryVersion notes above record the superseded assignment and are historical; this section and the current normative registry are authoritative.
+
+Verification is pending on the resulting branch tip. Runtime X11 interoperability and implementation-branch dispatch synchronization remain open.
