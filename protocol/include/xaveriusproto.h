@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "xaveriusconst.h"
 
-/* Wire XIDs/Atoms are always CARD32; Xlib CARD32/Atom may be wider on LP64. */
+/* Wire XIDs/Atoms are always CARD32; Xlib XID/Atom may be wider on LP64. */
 typedef float xavFloat32;
 #pragma pack(push, 4)
 
