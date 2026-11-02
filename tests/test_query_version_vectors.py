@@ -39,6 +39,8 @@ def validate_reply(wire: bytes, order: str) -> None:
         raise ValueError("byte order")
     if len(wire) != 32 or wire[0] != 1:
         raise ValueError("reply framing")
+    if wire[1] != 0:
+        raise ValueError("reply data")
     if int.from_bytes(wire[4:8], order) != 0:
         raise ValueError("reply length")
     if int.from_bytes(wire[8:10], order) != 0:
@@ -100,6 +102,8 @@ class QueryVersionVectors(unittest.TestCase):
     def test_reply_rejects_wrong_version_length_and_reserved(self):
         base = bytes.fromhex(self.fixture["reply_vectors"][0]["wire_hex"])
         mutations = [
+            (bytes([0]) + base[1:], "reply framing"),
+            (base[:1] + bytes([1]) + base[2:], "reply data"),
             (base[:8] + b"\x01\x00" + base[10:], "major version"),
             (base[:10] + b"\x02\x00" + base[12:], "minor version"),
             (base[:12] + b"\x01" + base[13:], "reply reserved"),
