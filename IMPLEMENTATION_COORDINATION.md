@@ -677,3 +677,17 @@ Clarified in spec/events.md: Device/Queue masks belong to the internal Device id
 No event layout, event ID, mask bit, request layout, or runtime behavior was changed. This closes a protocol identity/selection ambiguity and makes the XID-reuse behavior directly testable. Exact-tip CI is required before treating this delta as verified.
 
 The live XGE interoperability plan was also extended to exercise Device XID reuse: a new Device generation must not inherit Device/Queue masks, while the Connection mask remains active. This is a runtime test requirement for the eventual X11/XGE server, not something the static fixture suite can prove.
+
+
+## Presentation XGE golden-byte coverage — 2026-11-02
+
+The event/profile audit found no ID collision or profile-gating contradiction: compute events remain IDs 0–6, presentation events remain IDs 7–8, and queue mask bits 2/3 are presentation-only. The static checker already compared both 64-byte presentation payload layouts against the normative chapter, but the golden-byte fixture contained only the seven compute events.
+
+Added four presentation golden vectors (both events in little- and big-endian), a dedicated encoder/validator, negative checks for nonzero IMAGE_RELEASED reserved data and out-of-range PRESENTATION_COMPLETE status, and a static checker guard requiring this coverage. The conformance chapter now states the 64-byte/length-8 and event-local value requirements.
+
+These are static ABI tests only. Live XGE delivery, profile-gate behavior, and actual presentation backend behavior remain implementation-level interoperability work.
+
+Commits:
+- `63a9a9643c689eef06055d2326554a026b40c8be` — presentation event encoder and tests.
+- `1e912abdcf7c4026bc744d6963a410cb58cfe1cd` — four presentation event golden vectors.
+- `16af6b40a1a3c9b7e339bf69e0fc6c20677005d9` — static checker guard.
