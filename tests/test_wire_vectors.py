@@ -206,6 +206,20 @@ def validate_request_wire(wire: bytes, byte_order: str) -> None:
     if wire[6:8] != bytes(2):
         raise ValueError("reserved common-header field must be zero")
 
+    # Fixed memory/presentation requests have request-specific sizes in
+    # addition to the generic X11 envelope.
+    fixed_request_lengths = {
+        7: 12,   # GetPhysicalDeviceMemoryProperties
+        41: 16,  # CreateSurface
+        42: 12,  # DestroySurface
+        43: 16,  # GetSurfaceCapabilities
+        44: 48,  # CreateSwapchain
+        45: 12,  # DestroySwapchain
+        46: 32,  # AcquireNextImage
+    }
+    if wire[4] in fixed_request_lengths and len(wire) != fixed_request_lengths[wire[4]]:
+        raise ValueError("request does not have its exact fixed request length")
+
     # QueuePresent has a request-specific variable XID tail. Validate its
     # count-derived size here as well as the generic X11 envelope.
     if wire[4] == 47:
@@ -889,6 +903,38 @@ class GoldenWireVectorTests(unittest.TestCase):
         vector["length_bytes"] += 4
         with self.assertRaisesRegex(ValueError, "declared"):
             encode_request(vector)
+
+    def test_memory_and_presentation_fixed_request_lengths(self) -> None:
+        fixed_requests = {
+            "GetPhysicalDeviceMemoryProperties": 12,
+            "CreateSurface": 16,
+            "DestroySurface": 12,
+            "GetSurfaceCapabilities": 16,
+            "CreateSwapchain": 48,
+            "DestroySwapchain": 12,
+            "AcquireNextImage": 32,
+        }
+        for request, expected_length in fixed_requests.items():
+            for order in ("little", "big"):
+                vector = next(
+                    v for v in self.vectors
+                    if v["request"] == request and v["byte_order"] == order
+                )
+                wire = encode_request(vector)
+                self.assertEqual(len(wire), expected_length)
+                validate_request_wire(wire, order)
+
+                for malformed_length in (expected_length - 4, expected_length + 4):
+                    malformed = bytearray(
+                        wire[:-4] if malformed_length < expected_length
+                        else wire + bytes(4)
+                    )
+                    malformed[2:4] = (malformed_length // 4).to_bytes(2, order)
+                    with self.subTest(
+                        request=request, order=order, length=malformed_length
+                    ):
+                        with self.assertRaisesRegex(ValueError, "fixed request length"):
+                            validate_request_wire(bytes(malformed), order)
 
     def test_queue_present_wait_count_matches_wire_length(self) -> None:
         for order in ("little", "big"):
