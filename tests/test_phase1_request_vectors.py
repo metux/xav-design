@@ -170,6 +170,33 @@ class Phase1GoldenRequestTests(unittest.TestCase):
                 self.assertEqual(v["subopcode"], SUBOPCODES[v["request"]])
                 self.assertEqual(validate_common(wire, v["byte_order"]), SUBOPCODES[v["request"]])
                 validate_phase1(wire, v["byte_order"])
+                fields = v["fields"]
+                order = v["byte_order"]
+                if v["request"] == "GetPhysicalDeviceProperty":
+                    self.assertEqual(u32(wire, 8, order), fields["physical_device_xid"])
+                    self.assertEqual(u32(wire, 12, order), fields["property_atom"])
+                elif v["request"] in ("GetPhysicalDeviceQueueFamilyProperties", "GetPhysicalDeviceMemoryProperties"):
+                    self.assertEqual(u32(wire, 8, order), fields["physical_device_xid"])
+                elif v["request"] == "DestroyDevice":
+                    self.assertEqual(u32(wire, 8, order), fields["device_xid"])
+                elif v["request"] == "CreateDefaultDevice":
+                    self.assertEqual(u32(wire, 8, order), fields["device_xid"])
+                    self.assertEqual(u16(wire, 12, order), fields["queue_count"])
+                    self.assertEqual(u16(wire, 14, order), fields["reserved"])
+                    self.assertEqual([struct.unpack_from(endian(order) + "f", wire, 16 + 4*i)[0] for i in range(fields["queue_count"])], fields["priorities"])
+                elif v["request"] == "CreateDevice":
+                    for offset, field in ((8, "device_xid"), (12, "physical_device_xid")):
+                        self.assertEqual(u32(wire, offset, order), fields[field])
+                    for offset, field in ((16, "queue_family_request_count"), (18, "feature_request_count"), (20, "device_extension_count"), (22, "reserved")):
+                        self.assertEqual(u16(wire, offset, order), fields[field])
+                    self.assertEqual(u32(wire, 24, order), fields["queue_family_index"])
+                    self.assertEqual(u16(wire, 28, order), fields["queue_count"])
+                    self.assertEqual(u16(wire, 30, order), fields["queue_reserved"])
+                    self.assertEqual(struct.unpack_from(endian(order) + "f", wire, 32)[0], fields["queue_priority"])
+                    self.assertEqual(u16(wire, 36, order), fields["extension_name_length"])
+                    self.assertEqual(u16(wire, 38, order), fields["extension_reserved"])
+                    self.assertEqual(wire[40:46].decode("ascii"), fields["extension_name"])
+                    self.assertEqual(wire[46:48].hex(), fields["extension_padding_hex"])
                 self.assertEqual(u16(wire, 2, v["byte_order"]), len(wire) // 4)
 
     def test_layouts_match_registry_and_normative_documents(self):
