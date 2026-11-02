@@ -4,6 +4,8 @@ Working design repository for the XAverius X11 extension exposing a server-side 
 
 ## Documents
 
+- [Shared protocol headers](protocol/README.md) — common C wire declarations for server and client consumers.
+
 - [Project status](PROJECT_STATUS.md) — baseline and next steps.
 - [Decision log](DECISIONS.md) — settled, provisional, and open design decisions.
 - [Specification index](spec/README.md) — normative chapter order and links.
