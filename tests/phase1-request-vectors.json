@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "description": "Golden Phase-1 XAverius request frames. The major opcode 0x90 is a fixture value only; live X11 connections use the server-assigned extension opcode. Each request is represented in both X11 byte orders.",
+  "vectors": [
+    {
+      "name": "EnumeratePhysicalDevices-little",
+      "request": "EnumeratePhysicalDevices",
+      "subopcode": 1,
+      "byte_order": "little",
+      "length_bytes": 8,
+      "wire_hex": "9000020001000000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-little",
+      "request": "GetPhysicalDeviceProperty",
+      "subopcode": 2,
+      "byte_order": "little",
+      "length_bytes": 16,
+      "wire_hex": "90000400020000004030201080706050"
+    },
+    {
+      "name": "GetPhysicalDeviceQueueFamilyProperties-little",
+      "request": "GetPhysicalDeviceQueueFamilyProperties",
+      "subopcode": 3,
+      "byte_order": "little",
+      "length_bytes": 12,
+      "wire_hex": "900003000300000040302010"
+    },
+    {
+      "name": "CreateDevice-little",
+      "request": "CreateDevice",
+      "subopcode": 4,
+      "byte_order": "little",
+      "length_bytes": 48,
+      "wire_hex": "90000c00040000004433221140302010010000000100000002000000010000000000803f06000000564b5f415f780000"
+    },
+    {
+      "name": "CreateDefaultDevice-little",
+      "request": "CreateDefaultDevice",
+      "subopcode": 5,
+      "byte_order": "little",
+      "length_bytes": 24,
+      "wire_hex": "900006000500000044332211020000000000803e0000803f"
+    },
+    {
+      "name": "DestroyDevice-little",
+      "request": "DestroyDevice",
+      "subopcode": 6,
+      "byte_order": "little",
+      "length_bytes": 12,
+      "wire_hex": "900003000600000044332211"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-little",
+      "request": "GetPhysicalDeviceMemoryProperties",
+      "subopcode": 7,
+      "byte_order": "little",
+      "length_bytes": 12,
+      "wire_hex": "900003000700000040302010"
+    },
+    {
+      "name": "EnumeratePhysicalDevices-big",
+      "request": "EnumeratePhysicalDevices",
+      "subopcode": 1,
+      "byte_order": "big",
+      "length_bytes": 8,
+      "wire_hex": "9000000201000000"
+    },
+    {
+      "name": "GetPhysicalDeviceProperty-big",
+      "request": "GetPhysicalDeviceProperty",
+      "subopcode": 2,
+      "byte_order": "big",
+      "length_bytes": 16,
+      "wire_hex": "90000004020000001020304050607080"
+    },
+    {
+      "name": "GetPhysicalDeviceQueueFamilyProperties-big",
+      "request": "GetPhysicalDeviceQueueFamilyProperties",
+      "subopcode": 3,
+      "byte_order": "big",
+      "length_bytes": 12,
+      "wire_hex": "900000030300000010203040"
+    },
+    {
+      "name": "CreateDevice-big",
+      "request": "CreateDevice",
+      "subopcode": 4,
+      "byte_order": "big",
+      "length_bytes": 48,
+      "wire_hex": "9000000c040000001122334410203040000100000001000000000002000100003f80000000060000564b5f415f780000"
+    },
+    {
+      "name": "CreateDefaultDevice-big",
+      "request": "CreateDefaultDevice",
+      "subopcode": 5,
+      "byte_order": "big",
+      "length_bytes": 24,
+      "wire_hex": "900000060500000011223344000200003e8000003f800000"
+    },
+    {
+      "name": "DestroyDevice-big",
+      "request": "DestroyDevice",
+      "subopcode": 6,
+      "byte_order": "big",
+      "length_bytes": 12,
+      "wire_hex": "900000030600000011223344"
+    },
+    {
+      "name": "GetPhysicalDeviceMemoryProperties-big",
+      "request": "GetPhysicalDeviceMemoryProperties",
+      "subopcode": 7,
+      "byte_order": "big",
+      "length_bytes": 12,
+      "wire_hex": "900000030700000010203040"
+    }
+  ]
+}
