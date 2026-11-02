@@ -246,6 +246,19 @@ class GoldenXGEEventTests(unittest.TestCase):
                 self.assertEqual(int.from_bytes(actual[8:10], vector["byte_order"]), vector["event_type"])
                 self.assertEqual(actual[10:32], bytes(22))
 
+    def test_sequence_field_is_connection_local_16_bit_and_wraps(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "low 16 bits of the X11 request sequence number most recently processed by the server for the recipient connection at the event-enqueue point",
+            events,
+        )
+        self.assertIn("wraps modulo 65536", events)
+        for order in ("little", "big"):
+            for sequence in (0, 0xFFFF):
+                vector = dict(self.vectors[0], byte_order=order, sequence=sequence)
+                wire = encode_event(vector)
+                self.assertEqual(wire[2:4], sequence.to_bytes(2, order))
+                validate_event_wire(wire, order)
     def test_golden_field_layouts_match_normative_event_chapters(self):
         document = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         sizes = {"XID": 4, "CARD32": 4, "CARD64": 8}
