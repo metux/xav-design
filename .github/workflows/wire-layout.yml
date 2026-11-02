@@ -45,7 +45,8 @@ jobs:
         run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tools/check-async-callback-generations.py tools/preprocess-xav-source.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_async_callback_generation_audit.py tests/test_ci_workflow_coverage.py tests/test_ci_run_presence.py tools/check-ci-run-presence.py tests/test_wire_vectors.py tests/test_phase1_request_vectors.py tests/test_query_version_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
       - name: Compile shared XAverius protocol headers
         id: header_compile
-        run: cc -std=c11 -Wall -Wextra -Werror -I protocol/include -fsyntax-only protocol/tests/header-smoke.c
+        run: |
+          printf '%s\n' '#include <xaverius.h>' '#include <stddef.h>' '_Static_assert(sizeof(xavReqHeader) == 8, "request header");' '_Static_assert(sizeof(xavQueryVersionReply) == 32, "version reply");' '_Static_assert(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capability payload");' '_Static_assert(sizeof(xavAsyncErrorEvent) == 60, "async event");' '_Static_assert(sizeof(xavPresentationCompleteEvent) == 64, "presentation event");' '_Static_assert(sizeof(xavCreateSwapchainReq) == 48, "create swapchain");' '_Static_assert(sizeof(xavQueuePresentReq) == 44, "queue present");' 'int main(void) { return XAV_REQ_QUEUE_PRESENT != 47; }' | cc -std=c11 -Wall -Wextra -Werror -I protocol/include -x c -fsyntax-only -
       - name: Validate request/reply matrix and XGE event layouts
         id: wire_layout
         run: python tools/check-wire-layout.py
