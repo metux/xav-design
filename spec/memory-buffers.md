@@ -42,7 +42,7 @@ Request: physical-device XID at offset 8; total length 12 bytes.
 
 This request explicitly uses a physical-device XID, not a logical-device XID.
 
-The reply contains the following after the 32-byte header:
+The standard X11 reply header occupies offsets 0–31. The four fixed fields below occupy its ordinary data area at offsets 8–23; the variable record payload begins at offset 32. All offsets in the table are absolute offsets from the beginning of the reply packet.
 
 | Offset | Type | Field |
 |---:|---|---|
