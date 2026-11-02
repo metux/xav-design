@@ -66,7 +66,8 @@ This file is the central inventory and numeric assignment for XAverius extension
 | `CreateSwapchain` | 44 | Reply | Create a Swapchain with an exact image count and supported configuration. [Presentation](../spec/presentation.md) |
 | `DestroySwapchain` | 45 | Void | Retire a Swapchain after blocking references and backend access have drained. [Presentation](../spec/presentation.md) |
 | `AcquireNextImage` | 46 | Reply | Acquire an available Swapchain image with timeout and synchronization signaling. [Presentation](../spec/presentation.md) |
-| `QueuePresent` | 47 | Reply | Accept an acquired image for presentation with explicit binary-semaphore dependencies. [Presentation](../spec/presentation.md) |\n| `QueryVersion` | 48 | Reply | Return the server's XAverius protocol version independently of XGE negotiation. [Wire protocol](../spec/wire-protocol.md) |
+| `QueuePresent` | 47 | Reply | Accept an acquired image for presentation with explicit binary-semaphore dependencies. [Presentation](../spec/presentation.md) |
+| `QueryVersion` | 48 | Reply | Return the server's XAverius protocol version independently of XGE negotiation. [Wire protocol](../spec/wire-protocol.md) |
 
 ## Allocation policy
 
