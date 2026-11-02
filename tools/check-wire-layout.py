@@ -3008,6 +3008,13 @@ def check_presentation_profile(c: Check) -> None:
               "AcquireNextImage: reply status values must be explicit")
     c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST" in presentation,
               "QueuePresent: reply status values must be explicit and local to the reply field")
+    c.require("ordinary X11 request limit of 262140 bytes" in presentation and
+              "wait_semaphore_count` MUST NOT exceed 65525" in presentation and
+              "QueuePresent wait_semaphore_count does not match request length" in
+              read("tests/test_wire_vectors.py") and
+              "QueuePresent length exceeds the ordinary X11 request limit" in
+              read("tests/test_wire_vectors.py"),
+              "QueuePresent: variable wait count must be bounded and checked against the exact wire length")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
     c.require("actual_image_count = 0" in presentation and
