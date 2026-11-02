@@ -675,3 +675,5 @@ The cross-chapter lifecycle audit confirmed that disconnect, DestroyDevice, call
 Clarified in spec/events.md: Device/Queue masks belong to the internal Device identity; successful DestroyDevice atomically removes them; a newly created Device using the same numeric XID starts with no Device/Queue selection. The Connection mask survives. Added a conformance case and a static checker guard, plus a regression test in tests/test_select_events_vectors.py.
 
 No event layout, event ID, mask bit, request layout, or runtime behavior was changed. This closes a protocol identity/selection ambiguity and makes the XID-reuse behavior directly testable. Exact-tip CI is required before treating this delta as verified.
+
+The live XGE interoperability plan was also extended to exercise Device XID reuse: a new Device generation must not inherit Device/Queue masks, while the Connection mask remains active. This is a runtime test requirement for the eventual X11/XGE server, not something the static fixture suite can prove.
