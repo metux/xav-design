@@ -496,8 +496,8 @@ def check_error_registry(c: Check) -> None:
         registered = set(re.findall(
             r"^\|\s*" + tick + r"([^" + tick + r"]+)" + tick + r"\s*\|\s*\d+\s*\|", request_registry, re.M
         ))
-        c.require(len(requests) in (40, 47),
-                  f"error coverage: expected 40 baseline or 47 audited request matrix entries, found {len(requests)}")
+        c.require(len(requests) in (40, 47, 48),
+                  f"error coverage: expected 40 baseline, 47 presentation-profile, or 48 complete request matrix entries, found {len(requests)}")
         presentation_names = {
             "CreateSurface", "DestroySurface", "GetSurfaceCapabilities", "CreateSwapchain",
             "DestroySwapchain", "AcquireNextImage", "QueuePresent",
