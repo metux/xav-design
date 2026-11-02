@@ -161,7 +161,7 @@ An implementation SHOULD test at least the following cases:
 - Nach fehlgeschlagenem CommandBufferData-Chunk bleiben zuvor akzeptierte Chunks erhalten; ein korrigierter Chunk kann folgen oder ABORT setzt den Buffer auf INITIAL zurück
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
 - ABORT ist bei INITIAL, EXECUTABLE, INVALID oder PENDING unzulässig und ändert keinen Zustand
-- Die zentrale Request-Registry enthält 47 eindeutige, explizit vergebene Subopcodes (1–47): 1–40 für das Compute-Baseline-Profil und 41–47 ausschließlich für das presentation-capable Profil; Subopcode 0 ist reserviert, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
+- Die zentrale Request-Registry enthält 48 eindeutige, explizit vergebene Subopcodes (1–48): 1–40 für das Compute-Baseline-Profil, 41–47 ausschließlich für das presentation-capable Profil und 48 für `QueryVersion`; Subopcode 0 ist reserviert, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
 - Die Command-Entry-Registry weist `CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH` und `CMD_PUSH_CONSTANTS` eindeutig die IDs 1–4 zu. ID 5 bezeichnet ausschließlich im presentation-capable Profil `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`; ein Compute-only Server weist diesen Entry als unbekannte Command-ID mit `BadValue` zurück. ID 0 und alle sonstigen nicht zugewiesenen IDs ergeben `BadValue`
 - Die Descriptor-Type-Registry definiert in v0.1 ausschließlich `STORAGE_BUFFER = 1`; `0` und alle nicht zugewiesenen Werte werden abgewiesen und niemals stillschweigend umgedeutet
 - Die Shader-Stage-Registry definiert ausschließlich das `COMPUTE`-Bit `0x00000001`; andere Bits sind reserviert und müssen abgewiesen werden
@@ -262,7 +262,7 @@ An implementation SHOULD test at least the following cases:
 - `GetPhysicalDeviceProperty` successful replies use the exact registry type and length; UUID properties contain exactly 16 opaque bytes, `maxWorkGroupInvocations` exactly one `CARD32`, and `maxWorkGroupSize` exactly three `CARD32` values; all padding is zero.
 - Feature-ID and device-extension registries are empty in v0.1: every feature ID is `BadValue`; malformed extension names are `BadValue`; any syntactically valid extension name is `BadMatch`; failures leave `device_xid` unallocated.
 - Extension-name syntax tests include mixed-case extension suffixes (for example `VK_EXT_shaderObject`) and preserve the exact spelling; the syntax check must not incorrectly require the suffix to be lowercase.
-- `spec/errors.md` is checked against all 47 assigned request subopcodes: every request uses the common framing/XID/ownership/atomicity rules where applicable, with request-specific length, value, state, backend, and synchronous-versus-asynchronous outcomes taking precedence when explicitly defined.
+- `spec/errors.md` is checked against all 48 assigned request subopcodes: every request uses the common framing/XID/ownership/atomicity rules where applicable, with request-specific length, value, state, backend, and synchronous-versus-asynchronous outcomes taking precedence when explicitly defined.
 - Error precedence tests verify malformed length/record structure before field validation, field validation before XID resolution, and XID/type/ownership validation before state/backend checks; no rejected Void request leaves a partial resource or state change.
 
 
@@ -333,7 +333,7 @@ python3 -m py_compile tools/check-wire-layout.py
 python3 tools/check-wire-layout.py
 ```
 
-Der Checker verwendet nur die Python-Standardbibliothek. Er prüft die sieben Compute-Baseline-XGE-Event-IDs und -Längen sowie die zwei zusätzlichen, profilgebundenen Präsentations-Events, extrahiert die Event-Felder aus den Layoutbeschreibungen und meldet Überlappungen, Lücken, unzulässige Offsets/Ausrichtung, Felder außerhalb der Eventlänge sowie nicht explizit auf null gesetzte reservierte Felder. Für Replies vergleicht er das 47-Request-Inventar (40 Compute-Baseline-Requests plus sieben Präsentations-Requests) und die Längenmatrix mit dem Subopcode-Register und prüft zentrale feste Reply-Felder sowie variable `reply.length`-Formeln in den normativen Kapiteln. GitHub Actions führt den Check bei Änderungen auf dem Arbeitsbranch und bei Pull Requests aus.
+Der Checker verwendet nur die Python-Standardbibliothek. Er prüft die sieben Compute-Baseline-XGE-Event-IDs und -Längen sowie die zwei zusätzlichen, profilgebundenen Präsentations-Events, extrahiert die Event-Felder aus den Layoutbeschreibungen und meldet Überlappungen, Lücken, unzulässige Offsets/Ausrichtung, Felder außerhalb der Eventlänge sowie nicht explizit auf null gesetzte reservierte Felder. Für Replies vergleicht er das 48-Request-Inventar (40 Compute-Baseline-Requests, sieben Präsentations-Requests und `QueryVersion`) und die Längenmatrix mit dem Subopcode-Register und prüft zentrale feste Reply-Felder sowie variable `reply.length`-Formeln in den normativen Kapiteln. GitHub Actions führt den Check bei Änderungen auf dem Arbeitsbranch und bei Pull Requests aus.
 
 Der Check ist eine statische Dokumentations-Konsistenzprüfung. Er ersetzt weder Tests gegen einen laufenden X11/XGE-Server noch Backend-/Vulkan-Konformitätstests.
 
