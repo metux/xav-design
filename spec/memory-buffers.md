@@ -36,12 +36,9 @@ For the initial compute test:
 
 ## 5.2 `GetPhysicalDeviceMemoryProperties`
 
-Request: physical-device XID at offset 8; total length 12 bytes.
-
-Request:
+Request total length: 12 bytes.
 
 - Offset 8: Physical-Device-XID
-- Total length: 12 bytes
 
 This request explicitly uses a physical-device XID, not a logical-device XID.
 
