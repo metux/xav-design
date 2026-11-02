@@ -6,6 +6,7 @@ Uses only the Python standard library and parses the normative Markdown sources.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unicodedata
