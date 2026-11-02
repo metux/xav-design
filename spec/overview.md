@@ -1,7 +1,7 @@
 # XAverius Protocol Specification
 
 **Version:** 0.1 — freeze-ready protocol specification  
-**Status:** Normative v0.1 content is freeze-ready at candidate `fe45f897fc6dd079f914f8290b94855f37dd864c` (verified by [CI run 41432690799](https://github.com/metux/xav-design/actions/runs/41432690799): 4,823 wire-layout checks, 72 Timeline regressions, 685 Python tests, and required-check audit passed). The request registry contains 48 contracts, including common bootstrap `QueryVersion` at subopcode 0.  
+**Status:** Normative v0.1 content is freeze-ready at candidate `61e4e5517c94074d11cb5319f747528a8fc3f148` (verified by [CI run 41442418120](https://github.com/metux/xav-design/actions/runs/41432690799): 4,823 wire-layout checks, 72 Timeline regressions, 685 Python tests, and required-check audit passed). The request registry contains 48 contracts, including common bootstrap `QueryVersion` at subopcode 0.  
 **Transport:** X11 extension  
 **Backend:** Vulkan  
 **Initial implementation target:** Xvfb, compute-only  
