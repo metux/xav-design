@@ -2035,7 +2035,7 @@ def check_reply_layouts(c: Check) -> None:
 
     conformance = read("spec/conformance.md")
     inventory_match = re.search(
-        r"(?m)^- Reply-request inventory \\(16 total\\): (.+)$", conformance
+        r"(?m)^- Reply-request inventory [(]16 total[)]: (.+)$", conformance
     )
     inventory_text = inventory_match.group(1) if inventory_match else ""
     inventory_names = set(re.findall(r"`([^`]+)`", inventory_text))
