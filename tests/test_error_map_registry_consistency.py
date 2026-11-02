@@ -110,7 +110,8 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             "GetSemaphoreCounterValue": "GetSemaphoreCounterValue",
             "WaitSemaphores": "WaitSemaphores",
             "GetFenceStatus": "GetFenceStatus",
-            "WaitForFence": "WaitForFence",\n            "QueryVersion": "QueryVersion",
+            "WaitForFence": "WaitForFence",
+            "QueryVersion": "QueryVersion",
         }
         self.assertEqual(baseline_replies, set(event_prefix))
         for request, prefix in event_prefix.items():
