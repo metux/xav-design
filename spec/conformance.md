@@ -347,6 +347,14 @@ Zusätzlich zu festen Reply-Feldern prüft er jetzt die variablen Record- und Pa
 
 Die Formeltests enthalten zusätzlich Grenzwertvektoren für Byte-Padding und Reply-Wörter bei Payload-Längen 0, 1, 3, 4 und 5; für `PHYSICALDEVICEINFO`-Namenslängen 0, 1, 4 und 5; für leere und nichtleere Queue-Family-Arrays; sowie für Memory-Type-/Heap-Counts einschließlich der v0.1-Maxima 32/16. Für `WriteBuffer` und `WaitSemaphores` werden variable Request-Längen ebenfalls anhand konkreter Count-/Payload-Vektoren geprüft.
 
+## `QueryVersion` wire conformance (subopcode 48)
+
+- A valid 8-byte request with subopcode 48 returns exactly one standard 32-byte X11 reply with `reply.length = 0`, `major_version = 0`, `minor_version = 1`, and zero bytes at reply offsets 12–31.
+- Golden request and reply bytes MUST match the little-endian and big-endian fixtures in `tests/query-version-vectors.json`. The fixture major opcode and sequence number are test placeholders; live clients use the opcode returned by `QueryExtension` and the connection's actual sequence number.
+- The request succeeds immediately after `QueryExtension`, without prior `GEQueryVersion`, Device creation, or event selection. It MUST NOT mutate per-connection state. A separate `GEQueryVersion` remains mandatory for requests whose contracts require XGE.
+- Negative raw-wire cases reject nonzero X11 `data`, nonzero `flags`, nonzero common `reserved`, zero or mismatched X11 lengths, truncation, trailing payload bytes, and an incorrect subopcode. Each isolated mutation MUST be rejected before any state change.
+- Reply negative cases reject an incorrect `response_type`, nonzero `reply.length`, incorrect major/minor version fields, and any nonzero reserved reply byte.
+
 ## Golden-Wire-Testvektoren
 
 `tests/wire-vectors.json` enthält konkrete Request-Bytes für `CreateBuffer`, `WriteBuffer` und `ReadBuffer`, jeweils in Little- und Big-Endian-Byteordnung. Die `WriteBuffer`-Vektoren decken Payload-Längen 1, 3, 4 und 5 Bytes ab und prüfen damit Padding von 3, 1, 0 und 3 Bytes. Die Fixtures prüfen den 8-Byte-Request-Header, das Null-`data`-Feld, den Subopcode am Offset 4, die vierbytebasierte Request-Länge und die festen Feldlayouts. Zusätzliche Raw-Frame-Tests weisen abgeschnittene Header, falsche deklarierte Längen und nicht-nullige reservierte Headerbytes zurück. Der Major-Opcode `0x90` ist nur ein Fixture-Wert; im Betrieb wird er vom X-Server zugewiesen.
