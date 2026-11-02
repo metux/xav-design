@@ -3010,10 +3010,13 @@ def check_presentation_profile(c: Check) -> None:
               "QueuePresent: reply status values must be explicit and local to the reply field")
     c.require("ordinary X11 request limit of 262140 bytes" in presentation and
               "wait_semaphore_count` MUST NOT exceed 65525" in presentation and
+              "maximum ordinary request length is 262140 bytes" in
+              read("spec/wire-protocol.md") and
               "QueuePresent wait_semaphore_count does not match request length" in
               read("tests/test_wire_vectors.py") and
               "QueuePresent length exceeds the ordinary X11 request limit" in
-              read("tests/test_wire_vectors.py"),
+              read("tests/test_wire_vectors.py") and
+              "maximum_count = 65525" in read("tests/test_wire_vectors.py"),
               "QueuePresent: variable wait count must be bounded and checked against the exact wire length")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
