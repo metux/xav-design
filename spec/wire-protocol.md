@@ -22,6 +22,30 @@ The X11 connection byte order applies to every multi-byte wire field.
 
 The X server dynamically assigns the extension major opcode from the X11 extension range 128–255. Clients MUST discover XAverius using the standard X11 `QueryExtension` request and use the returned major opcode; hard-coding the XAverius major opcode is forbidden. The same value appears in the X11 request header's `reqType` field and the XGE `extension` field. It is not a XAverius registry constant. In XAverius v0.1, the X11 request header's `data` field is always zero; a non-zero value MUST result in `BadValue` before subopcode dispatch, XID resolution, allocation, or state changes. The zero X11 `length` check for unsupported BIG-REQUESTS framing takes precedence and MUST still return `BadLength` before interpreting offset 4. Request identity is carried exclusively by the `subopcode` field at offset 4. Subopcodes are centrally registered; value `0` is reserved. Assigned subopcodes are stable and MUST NOT be reassigned or shifted by later extensions. Undefined requests have no implicit value. In a standard X11 error packet, the subopcode is zero-extended into `minorCode`; `majorCode` contains the extension major opcode. Clients MUST NOT interpret `data` as a subopcode.
 
+## XAverius `QueryVersion`
+
+`QueryVersion` is XAverius subopcode 48. It is the protocol-version query for the XAverius extension itself; it is distinct from the X11 `QueryExtension` request and the XGE `GEQueryVersion` request.
+
+The request has no request-specific payload and is exactly 8 bytes: only the common request header is present. The common header's `subopcode` is 48, `flags` is zero, and `reserved` is zero. The X11 `data` byte remains zero. The request is valid immediately after standard X11 `QueryExtension` has discovered the dynamic XAverius major opcode. It does not require XGE negotiation, a logical Device, or any other XAverius state.
+
+A successful request returns one standard 32-byte X11 reply with `reply.length = 0`. The reply fields are:
+
+| Offset | Type | Field | Required value |
+|---:|---|---|---|
+| 0 | CARD8 | `response_type` | 1 |
+| 1 | CARD8 | `data` | 0 |
+| 2 | CARD16 | `sequenceNumber` | X11 sequence number of this request |
+| 4 | CARD32 | `length` | 0 |
+| 8 | CARD16 | `major_version` | 0 |
+| 10 | CARD16 | `minor_version` | 1 |
+| 12–31 | BYTE[20] | `reserved` | all zero |
+
+All multi-byte fields use the connection's X11 byte order. XAverius v0.1 servers MUST report exactly version 0.1. The returned values describe the server's implemented XAverius protocol version; they are not negotiated values and the request does not change per-connection state. A client determines compatibility by comparing the returned version with the versions it implements: the major version identifies a wire-incompatible protocol generation, while minor versions within one major generation are backward-compatible additions. A client MUST NOT send requests or use fields introduced by a minor version greater than the server's reported minor version.
+
+A malformed request follows the common request-validation precedence. In particular, malformed envelope framing returns `BadLength`; nonzero X11 `data`, common `reserved`, or `flags` returns `BadValue`; a validly framed request with an incorrect request-specific length returns `BadLength`. The request has no XID, lifecycle, backend, or asynchronous failure outcomes.
+
+This query is independent of XGE: `GEQueryVersion` still separately negotiates XGE support, and XAverius requests that require XGE retain their existing per-connection prerequisite.
+
 ## Common Request Validation Precedence
 
 Every request follows this shared order before any request-specific state change:
