@@ -206,6 +206,18 @@ def validate_request_wire(wire: bytes, byte_order: str) -> None:
     if wire[6:8] != bytes(2):
         raise ValueError("reserved common-header field must be zero")
 
+    # QueuePresent has a request-specific variable XID tail. Validate its
+    # count-derived size here as well as the generic X11 envelope.
+    if wire[4] == 47:
+        if len(wire) < 40:
+            raise ValueError("QueuePresent fixed fields are truncated")
+        wait_count = int.from_bytes(wire[28:32], byte_order)
+        expected_length = 40 + 4 * wait_count
+        if expected_length > 262140:
+            raise ValueError("QueuePresent length exceeds the ordinary X11 request limit")
+        if expected_length != len(wire):
+            raise ValueError("QueuePresent wait_semaphore_count does not match request length")
+
 
 class GoldenWireVectorTests(unittest.TestCase):
     @classmethod
@@ -877,6 +889,41 @@ class GoldenWireVectorTests(unittest.TestCase):
         vector["length_bytes"] += 4
         with self.assertRaisesRegex(ValueError, "declared"):
             encode_request(vector)
+
+    def test_queue_present_wait_count_matches_wire_length(self) -> None:
+        for order in ("little", "big"):
+            vector = next(
+                v for v in self.vectors
+                if v["request"] == "QueuePresent"
+                and v["byte_order"] == order
+                and v["fields"]["wait_semaphore_count"] == 0
+            )
+            wire = bytearray(encode_request(vector))
+            wire[28:32] = (1).to_bytes(4, order)
+            with self.subTest(order=order, case="count exceeds tail"):
+                with self.assertRaisesRegex(ValueError, "wait_semaphore_count"):
+                    validate_request_wire(bytes(wire), order)
+
+            wire = bytearray(encode_request(vector))
+            wire.extend((0x12345678).to_bytes(4, order))
+            wire[2:4] = (len(wire) // 4).to_bytes(2, order)
+            with self.subTest(order=order, case="tail exceeds count"):
+                with self.assertRaisesRegex(ValueError, "wait_semaphore_count"):
+                    validate_request_wire(bytes(wire), order)
+
+    def test_queue_present_wait_count_ordinary_length_overflow(self) -> None:
+        for order in ("little", "big"):
+            vector = next(
+                v for v in self.vectors
+                if v["request"] == "QueuePresent"
+                and v["byte_order"] == order
+                and v["fields"]["wait_semaphore_count"] == 0
+            )
+            wire = bytearray(encode_request(vector))
+            wire[28:32] = (65526).to_bytes(4, order)
+            with self.subTest(order=order):
+                with self.assertRaisesRegex(ValueError, "ordinary X11 request limit"):
+                    validate_request_wire(bytes(wire), order)
 
     def test_rejects_nonzero_write_padding(self) -> None:
         import copy
