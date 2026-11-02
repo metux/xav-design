@@ -86,7 +86,7 @@ The following items were found during an earlier audit pass and have since been 
 5. **Error-mapping coverage:** several requests rely on the general error chapter without spelling out all Create-XID, field-value, backend-allocation, or status-reply outcomes. The central rules must be applied consistently; no Void request may silently turn a normal status into a reply.
 
 6. **Create-XID versus input-XID handling:** the general `BadIDChoice` rule was not explicit enough in several pipeline and chunked-create cases, and a few duplicate/count conditions lacked a concrete error. The error chapter now distinguishes target-XID collisions from missing input resources and assigns deterministic errors to the invalid duplicate-entry cases.
-7. **Audit metadata drift:** the earlier registry-completeness statement and unresolved list became stale as the registries and request inventory grew. This audit now reports the current 47-request inventory and keeps only implementation-level interoperability as an open v0.1 validation item.
+7. **Audit metadata drift:** the earlier registry-completeness statement and unresolved list became stale as the registries and request inventory grew. This audit now reports the current 48-request inventory and keeps only implementation-level interoperability as an open v0.1 validation item.
 
 These are protocol-documentation corrections, not user-level design changes. Any newly exposed ambiguity that requires choosing new semantics remains an open issue rather than being guessed. The descriptor-type check is a confirmed consistency result, not a defect.
 
@@ -164,7 +164,7 @@ The presentation chapter is normative for the presentation-capable profile. Its 
 
 For `GetSurfaceCapabilities`, the reply length field is `8 + 2*format_pair_count + present_mode_count + 2*queue_family_count` four-byte units. The variable counts and all aggregate-size calculations require checked wide arithmetic. `CreateSwapchain` has a 48-byte request but a 40-byte reply; the 40-byte reply consists of the standard 32-byte header plus `status` and `actual_image_count`. `AcquireNextImage` replies with `status`, `image_index`, and a zero reserved word. `QueuePresent` has a variable request and a fixed 36-byte reply.
 
-This profile matrix is intentionally separate from the assigned 1–40 request matrix. It records request kind and lengths from [the presentation chapter](presentation.md#10-requestreply-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
+This profile matrix is intentionally separate from the compute-baseline request matrix (1–40 plus `QueryVersion` at 48). It records request kind and lengths from [the presentation chapter](presentation.md#10-requestreply-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
 
 
 
@@ -185,7 +185,7 @@ The specification-level ABI pass rechecked the standard 32-byte X11 reply header
 
 ## Automated wire-layout checker — 2026-10-21
 
-The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 47 assigned request contracts (compute baseline 1–40 and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
+The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 48 assigned request contracts (compute baseline 1–40 and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
 
 ## Expanded Reply ABI checker — 2026-10-21
 
@@ -201,7 +201,7 @@ The static wire-layout checker now requires every centrally registered request t
 
 ## Numeric registry integrity follow-up — 2026-10-21
 
-The static checker verifies uniqueness and expected ranges for the 47 assigned request subopcodes (40 compute-baseline plus seven presentation-profile-only), nine event-type IDs across the profile-gated registries, contiguous error offsets, five command-entry IDs (including the presentation-only copy entry), descriptor-type assignments, physical-device types, queue-flag bits/masks, the v0.1 compute shader-stage bit, and physical-property type IDs. It also checks that the v0.1 optional feature-ID and device-extension registries remain explicitly empty. The request, event, and error checks detect duplicate names/values and missing assignments; other registries are checked against their current v0.1 supported assignments.
+The static checker verifies uniqueness and expected ranges for the 48 assigned request subopcodes (40 compute-baseline, seven presentation-profile-only, and `QueryVersion`), nine event-type IDs across the profile-gated registries, contiguous error offsets, five command-entry IDs (including the presentation-only copy entry), descriptor-type assignments, physical-device types, queue-flag bits/masks, the v0.1 compute shader-stage bit, and physical-property type IDs. It also checks that the v0.1 optional feature-ID and device-extension registries remain explicitly empty. The request, event, and error checks detect duplicate names/values and missing assignments; other registries are checked against their current v0.1 supported assignments.
 
 These are drift guards for the current documented ABI. They do not make unassigned values valid, and they do not claim runtime interoperability.
 
