@@ -10,7 +10,7 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 
 ## `QueryVersion`
 
-`QueryVersion` (subopcode 48) has no request-specific error conditions and performs no state change. It returns the server's fixed protocol-version reply when the exact 8-byte request is valid. Common envelope/header validation remains mandatory: malformed framing returns `BadLength`, and nonzero `data`, `flags`, or common reserved fields return `BadValue`. No XID, ownership, Device-state, XGE-negotiation, or backend checks apply.
+`QueryVersion` (subopcode 0) has no request-specific error conditions and performs no state change. It returns the server's fixed protocol-version reply when the exact 8-byte request is valid. Common envelope/header validation remains mandatory: malformed framing returns `BadLength`, and nonzero `data`, `flags`, or common reserved fields return `BadValue`. No XID, ownership, Device-state, XGE-negotiation, or backend checks apply.
 
 ## General Error Classes
 
