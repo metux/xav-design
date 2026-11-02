@@ -200,6 +200,6 @@ XAV_STATIC_ASSERT(offsetof(xavAsyncErrorEvent, submission_token) == 44, "ASYNC_E
 XAV_STATIC_ASSERT(sizeof(xavAsyncErrorEvent) == 60, "ASYNC_ERROR event size");
 XAV_STATIC_ASSERT(offsetof(xavImageReleasedEvent, presentation_token) == 56, "IMAGE_RELEASED token offset");
 XAV_STATIC_ASSERT(sizeof(xavImageReleasedEvent) == 64, "IMAGE_RELEASED event size");
-XAV_STATIC_ASSERT(sizeof(xavGetSurfaceCapabilitiesReply) == 65, "capabilities reply prefix plus tail byte");
+XAV_STATIC_ASSERT(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capabilities variable payload offset");
 #undef XAV_STATIC_ASSERT
 #endif
