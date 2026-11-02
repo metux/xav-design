@@ -511,3 +511,10 @@ The specification now assigns `QueryVersion` subopcode 48 (append-only; no exist
 - The version reply reports the server's implemented protocol version; it is not a negotiated per-connection version and causes no state change.
 
 This update changes only the new request assignment and its contract; subopcodes 1–47 and the Phase 1 handler split are unchanged. Please confirm Ship A's ownership and add the handler to its implementation plan before integrating the new contract.
+
+
+## QueryVersion conformance verification — 2026-11-02
+
+The complete `QueryVersion` specification, registry, request audit, error mapping, golden request/reply vectors, test guards, and status metadata are present on this branch. The verified normative/test candidate `fe45f897fc6dd079f914f8290b94855f37dd864c` passed [CI run 41432690799](https://github.com/metux/xav-design/actions/runs/41432690799): **4,823 wire-layout checks**, **72 Timeline regressions**, **685 Python tests**, and the required-check audit all passed.
+
+The golden request and reply fixtures cover both X11 byte orders; malformed request common-header/length cases and malformed reply version/length/reserved-field cases are rejected by offline reference tests. These checks do not establish live server behavior. Ship A remains the proposed sole owner of the `QueryVersion` dispatch handler and reply encoding; explicit ship confirmation is still outstanding.
