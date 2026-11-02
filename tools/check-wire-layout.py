@@ -1940,7 +1940,7 @@ def check_reply_matrix(c: Check) -> None:
               "registries/README.md: command-entry summary must include presentation-only entry 5")
     audit_text = read("spec/request-audit.md")
     c.require("48 assigned request contracts" in audit_text and
-              "compute-baseline `QueryVersion` request" in audit_text,
+              "common bootstrap `QueryVersion` at subopcode 0" in audit_text,
               "request audit: checker summary must describe the full 48-request inventory")
     c.require("matrix remains 40 rows" not in audit_text and
               "central 40-request registry" not in audit_text and
@@ -3063,8 +3063,8 @@ def check_presentation_profile(c: Check) -> None:
         c.require(assigned_presentation_requests == expected_presentation_assignments,
                   "presentation audit: presentation requests must use append-only subopcodes 41–47")
     else:
-        c.require(set(request_rows) == set(range(1, 41)),
-                  "presentation audit: baseline request registry must remain contiguous at IDs 1–40")
+        c.require(set(request_rows) == (set(range(1, 41)) | {0}),
+                  "presentation audit: baseline request registry must contain bootstrap ID 0 and compute IDs 1–40")
     command_rows = re.findall(r"^\|\s*(\d+)\s*\|\s*([A-Z_]+)\s*\|", command_registry, re.M)
     compute_command_rows = [
         (1, "CMD_BIND_PIPELINE"), (2, "CMD_BIND_DESCRIPTOR_SETS"),
