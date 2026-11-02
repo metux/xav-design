@@ -14,8 +14,7 @@
 |-------|---------|-------|--------|
 | 1-40 | Compute-Baseline | 40 | **DEFINED** |
 | 41-47 | Presentation-Profile | 7 | **DEFINED** (Profile-gated) |
-| 48 | QueryVersion | 1 | **DEFINED** (Compute-baseline) |
-| 0 | Reserved | 1 | Reserved |
+| 0 | QueryVersion | 1 | **DEFINED** (Common bootstrap) |
 
 **Registry Location**: `registries/request-subopcodes.md` (48 entries, complete)
 
@@ -53,11 +52,11 @@ The request-handler split above is the coordination baseline. It does not assign
 - Subopcode at offset 4 (byte 4)
 - BIG-REQUESTS not supported (conflicts with subopcode at offset 4)
 - X11 `data` byte MUST be 0 for XAverius requests
-- Subopcode 0 reserved, 1-40 compute-baseline, 41-47 presentation-profile, 48 QueryVersion (compute-baseline)
+- Subopcode 0 QueryVersion (common bootstrap), 1-40 compute-baseline, 41-47 presentation-profile
 
 ### Spec Compliance Checklist (from xav-design)
 - [ ] Wire protocol framing (8-byte header + payload)
-- [ ] Subopcode dispatch (1-48, 0 reserved)
+- [ ] Subopcode dispatch (0-47; QueryVersion is bootstrap request)
 - [ ] Profile gating (41-47 presentation-only)
 - [ ] Error mapping (errors.md + conformance.md)
 - [ ] Chunk upload protocol (ShaderModuleData)
@@ -501,7 +500,7 @@ Normative design gaps are not currently known. This does not claim that runtime 
 
 ## QueryVersion assignment and implementation note — 2026-11-02
 
-The specification now assigns `QueryVersion` subopcode 48 (append-only; no existing assignment changed). It is a compute-baseline control request, not presentation-profile-gated.
+The specification now assigns `QueryVersion` common bootstrap subopcode 0; compute requests 1–40 and presentation requests 41–47 are unchanged. It is a compute-baseline control request, not presentation-profile-gated.
 
 - Ship A (common protocol framing/dispatch) is the proposed sole owner for the `QueryVersion` request handler and reply encoding; it must not be duplicated by the device ships.
 - Request: exactly the 8-byte common header, no payload, `flags = 0`, `reserved = 0`.
@@ -513,7 +512,7 @@ The specification now assigns `QueryVersion` subopcode 48 (append-only; no exist
 This update changes only the new request assignment and its contract; subopcodes 1–47 and the Phase 1 handler split are unchanged. Please confirm Ship A's ownership and add the handler to its implementation plan before integrating the new contract.
 
 
-## QueryVersion conformance verification — 2026-11-02
+## QueryVersion conformance verification — 2026-11-02 (superseded opcode note)
 
 The complete `QueryVersion` specification, registry, request audit, error mapping, golden request/reply vectors, test guards, and status metadata are present on this branch. The verified normative/test candidate `fe45f897fc6dd079f914f8290b94855f37dd864c` passed [CI run 41432690799](https://github.com/metux/xav-design/actions/runs/41432690799): **4,823 wire-layout checks**, **72 Timeline regressions**, **685 Python tests**, and the required-check audit all passed.
 
