@@ -885,7 +885,8 @@
         "swapchain_xid": 2695938256,
         "image_index": 2,
         "wait_semaphore_count": 0,
-        "presentation_token": 72623859790382850
+        "presentation_token": 72623859790382850,
+        "wait_semaphore_xids": []
       },
       "wire_hex": "90000a002f000000040302010100000000000000d0c0b0a002000000000000000007060504030201"
     },
@@ -904,7 +905,8 @@
         "swapchain_xid": 2695938256,
         "image_index": 2,
         "wait_semaphore_count": 0,
-        "presentation_token": 72623859790382850
+        "presentation_token": 72623859790382850,
+        "wait_semaphore_xids": []
       },
       "wire_hex": "9000000a2f000000010203040000000100000000a0b0c0d000000002000000000102030405060700"
     },
