@@ -549,3 +549,25 @@ Verification: PR-head workflow run [41452295432](https://github.com/metux/xav-de
 
 This is spec/reference-test integration only. It does not close the outstanding live X11/XGE or Vulkan runtime acceptance gates, nor the Phase 1 ship ownership confirmations/shared integration-interface owner.
 
+
+
+## Post-merge wire-contract audit — 2026-11-02
+
+Reviewed the local-agent WIP integration from PR #3 against the normative memory/presentation chapters, request/error audit, conformance matrix, golden fixtures, and reference encoder.
+
+### Finding corrected
+
+- `GetPhysicalDeviceMemoryProperties` had an ambiguous lead-in saying that the reply fields followed the 32-byte X11 header while its new offset table used absolute packet offsets (8, 12, 16, 20, and 32). Clarified that offsets are absolute, fixed fields occupy the ordinary reply data area at offsets 8–23, and variable records begin at offset 32.
+- `QueuePresent` now receives request-specific raw-wire validation in `tests/test_wire_vectors.py`: the declared wait count must exactly match the variable XID tail, and the count-derived request size must fit the ordinary X11 limit (262140 bytes; maximum representable wait count 65525). Added little- and big-endian negative vectors for count/tail disagreement in both directions and arithmetic/envelope overflow.
+
+Commits:
+- `spec/memory-buffers.md` clarification: `9e970d57dde23005228d5805c18c28c23d74b631`
+- `tests/test_wire_vectors.py` QueuePresent raw-wire count/length checks: `15166a57e496330001324b8b3d22b4e8423a1006`
+
+### Review result and verification
+
+- The integrated presentation layouts agree with the fixed request offsets, CARD64 alignment, QueuePresent variable-tail offset/formula, and reply sizes. The two QueuePresent positive fixtures cover zero and two waits in both byte orders; semantic acceptance/error precedence remains covered by the existing state model and conformance vectors.
+- The memory-properties reply formula remains `reply.length = 4 + 2 * memory_type_count + 4 * memory_heap_count`; record offsets and count bounds are consistent with the 32-byte X11 reply header.
+- Exact-tip CI has not yet been observed for the two post-merge audit commits. Run the wire checker, golden vectors, Timeline regressions, full Python suite, and required-check audit on the resulting branch tip before treating these additions as verified.
+
+This is specification/reference-test work only; no runtime implementation was added.
