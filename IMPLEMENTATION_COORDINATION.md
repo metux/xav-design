@@ -13,7 +13,8 @@
 | Range | Profile | Count | Status |
 |-------|---------|-------|--------|
 | 1-40 | Compute-Baseline | 40 | **DEFINED** |
-| 41-47 | Presentation-Profile | 7 | **DEFINED** (Profile-gated) |\n| 48 | QueryVersion | 1 | **DEFINED** (Compute-baseline) |
+| 41-47 | Presentation-Profile | 7 | **DEFINED** (Profile-gated) |
+| 48 | QueryVersion | 1 | **DEFINED** (Compute-baseline) |
 | 0 | Reserved | 1 | Reserved |
 
 **Registry Location**: `registries/request-subopcodes.md` (48 entries, complete)
