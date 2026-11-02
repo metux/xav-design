@@ -8,7 +8,8 @@
       "subopcode": 1,
       "byte_order": "little",
       "length_bytes": 8,
-      "wire_hex": "9000020001000000"
+      "wire_hex": "9000020001000000",
+      "fields": {}
     },
     {
       "name": "GetPhysicalDeviceProperty-little",
@@ -16,7 +17,11 @@
       "subopcode": 2,
       "byte_order": "little",
       "length_bytes": 16,
-      "wire_hex": "90000400020000004030201080706050"
+      "wire_hex": "90000400020000004030201080706050",
+      "fields": {
+        "physical_device_xid": 270544960,
+        "property_atom": 1348497536
+      }
     },
     {
       "name": "GetPhysicalDeviceQueueFamilyProperties-little",
@@ -24,7 +29,10 @@
       "subopcode": 3,
       "byte_order": "little",
       "length_bytes": 12,
-      "wire_hex": "900003000300000040302010"
+      "wire_hex": "900003000300000040302010",
+      "fields": {
+        "physical_device_xid": 270544960
+      }
     },
     {
       "name": "CreateDevice-little",
@@ -32,7 +40,23 @@
       "subopcode": 4,
       "byte_order": "little",
       "length_bytes": 48,
-      "wire_hex": "90000c00040000004433221140302010010000000100000002000000010000000000803f06000000564b5f415f780000"
+      "wire_hex": "90000c00040000004433221140302010010000000100000002000000010000000000803f06000000564b5f415f780000",
+      "fields": {
+        "device_xid": 287454020,
+        "physical_device_xid": 270544960,
+        "queue_family_request_count": 1,
+        "feature_request_count": 0,
+        "device_extension_count": 1,
+        "reserved": 0,
+        "queue_family_index": 2,
+        "queue_count": 1,
+        "queue_reserved": 0,
+        "queue_priority": 1,
+        "extension_name_length": 6,
+        "extension_reserved": 0,
+        "extension_name": "VK_A_x",
+        "extension_padding_hex": "0000"
+      }
     },
     {
       "name": "CreateDefaultDevice-little",
@@ -40,7 +64,16 @@
       "subopcode": 5,
       "byte_order": "little",
       "length_bytes": 24,
-      "wire_hex": "900006000500000044332211020000000000803e0000803f"
+      "wire_hex": "900006000500000044332211020000000000803e0000803f",
+      "fields": {
+        "device_xid": 287454020,
+        "queue_count": 2,
+        "reserved": 0,
+        "priorities": [
+          0.25,
+          1
+        ]
+      }
     },
     {
       "name": "DestroyDevice-little",
@@ -48,7 +81,10 @@
       "subopcode": 6,
       "byte_order": "little",
       "length_bytes": 12,
-      "wire_hex": "900003000600000044332211"
+      "wire_hex": "900003000600000044332211",
+      "fields": {
+        "device_xid": 287454020
+      }
     },
     {
       "name": "GetPhysicalDeviceMemoryProperties-little",
@@ -56,7 +92,10 @@
       "subopcode": 7,
       "byte_order": "little",
       "length_bytes": 12,
-      "wire_hex": "900003000700000040302010"
+      "wire_hex": "900003000700000040302010",
+      "fields": {
+        "physical_device_xid": 270544960
+      }
     },
     {
       "name": "EnumeratePhysicalDevices-big",
@@ -64,7 +103,8 @@
       "subopcode": 1,
       "byte_order": "big",
       "length_bytes": 8,
-      "wire_hex": "9000000201000000"
+      "wire_hex": "9000000201000000",
+      "fields": {}
     },
     {
       "name": "GetPhysicalDeviceProperty-big",
@@ -72,7 +112,11 @@
       "subopcode": 2,
       "byte_order": "big",
       "length_bytes": 16,
-      "wire_hex": "90000004020000001020304050607080"
+      "wire_hex": "90000004020000001020304050607080",
+      "fields": {
+        "physical_device_xid": 270544960,
+        "property_atom": 1348497536
+      }
     },
     {
       "name": "GetPhysicalDeviceQueueFamilyProperties-big",
@@ -80,7 +124,10 @@
       "subopcode": 3,
       "byte_order": "big",
       "length_bytes": 12,
-      "wire_hex": "900000030300000010203040"
+      "wire_hex": "900000030300000010203040",
+      "fields": {
+        "physical_device_xid": 270544960
+      }
     },
     {
       "name": "CreateDevice-big",
@@ -88,7 +135,23 @@
       "subopcode": 4,
       "byte_order": "big",
       "length_bytes": 48,
-      "wire_hex": "9000000c040000001122334410203040000100000001000000000002000100003f80000000060000564b5f415f780000"
+      "wire_hex": "9000000c040000001122334410203040000100000001000000000002000100003f80000000060000564b5f415f780000",
+      "fields": {
+        "device_xid": 287454020,
+        "physical_device_xid": 270544960,
+        "queue_family_request_count": 1,
+        "feature_request_count": 0,
+        "device_extension_count": 1,
+        "reserved": 0,
+        "queue_family_index": 2,
+        "queue_count": 1,
+        "queue_reserved": 0,
+        "queue_priority": 1,
+        "extension_name_length": 6,
+        "extension_reserved": 0,
+        "extension_name": "VK_A_x",
+        "extension_padding_hex": "0000"
+      }
     },
     {
       "name": "CreateDefaultDevice-big",
@@ -96,7 +159,16 @@
       "subopcode": 5,
       "byte_order": "big",
       "length_bytes": 24,
-      "wire_hex": "900000060500000011223344000200003e8000003f800000"
+      "wire_hex": "900000060500000011223344000200003e8000003f800000",
+      "fields": {
+        "device_xid": 287454020,
+        "queue_count": 2,
+        "reserved": 0,
+        "priorities": [
+          0.25,
+          1
+        ]
+      }
     },
     {
       "name": "DestroyDevice-big",
@@ -104,7 +176,10 @@
       "subopcode": 6,
       "byte_order": "big",
       "length_bytes": 12,
-      "wire_hex": "900000030600000011223344"
+      "wire_hex": "900000030600000011223344",
+      "fields": {
+        "device_xid": 287454020
+      }
     },
     {
       "name": "GetPhysicalDeviceMemoryProperties-big",
@@ -112,7 +187,10 @@
       "subopcode": 7,
       "byte_order": "big",
       "length_bytes": 12,
-      "wire_hex": "900000030700000010203040"
+      "wire_hex": "900000030700000010203040",
+      "fields": {
+        "physical_device_xid": 270544960
+      }
     }
   ]
 }
