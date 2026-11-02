@@ -970,6 +970,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             # per-request contract with exact fixed length and every field offset/type.
             compact_contracts = {
                 "EnumeratePhysicalDevices": (8, ()),
+                "QueryVersion": (8, ()),
                 "GetPhysicalDeviceMemoryProperties": (12, ((8, "XID"),)),
                 "GetBufferMemoryRequirements": (16, ((8, "XID"), (12, "XID"))),
                 "FreeMemory": (16, ((8, "XID"), (12, "XID"))),
