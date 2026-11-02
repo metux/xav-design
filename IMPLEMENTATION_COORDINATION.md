@@ -696,3 +696,14 @@ Commits:
 ### Presentation XGE checker follow-up
 
 The first CI attempts for the presentation golden-vector checker stopped before the test suite because the checker used `json.loads` without importing `json`. This was a checker-only failure, not a vector or protocol failure. Added the missing standard-library import in commit `db1b5d38479911eb8e3bdef8859105285deca505`; exact-tip CI for that correction is pending. The earlier failed runs must not be treated as validation.
+
+
+## Freeze checklist reconciliation — 2026-11-02
+
+Exact-tip CI for the completed post-merge specification audit passed on candidate `0b9c40e0907592f7f96687912d948abf221123d0`:
+- [Wire-layout run 41476931362](https://github.com/metux/xav-design/actions/runs/41476931362): 4,836 static checks passed; Timeline regression runner passed (72); full Python suite passed (692 tests).
+- [Branch-tip monitor 41476931297](https://github.com/metux/xav-design/actions/runs/41476931297): success.
+
+Updated `spec/freeze-checklist.md`, `PROJECT_STATUS.md`, `README.md`, and `spec/open-issues.md` to stop presenting the PR #3 merge baseline or October candidate as the latest verified content. The freeze checklist now marks the post-merge audit CI gate complete. Implementation acceptance remains open: live X11/XGE, Vulkan compute/runtime lifecycle, and optional presentation backend validation. Project coordination still needs Phase 1 ship confirmations and a named shared integration-interface owner.
+
+The checklist/status-only edits themselves are committed separately and must receive their own exact-tip CI result before that later tip is called verified.
