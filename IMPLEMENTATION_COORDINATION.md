@@ -571,3 +571,15 @@ Commits:
 - Exact-tip CI has not yet been observed for the two post-merge audit commits. Run the wire checker, golden vectors, Timeline regressions, full Python suite, and required-check audit on the resulting branch tip before treating these additions as verified.
 
 This is specification/reference-test work only; no runtime implementation was added.
+
+
+### QueuePresent count bound and checker guard — 2026-11-02
+
+The presentation wire audit also made the derived ordinary-request bound explicit: `40 + 4 * wait_semaphore_count` MUST fit within 262140 bytes, so the maximum wait count is 65525; larger values are `BadLength`. The common wire-envelope rule already sets this 262140-byte limit and BIG-REQUESTS remains unsupported.
+
+- `spec/presentation.md`: `c3db6aa5533b0cdac9c9e547206e022da9d53b39`
+- `tools/check-wire-layout.py`: `848b01a8137cc79b7d468bd590b6e3fadd713421`
+
+The checker now guards the normative bound and requires the raw-wire count/length and overflow assertions in `tests/test_wire_vectors.py`. No wire layout or opcode changed.
+
+The GitHub status endpoint currently reports no checks/workflow runs for the direct post-merge commits in this audit; therefore the green PR #3 merge CI does not validate these later corrections. Exact-tip CI remains pending, and no passing result is claimed for this audit series.
