@@ -644,3 +644,16 @@ Exact-tip GitHub Actions run for `dd6242139849e252e88bbf16552fa0dd531c1ed4` succ
 Local execution is still blocked in the current automation container: `getent ahosts github.com` returns no addresses (exit 2), and `git ls-remote https://github.com/metux/xav-design.git refs/heads/docs/restructure-2026-10-21` fails with `Could not resolve host: github.com`. No local checkout is present. Therefore the requested local commands `python3 tools/check-wire-layout.py` and `python3 -m unittest tests.test_event_vectors` have **not** been run locally; the results above are GitHub Actions results, not local results.
 
 No runtime X11/XGE or Vulkan backend interoperability test was performed by this static CI run.
+
+
+## XGE event sequence-number ABI audit — 2026-11-02
+
+The XGE event audit confirmed that the nine event layouts, profile-specific IDs, status registries, both byte orders, fixed lengths, reserved bytes, and SelectEvents mask mappings are covered by the normative chapters and reference tests. One normative ambiguity remained: the 16-bit XGE sequence field was identified by offset but its source was not stated precisely for asynchronous backend events.
+
+Corrected:
+- spec/events.md now requires the low 16 bits of the last X11 request sequence processed for the recipient connection at the event-enqueue point. It explicitly forbids substituting another client's request sequence, a submission token, or a backend callback's stored sequence; wrap is modulo 65536.
+- spec/conformance.md adds the recipient-connection and wrap-boundary requirement.
+- tests/test_event_vectors.py checks sequence encoding at 0 and 65535 in both byte orders.
+- tools/check-wire-layout.py now guards the normative source and anti-confusion rules.
+
+This is an XGE ABI clarification; event layouts, IDs, mask bits, and runtime behavior are unchanged. Exact-tip CI is required before marking this delta verified.
