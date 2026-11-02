@@ -691,3 +691,8 @@ Commits:
 - `63a9a9643c689eef06055d2326554a026b40c8be` — presentation event encoder and tests.
 - `1e912abdcf7c4026bc744d6963a410cb58cfe1cd` — four presentation event golden vectors.
 - `16af6b40a1a3c9b7e339bf69e0fc6c20677005d9` — static checker guard.
+
+
+### Presentation XGE checker follow-up
+
+The first CI attempts for the presentation golden-vector checker stopped before the test suite because the checker used `json.loads` without importing `json`. This was a checker-only failure, not a vector or protocol failure. Added the missing standard-library import in commit `db1b5d38479911eb8e3bdef8859105285deca505`; exact-tip CI for that correction is pending. The earlier failed runs must not be treated as validation.
