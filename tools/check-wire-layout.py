@@ -3016,7 +3016,11 @@ def check_presentation_profile(c: Check) -> None:
               read("tests/test_wire_vectors.py") and
               "QueuePresent length exceeds the ordinary X11 request limit" in
               read("tests/test_wire_vectors.py") and
-              "maximum_count = 65525" in read("tests/test_wire_vectors.py"),
+              "maximum_count = 65525" in read("tests/test_wire_vectors.py") and
+              "request does not have its exact fixed request length" in
+              read("tests/test_wire_vectors.py") and
+              "test_memory_and_presentation_fixed_request_lengths" in
+              read("tests/test_wire_vectors.py"),
               "QueuePresent: variable wait count must be bounded and checked against the exact wire length")
     c.require("CreateSwapchain" in presentation and "actual_image_count" in presentation,
               "CreateSwapchain: exact image-count reply contract missing")
