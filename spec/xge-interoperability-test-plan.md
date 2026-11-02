@@ -19,7 +19,7 @@ This plan is the implementation-level follow-up for the static XGE ABI checks. I
 6. **XGE framing:** verify response type 35, 16-bit sequence, 32-bit XGE length at offset 4, 16-bit event type at offset 8, zero reserved bytes at offsets 10..31, and exact total bytes `32 + 4 * length`. Check every event type implemented by the server against its registered size and offsets.
 7. **Event masks:** verify connection-, device-, and queue-scoped events go only to the matching selection. Verify a successful zero mask clears only its selected scope and that replacing one scope does not alter other scopes.
 8. **Terminal-event exclusivity:** for accepted submissions, verify no submission produces both `SUBMISSION_COMPLETE` and `SUBMISSION_FAILED`. Test event-send failure or client disconnect separately from the internal terminal outcome.
-9. **Connection isolation:** create two clients with distinct masks. Confirm neither client receives the other's selected events and that a late backend completion cannot enqueue an event onto a closed or different connection.
+9. **Connection isolation:** create two clients with distinct masks. Confirm neither client receives the other's selected events and that a late backend completion cannot enqueue an event onto a closed or different connection. Reuse a destroyed Device XID on the same connection: confirm the new Device generation receives no Device- or Queue-scope events until fresh `SelectEvents` requests are issued, while the Connection-scope selection remains active.
 
 ## Required negative cases
 
