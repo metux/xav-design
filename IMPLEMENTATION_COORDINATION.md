@@ -657,3 +657,13 @@ Corrected:
 - tools/check-wire-layout.py now guards the normative source and anti-confusion rules.
 
 This is an XGE ABI clarification; event layouts, IDs, mask bits, and runtime behavior are unchanged. Exact-tip CI is required before marking this delta verified.
+
+### XGE sequence-number audit CI result — 2026-11-02
+
+The final event-sequence wording was aligned with the X11 core protocol: the 16-bit event sequence is the low 16 bits of the last request issued by the recipient client that the server has processed or is currently processing when the event is enqueued. This preserves the X11 rule for events generated during request processing as well as later asynchronous events.
+
+Exact-tip validation on commit 96bede90c558d8127b07c53d6a009ea52a40f717 succeeded:
+- Wire-layout workflow 41473067916: 4,831 static wire-layout checks passed; full Python suite: 689 tests passed; Timeline and required-check steps succeeded.
+- Branch-tip monitor 41473068396: success.
+
+The earlier wire-layout failure on intermediate commit 12911c4f was the expected missing static-checker guard; the guard was added in 93480019 and the final branch-tip run passed. No runtime X11/XGE server test or Vulkan backend test was performed.
