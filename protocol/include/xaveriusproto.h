@@ -4,6 +4,9 @@
 #include <X11/Xmd.h>
 #include <stddef.h>
 #include "xaveriusconst.h"
+
+/* Wire XIDs/Atoms are always CARD32; Xlib CARD32/Atom may be wider on LP64. */
+typedef float xavFloat32;
 #pragma pack(push, 4)
 
 typedef struct { CARD8 reqType; CARD8 data; CARD16 length; CARD8 subopcode; CARD8 flags; CARD16 reserved; } xavReqHeader;
@@ -12,74 +15,74 @@ typedef struct { CARD8 response_type; CARD8 extension; CARD16 sequenceNumber; CA
 
 typedef struct { xavReqHeader header; } xavQueryVersionReq;
 typedef struct { xavReqHeader header; } xavEnumeratePhysicalDevicesReq;
-typedef struct { xavReqHeader header; XID physical_device_xid; ATOM property_atom; } xavGetPhysicalDevicePropertyReq;
-typedef struct { xavReqHeader header; XID physical_device_xid; } xavGetPhysicalDeviceQueueFamilyPropertiesReq;
-typedef struct { CARD32 queue_family_index; CARD16 queue_count; CARD16 reserved; FLOAT32 queue_priorities[1]; } xavQueueFamilyRequest;
+typedef struct { xavReqHeader header; CARD32 physical_device_xid; CARD32 property_atom; } xavGetPhysicalDevicePropertyReq;
+typedef struct { xavReqHeader header; CARD32 physical_device_xid; } xavGetPhysicalDeviceQueueFamilyPropertiesReq;
+typedef struct { CARD32 queue_family_index; CARD16 queue_count; CARD16 reserved; xavFloat32 queue_priorities[1]; } xavQueueFamilyRequest;
 typedef struct { CARD32 feature_id; CARD32 enabled; } xavDeviceFeatureRequest;
 typedef struct { CARD16 name_length; CARD16 reserved; CARD8 name[1]; } xavDeviceExtensionRequest;
-typedef struct { xavReqHeader header; XID device_xid; XID physical_device_xid; CARD16 queue_family_request_count; CARD16 feature_request_count; CARD16 device_extension_count; CARD16 reserved; CARD8 requests[1]; } xavCreateDeviceReq;
-typedef struct { xavReqHeader header; XID device_xid; CARD16 queue_count; CARD16 reserved; FLOAT32 priorities[1]; } xavCreateDefaultDeviceReq;
-typedef struct { xavReqHeader header; XID device_xid; } xavDestroyDeviceReq;
-typedef struct { xavReqHeader header; XID physical_device_xid; } xavGetPhysicalDeviceMemoryPropertiesReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 physical_device_xid; CARD16 queue_family_request_count; CARD16 feature_request_count; CARD16 device_extension_count; CARD16 reserved; CARD8 requests[1]; } xavCreateDeviceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD16 queue_count; CARD16 reserved; xavFloat32 priorities[1]; } xavCreateDefaultDeviceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; } xavDestroyDeviceReq;
+typedef struct { xavReqHeader header; CARD32 physical_device_xid; } xavGetPhysicalDeviceMemoryPropertiesReq;
 
-typedef struct { xavReqHeader header; XID device_xid; XID buffer_xid; CARD64 size; CARD32 usage_flags; CARD32 reserved; } xavCreateBufferReq;
-typedef struct { xavReqHeader header; XID device_xid; XID buffer_xid; } xavGetBufferMemoryRequirementsReq;
-typedef struct { xavReqHeader header; XID device_xid; XID memory_xid; CARD64 allocation_size; CARD32 memory_type_index; CARD32 reserved; } xavAllocateMemoryReq;
-typedef struct { xavReqHeader header; XID device_xid; XID memory_xid; } xavFreeMemoryReq;
-typedef struct { xavReqHeader header; XID device_xid; XID buffer_xid; XID memory_xid; CARD64 memory_offset; } xavBindBufferMemoryReq;
-typedef struct { xavReqHeader header; XID device_xid; XID buffer_xid; CARD64 buffer_offset; CARD32 data_length; CARD8 data[1]; } xavWriteBufferReq;
-typedef struct { xavReqHeader header; XID device_xid; XID buffer_xid; CARD64 buffer_offset; CARD32 data_length; } xavReadBufferReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 buffer_xid; CARD64 size; CARD32 usage_flags; CARD32 reserved; } xavCreateBufferReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 buffer_xid; } xavGetBufferMemoryRequirementsReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 memory_xid; CARD64 allocation_size; CARD32 memory_type_index; CARD32 reserved; } xavAllocateMemoryReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 memory_xid; } xavFreeMemoryReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 buffer_xid; CARD32 memory_xid; CARD64 memory_offset; } xavBindBufferMemoryReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 buffer_xid; CARD64 buffer_offset; CARD32 data_length; CARD8 data[1]; } xavWriteBufferReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 buffer_xid; CARD64 buffer_offset; CARD32 data_length; } xavReadBufferReq;
 
-typedef struct { xavReqHeader header; XID device_xid; XID shader_module_xid; CARD32 data_length; CARD8 data[1]; } xavShaderModuleDataReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 shader_module_xid; CARD32 data_length; CARD8 data[1]; } xavShaderModuleDataReq;
 typedef struct { CARD32 binding; CARD32 descriptor_type; CARD32 descriptor_count; CARD32 stage_flags; } xavDescriptorSetLayoutBinding;
-typedef struct { xavReqHeader header; XID device_xid; XID descriptor_set_layout_xid; CARD32 flags; CARD32 binding_count; xavDescriptorSetLayoutBinding bindings[1]; } xavCreateDescriptorSetLayoutReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 descriptor_set_layout_xid; CARD32 flags; CARD32 binding_count; xavDescriptorSetLayoutBinding bindings[1]; } xavCreateDescriptorSetLayoutReq;
 typedef struct { CARD32 descriptor_type; CARD32 descriptor_count; } xavDescriptorPoolSize;
-typedef struct { xavReqHeader header; XID device_xid; XID descriptor_pool_xid; CARD32 max_sets; CARD16 pool_size_count; CARD16 reserved; xavDescriptorPoolSize pool_sizes[1]; } xavCreateDescriptorPoolReq;
-typedef struct { xavReqHeader header; XID device_xid; XID descriptor_pool_xid; } xavDestroyDescriptorPoolReq;
-typedef struct { XID descriptor_set_xid; XID descriptor_set_layout_xid; } xavDescriptorSetAllocation;
-typedef struct { xavReqHeader header; XID device_xid; XID descriptor_pool_xid; CARD16 descriptor_set_count; CARD16 reserved; xavDescriptorSetAllocation allocations[1]; } xavAllocateDescriptorSetsReq;
-typedef struct { XID descriptor_set_xid; CARD32 binding; CARD32 array_element; CARD32 descriptor_type; XID buffer_xid; CARD64 buffer_offset; CARD64 range; } xavDescriptorWrite;
-typedef struct { xavReqHeader header; XID device_xid; CARD16 write_count; CARD16 reserved0; CARD32 reserved1; xavDescriptorWrite writes[1]; } xavUpdateDescriptorSetsReq;
-typedef struct { xavReqHeader header; XID device_xid; XID descriptor_pool_xid; CARD16 descriptor_set_count; CARD16 reserved; XID descriptor_set_xids[1]; } xavFreeDescriptorSetsReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 descriptor_pool_xid; CARD32 max_sets; CARD16 pool_size_count; CARD16 reserved; xavDescriptorPoolSize pool_sizes[1]; } xavCreateDescriptorPoolReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 descriptor_pool_xid; } xavDestroyDescriptorPoolReq;
+typedef struct { CARD32 descriptor_set_xid; CARD32 descriptor_set_layout_xid; } xavDescriptorSetAllocation;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 descriptor_pool_xid; CARD16 descriptor_set_count; CARD16 reserved; xavDescriptorSetAllocation allocations[1]; } xavAllocateDescriptorSetsReq;
+typedef struct { CARD32 descriptor_set_xid; CARD32 binding; CARD32 array_element; CARD32 descriptor_type; CARD32 buffer_xid; CARD64 buffer_offset; CARD64 range; } xavDescriptorWrite;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD16 write_count; CARD16 reserved0; CARD32 reserved1; xavDescriptorWrite writes[1]; } xavUpdateDescriptorSetsReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 descriptor_pool_xid; CARD16 descriptor_set_count; CARD16 reserved; CARD32 descriptor_set_xids[1]; } xavFreeDescriptorSetsReq;
 typedef struct { CARD32 stage_flags; CARD32 offset; CARD32 size; } xavPushConstantRange;
-typedef struct { xavReqHeader header; XID device_xid; XID pipeline_layout_xid; CARD16 set_layout_count; CARD16 push_constant_range_count; CARD8 data[1]; } xavCreatePipelineLayoutReq;
-typedef struct { xavReqHeader header; XID device_xid; XID pipeline_xid; XID pipeline_layout_xid; XID shader_module_xid; CARD16 entry_point_length; CARD16 reserved; CARD8 entry_point[1]; } xavCreateComputePipelineReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 pipeline_layout_xid; CARD16 set_layout_count; CARD16 push_constant_range_count; CARD8 data[1]; } xavCreatePipelineLayoutReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 pipeline_xid; CARD32 pipeline_layout_xid; CARD32 shader_module_xid; CARD16 entry_point_length; CARD16 reserved; CARD8 entry_point[1]; } xavCreateComputePipelineReq;
 
-typedef struct { xavReqHeader header; XID device_xid; XID command_pool_xid; CARD32 queue_family_index; CARD32 flags; } xavCreateCommandPoolReq;
-typedef struct { xavReqHeader header; XID device_xid; XID command_pool_xid; } xavDestroyCommandPoolReq;
-typedef struct { xavReqHeader header; XID device_xid; XID command_buffer_xid; } xavResetCommandBufferReq;
-typedef struct { xavReqHeader header; XID command_buffer_xid; XID command_pool_xid; CARD8 entries[1]; } xavCommandBufferDataReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 command_pool_xid; CARD32 queue_family_index; CARD32 flags; } xavCreateCommandPoolReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 command_pool_xid; } xavDestroyCommandPoolReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 command_buffer_xid; } xavResetCommandBufferReq;
+typedef struct { xavReqHeader header; CARD32 command_buffer_xid; CARD32 command_pool_xid; CARD8 entries[1]; } xavCommandBufferDataReq;
 typedef struct { CARD16 command_id; CARD16 entry_length; } xavCommandEntryHeader;
-typedef struct { CARD16 command_id; CARD16 entry_length; XID pipeline_xid; } xavCmdBindPipeline;
-typedef struct { CARD16 command_id; CARD16 entry_length; XID pipeline_layout_xid; CARD32 first_set; CARD16 descriptor_set_count; CARD16 reserved; XID descriptor_set_xids[1]; } xavCmdBindDescriptorSets;
+typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 pipeline_xid; } xavCmdBindPipeline;
+typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 pipeline_layout_xid; CARD32 first_set; CARD16 descriptor_set_count; CARD16 reserved; CARD32 descriptor_set_xids[1]; } xavCmdBindDescriptorSets;
 typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 group_count_x; CARD32 group_count_y; CARD32 group_count_z; } xavCmdDispatch;
-typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 stage_flags; XID pipeline_layout_xid; CARD32 offset; CARD32 data_length; CARD8 data[1]; } xavCmdPushConstants;
-typedef struct { CARD16 command_id; CARD16 entry_length; XID buffer_xid; XID swapchain_xid; CARD32 image_index; CARD64 buffer_offset; CARD32 row_length; CARD32 image_height; CARD32 reserved; } xavCmdCopyBufferToSwapchainImage;
+typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 stage_flags; CARD32 pipeline_layout_xid; CARD32 offset; CARD32 data_length; CARD8 data[1]; } xavCmdPushConstants;
+typedef struct { CARD16 command_id; CARD16 entry_length; CARD32 buffer_xid; CARD32 swapchain_xid; CARD32 image_index; CARD64 buffer_offset; CARD32 row_length; CARD32 image_height; CARD32 reserved; } xavCmdCopyBufferToSwapchainImage;
 
-typedef struct { XID semaphore_xid; CARD64 wait_value; CARD32 wait_stage_mask; } xavQueueSubmitWait;
-typedef struct { XID semaphore_xid; CARD64 signal_value; } xavQueueSubmitSignal;
-typedef struct { xavReqHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; XID fence_xid; CARD16 command_buffer_count; CARD16 wait_semaphore_count; CARD16 signal_semaphore_count; CARD16 reserved; CARD64 submission_token; CARD8 arrays[1]; } xavQueueSubmitReq;
-typedef struct { xavReqHeader header; XID device_xid; XID semaphore_xid; CARD32 semaphore_type; CARD64 initial_value; } xavCreateSemaphoreReq;
-typedef struct { xavReqHeader header; XID device_xid; XID semaphore_xid; } xavGetSemaphoreCounterValueReq;
-typedef struct { XID semaphore_xid; CARD64 wait_value; } xavWaitSemaphoreEntry;
-typedef struct { xavReqHeader header; XID device_xid; CARD32 semaphore_count; CARD32 wait_mode; CARD64 timeout_ns; xavWaitSemaphoreEntry entries[1]; } xavWaitSemaphoresReq;
-typedef struct { xavReqHeader header; XID device_xid; XID semaphore_xid; CARD64 signal_value; } xavSignalSemaphoreReq;
-typedef struct { xavReqHeader header; XID device_xid; XID semaphore_xid; } xavDestroySemaphoreReq;
-typedef struct { xavReqHeader header; XID device_xid; XID fence_xid; CARD32 create_flags; CARD32 reserved; } xavCreateFenceReq;
-typedef struct { xavReqHeader header; XID device_xid; XID fence_xid; } xavGetFenceStatusReq;
-typedef struct { xavReqHeader header; XID device_xid; XID fence_xid; CARD64 timeout_ns; } xavWaitForFenceReq;
-typedef struct { xavReqHeader header; XID device_xid; XID fence_xid; } xavResetFenceReq;
-typedef struct { xavReqHeader header; XID device_xid; XID fence_xid; } xavDestroyFenceReq;
-typedef struct { xavReqHeader header; XID device_xid; XID resource_xid; } xavDestroyResourceReq;
-typedef struct { xavReqHeader header; CARD32 scope; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 event_mask; CARD32 reserved; } xavSelectEventsReq;
+typedef struct { CARD32 semaphore_xid; CARD64 wait_value; CARD32 wait_stage_mask; } xavQueueSubmitWait;
+typedef struct { CARD32 semaphore_xid; CARD64 signal_value; } xavQueueSubmitSignal;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 fence_xid; CARD16 command_buffer_count; CARD16 wait_semaphore_count; CARD16 signal_semaphore_count; CARD16 reserved; CARD64 submission_token; CARD8 arrays[1]; } xavQueueSubmitReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 semaphore_xid; CARD32 semaphore_type; CARD64 initial_value; } xavCreateSemaphoreReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 semaphore_xid; } xavGetSemaphoreCounterValueReq;
+typedef struct { CARD32 semaphore_xid; CARD64 wait_value; } xavWaitSemaphoreEntry;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 semaphore_count; CARD32 wait_mode; CARD64 timeout_ns; xavWaitSemaphoreEntry entries[1]; } xavWaitSemaphoresReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 semaphore_xid; CARD64 signal_value; } xavSignalSemaphoreReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 semaphore_xid; } xavDestroySemaphoreReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 fence_xid; CARD32 create_flags; CARD32 reserved; } xavCreateFenceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 fence_xid; } xavGetFenceStatusReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 fence_xid; CARD64 timeout_ns; } xavWaitForFenceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 fence_xid; } xavResetFenceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 fence_xid; } xavDestroyFenceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 resource_xid; } xavDestroyResourceReq;
+typedef struct { xavReqHeader header; CARD32 scope; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 event_mask; CARD32 reserved; } xavSelectEventsReq;
 
-typedef struct { xavReqHeader header; XID surface_xid; XID window_xid; } xavCreateSurfaceReq;
-typedef struct { xavReqHeader header; XID surface_xid; } xavDestroySurfaceReq;
-typedef struct { xavReqHeader header; XID device_xid; XID surface_xid; } xavGetSurfaceCapabilitiesReq;
-typedef struct { xavReqHeader header; XID device_xid; XID swapchain_xid; XID surface_xid; CARD32 image_count; CARD32 format_id; CARD32 color_space_id; CARD32 width; CARD32 height; CARD32 present_mode_id; CARD32 image_usage_flags; } xavCreateSwapchainReq;
-typedef struct { xavReqHeader header; XID swapchain_xid; } xavDestroySwapchainReq;
-typedef struct { xavReqHeader header; XID device_xid; XID swapchain_xid; CARD64 timeout_ns; XID semaphore_xid; XID fence_xid; } xavAcquireNextImageReq;
-typedef struct { xavReqHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; XID swapchain_xid; CARD32 image_index; CARD32 wait_semaphore_count; CARD64 presentation_token; XID wait_semaphore_xids[1]; } xavQueuePresentReq;
+typedef struct { xavReqHeader header; CARD32 surface_xid; CARD32 window_xid; } xavCreateSurfaceReq;
+typedef struct { xavReqHeader header; CARD32 surface_xid; } xavDestroySurfaceReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 surface_xid; } xavGetSurfaceCapabilitiesReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 swapchain_xid; CARD32 surface_xid; CARD32 image_count; CARD32 format_id; CARD32 color_space_id; CARD32 width; CARD32 height; CARD32 present_mode_id; CARD32 image_usage_flags; } xavCreateSwapchainReq;
+typedef struct { xavReqHeader header; CARD32 swapchain_xid; } xavDestroySwapchainReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 swapchain_xid; CARD64 timeout_ns; CARD32 semaphore_xid; CARD32 fence_xid; } xavAcquireNextImageReq;
+typedef struct { xavReqHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 swapchain_xid; CARD32 image_index; CARD32 wait_semaphore_count; CARD64 presentation_token; CARD32 wait_semaphore_xids[1]; } xavQueuePresentReq;
 
 /* Replies whose fields occupy the standard 32-byte reply header's data area. */
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD16 major_version; CARD16 minor_version; CARD8 reserved[20]; } xavQueryVersionReply;
@@ -89,22 +92,22 @@ typedef struct { CARD32 property_flags; CARD32 heap_index; } xavMemoryTypeInfo;
 typedef struct { CARD64 size; CARD32 heap_flags; CARD32 reserved; } xavMemoryHeapInfo;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD64 size; CARD64 alignment; CARD32 memory_type_bits; CARD32 reserved; } xavGetBufferMemoryRequirementsReply;
 typedef struct { CARD32 queue_flags; CARD32 queue_count; CARD32 reserved; } xavQueueFamilyInfo;
-typedef struct { XID physical_device_xid; CARD32 device_type; CARD32 vendor_id; CARD32 device_id; CARD32 api_version; CARD32 driver_version; CARD32 compute_queue_family_count; CARD16 device_name_length; CARD16 reserved; CARD8 device_name[1]; } xavPhysicalDeviceInfo;
+typedef struct { CARD32 physical_device_xid; CARD32 device_type; CARD32 vendor_id; CARD32 device_id; CARD32 api_version; CARD32 driver_version; CARD32 compute_queue_family_count; CARD16 device_name_length; CARD16 reserved; CARD8 device_name[1]; } xavPhysicalDeviceInfo;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD64 counter_value; CARD8 reserved[16]; } xavGetSemaphoreCounterValueReply;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD32 status; CARD8 reserved[20]; } xavWaitSemaphoresReply;
 typedef struct { CARD8 response_type; CARD8 fence_status; CARD16 sequenceNumber; CARD32 length; CARD8 reserved[24]; } xavGetFenceStatusReply;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD32 status; CARD8 reserved[20]; } xavWaitForFenceReply;
 
 /* XGE events. */
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 error_code; CARD32 origin; CARD64 submission_token; XID resource_xid; CARD32 reserved; } xavAsyncErrorEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 reason_code; CARD64 device_generation; } xavDeviceLostEvent;
-typedef struct { xavXGEHeader header; XID physical_device_xid; CARD32 new_status; CARD32 reason_code; CARD32 reserved; } xavDeviceStatusChangedEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 heap_index; CARD32 pressure_level; CARD32 reserved; } xavDeviceMemoryPressureEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 idle_reason; CARD64 device_generation; } xavDeviceIdleEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 reserved; CARD64 submission_token; } xavSubmissionCompleteEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 failure_class; CARD64 submission_token; } xavSubmissionFailedEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; XID swapchain_xid; CARD32 image_index; CARD32 reserved; CARD64 presentation_token; } xavImageReleasedEvent;
-typedef struct { xavXGEHeader header; XID device_xid; CARD32 queue_family_index; CARD32 queue_index; XID swapchain_xid; CARD32 image_index; CARD32 status; CARD64 presentation_token; } xavPresentationCompleteEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 error_code; CARD32 origin; CARD64 submission_token; CARD32 resource_xid; CARD32 reserved; } xavAsyncErrorEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 reason_code; CARD64 device_generation; } xavDeviceLostEvent;
+typedef struct { xavXGEHeader header; CARD32 physical_device_xid; CARD32 new_status; CARD32 reason_code; CARD32 reserved; } xavDeviceStatusChangedEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 heap_index; CARD32 pressure_level; CARD32 reserved; } xavDeviceMemoryPressureEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 idle_reason; CARD64 device_generation; } xavDeviceIdleEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 reserved; CARD64 submission_token; } xavSubmissionCompleteEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 failure_class; CARD64 submission_token; } xavSubmissionFailedEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 swapchain_xid; CARD32 image_index; CARD32 reserved; CARD64 presentation_token; } xavImageReleasedEvent;
+typedef struct { xavXGEHeader header; CARD32 device_xid; CARD32 queue_family_index; CARD32 queue_index; CARD32 swapchain_xid; CARD32 image_index; CARD32 status; CARD64 presentation_token; } xavPresentationCompleteEvent;
 
 /* Variable-length presentation capability reply starts at offset 64. */
 typedef struct {
