@@ -1931,10 +1931,10 @@ def check_reply_matrix(c: Check) -> None:
     # Keep user-facing inventory summaries in sync with the actual registry. These
     # labels are easy to overlook when a profile adds append-only request IDs.
     readme = read("README.md")
-    c.require("48 assigned request subopcodes" in readme and "compute baseline 1–40 plus QueryVersion 48, and presentation-profile-only 41–47" in readme,
+    c.require("48 assigned request subopcodes" in readme and "common bootstrap QueryVersion 0, compute baseline 1–40, and presentation-profile-only 41–47" in readme,
               "README: request registry summary must describe all 48 assignments and the profile boundary")
     registry_readme = read("registries/README.md")
-    c.require("48 requests assigned: compute baseline 1–40 plus QueryVersion 48; presentation-profile-only 41–47" in registry_readme,
+    c.require("48 requests assigned: common bootstrap QueryVersion 0; compute baseline 1–40; presentation-profile-only 41–47" in registry_readme,
               "registries/README.md: request inventory summary must match the central 48-request registry")
     c.require("Values 1–4 are assigned for the compute baseline; value 5 is presentation-profile-only" in registry_readme,
               "registries/README.md: command-entry summary must include presentation-only entry 5")
@@ -1952,8 +1952,8 @@ def check_reply_matrix(c: Check) -> None:
               f"request registry: expected all 48 assigned requests, found {len(registry_rows)}")
     c.require(len(set(opcodes)) == len(opcodes), "request registry contains duplicate subopcode values")
     c.require(len(set(names)) == len(names), "request registry contains duplicate request names")
-    c.require(set(opcodes) == set(range(1, 49)),
-              "request registry must contain every assigned ID 1–48 exactly once; 0 is reserved")
+    c.require(set(opcodes) == set(range(0, 48)),
+              "request registry must contain every assigned ID 0–47 exactly once, with QueryVersion at 0")
     audit = read("spec/request-audit.md")
     matrix = audit.split("## Per-request contract matrix", 1)
     c.require(len(matrix) == 2, "request-audit.md: missing per-request contract matrix")
@@ -2838,7 +2838,7 @@ def check_presentation_profile(c: Check) -> None:
     for row in presentation_audit_rows:
         c.require(row in request_audit,
                   f"request audit: presentation request kind/length row missing or inconsistent: {row}")
-    c.require("This profile matrix is intentionally separate from the compute-baseline request matrix (1–40 plus `QueryVersion` at 48)." in request_audit,
+    c.require("This profile matrix is intentionally separate from the compute-baseline request matrix (1–40), with common bootstrap `QueryVersion` at subopcode 0." in request_audit,
               "request audit: profile-gated presentation rows must remain separate from compute-baseline assignments")
 
     # Presentation event IDs live in a separate, profile-gated registry.
@@ -3058,8 +3058,8 @@ def check_presentation_profile(c: Check) -> None:
         "QueuePresent": 47,
     }
     if assigned_presentation_requests:
-        c.require(set(request_rows) == set(range(1, 49)),
-                  "presentation audit: assigned registry must contain contiguous subopcodes 1–48")
+        c.require(set(request_rows) == set(range(0, 48)),
+                  "presentation audit: assigned registry must contain contiguous subopcodes 0–47")
         c.require(assigned_presentation_requests == expected_presentation_assignments,
                   "presentation audit: presentation requests must use append-only subopcodes 41–47")
     else:
