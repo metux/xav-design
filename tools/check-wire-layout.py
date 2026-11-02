@@ -2271,6 +2271,11 @@ def check_reply_golden_vectors(c: Check) -> None:
                           f"{name}: ReadBuffer padding must be zero")
             except (ValueError, IndexError):
                 c.require(False, f"{name}: malformed ReadBuffer vector kind")
+        elif kind == "QueryVersion":
+            c.require(len(wire) == 32 and declared == 0, f"{name}: QueryVersion reply must be exactly 32 bytes with length zero")
+            c.require(int.from_bytes(wire[8:10], order) == 0, f"{name}: QueryVersion major version must be 0")
+            c.require(int.from_bytes(wire[10:12], order) == 1, f"{name}: QueryVersion minor version must be 1")
+            c.require(wire[12:32] == bytes(20), f"{name}: QueryVersion reserved bytes must be zero")
         elif kind in ("GetFenceStatus", "WaitForFence", "WaitForFence-success", "WaitForFence-timeout", "WaitForFence-execution-failed", "WaitForFence-device-lost", "WaitForFence-device-destroyed", "GetSemaphoreCounterValue", "WaitSemaphores-success"):
             c.require(len(wire) == 32 and declared == 0, f"{name}: fixed reply must be exactly 32 bytes with length zero")
             if kind == "GetFenceStatus":
@@ -2371,7 +2376,7 @@ def check_reply_golden_vectors(c: Check) -> None:
         "GetPhysicalDeviceQueueFamilyProperties-two-records",
         "GetPhysicalDeviceProperty-success", "GetPhysicalDeviceProperty-not-supported", "GetPhysicalDeviceProperty-not-available",
         "GetPhysicalDeviceMemoryProperties-one-type-one-heap", "GetPhysicalDeviceMemoryProperties-max-counts", "GetBufferMemoryRequirements",
-        "WriteBuffer-success", "WaitSemaphores-timeout",
+        "WriteBuffer-success", "WaitSemaphores-timeout", "QueryVersion",
     }
     present = {v.get("event") for v in vectors if isinstance(v, dict)}
     for kind in sorted(required):
