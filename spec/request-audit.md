@@ -185,7 +185,7 @@ The specification-level ABI pass rechecked the standard 32-byte X11 reply header
 
 ## Automated wire-layout checker — 2026-10-21
 
-The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 48 assigned request contracts (compute baseline 1–40 and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
+The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 48 assigned request contracts (compute baseline 1–40, `QueryVersion` 48, and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
 
 ## Expanded Reply ABI checker — 2026-10-21
 
