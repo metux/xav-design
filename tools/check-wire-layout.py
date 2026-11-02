@@ -2584,7 +2584,7 @@ def check_xge_abi(c: Check) -> None:
               "XGE header: exact total-size formula missing")
     c.require(re.search(r"connection byte order applies to both header and payload", header, re.I) is not None,
               "XGE header: connection byte order must apply to header and payload")
-    c.require(re.search(r"low 16 bits of the X11 request sequence number most recently processed by the server for the recipient connection at the event-enqueue point", header, re.I) is not None and
+    c.require(re.search(r"low 16 bits of the X11 request sequence number issued by the recipient client and has been or is currently being processed by the server at the event-enqueue point", header, re.I) is not None and
               re.search(r"wraps modulo 65536", header, re.I) is not None,
               "XGE header: sequence must be recipient-connection-local and wrap as CARD16")
     c.require("submission token" in header.lower() and "backend callback record" in header.lower(),
