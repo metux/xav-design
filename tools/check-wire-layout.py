@@ -2961,6 +2961,17 @@ def check_presentation_profile(c: Check) -> None:
         c.require(occupied == set(range(32, 64)),
                   f"{name}: event payload must cover bytes 32 through 63 exactly")
 
+
+    presentation_event_tests = read("tests/test_event_vectors.py")
+    presentation_vectors = json.loads(read("tests/event-vectors.json"))
+    c.require(len(presentation_vectors.get("presentation_vectors", [])) == 4,
+              "presentation XGE: require little- and big-endian golden vectors for both presentation event types")
+    c.require("def encode_presentation_event" in presentation_event_tests
+              and "def validate_presentation_event_wire" in presentation_event_tests
+              and "def test_presentation_golden_event_bytes" in presentation_event_tests
+              and "def test_presentation_event_rejects_invalid_status_and_reserved_field" in presentation_event_tests,
+              "presentation XGE: golden-byte encoding and invalid status/reserved-field regression tests are required")
+
     # Request layouts are specified but not assigned subopcodes yet.
     expected_headings = (
         "### CreateSurface — Void, 16 bytes",
