@@ -588,3 +588,12 @@ The QueuePresent boundary test now accepts the exact maximum 262140-byte ordinar
 
 - `tests/test_wire_vectors.py` boundary coverage: `477d0921c7daba11bc826b4aa813fcf86e5f144e`
 - `tools/check-wire-layout.py` common-limit cross-check: `358023526dd66eb6518d9a16df701e8041516e0e`
+
+### Fixed request-length negative coverage — 2026-11-02
+
+Extended the raw-wire reference validator to enforce the exact fixed request sizes for `GetPhysicalDeviceMemoryProperties` and all six fixed-size presentation requests (subopcodes 41–46). New tests exercise the valid request and both one-word-short and one-word-long frames in little- and big-endian order. `QueuePresent` remains count-derived and is covered separately by the variable-tail and ordinary-limit tests.
+
+- `tests/test_wire_vectors.py`: `72b28a8adcfa6461491e4344460022bb5141f8ee`
+- `tools/check-wire-layout.py` guard: `1e0927d0323770818e87f322d5f6d2b9bb2395f6`
+
+This closes the request-length negative-vector gap identified during the PR #3 post-merge audit at the reference-wire-validation level. It does not replace live server conformance testing. Exact-tip CI remains unobserved for the direct commits in this audit series.
