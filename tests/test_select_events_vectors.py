@@ -482,6 +482,24 @@ class GoldenSelectEventsTests(unittest.TestCase):
         )
 
 
+    def test_device_event_selections_do_not_survive_device_xid_reuse(self):
+        events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
+        lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
+        conformance = (ROOT / "spec" / "conformance.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "Device- and Queue-scope selections are bound to the immutable internal Device identity, not to the numeric `device_xid` alone.",
+            events,
+        )
+        self.assertIn(
+            "Reusing that XID for a newly created logical Device MUST NOT restore or inherit any selection from the destroyed Device",
+            events,
+        )
+        self.assertIn(
+            "This removal and identity separation take effect atomically at the successful `DestroyDevice` linearization point.",
+            events,
+        )
+        self.assertIn("a reused XID identifies a new internal resource identity", lifetime)
+        self.assertIn("erbt keine alte Auswahl", conformance)
     def test_async_event_decision_is_linearized_with_mask_changes_and_destroy(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
         lifetime = (ROOT / "spec" / "resource-lifetime.md").read_text(encoding="utf-8")
