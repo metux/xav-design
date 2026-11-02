@@ -68,7 +68,7 @@ def validate_common(wire: bytes, order: str) -> int:
         raise ValueError("X11 data")
     if wire[5] != 0:
         raise ValueError("flags")
-    if wire[6:8] != b"\\x00\\x00":
+    if wire[6:8] != b"\x00\x00":
         raise ValueError("common reserved")
     if wire[4] == 0:
         raise ValueError("subopcode zero")
@@ -140,7 +140,7 @@ def validate_phase1(wire: bytes, order: str) -> None:
                 raise ValueError("CreateDevice extension reserved/length")
             name = wire[off + 4:off + 4 + n]
             padding = wire[off + 4 + n:off + 4 + padded]
-            if any(padding) or b"\\x00" in name or name in seen_extensions:
+            if any(padding) or b"\x00" in name or name in seen_extensions:
                 raise ValueError("CreateDevice extension padding/value")
             if not re.fullmatch(rb"VK_[A-Za-z0-9_]+_[A-Za-z0-9_]+", name):
                 raise ValueError("CreateDevice extension syntax")
@@ -175,7 +175,7 @@ class Phase1GoldenRequestTests(unittest.TestCase):
     def test_layouts_match_registry_and_normative_documents(self):
         for request, opcode in SUBOPCODES.items():
             with self.subTest(request=request):
-                self.assertRegex(REGISTRY, rf"(?m)^\\|\\s*`{request}`\\s*\\|\\s*{opcode}\\s*\\|")
+                self.assertRegex(REGISTRY, rf"(?m)^\|\s*`{request}`\s*\|\s*{opcode}\s*\|")
         expected = {
             "EnumeratePhysicalDevices": (8, "no request-specific payload"),
             "GetPhysicalDeviceProperty": (16, "property_atom"),
@@ -205,7 +205,7 @@ class Phase1GoldenRequestTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_phase1(bad, order)
             with self.subTest(request=v["request"], order=order, mutation="trailing"):
-                bad = wire + b"\\x00" * 4
+                bad = wire + b"\x00" * 4
                 bad = bytearray(bad)
                 bad[2:4] = (len(bad) // 4).to_bytes(2, order)
                 with self.assertRaises(ValueError):
@@ -222,7 +222,7 @@ class Phase1GoldenRequestTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, label):
                         validate_phase1(bytes(bad), v["byte_order"])
             bad = bytearray(original)
-            bad[2:4] = b"\\x00\\x00"
+            bad[2:4] = b"\x00\x00"
             with self.subTest(request=v["request"], order=v["byte_order"], field="zero length"):
                 with self.assertRaisesRegex(ValueError, "zero request length"):
                     validate_phase1(bytes(bad), v["byte_order"])
