@@ -52,9 +52,9 @@ This audit compares the currently defined request inventory in [the central requ
 
 ## Inventory result
 
-- The registry contains 47 assigned request contracts: the 40-request compute baseline plus seven requests gated on the presentation-capable profile.
+- The registry contains 48 assigned request contracts: the 40-request compute baseline, seven requests gated on the presentation-capable profile, and the compute-baseline `QueryVersion` request.
 - Every registered request has a defining specification chapter.
-- The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for all 47 assigned requests.
+- The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for all 48 assigned requests.
 - The common X11 framing rules specify an 8-byte request header, four-byte request-length units, zero padding, no BIG-REQUESTS in v0.1, and standard 32-byte X11 replies/errors.
 - The second systematic pass found several cross-chapter discrepancies and underspecified reply fields. These are recorded below and corrected in follow-up commits; the earlier pass must not be read as a claim that every contract was already consistent.
 
@@ -72,7 +72,7 @@ A cross-chapter review found that the general error-class table described `DEVIC
 
 ## Subopcode allocation policy
 
-The 40 compute-baseline requests retain explicit values 1 through 40. The seven presentation-capable requests are now appended at values 41 through 47. Value 0 is reserved and MUST NOT identify a request. All numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` remains subopcode 40; no pre-existing assignment changed.
+The 40 compute-baseline requests retain explicit values 1 through 40. The seven presentation-capable requests use values 41 through 47, and `QueryVersion` is assigned value 48. Value 0 is reserved and MUST NOT identify a request. All numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` remains subopcode 40; no pre-existing assignment changed.
 
 
 ## Historical findings from the second systematic pass (resolved)
@@ -143,7 +143,7 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 44 | `CreateSwapchain` | Reply | 48 |
 | 45 | `DestroySwapchain` | Void | 12 |
 | 46 | `AcquireNextImage` | Reply | 32 |
-| 47 | `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` |
+| 47 | `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` |\n| 48 | `QueryVersion` | Reply | 8 |
 
 Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
 
@@ -169,7 +169,7 @@ This profile matrix is intentionally separate from the assigned 1–40 request m
 
 ## Cross-chapter consistency results
 
-- **Request kind:** all 47 assigned request kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
+- **Request kind:** all 48 assigned request kinds agree with the defining chapter; `WriteBuffer` is a Reply request because its successful reply is the upload-completion/visibility boundary. `QueueSubmit` remains Void; post-acceptance outcomes are asynchronous.
 - **Reply lengths:** discovery reply formulas and property status values are now explicit; fixed replies use `reply.length = 0` when all data fits in the standard 32-byte reply header. Variable data begins at byte 32 and `reply.length` counts four-byte units after that header.
 - **Descriptor/stage values:** v0.1 supports `STORAGE_BUFFER = 1` only and the XAverius stage bit `COMPUTE = 0x00000001`; examples must not substitute native Vulkan enum names.
 - **Error mapping:** the central error chapter governs XID liveness, live-type mismatch, ownership, Atom validation, Create-XID choice, validation order, and atomic rejection. Request-specific tables define the specialized state and backend failures. The specification-level ABI review is complete for the currently defined reply and XGE layouts. The remaining ABI task is live interoperability testing against an X11/XGE implementation; static checks do not establish runtime interoperability. The feature-ID, device-extension, and physical-device-property registries are defined for v0.1; XGE negotiation and event selection are specified. Timeout behavior and implementation-level backend conformance remain subject to their defining chapters and the open-issues register.
