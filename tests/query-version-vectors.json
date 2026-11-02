@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "description": "Golden XAverius QueryVersion request and standard X11 reply frames in both connection byte orders. The major opcode 0x90 and sequence 0x1234 are fixture-only values.",
+  "request_vectors": [
+    {"name":"QueryVersion-request-little","byte_order":"little","wire_hex":"9000020030000000","total_bytes":8,"subopcode":48},
+    {"name":"QueryVersion-request-big","byte_order":"big","wire_hex":"9000000230000000","total_bytes":8,"subopcode":48}
+  ],
+  "reply_vectors": [
+    {"name":"QueryVersion-reply-little","byte_order":"little","wire_hex":"0100341200000000000001000000000000000000000000000000000000000000","total_bytes":32,"sequence":4660,"reply_length":0,"major_version":0,"minor_version":1},
+    {"name":"QueryVersion-reply-big","byte_order":"big","wire_hex":"0100123400000000000000010000000000000000000000000000000000000000","total_bytes":32,"sequence":4660,"reply_length":0,"major_version":0,"minor_version":1}
+  ]
+}
