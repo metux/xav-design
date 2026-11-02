@@ -528,3 +528,8 @@ Updated normative and test surfaces include `registries/request-subopcodes.md`, 
 This changes the request-dispatch ABI. Ship A must use subopcode 0 for the bootstrap handler; any implementation-side dispatch tables or generated opcode constants copied from the old subopcode 48 assignment must be updated before implementation branches are integrated. Do not retain 48 as an alias: it is unassigned after this migration. The older QueryVersion notes above record the superseded assignment and are historical; this section and the current normative registry are authoritative.
 
 Verification is pending on the resulting branch tip. Runtime X11 interoperability and implementation-branch dispatch synchronization remain open.
+
+
+### Migration CI result — 2026-11-02
+
+The first CI run exposed two stale test assertions: the big-endian fixture metadata still carried subopcode 48, and the generic request-vector registry test still asserted that zero was reserved. Both were corrected. The final migration commit `61e4e5517c94074d11cb5319f747528a8fc3f148` passed [CI run 41442418120](https://github.com/metux/xav-design/actions/runs/41442418120): **4,823 wire-layout checks**, **72 Timeline regressions**, **685 Python tests**, and the required-check audit all passed. This verifies the specification/reference tests, not a live X11 server or implementation dispatch table.
