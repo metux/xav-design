@@ -2,7 +2,7 @@
 
 ## Current specification-finalization status — 2026-10-31
 
-The normative v0.1 content is **freeze-ready** at candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576`, with exact CI run 41235437766 green. The central registry defines 47 request contracts: compute-baseline subopcodes 1–40 and presentation-capable-profile subopcodes 41–47. Presentation remains separately gated and is not implied by compute-only support. Formal implementation coordination still awaits Phase 1 ship confirmations and a named shared integration-interface owner.
+The normative v0.1 content is **freeze-ready** at candidate `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576`, with exact CI run 41235437766 green. The central registry defines 48 request contracts: compute-baseline subopcodes 1–40 plus `QueryVersion` at 48, and presentation-capable-profile subopcodes 41–47. Presentation remains separately gated and is not implied by compute-only support. Formal implementation coordination still awaits Phase 1 ship confirmations and a named shared integration-interface owner.
 
 The authoritative working branch is `docs/restructure-2026-10-21`; `master` remains untouched. The latest fully CI-verified specification-content candidate is `7ffd9c5b17cc706d0810d6c8fdbb6bf433ce6576`, verified by [CI run 41235437766](https://github.com/metux/xav-design/actions/runs/41235437766): 4,759 wire-layout/documentation checks, 72 Timeline regression tests, all 675 Python tests, and the required-check presence audit passed. This candidate includes the final cross-request audits and all normative corrections through request groups 31–40 and presentation requests 41–47. The historical CI result for `0e0ced45371a2548031c4b9d1370c1dead69d724` remains historical evidence only.
 
@@ -47,7 +47,7 @@ Two earlier `wire-layout` CI runs failed for separate reasons. Run 39935266354 e
 - Rerun the static wire-layout checker, golden wire vectors, full Python suite, and required-check presence audit on the exact final freeze commit.
 - Keep live X11/XGE interoperability and real Vulkan backend acceptance tracked as separate implementation gates; do not infer them from static CI.
 - Keep the automated wire-layout checker and golden vectors as static contract guards. A passing run does not prove runtime interoperability or full Vulkan conformance.
-- Numeric registries and request assignments are already centrally checked; add values append-only and do not renumber existing assignments.
+- Numeric registries and request assignments are centrally checked; `QueryVersion` is the append-only subopcode 48, and future values must not renumber existing assignments.
 - The shared `DEVICE_STATUS_CHANGED.reason_code` / `DEVICE_LOST.reason_code` registry is defined in [reason-codes](registries/reason-codes.md) and is not an open design item.
 
 ## End-to-end compute-path audit — 2026-10-21
