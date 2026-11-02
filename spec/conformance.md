@@ -318,6 +318,7 @@ Every vector must assert both externally observable result (X11 error versus nor
 ## XGE- und Reply-ABI
 
 - Jeder XAverius-XGE-Event-Header ist genau 32 Bytes groß: `response_type = 35`, `extension` ist der ausgehandelte XAverius-Major-Opcode, `sequence` liegt bei Offset 2, `length` bei Offset 4 und `evtype` bei Offset 8; Header-Padding bei Offset 10–31 ist null.
+- Das XGE-`sequence`-Feld enthält die unteren 16 Bits der zuletzt vom Server für genau diese Empfängerverbindung verarbeiteten X11-Request-Sequenznummer zum Event-Enqueue-Zeitpunkt; es wird modulo 65536 übertragen und darf nicht aus einem fremden Request, Submission-Token oder Backend-Callback übernommen werden. Prüfe beide Byteordnungen sowie die Wrap-Grenzen 0 und 65535.
 - XGE-Längen werden als `32 + 4 * length` geprüft: `ASYNC_ERROR` 60 Bytes/length 7; `DEVICE_LOST`, `DEVICE_STATUS_CHANGED`, `DEVICE_MEMORY_PRESSURE` und `DEVICE_IDLE` je 48 Bytes/length 4; `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED` je 56 Bytes/length 6.
 - Event-`evtype`-Werte stimmen exakt mit der Event-Registry überein (0–6); der dynamische Extension-Major-Opcode wird nicht als Event-Type-ID verwendet.
 - Die event-spezifischen Felder beginnen bei Offset 32. Alle als reserviert definierten Felder sind null; `SUBMISSION_COMPLETE` und `SUBMISSION_FAILED` unterscheiden sich bei Offset 44 (reserviert null bzw. `failure_class`) und dürfen für dieselbe angenommene Submission nicht beide als terminales Event auftreten.
