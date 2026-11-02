@@ -194,7 +194,9 @@ class Phase1GoldenRequestTests(unittest.TestCase):
         self.assertIn("24 + Σ(8 + 4 * queue_count_i)", DEVICES)
         self.assertIn("16 + 4 * queue_count", DEVICES)
         self.assertIn("X11 `data`", WIRE)
-        self.assertIn("subopcode(1) | flags(1) | reserved(2)", WIRE)
+        self.assertIn("CARD8  subopcode;", WIRE)
+        self.assertIn("CARD8  flags;", WIRE)
+        self.assertIn("CARD16 reserved;", WIRE)
 
     def test_each_request_rejects_wrong_exact_length(self):
         for v in self.vectors:
