@@ -70,7 +70,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 The fixture suite above is intentionally offline. Once a XAverius server and client exist, run a separate live test against an X server that actually supports XGE (Xvfb is suitable only when the XAverius server extension is loaded into that server):
 
-- Discover the XAverius major opcode with `QueryExtension`; do not hard-code it. Negotiate XGE with `GEQueryVersion` and verify that versions below 1.0 or failed negotiation prevent device creation and `SelectEvents` as specified.
+- Discover the XAverius major opcode with `QueryExtension`; do not hard-code it. Send `QueryVersion` and verify the server reports 0.1 before separately negotiating XGE with `GEQueryVersion` and verify that versions below 1.0 or failed negotiation prevent device creation and `SelectEvents` as specified.
 - Send `SelectEvents` for each supported scope, then verify on the socket that the emitted packet has `response_type = GenericEvent (35)`, `extension` equal to the negotiated XAverius major opcode, the registered static `evtype`, exact `length` and total byte count, and zero reserved header/payload fields.
 - Exercise every event type with known field values and decode the received bytes using the connection's byte order. In particular check the 60-byte `ASYNC_ERROR`, all five 48-byte device events, and both 56-byte terminal submission events.
 - Check connection/device/queue mask isolation, zero-mask deselection, replacement rather than accumulation, failed-`SelectEvents` atomicity, unmaskable events, and that event delivery is suppressed after successful `DestroyDevice` while already queued events remain untouched.
