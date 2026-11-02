@@ -52,7 +52,7 @@ This audit compares the currently defined request inventory in [the central requ
 
 ## Inventory result
 
-- The registry contains 48 assigned request contracts: the 40-request compute baseline, seven requests gated on the presentation-capable profile, and the compute-baseline `QueryVersion` request.
+- The registry contains 48 assigned request contracts: common bootstrap `QueryVersion` at subopcode 0, the 40-request compute baseline at 1–40, and seven requests gated on the presentation-capable profile at 41–47.
 - Every registered request has a defining specification chapter.
 - The registry's Reply, Void, and Void + async-events classifications agree with the chapter descriptions for all 48 assigned requests.
 - The common X11 framing rules specify an 8-byte request header, four-byte request-length units, zero padding, no BIG-REQUESTS in v0.1, and standard 32-byte X11 replies/errors.
@@ -72,7 +72,7 @@ A cross-chapter review found that the general error-class table described `DEVIC
 
 ## Subopcode allocation policy
 
-The 40 compute-baseline requests retain explicit values 1 through 40. The seven presentation-capable requests use values 41 through 47, and `QueryVersion` is assigned value 48. Value 0 is reserved and MUST NOT identify a request. All numbers are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` remains subopcode 40; no pre-existing assignment changed.
+`QueryVersion` is assigned common bootstrap subopcode 0. The 40 compute-baseline requests retain values 1 through 40, and the seven presentation-capable requests use values 41 through 47. All assignments are stable: later requests MUST use an unused value and MUST NOT renumber an existing request. `SelectEvents` remains subopcode 40.
 
 
 ## Historical findings from the second systematic pass (resolved)
@@ -144,7 +144,7 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 45 | `DestroySwapchain` | Void | 12 |
 | 46 | `AcquireNextImage` | Reply | 32 |
 | 47 | `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` ||
-| 48 | `QueryVersion` | Reply | 8 |
+| 0 | `QueryVersion` | Reply | 8 |
 
 Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
 
@@ -164,7 +164,7 @@ The presentation chapter is normative for the presentation-capable profile. Its 
 
 For `GetSurfaceCapabilities`, the reply length field is `8 + 2*format_pair_count + present_mode_count + 2*queue_family_count` four-byte units. The variable counts and all aggregate-size calculations require checked wide arithmetic. `CreateSwapchain` has a 48-byte request but a 40-byte reply; the 40-byte reply consists of the standard 32-byte header plus `status` and `actual_image_count`. `AcquireNextImage` replies with `status`, `image_index`, and a zero reserved word. `QueuePresent` has a variable request and a fixed 36-byte reply.
 
-This profile matrix is intentionally separate from the compute-baseline request matrix (1–40 plus `QueryVersion` at 48). It records request kind and lengths from [the presentation chapter](presentation.md#10-requestreply-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
+This profile matrix is intentionally separate from the compute-baseline request matrix (1–40), with common bootstrap `QueryVersion` at subopcode 0. It records request kind and lengths from [the presentation chapter](presentation.md#10-requestreply-wire-layouts) as an independent profile-gating cross-check; the actual 41–47 assignments are recorded in the central registry and main per-request matrix, and these requests are not part of compute-only v0.1.
 
 
 
@@ -185,7 +185,7 @@ The specification-level ABI pass rechecked the standard 32-byte X11 reply header
 
 ## Automated wire-layout checker — 2026-10-21
 
-The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 48 assigned request contracts (compute baseline 1–40, `QueryVersion` 48, and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
+The repository contains `tools/check-wire-layout.py`, wired into `.github/workflows/wire-layout.yml`. The current checker cross-checks all 48 assigned request contracts (bootstrap `QueryVersion` 0, compute baseline 1–40, and presentation-profile-only 41–47) against this audit's request-kind/length matrix; checks selected fixed reply fields, reserved bytes, and variable reply-length formulas against their defining chapters; and parses every XGE event's field declarations to detect overlap, holes, alignment violations, out-of-bounds fields, incorrect total/XGE lengths, and registry-ID drift. It is deliberately a static Markdown contract checker. It does not parse every arbitrary formula into an expression tree and does not establish runtime interoperability; those remain separate conformance tasks.
 
 ## Expanded Reply ABI checker — 2026-10-21
 
@@ -201,7 +201,7 @@ The static wire-layout checker now requires every centrally registered request t
 
 ## Numeric registry integrity follow-up — 2026-10-21
 
-The static checker verifies uniqueness and expected ranges for the 48 assigned request subopcodes (40 compute-baseline, seven presentation-profile-only, and `QueryVersion`), nine event-type IDs across the profile-gated registries, contiguous error offsets, five command-entry IDs (including the presentation-only copy entry), descriptor-type assignments, physical-device types, queue-flag bits/masks, the v0.1 compute shader-stage bit, and physical-property type IDs. It also checks that the v0.1 optional feature-ID and device-extension registries remain explicitly empty. The request, event, and error checks detect duplicate names/values and missing assignments; other registries are checked against their current v0.1 supported assignments.
+The static checker verifies uniqueness and expected ranges for the 48 assigned request subopcodes (bootstrap `QueryVersion` 0, 40 compute-baseline, and seven presentation-profile-only), nine event-type IDs across the profile-gated registries, contiguous error offsets, five command-entry IDs (including the presentation-only copy entry), descriptor-type assignments, physical-device types, queue-flag bits/masks, the v0.1 compute shader-stage bit, and physical-property type IDs. It also checks that the v0.1 optional feature-ID and device-extension registries remain explicitly empty. The request, event, and error checks detect duplicate names/values and missing assignments; other registries are checked against their current v0.1 supported assignments.
 
 These are drift guards for the current documented ABI. They do not make unassigned values valid, and they do not claim runtime interoperability.
 
@@ -344,7 +344,7 @@ The event review found that `ASYNC_ERROR.resource_xid` had no explicit rule for 
 
 ## Request-subopcode registry and golden-vector cross-check — 2026-10-23
 
-The central request registry and static wire checker enforce all 47 assignments (1–47), unique request names and numeric values, reserved subopcode 0, and a one-to-one match with the per-request audit matrix; the presentation request layouts remain profile-gated. The golden request-vector tests previously checked encoded bytes and framing but did not compare each fixture's request name and subopcode against the central registry. That meant a stale fixture could remain self-consistent after an assignment drift.
+The central request registry and static wire checker enforce all 48 assignments (0–47), unique request names and numeric values, with `QueryVersion` assigned at subopcode 0, and a one-to-one match with the per-request audit matrix; the presentation request layouts remain profile-gated. The golden request-vector tests previously checked encoded bytes and framing but did not compare each fixture's request name and subopcode against the central registry. That meant a stale fixture could remain self-consistent after an assignment drift.
 
 Added a cross-check in `tests/test_wire_vectors.py`: every golden vector must name a registered request, use that request's assigned subopcode, and carry the same value in wire-header byte 4. The test also checks uniqueness and reservation of zero in the parsed registry. This complements rather than duplicates the checker’s full contiguous 1–47 assignment check. Current golden byte coverage remains intentionally limited to `CreateBuffer`, `WriteBuffer`, and `ReadBuffer`; this change does not claim byte-vector coverage for all 47 request layouts.
 
