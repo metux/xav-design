@@ -161,7 +161,7 @@ An implementation SHOULD test at least the following cases:
 - Nach fehlgeschlagenem CommandBufferData-Chunk bleiben zuvor akzeptierte Chunks erhalten; ein korrigierter Chunk kann folgen oder ABORT setzt den Buffer auf INITIAL zurück
 - Fehlgeschlagenes CREATE hinterlässt keinen Command Buffer; fehlgeschlagenes FINAL lässt den bestehenden Buffer RECORDING
 - ABORT ist bei INITIAL, EXECUTABLE, INVALID oder PENDING unzulässig und ändert keinen Zustand
-- Die zentrale Request-Registry enthält 48 eindeutige, explizit vergebene Subopcodes (1–48): 1–40 für das Compute-Baseline-Profil, 41–47 ausschließlich für das presentation-capable Profil und 48 für `QueryVersion`; Subopcode 0 ist reserviert, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
+- Die zentrale Request-Registry enthält 48 eindeutige, explizit vergebene Subopcodes (0–47): 0 für das gemeinsame Bootstrap-`QueryVersion`, 1–40 für das Compute-Baseline-Profil und 41–47 ausschließlich für das presentation-capable Profil, kein Wert ist doppelt vergeben, und spätere Requests dürfen bestehende Werte nicht verschieben oder wiederverwenden
 - Die Command-Entry-Registry weist `CMD_BIND_PIPELINE`, `CMD_BIND_DESCRIPTOR_SETS`, `CMD_DISPATCH` und `CMD_PUSH_CONSTANTS` eindeutig die IDs 1–4 zu. ID 5 bezeichnet ausschließlich im presentation-capable Profil `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE`; ein Compute-only Server weist diesen Entry als unbekannte Command-ID mit `BadValue` zurück. ID 0 und alle sonstigen nicht zugewiesenen IDs ergeben `BadValue`
 - Die Descriptor-Type-Registry definiert in v0.1 ausschließlich `STORAGE_BUFFER = 1`; `0` und alle nicht zugewiesenen Werte werden abgewiesen und niemals stillschweigend umgedeutet
 - Die Shader-Stage-Registry definiert ausschließlich das `COMPUTE`-Bit `0x00000001`; andere Bits sind reserviert und müssen abgewiesen werden
@@ -347,9 +347,9 @@ Zusätzlich zu festen Reply-Feldern prüft er jetzt die variablen Record- und Pa
 
 Die Formeltests enthalten zusätzlich Grenzwertvektoren für Byte-Padding und Reply-Wörter bei Payload-Längen 0, 1, 3, 4 und 5; für `PHYSICALDEVICEINFO`-Namenslängen 0, 1, 4 und 5; für leere und nichtleere Queue-Family-Arrays; sowie für Memory-Type-/Heap-Counts einschließlich der v0.1-Maxima 32/16. Für `WriteBuffer` und `WaitSemaphores` werden variable Request-Längen ebenfalls anhand konkreter Count-/Payload-Vektoren geprüft.
 
-## `QueryVersion` wire conformance (subopcode 48)
+## `QueryVersion` wire conformance (subopcode 0)
 
-- A valid 8-byte request with subopcode 48 returns exactly one standard 32-byte X11 reply with `reply.length = 0`, `major_version = 0`, `minor_version = 1`, and zero bytes at reply offsets 12–31.
+- A valid 8-byte request with subopcode 0 returns exactly one standard 32-byte X11 reply with `reply.length = 0`, `major_version = 0`, `minor_version = 1`, and zero bytes at reply offsets 12–31.
 - Golden request and reply bytes MUST match the little-endian and big-endian fixtures in `tests/query-version-vectors.json`. The fixture major opcode and sequence number are test placeholders; live clients use the opcode returned by `QueryExtension` and the connection's actual sequence number.
 - The request succeeds immediately after `QueryExtension`, without prior `GEQueryVersion`, Device creation, or event selection. It MUST NOT mutate per-connection state. A separate `GEQueryVersion` remains mandatory for requests whose contracts require XGE.
 - Negative raw-wire cases reject nonzero X11 `data`, nonzero `flags`, nonzero common `reserved`, zero or mismatched X11 lengths, truncation, trailing payload bytes, and an incorrect subopcode. Each isolated mutation MUST be rejected before any state change.
