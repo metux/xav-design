@@ -95,9 +95,12 @@ typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 
 typedef struct { CARD32 property_flags; CARD32 heap_index; } xavMemoryTypeInfo;
 typedef struct { CARD64 size; CARD32 heap_flags; CARD32 reserved; } xavMemoryHeapInfo;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD64 size; CARD64 alignment; CARD32 memory_type_bits; CARD32 reserved; } xavGetBufferMemoryRequirementsReply;
-typedef struct { CARD32 queue_flags; CARD32 queue_count; CARD32 reserved; } xavQueueFamilyInfo;\ntypedef struct { xavReplyHeader header; xavQueueFamilyInfo records[1]; } xavGetPhysicalDeviceQueueFamilyPropertiesReply;
-typedef struct { CARD32 physical_device_xid; CARD32 device_type; CARD32 vendor_id; CARD32 device_id; CARD32 api_version; CARD32 driver_version; CARD32 compute_queue_family_count; CARD16 device_name_length; CARD16 reserved; CARD8 device_name[1]; } xavPhysicalDeviceInfo;\ntypedef struct { xavReplyHeader header; xavPhysicalDeviceInfo records[1]; } xavEnumeratePhysicalDevicesReply;
-typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD64 counter_value; CARD8 reserved[16]; } xavGetSemaphoreCounterValueReply;\ntypedef struct { xavReplyHeader header; CARD8 data[1]; } xavReadBufferReply;
+typedef struct { CARD32 queue_flags; CARD32 queue_count; CARD32 reserved; } xavQueueFamilyInfo;
+typedef struct { xavReplyHeader header; xavQueueFamilyInfo records[1]; } xavGetPhysicalDeviceQueueFamilyPropertiesReply;
+typedef struct { CARD32 physical_device_xid; CARD32 device_type; CARD32 vendor_id; CARD32 device_id; CARD32 api_version; CARD32 driver_version; CARD32 compute_queue_family_count; CARD16 device_name_length; CARD16 reserved; CARD8 device_name[1]; } xavPhysicalDeviceInfo;
+typedef struct { xavReplyHeader header; xavPhysicalDeviceInfo records[1]; } xavEnumeratePhysicalDevicesReply;
+typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD64 counter_value; CARD8 reserved[16]; } xavGetSemaphoreCounterValueReply;
+typedef struct { xavReplyHeader header; CARD8 data[1]; } xavReadBufferReply;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD32 status; CARD8 reserved[20]; } xavWaitSemaphoresReply;
 typedef struct { CARD8 response_type; CARD8 fence_status; CARD16 sequenceNumber; CARD32 length; CARD8 reserved[24]; } xavGetFenceStatusReply;
 typedef struct { CARD8 response_type; CARD8 data; CARD16 sequenceNumber; CARD32 length; CARD32 status; CARD8 reserved[20]; } xavWaitForFenceReply;
@@ -207,6 +210,8 @@ XAV_STATIC_ASSERT(offsetof(xavAsyncErrorEvent, submission_token) == 44, "ASYNC_E
 XAV_STATIC_ASSERT(sizeof(xavAsyncErrorEvent) == 60, "ASYNC_ERROR event size");
 XAV_STATIC_ASSERT(offsetof(xavImageReleasedEvent, presentation_token) == 56, "IMAGE_RELEASED token offset");
 XAV_STATIC_ASSERT(sizeof(xavImageReleasedEvent) == 64, "IMAGE_RELEASED event size");
-XAV_STATIC_ASSERT(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capabilities variable payload offset");\nXAV_STATIC_ASSERT(offsetof(xavGetPhysicalDeviceMemoryPropertiesReply, records) == 32, "memory properties payload offset");\nXAV_STATIC_ASSERT(sizeof(xavErrorPacket) == 32, "X11 error packet size");
+XAV_STATIC_ASSERT(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capabilities variable payload offset");
+XAV_STATIC_ASSERT(offsetof(xavGetPhysicalDeviceMemoryPropertiesReply, records) == 32, "memory properties payload offset");
+XAV_STATIC_ASSERT(sizeof(xavErrorPacket) == 32, "X11 error packet size");
 #undef XAV_STATIC_ASSERT
 #endif
