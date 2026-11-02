@@ -619,3 +619,28 @@ Reconciled current status documents against the actual verified CI baseline and 
 Commits: freeze checklist `8a2dbd1354ccf1a853e6796d6c8dd290b94222db`; project status `a5f1258fce01e0e6cf982470d79cffff5629fb75`; README `6f470ad309cf1b96aae1c2464ca0f388d742aa32`.
 
 These are status/traceability corrections. The latest direct commits still have no visible status checks from the GitHub status endpoint; exact-tip CI remains pending.
+
+
+## Exact-tip wire/XGE CI verification — 2026-11-02
+
+The post-merge audit CI failures on the prior tip were reproducible and have been corrected on `docs/restructure-2026-10-21`:
+
+- `spec/memory-buffers.md`: introduced an explicit `Reply layout:` boundary after the 12-byte request contract. This prevents the request-field audit from treating reply-header fields at offsets 12, 16, and 20 as request fields.
+- `spec/conformance.md`: explicitly enumerates all 16 registered Reply requests, separating the common bootstrap, compute-baseline, and presentation-profile groups.
+- `tools/check-wire-layout.py`: validates that the enumerated names exactly match the central Reply registry; the inventory matcher uses a literal-parenthesis pattern.
+
+Commits:
+- `8ab04a4a5e46dbd13e5818f37bc7d55d8e21b67f` — request/reply boundary and 16-reply inventory.
+- `dd6242139849e252e88bbf16552fa0dd531c1ed4` — correct inventory matcher.
+
+Exact-tip GitHub Actions run for `dd6242139849e252e88bbf16552fa0dd531c1ed4` succeeded (run 41471016473):
+
+- `python tools/check-wire-layout.py`: 4,829 checks passed.
+- Timeline regression runner: 72 tests passed.
+- Full `unittest discover -s tests -p 'test_*.py' -v`: 688 tests passed.
+- All 33 test methods in `tests/test_event_vectors.py` were present in the successful suite log.
+- Required-check audit: success. Branch-tip monitor run 41471016586: success.
+
+Local execution is still blocked in the current automation container: `getent ahosts github.com` returns no addresses (exit 2), and `git ls-remote https://github.com/metux/xav-design.git refs/heads/docs/restructure-2026-10-21` fails with `Could not resolve host: github.com`. No local checkout is present. Therefore the requested local commands `python3 tools/check-wire-layout.py` and `python3 -m unittest tests.test_event_vectors` have **not** been run locally; the results above are GitHub Actions results, not local results.
+
+No runtime X11/XGE or Vulkan backend interoperability test was performed by this static CI run.
