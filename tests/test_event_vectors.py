@@ -184,6 +184,69 @@ PRESENTATION_EVENT_FIELDS = {
 }
 
 
+def validate_presentation_event_wire(wire: bytes, byte_order: str, *, expected_extension_opcode: int | None = None) -> None:
+    """Validate the profile-gated presentation XGE event ABI."""
+    if len(wire) != 64:
+        raise ValueError("presentation event must be exactly 64 bytes")
+    if byte_order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if wire[0] != 35:
+        raise ValueError("response_type must be GenericEvent (35)")
+    if wire[1] < 128:
+        raise ValueError("extension major opcode must be in 128..255")
+    if expected_extension_opcode is not None and wire[1] != expected_extension_opcode:
+        raise ValueError("XGE extension opcode does not match negotiated XAverius opcode")
+    if int.from_bytes(wire[4:8], byte_order) != 8:
+        raise ValueError("presentation XGE length must be 8")
+    event_type = int.from_bytes(wire[8:10], byte_order)
+    if event_type not in (7, 8):
+        raise ValueError("unknown presentation event type")
+    if any(wire[10:32]):
+        raise ValueError("XGE reserved header bytes must be zero")
+    for offset in (32, 44):
+        if int.from_bytes(wire[offset:offset + 4], byte_order) == 0:
+            raise ValueError("required presentation event XID must be nonzero")
+    if event_type == 7 and wire[52:56] != bytes(4):
+        raise ValueError("IMAGE_RELEASED reserved field must be zero")
+    if event_type == 8 and int.from_bytes(wire[52:56], byte_order) not in range(5):
+        raise ValueError("PRESENTATION_COMPLETE status is outside its registry")
+
+
+def encode_presentation_event(vector: dict) -> bytes:
+    order = vector["byte_order"]
+    if order not in ("little", "big"):
+        raise ValueError("unknown byte order")
+    if vector["event"] not in PRESENTATION_EVENT_FIELDS:
+        raise ValueError("unknown presentation event")
+    event_type = {"IMAGE_RELEASED": 7, "PRESENTATION_COMPLETE": 8}[vector["event"]]
+    if vector["event_type"] != event_type:
+        raise ValueError("presentation event name and type ID disagree")
+    if vector["total_bytes"] != 64 or vector["xge_length"] != 8:
+        raise ValueError("presentation event must be 64 bytes with XGE length 8")
+    if vector["extension_opcode"] not in range(128, 256):
+        raise ValueError("extension major opcode must be in 128..255")
+    endian = "little" if order == "little" else "big"
+    wire = bytearray(64)
+    wire[0:2] = bytes((35, vector["extension_opcode"]))
+    wire[2:4] = vector["sequence"].to_bytes(2, endian)
+    wire[4:8] = (8).to_bytes(4, endian)
+    wire[8:10] = event_type.to_bytes(2, endian)
+    fields = PRESENTATION_EVENT_FIELDS[vector["event"]]
+    if set(vector["fields"]) != set(fields):
+        raise ValueError("presentation event field set does not match ABI")
+    for name, (offset, width, _typ) in fields.items():
+        value = int(vector["fields"][name])
+        if name == "reserved" and value != 0:
+            raise ValueError("IMAGE_RELEASED reserved field must be zero")
+        if name == "status" and value not in range(5):
+            raise ValueError("PRESENTATION_COMPLETE status is outside its registry")
+        wire[offset:offset + width] = value.to_bytes(width, endian)
+    result = bytes(wire)
+    validate_presentation_event_wire(result, order)
+    return result
+
+
+
 class GoldenXGEEventTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -191,6 +254,7 @@ class GoldenXGEEventTests(unittest.TestCase):
         if fixture.get("schema_version") != 1:
             raise ValueError("unsupported event vector schema version")
         cls.vectors = fixture["vectors"]
+        cls.presentation_vectors = fixture.get("presentation_vectors", [])
 
     def test_presentation_registry_ids_and_status_values_are_stable(self):
         compute = (ROOT / "registries" / "event-types.md").read_text(encoding="utf-8")
@@ -245,6 +309,39 @@ class GoldenXGEEventTests(unittest.TestCase):
                 self.assertEqual(int.from_bytes(actual[4:8], vector["byte_order"]), vector["xge_length"])
                 self.assertEqual(int.from_bytes(actual[8:10], vector["byte_order"]), vector["event_type"])
                 self.assertEqual(actual[10:32], bytes(22))
+
+    def test_presentation_golden_event_bytes(self):
+        self.assertEqual(len(self.presentation_vectors), 4)
+        seen = {}
+        for vector in self.presentation_vectors:
+            with self.subTest(vector=vector["name"]):
+                actual = encode_presentation_event(vector)
+                self.assertEqual(actual.hex(), vector["wire_hex"])
+                validate_presentation_event_wire(actual, vector["byte_order"])
+                self.assertEqual(len(actual), 64)
+                self.assertEqual(actual[0], 35)
+                self.assertEqual(int.from_bytes(actual[8:10], vector["byte_order"]), vector["event_type"])
+                seen.setdefault(vector["event"], set()).add(vector["byte_order"])
+        self.assertEqual(set(seen), {"IMAGE_RELEASED", "PRESENTATION_COMPLETE"})
+        self.assertTrue(all(orders == {"little", "big"} for orders in seen.values()))
+
+    def test_presentation_event_rejects_invalid_status_and_reserved_field(self):
+        import copy
+        for vector in self.presentation_vectors:
+            invalid = bytearray(encode_presentation_event(vector))
+            order = vector["byte_order"]
+            if vector["event"] == "IMAGE_RELEASED":
+                invalid[52:56] = (1).to_bytes(4, order)
+                with self.assertRaisesRegex(ValueError, "reserved field"):
+                    validate_presentation_event_wire(bytes(invalid), order)
+            else:
+                invalid[52:56] = (5).to_bytes(4, order)
+                with self.assertRaisesRegex(ValueError, "status"):
+                    validate_presentation_event_wire(bytes(invalid), order)
+        bad = copy.deepcopy(self.presentation_vectors[0])
+        bad["fields"]["reserved"] = 1
+        with self.assertRaisesRegex(ValueError, "reserved field"):
+            encode_presentation_event(bad)
 
     def test_sequence_field_is_connection_local_16_bit_and_wraps(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
