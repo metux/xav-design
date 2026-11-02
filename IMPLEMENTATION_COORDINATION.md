@@ -597,3 +597,13 @@ Extended the raw-wire reference validator to enforce the exact fixed request siz
 - `tools/check-wire-layout.py` guard: `1e0927d0323770818e87f322d5f6d2b9bb2395f6`
 
 This closes the request-length negative-vector gap identified during the PR #3 post-merge audit at the reference-wire-validation level. It does not replace live server conformance testing. Exact-tip CI remains unobserved for the direct commits in this audit series.
+
+
+## Reply-request inventory correction — 2026-11-02
+
+The post-QueryVersion audit found one stale count in the conformance text: it still described 15 Reply requests and omitted the newly assigned bootstrap `QueryVersion` request. The central registry and checker already included `QueryVersion`, so the actual inventory is 16: `QueryVersion`, eleven other compute-baseline Reply requests, and four presentation-profile Reply requests.
+
+- `spec/conformance.md` now lists all 16 explicitly: `46a615b5620b5584a625655eeeaae137d949a500`
+- `tools/check-wire-layout.py` now asserts the total and the profile breakdown against the registry and conformance text: `054ce3a0213e805494be073ef47b1426fd9aa90c`
+
+No request layout, kind, subopcode, or runtime behavior changed. Historical dated audit entries that accurately recorded the pre-QueryVersion inventory remain historical; current normative/conformance inventory is 16. Exact-tip CI remains to be confirmed.
