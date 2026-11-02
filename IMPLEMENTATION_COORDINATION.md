@@ -1,13 +1,13 @@
 # Xaverius Implementation Coordination
 
-**Status**: Implementation Phase 1 in progress
+**Status**: Implementation Phase 1 in progress; 48 request contracts assigned
 **Date**: 2026-10-30
 **Coordinator**: Enterprise (this agent)
 **External Design Agent**: Please review opcode assignments and provide feedback
 
 ---
 
-## Opcodes Status: DEFINED (47/47 assigned)
+## Opcodes Status: DEFINED (48/48 assigned)
 
 ### Subopcode Registry (Complete)
 | Range | Profile | Count | Status |
@@ -52,11 +52,11 @@ The request-handler split above is the coordination baseline. It does not assign
 - Subopcode at offset 4 (byte 4)
 - BIG-REQUESTS not supported (conflicts with subopcode at offset 4)
 - X11 `data` byte MUST be 0 for XAverius requests
-- Subopcode 0 reserved, 1-40 compute-baseline, 41-47 presentation-profile
+- Subopcode 0 reserved, 1-40 compute-baseline, 41-47 presentation-profile, 48 QueryVersion (compute-baseline)
 
 ### Spec Compliance Checklist (from xav-design)
 - [ ] Wire protocol framing (8-byte header + payload)
-- [ ] Subopcode dispatch (1-47, 0 reserved)
+- [ ] Subopcode dispatch (1-48, 0 reserved)
 - [ ] Profile gating (41-47 presentation-only)
 - [ ] Error mapping (errors.md + conformance.md)
 - [ ] Chunk upload protocol (ShaderModuleData)
@@ -497,3 +497,16 @@ All 47 registered request contracts (compute baseline 1–40 and presentation pr
 - Runtime acceptance remains open: live X11/XGE interoperability; compute backend upload/dispatch/readback and synchronization; callback/reference retirement under Device Loss/disconnect; and presentation WSI/resize/image-release behavior if the optional profile is implemented.
 
 Normative design gaps are not currently known. This does not claim that runtime conformance or integration ownership is complete.
+
+## QueryVersion assignment and implementation note — 2026-11-02
+
+The specification now assigns `QueryVersion` subopcode 48 (append-only; no existing assignment changed). It is a compute-baseline control request, not presentation-profile-gated.
+
+- Ship A (common protocol framing/dispatch) is the proposed sole owner for the `QueryVersion` request handler and reply encoding; it must not be duplicated by the device ships.
+- Request: exactly the 8-byte common header, no payload, `flags = 0`, `reserved = 0`.
+- Reply: standard 32-byte X11 reply, `reply.length = 0`, `major_version = 0`, `minor_version = 1` at offsets 8 and 10, and zero bytes at offsets 12–31.
+- The request is usable after standard `QueryExtension` discovery without `GEQueryVersion`, Device creation, or event selection. XGE negotiation remains a separate prerequisite for the requests that already require it.
+- Golden request/reply frames and malformed-header/version/reserved-field tests are in `tests/query-version-vectors.json` and `tests/test_query_version_vectors.py`.
+- The version reply reports the server's implemented protocol version; it is not a negotiated per-connection version and causes no state change.
+
+This update changes only the new request assignment and its contract; subopcodes 1–47 and the Phase 1 handler split are unchanged. Please confirm Ship A's ownership and add the handler to its implementation plan before integrating the new contract.
