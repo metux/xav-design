@@ -143,7 +143,8 @@ The following matrix is the per-request checklist used for the second pass. Leng
 | 44 | `CreateSwapchain` | Reply | 48 |
 | 45 | `DestroySwapchain` | Void | 12 |
 | 46 | `AcquireNextImage` | Reply | 32 |
-| 47 | `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` |\n| 48 | `QueryVersion` | Reply | 8 |
+| 47 | `QueuePresent` | Reply | `40 + 4*wait_semaphore_count` ||
+| 48 | `QueryVersion` | Reply | 8 |
 
 Here `pad4(n) = (n + 3) & ~3`. Every formula must be evaluated with checked arithmetic before allocation or parsing. Counts and the actual packet length must agree exactly; extra trailing bytes are not permitted unless the request definition explicitly includes them.
 
