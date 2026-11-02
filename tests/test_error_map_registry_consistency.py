@@ -55,7 +55,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         names = [name for name, _value, _kind, _details in rows]
         values = [int(value) for _name, value, _kind, _details in rows]
         self.assertEqual(len(names), len(set(names)), "request names must be unique")
-        self.assertEqual(values, list(range(1, 49)), "request subopcodes must be unique and append-only")
+        self.assertEqual(values, list(range(0, 48)), "request subopcodes 0–47 must be unique and append-only")
 
         for name, _value, kind, details in rows:
             chapters = re.findall(r"\]\(\.\./spec/([^)]+)\)", details)
@@ -95,7 +95,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         )
         baseline_replies = {
             name for name, value, kind, _details in rows
-            if (int(value) <= 40 or name == "QueryVersion") and kind == "Reply"
+            if (int(value) == 0 or int(value) <= 40) and kind == "Reply"
         }
         fixture = json.loads((ROOT / "tests/reply-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
