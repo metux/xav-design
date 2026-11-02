@@ -498,7 +498,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
             "This removal and identity separation take effect atomically at the successful `DestroyDevice` linearization point.",
             events,
         )
-        self.assertIn("a reused XID identifies a new internal resource identity", lifetime)
+        self.assertIn("A reused XID identifies a new internal resource identity", lifetime)
         self.assertIn("erbt keine alte Auswahl", conformance)
     def test_async_event_decision_is_linearized_with_mask_changes_and_destroy(self):
         events = (ROOT / "spec" / "events.md").read_text(encoding="utf-8")
