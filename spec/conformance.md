@@ -35,6 +35,7 @@ The server MUST ensure that descriptors match the shader, statically used resour
 An implementation SHOULD test at least the following cases:
 
 - Exact request lengths, counts, and padding
+- Reply-request inventory (16 total): common bootstrap `QueryVersion`; compute-baseline profile: `EnumeratePhysicalDevices`, `GetPhysicalDeviceProperty`, `GetPhysicalDeviceQueueFamilyProperties`, `GetPhysicalDeviceMemoryProperties`, `GetBufferMemoryRequirements`, `WriteBuffer`, `ReadBuffer`, `GetSemaphoreCounterValue`, `WaitSemaphores`, `GetFenceStatus`, and `WaitForFence`; presentation profile: `GetSurfaceCapabilities`, `CreateSwapchain`, `AcquireNextImage`, and `QueuePresent`. The central request registry MUST classify exactly these names as Reply requests.
 - `ReadBuffer` waits for earlier accepted writes to the requested range on the same logical Device, including writes on other queues. An earlier submission failure alone does not prevent the read, but data expected from the failed write is not guaranteed. On Device Loss, `ReadBuffer` MUST fail with `DEVICE_LOST` and MUST NOT send a successful data reply.
 - `EnumeratePhysicalDevices` is an 8-byte reply request; `DestroyDevice` is a 12-byte void request.
 - `EnumeratePhysicalDevices.reply.length` equals the sum of padded `PHYSICALDEVICEINFO` record lengths divided by four; it is zero when there are no records.

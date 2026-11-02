@@ -2034,10 +2034,20 @@ def check_reply_layouts(c: Check) -> None:
               f"reply contract inventory mismatch: registry={sorted(reply_names)}, checker={sorted(expected_names)}")
 
     conformance = read("spec/conformance.md")
-    c.require(len(reply_names) == 16 and
-              "all 16 als `Reply` registrierten Requests" in conformance and
-              "`QueryVersion`, elf weitere Reply-Requests des Compute-Baseline-Profils und vier Reply-Requests des Presentation-Profils" in conformance,
-              "reply contract inventory: conformance must enumerate all 16 replies, including bootstrap QueryVersion")
+    inventory_match = re.search(
+        r"(?m)^- Reply-request inventory \\(16 total\\): (.+)$", conformance
+    )
+    inventory_text = inventory_match.group(1) if inventory_match else ""
+    inventory_names = set(re.findall(r"`([^`]+)`", inventory_text))
+    c.require(
+        len(reply_names) == 16
+        and inventory_match is not None
+        and inventory_names == reply_names
+        and "common bootstrap" in inventory_text
+        and "compute-baseline profile" in inventory_text
+        and "presentation profile" in inventory_text,
+        "reply contract inventory: conformance must enumerate all 16 replies, including bootstrap QueryVersion",
+    )
 
     sources = {
         "devices": read("spec/devices.md"),
