@@ -583,3 +583,8 @@ The presentation wire audit also made the derived ordinary-request bound explici
 The checker now guards the normative bound and requires the raw-wire count/length and overflow assertions in `tests/test_wire_vectors.py`. No wire layout or opcode changed.
 
 The GitHub status endpoint currently reports no checks/workflow runs for the direct post-merge commits in this audit; therefore the green PR #3 merge CI does not validate these later corrections. Exact-tip CI remains pending, and no passing result is claimed for this audit series.
+
+The QueuePresent boundary test now accepts the exact maximum 262140-byte ordinary request (65525 waits) in both byte orders and rejects 65526 waits. The static checker also cross-checks the bound against the common framing chapter.
+
+- `tests/test_wire_vectors.py` boundary coverage: `477d0921c7daba11bc826b4aa813fcf86e5f144e`
+- `tools/check-wire-layout.py` common-limit cross-check: `358023526dd66eb6518d9a16df701e8041516e0e`
