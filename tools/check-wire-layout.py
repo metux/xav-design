@@ -2023,6 +2023,7 @@ def check_reply_layouts(c: Check) -> None:
         "GetPhysicalDeviceQueueFamilyProperties", "GetPhysicalDeviceMemoryProperties",
         "GetBufferMemoryRequirements", "WriteBuffer", "ReadBuffer",
         "GetSemaphoreCounterValue", "WaitSemaphores", "GetFenceStatus", "WaitForFence",
+        "QueryVersion",
     }
     presentation_reply_names = {
         "GetSurfaceCapabilities", "CreateSwapchain", "AcquireNextImage", "QueuePresent",
@@ -2129,6 +2130,13 @@ def check_reply_layouts(c: Check) -> None:
             (r"Offsets 4–7: standard \x60reply\.length = 0\x60", "zero reply.length"),
             (r"(?:Offsets 8–31: reserved for XAverius, zero|Offsets 8–31: XAverius-reserviert, null)", "reserved reply bytes"),
         ]),
+        "QueryVersion": ("wire", [
+            (r"standard 32-byte X11 reply", "standard 32-byte version reply"),
+            (r"\|\s*8\s*\|\s*CARD16\s*\|\s*\x60major_version\x60", "major version at reply offset 8"),
+            (r"\|\s*10\s*\|\s*CARD16\s*\|\s*\x60minor_version\x60", "minor version at reply offset 10"),
+            (r"\|\s*12–31\s*\|\s*BYTE\[20\]\s*\|\s*\x60reserved\x60\s*\|\s*all zero", "zero reserved reply bytes"),
+            (r"\x60reply.length = 0\x60", "zero reply payload length"),
+        ]),
         "WaitForFence": ("sync", [
             (r"Request: exactly 24 bytes", "fixed request length"),
             (r"Offset 8 (?:contains a|enthält einen) \x60CARD32 status\x60", "wait status field"),
@@ -2142,7 +2150,7 @@ def check_reply_layouts(c: Check) -> None:
 
     for name in sorted(expected_names):
         source_key, patterns = contracts[name]
-        section = chapter_section(sources[source_key], name)
+        section = chapter_section(sources[source_key], "QueryVersion reply") if name == "QueryVersion" else chapter_section(sources[source_key], name)
         c.require(bool(section), f"{name}: missing normative chapter section")
         if not section:
             continue
@@ -2824,7 +2832,7 @@ def check_presentation_profile(c: Check) -> None:
     for row in presentation_audit_rows:
         c.require(row in request_audit,
                   f"request audit: presentation request kind/length row missing or inconsistent: {row}")
-    c.require("This profile matrix is intentionally separate from the assigned 1–40 request matrix." in request_audit,
+    c.require("This profile matrix is intentionally separate from the compute-baseline request matrix (1–40 plus `QueryVersion` at 48)." in request_audit,
               "request audit: profile-gated presentation rows must remain separate from compute-baseline assignments")
 
     # Presentation event IDs live in a separate, profile-gated registry.
