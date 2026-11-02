@@ -6,7 +6,7 @@ The automated wire-layout checker validates uniqueness and expected ranges for t
 
 | Registry | Namespace | Status |
 |---|---|---|
-| [Request subopcodes](request-subopcodes.md) | X11 request subopcode | 47 requests assigned: compute baseline 1–40; presentation-profile-only 41–47; append-only |
+| [Request subopcodes](request-subopcodes.md) | X11 request subopcode | 48 requests assigned: compute baseline 1–40 plus QueryVersion 48; presentation-profile-only 41–47; append-only |
 | [Errors](errors.md) | XAverius error offset from X11 `first_error` | Assigned |
 | [Descriptor types](descriptor-types.md) | `descriptor_type` values | v0.1 storage-buffer type assigned |
 | [Shader stages](shader-stages.md) | shader-stage bit masks | v0.1 compute stage assigned |
