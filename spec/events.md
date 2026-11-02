@@ -11,7 +11,7 @@ All events below use XGE. The seven compute-baseline events use IDs from the [ce
 | 8 | CARD16 | `evtype`, static event type ID from the event registry |
 | 10–31 | — | XGE-reserved header bytes, zero |
 
-Event-specific fields begin at offset 32. The total length is exactly `32 + 4 * length`; the connection byte order applies to both header and payload. The `extension` and `evtype` values are not interchangeable: the former is dynamically assigned by each X11 server, while the latter is statically assigned by XAverius.
+Event-specific fields begin at offset 32. The total length is exactly `32 + 4 * length`; the connection byte order applies to both header and payload. The `extension` and `evtype` values are not interchangeable: the former is dynamically assigned by each X11 server, while the latter is statically assigned by XAverius. The `sequence` field is the low 16 bits of the X11 request sequence number most recently processed by the server for the recipient connection at the event-enqueue point. It is connection-local and MUST NOT be copied from the request sequence of another client, a GPU submission token, or a backend callback record. The value wraps modulo 65536; it is not a globally unique event or submission identifier.
 
 
 ## `ASYNC_ERROR`
