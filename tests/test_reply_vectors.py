@@ -165,7 +165,7 @@ class GoldenReplyVectorTests(unittest.TestCase):
         cls.vectors = fixture["vectors"]
 
     def test_golden_reply_bytes_and_framing(self):
-        self.assertEqual(len(self.vectors), 88)
+        self.assertEqual(len(self.vectors), 90)
         names = set()
         for vector in self.vectors:
             with self.subTest(vector=vector["name"]):
@@ -210,6 +210,11 @@ class GoldenReplyVectorTests(unittest.TestCase):
             elif vector["event"] == "GetSemaphoreCounterValue":
                 self.assertEqual(int.from_bytes(wire[8:16], order), 72623859790382856)
                 self.assertEqual(wire[16:32], bytes(16))
+            elif vector["event"] == "QueryVersion":
+                self.assertEqual(len(wire), 32)
+                self.assertEqual(int.from_bytes(wire[8:10], order), 0)
+                self.assertEqual(int.from_bytes(wire[10:12], order), 1)
+                self.assertEqual(wire[12:32], bytes(20))
 
     def test_read_buffer_payload_is_padded_and_length_counts_words(self):
         for vector in self.vectors:
