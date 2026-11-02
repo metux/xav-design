@@ -13,7 +13,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -30,7 +30,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "size": 72623859790382856,
+        "size": 72623859790382850,
         "usage_flags": 5,
         "reserved": 0
       },
@@ -47,7 +47,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -65,7 +65,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3,
         "payload_hex": "aabbcc",
         "padding_hex": "00"
@@ -83,7 +83,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900007000e00000004030201d0c0b0a0080706050403020103000000"
@@ -99,7 +99,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 3
       },
       "wire_hex": "900000070e00000001020304a0b0c0d0010203040506070800000003"
@@ -115,7 +115,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -133,7 +133,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 1,
         "payload_hex": "aa",
         "padding_hex": "000000"
@@ -151,7 +151,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -169,7 +169,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 4,
         "payload_hex": "aabbccdd",
         "padding_hex": ""
@@ -187,7 +187,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
@@ -205,7 +205,7 @@
       "fields": {
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
-        "buffer_offset": 72623859790382856,
+        "buffer_offset": 72623859790382850,
         "data_length": 5,
         "payload_hex": "aabbccddee",
         "padding_hex": "000000"
@@ -223,7 +223,7 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382856,
+        "allocation_size": 72623859790382850,
         "memory_type_index": 2,
         "reserved": 0
       },
@@ -240,7 +240,7 @@
       "fields": {
         "device_xid": 16909060,
         "memory_xid": 2695938256,
-        "allocation_size": 72623859790382856,
+        "allocation_size": 72623859790382850,
         "memory_type_index": 2,
         "reserved": 0
       },
@@ -286,7 +286,7 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382856
+        "memory_offset": 72623859790382850
       },
       "wire_hex": "900007000c00000004030201d0c0b0a0443322110807060504030201"
     },
@@ -302,7 +302,7 @@
         "device_xid": 16909060,
         "buffer_xid": 2695938256,
         "memory_xid": 287454020,
-        "memory_offset": 72623859790382856
+        "memory_offset": 72623859790382850
       },
       "wire_hex": "900000070c00000001020304a0b0c0d0112233440102030405060708"
     },
@@ -350,7 +350,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": 72623859790382856
+        "initial_value": 72623859790382850
       },
       "wire_hex": "900007001d00000004030201d0c0b0a0010000000807060504030201"
     },
@@ -366,7 +366,7 @@
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
         "semaphore_type": 1,
-        "initial_value": 72623859790382856
+        "initial_value": 72623859790382850
       },
       "wire_hex": "900000071d00000001020304a0b0c0d0000000010102030405060708"
     },
@@ -553,7 +553,7 @@
       "fields": {
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
-        "signal_value": 72623859790382848
+        "signal_value": 72623859790382850
       },
       "wire_hex": "900006002000000004030201d0c0b0a00007060504030201"
     },
@@ -568,7 +568,7 @@
       "fields": {
         "device_xid": 16909060,
         "semaphore_xid": 2695938256,
-        "signal_value": 72623859790382848
+        "signal_value": 72623859790382850
       },
       "wire_hex": "900000062000000001020304a0b0c0d00102030405060700"
     },
@@ -639,7 +639,7 @@
       "fields": {
         "device_xid": 16909060,
         "fence_xid": 2695938256,
-        "timeout_ns": 72623859790382848
+        "timeout_ns": 72623859790382850
       },
       "wire_hex": "900006002400000004030201d0c0b0a00007060504030201"
     },
@@ -654,7 +654,7 @@
       "fields": {
         "device_xid": 16909060,
         "fence_xid": 2695938256,
-        "timeout_ns": 72623859790382848
+        "timeout_ns": 72623859790382850
       },
       "wire_hex": "900000062400000001020304a0b0c0d00102030405060700"
     },
@@ -847,7 +847,7 @@
       "fields": {
         "device_xid": 16909060,
         "swapchain_xid": 2695938256,
-        "timeout_ns": 72623859790382848,
+        "timeout_ns": 72623859790382850,
         "semaphore_xid": 0,
         "fence_xid": 0
       },
@@ -864,7 +864,7 @@
       "fields": {
         "device_xid": 16909060,
         "swapchain_xid": 2695938256,
-        "timeout_ns": 72623859790382848,
+        "timeout_ns": 72623859790382850,
         "semaphore_xid": 0,
         "fence_xid": 0
       },
@@ -885,7 +885,7 @@
         "swapchain_xid": 2695938256,
         "image_index": 2,
         "wait_semaphore_count": 0,
-        "presentation_token": 72623859790382848
+        "presentation_token": 72623859790382850
       },
       "wire_hex": "90000a002f000000040302010100000000000000d0c0b0a002000000000000000007060504030201"
     },
@@ -904,9 +904,55 @@
         "swapchain_xid": 2695938256,
         "image_index": 2,
         "wait_semaphore_count": 0,
-        "presentation_token": 72623859790382848
+        "presentation_token": 72623859790382850
       },
       "wire_hex": "9000000a2f000000010203040000000100000000a0b0c0d000000002000000000102030405060700"
+    },
+    {
+      "name": "QueuePresent-two-wait-semaphores-little-endian",
+      "byte_order": "little",
+      "request": "QueuePresent",
+      "major_opcode": 144,
+      "subopcode": 47,
+      "flags": 0,
+      "length_bytes": 48,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 0,
+        "swapchain_xid": 2695938256,
+        "image_index": 2,
+        "wait_semaphore_count": 2,
+        "presentation_token": 72623859790382850,
+        "wait_semaphore_xids": [
+          287454020,
+          2712847316
+        ]
+      },
+      "wire_hex": "90000c002f000000040302010100000000000000d0c0b0a00200000002000000000706050403020144332211d4c3b2a1"
+    },
+    {
+      "name": "QueuePresent-two-wait-semaphores-big-endian",
+      "byte_order": "big",
+      "request": "QueuePresent",
+      "major_opcode": 144,
+      "subopcode": 47,
+      "flags": 0,
+      "length_bytes": 48,
+      "fields": {
+        "device_xid": 16909060,
+        "queue_family_index": 1,
+        "queue_index": 0,
+        "swapchain_xid": 2695938256,
+        "image_index": 2,
+        "wait_semaphore_count": 2,
+        "presentation_token": 72623859790382850,
+        "wait_semaphore_xids": [
+          287454020,
+          2712847316
+        ]
+      },
+      "wire_hex": "9000000c2f000000010203040000000100000000a0b0c0d00000000200000002010203040506070011223344a1b2c3d4"
     }
   ]
 }
