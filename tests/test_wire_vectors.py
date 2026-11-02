@@ -919,9 +919,17 @@ class GoldenWireVectorTests(unittest.TestCase):
                 and v["byte_order"] == order
                 and v["fields"]["wait_semaphore_count"] == 0
             )
+            maximum_count = 65525
+            wire = bytearray(encode_request(vector))
+            wire.extend(bytes(4 * maximum_count))
+            wire[2:4] = (65535).to_bytes(2, order)
+            wire[28:32] = maximum_count.to_bytes(4, order)
+            with self.subTest(order=order, case="maximum ordinary request"):
+                validate_request_wire(bytes(wire), order)
+
             wire = bytearray(encode_request(vector))
             wire[28:32] = (65526).to_bytes(4, order)
-            with self.subTest(order=order):
+            with self.subTest(order=order, case="one above maximum"):
                 with self.assertRaisesRegex(ValueError, "ordinary X11 request limit"):
                     validate_request_wire(bytes(wire), order)
 
