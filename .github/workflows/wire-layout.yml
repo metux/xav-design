@@ -43,6 +43,9 @@ jobs:
       - name: Syntax-check checker and wire tests
         id: py_compile
         run: python -m py_compile tools/check-wire-layout.py tools/check-handler-signatures.py tools/check-handler-ci-gate.py tools/check-async-callback-generations.py tools/preprocess-xav-source.py tests/test_handler_signatures.py tests/test_handler_ci_gate.py tests/test_async_callback_generation_audit.py tests/test_ci_workflow_coverage.py tests/test_ci_run_presence.py tools/check-ci-run-presence.py tests/test_wire_vectors.py tests/test_phase1_request_vectors.py tests/test_query_version_vectors.py tests/test_negative_contracts.py tests/xa_state_model.py tests/test_state_model.py tests/run_timeline_regressions.py tests/test_event_vectors.py tests/test_select_events_vectors.py tests/test_reply_vectors.py tests/test_reply_spec_coverage.py tests/test_presentation_event_vectors.py tests/test_presentation_reply_vectors.py
+      - name: Compile shared XAverius protocol headers
+        id: header_compile
+        run: cc -std=c11 -Wall -Wextra -Werror -I protocol/include -fsyntax-only protocol/tests/header-smoke.c
       - name: Validate request/reply matrix and XGE event layouts
         id: wire_layout
         run: python tools/check-wire-layout.py
@@ -65,13 +68,14 @@ jobs:
           HANDLER_GATE_TESTS_OUTCOME: ${{ steps.handler_gate_tests.outcome }}
           CALLBACK_GENERATION_TESTS_OUTCOME: ${{ steps.callback_generation_tests.outcome }}
           PY_COMPILE_OUTCOME: ${{ steps.py_compile.outcome }}
+          HEADER_COMPILE_OUTCOME: ${{ steps.header_compile.outcome }}
           WIRE_LAYOUT_OUTCOME: ${{ steps.wire_layout.outcome }}
           TIMELINE_OUTCOME: ${{ steps.timeline.outcome }}
           PYTHON_SUITE_OUTCOME: ${{ steps.python_suite.outcome }}
         run: |
           set -eu
           failed=0
-          for check in CHECKOUT SETUP_PYTHON SHELL_SYNTAX BACKEND_TESTS HANDLER_SIGNATURES HANDLER_GATE HANDLER_GATE_TESTS CALLBACK_GENERATION_TESTS PY_COMPILE WIRE_LAYOUT TIMELINE PYTHON_SUITE; do
+          for check in CHECKOUT SETUP_PYTHON SHELL_SYNTAX BACKEND_TESTS HANDLER_SIGNATURES HANDLER_GATE HANDLER_GATE_TESTS CALLBACK_GENERATION_TESTS PY_COMPILE HEADER_COMPILE WIRE_LAYOUT TIMELINE PYTHON_SUITE; do
             eval "outcome=\$"${check}_OUTCOME
             if [ "$outcome" != success ]; then
               echo "::error::Required CI check $check did not succeed (outcome: $outcome)"
