@@ -51,11 +51,11 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             table,
             re.M,
         )
-        self.assertEqual(len(rows), 47, "every assigned request must have one registry row")
+        self.assertEqual(len(rows), 48, "every assigned request must have one registry row")
         names = [name for name, _value, _kind, _details in rows]
         values = [int(value) for _name, value, _kind, _details in rows]
         self.assertEqual(len(names), len(set(names)), "request names must be unique")
-        self.assertEqual(values, list(range(1, 48)), "request subopcodes must be unique and append-only")
+        self.assertEqual(values, list(range(1, 49)), "request subopcodes must be unique and append-only")
 
         for name, _value, kind, details in rows:
             chapters = re.findall(r"\]\(\.\./spec/([^)]+)\)", details)
@@ -95,7 +95,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         )
         baseline_replies = {
             name for name, value, kind, _details in rows
-            if int(value) <= 40 and kind == "Reply"
+            if (int(value) <= 40 or name == "QueryVersion") and kind == "Reply"
         }
         fixture = json.loads((ROOT / "tests/reply-vectors.json").read_text(encoding="utf-8"))
         vectors = fixture["vectors"]
@@ -110,7 +110,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
             "GetSemaphoreCounterValue": "GetSemaphoreCounterValue",
             "WaitSemaphores": "WaitSemaphores",
             "GetFenceStatus": "GetFenceStatus",
-            "WaitForFence": "WaitForFence",
+            "WaitForFence": "WaitForFence",\n            "QueryVersion": "QueryVersion",
         }
         self.assertEqual(baseline_replies, set(event_prefix))
         for request, prefix in event_prefix.items():
@@ -184,7 +184,7 @@ class ErrorMapRegistryConsistencyTests(unittest.TestCase):
         error_section = self.errors.split("## Request-specific error mapping", 1)[1].split(
             "## Synchronous versus Asynchronous Errors", 1
         )[0]
-        self.assertEqual(len(rows), 47)
+        self.assertEqual(len(rows), 48)
         missing = [name for name in rows if tick + name + tick not in error_section]
         self.assertEqual(missing, [], f"registered requests missing from the error mapping: {missing}")
 
