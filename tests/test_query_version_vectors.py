@@ -24,7 +24,7 @@ def validate_request(wire: bytes, order: str) -> None:
         raise ValueError("request length")
     if wire[1] != 0:
         raise ValueError("data")
-    if wire[4] != 48:
+    if wire[4] != 0:
         raise ValueError("subopcode")
     if wire[5] != 0:
         raise ValueError("flags")
@@ -64,9 +64,9 @@ class QueryVersionVectors(unittest.TestCase):
             with self.subTest(vector=v["name"]):
                 wire = bytes.fromhex(v["wire_hex"])
                 self.assertEqual(len(wire), v["total_bytes"])
-                self.assertEqual(v["subopcode"], 48)
+                self.assertEqual(v["subopcode"], 0)
                 self.assertEqual(wire[0], 0x90)  # fixture-only major opcode
-                self.assertEqual(wire[4], 48)
+                self.assertEqual(wire[4], 0)
                 validate_request(wire, v["byte_order"])
 
     def test_reply_golden_frames_both_byte_orders(self):
@@ -116,11 +116,11 @@ class QueryVersionVectors(unittest.TestCase):
                     validate_reply(wire, "little")
 
     def test_spec_registry_and_error_contract_agree(self):
-        self.assertIn("`QueryVersion` is XAverius subopcode 48", WIRE_SPEC)
+        self.assertIn("`QueryVersion` is XAverius subopcode 0", WIRE_SPEC)
         self.assertIn("`major_version`", WIRE_SPEC)
         self.assertIn("MUST report exactly version 0.1", WIRE_SPEC)
-        self.assertIn("`QueryVersion` | 48 | Reply", REGISTRY)
-        self.assertIn("`QueryVersion` (subopcode 48)", ERRORS)
+        self.assertIn("`QueryVersion` | 0 | Reply", REGISTRY)
+        self.assertIn("`QueryVersion` (subopcode 0)", ERRORS)
         self.assertIn("`QueryVersion`", CONFORMANCE)
 
 
