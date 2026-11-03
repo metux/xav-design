@@ -231,6 +231,7 @@
 #include <X11/X.h>
 #include <X11/Xmd.h>
 #include <stddef.h>
+#include <float.h>
 
 /* Wire XIDs/Atoms are always CARD32; Xlib XID/Atom may be wider on LP64. */
 typedef float xavFloat32;
@@ -468,6 +469,103 @@ XAV_STATIC_ASSERT(sizeof(xavImageReleasedEvent) == 64, "IMAGE_RELEASED event siz
 XAV_STATIC_ASSERT(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capabilities variable payload offset");
 XAV_STATIC_ASSERT(offsetof(xavGetPhysicalDeviceMemoryPropertiesReply, records) == 32, "memory properties payload offset");
 XAV_STATIC_ASSERT(sizeof(xavErrorPacket) == 32, "X11 error packet size");
+
+/* FLOAT32 is an IEEE-754 binary32 wire value, not an arbitrary C float. */
+XAV_STATIC_ASSERT(sizeof(xavFloat32) == 4, "FLOAT32 size");
+XAV_STATIC_ASSERT(FLT_RADIX == 2, "FLOAT32 radix");
+XAV_STATIC_ASSERT(FLT_MANT_DIG == 24, "FLOAT32 precision");
+XAV_STATIC_ASSERT(FLT_MAX_EXP == 128, "FLOAT32 maximum exponent");
+XAV_STATIC_ASSERT(FLT_MIN_EXP == -125, "FLOAT32 minimum exponent");
+
+/* Fixed request structures must match their normative total wire lengths. */
+#define XAV_ASSERT_REQ_SIZE(type) \
+    XAV_STATIC_ASSERT(sizeof(type) == sz_##type, #type " wire size")
+#define XAV_ASSERT_REQ_PREFIX(type, field) \
+    XAV_STATIC_ASSERT(offsetof(type, field) == sz_##type, #type " fixed prefix")
+
+XAV_ASSERT_REQ_SIZE(xavQueryVersionReq);
+XAV_ASSERT_REQ_SIZE(xavEnumeratePhysicalDevicesReq);
+XAV_ASSERT_REQ_SIZE(xavGetPhysicalDevicePropertyReq);
+XAV_ASSERT_REQ_SIZE(xavGetPhysicalDeviceQueueFamilyPropertiesReq);
+XAV_ASSERT_REQ_PREFIX(xavCreateDeviceReq, requests);
+XAV_ASSERT_REQ_PREFIX(xavCreateDefaultDeviceReq, priorities);
+XAV_ASSERT_REQ_SIZE(xavDestroyDeviceReq);
+XAV_ASSERT_REQ_SIZE(xavGetPhysicalDeviceMemoryPropertiesReq);
+XAV_ASSERT_REQ_SIZE(xavCreateBufferReq);
+XAV_ASSERT_REQ_SIZE(xavGetBufferMemoryRequirementsReq);
+XAV_ASSERT_REQ_SIZE(xavAllocateMemoryReq);
+XAV_ASSERT_REQ_SIZE(xavFreeMemoryReq);
+XAV_ASSERT_REQ_SIZE(xavBindBufferMemoryReq);
+XAV_ASSERT_REQ_PREFIX(xavWriteBufferReq, data);
+XAV_ASSERT_REQ_SIZE(xavReadBufferReq);
+XAV_ASSERT_REQ_PREFIX(xavShaderModuleDataReq, data);
+XAV_ASSERT_REQ_PREFIX(xavCreateDescriptorSetLayoutReq, bindings);
+XAV_ASSERT_REQ_PREFIX(xavCreateDescriptorPoolReq, pool_sizes);
+XAV_ASSERT_REQ_SIZE(xavDestroyDescriptorPoolReq);
+XAV_ASSERT_REQ_PREFIX(xavAllocateDescriptorSetsReq, allocations);
+XAV_ASSERT_REQ_PREFIX(xavUpdateDescriptorSetsReq, writes);
+XAV_ASSERT_REQ_PREFIX(xavFreeDescriptorSetsReq, descriptor_set_xids);
+XAV_ASSERT_REQ_PREFIX(xavCreatePipelineLayoutReq, data);
+XAV_ASSERT_REQ_PREFIX(xavCreateComputePipelineReq, entry_point);
+XAV_ASSERT_REQ_SIZE(xavCreateCommandPoolReq);
+XAV_ASSERT_REQ_SIZE(xavDestroyCommandPoolReq);
+XAV_ASSERT_REQ_SIZE(xavResetCommandBufferReq);
+XAV_ASSERT_REQ_PREFIX(xavCommandBufferDataReq, entries);
+XAV_ASSERT_REQ_PREFIX(xavQueueSubmitReq, arrays);
+XAV_ASSERT_REQ_SIZE(xavCreateSemaphoreReq);
+XAV_ASSERT_REQ_SIZE(xavGetSemaphoreCounterValueReq);
+XAV_ASSERT_REQ_PREFIX(xavWaitSemaphoresReq, entries);
+XAV_ASSERT_REQ_SIZE(xavSignalSemaphoreReq);
+XAV_ASSERT_REQ_SIZE(xavDestroySemaphoreReq);
+XAV_ASSERT_REQ_SIZE(xavCreateFenceReq);
+XAV_ASSERT_REQ_SIZE(xavGetFenceStatusReq);
+XAV_ASSERT_REQ_SIZE(xavWaitForFenceReq);
+XAV_ASSERT_REQ_SIZE(xavResetFenceReq);
+XAV_ASSERT_REQ_SIZE(xavDestroyFenceReq);
+XAV_ASSERT_REQ_SIZE(xavDestroyResourceReq);
+XAV_ASSERT_REQ_SIZE(xavSelectEventsReq);
+XAV_ASSERT_REQ_SIZE(xavCreateSurfaceReq);
+XAV_ASSERT_REQ_SIZE(xavDestroySurfaceReq);
+XAV_ASSERT_REQ_SIZE(xavGetSurfaceCapabilitiesReq);
+XAV_ASSERT_REQ_SIZE(xavCreateSwapchainReq);
+XAV_ASSERT_REQ_SIZE(xavDestroySwapchainReq);
+XAV_ASSERT_REQ_SIZE(xavAcquireNextImageReq);
+XAV_ASSERT_REQ_PREFIX(xavQueuePresentReq, wait_semaphore_xids);
+
+/* Nested variable records and reply payload boundaries. */
+XAV_STATIC_ASSERT(offsetof(xavQueueFamilyRequest, queue_priorities) == 8, "queue priorities offset");
+XAV_STATIC_ASSERT(offsetof(xavDeviceExtensionRequest, name) == 4, "device extension name offset");
+XAV_STATIC_ASSERT(offsetof(xavCmdBindDescriptorSets, descriptor_set_xids) == 16, "descriptor-set command tail offset");
+XAV_STATIC_ASSERT(offsetof(xavCmdPushConstants, data) == 20, "push-constant command tail offset");
+XAV_STATIC_ASSERT(offsetof(xavPhysicalDeviceInfo, device_name) == 32, "physical-device name offset");
+XAV_STATIC_ASSERT(offsetof(xavEnumeratePhysicalDevicesReply, records) == 32, "physical-device reply records offset");
+XAV_STATIC_ASSERT(offsetof(xavGetPhysicalDeviceQueueFamilyPropertiesReply, records) == 32, "queue-family reply records offset");
+XAV_STATIC_ASSERT(offsetof(xavGetPhysicalDeviceMemoryPropertiesReply, records) == 32, "memory-property reply records offset");
+XAV_STATIC_ASSERT(offsetof(xavReadBufferReply, data) == 32, "ReadBuffer payload offset");
+XAV_STATIC_ASSERT(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "surface-capability payload offset");
+
+/* Every fixed-size reply and every XGE event must have its specified size. */
+XAV_STATIC_ASSERT(sizeof(xavQueryVersionReply) == sz_xavQueryVersionReply, "QueryVersion reply size");
+XAV_STATIC_ASSERT(sizeof(xavGetBufferMemoryRequirementsReply) == sz_xavGetBufferMemoryRequirementsReply, "buffer requirements reply size");
+XAV_STATIC_ASSERT(sizeof(xavGetSemaphoreCounterValueReply) == sz_xavGetSemaphoreCounterValueReply, "semaphore counter reply size");
+XAV_STATIC_ASSERT(sizeof(xavWaitSemaphoresReply) == sz_xavWaitSemaphoresReply, "WaitSemaphores reply size");
+XAV_STATIC_ASSERT(sizeof(xavGetFenceStatusReply) == sz_xavGetFenceStatusReply, "GetFenceStatus reply size");
+XAV_STATIC_ASSERT(sizeof(xavWaitForFenceReply) == sz_xavWaitForFenceReply, "WaitForFence reply size");
+XAV_STATIC_ASSERT(sizeof(xavCreateSwapchainReply) == sz_xavCreateSwapchainReply, "CreateSwapchain reply size");
+XAV_STATIC_ASSERT(sizeof(xavAcquireNextImageReply) == sz_xavAcquireNextImageReply, "AcquireNextImage reply size");
+XAV_STATIC_ASSERT(sizeof(xavQueuePresentReply) == sz_xavQueuePresentReply, "QueuePresent reply size");
+XAV_STATIC_ASSERT(sizeof(xavAsyncErrorEvent) == sz_xavAsyncErrorEvent, "ASYNC_ERROR event size");
+XAV_STATIC_ASSERT(sizeof(xavDeviceLostEvent) == sz_xavDeviceLostEvent, "DEVICE_LOST event size");
+XAV_STATIC_ASSERT(sizeof(xavDeviceStatusChangedEvent) == sz_xavDeviceStatusChangedEvent, "DEVICE_STATUS_CHANGED event size");
+XAV_STATIC_ASSERT(sizeof(xavDeviceMemoryPressureEvent) == sz_xavDeviceMemoryPressureEvent, "DEVICE_MEMORY_PRESSURE event size");
+XAV_STATIC_ASSERT(sizeof(xavDeviceIdleEvent) == sz_xavDeviceIdleEvent, "DEVICE_IDLE event size");
+XAV_STATIC_ASSERT(sizeof(xavSubmissionCompleteEvent) == sz_xavSubmissionCompleteEvent, "SUBMISSION_COMPLETE event size");
+XAV_STATIC_ASSERT(sizeof(xavSubmissionFailedEvent) == sz_xavSubmissionFailedEvent, "SUBMISSION_FAILED event size");
+XAV_STATIC_ASSERT(sizeof(xavImageReleasedEvent) == sz_xavImageReleasedEvent, "IMAGE_RELEASED event size");
+XAV_STATIC_ASSERT(sizeof(xavPresentationCompleteEvent) == sz_xavPresentationCompleteEvent, "PRESENTATION_COMPLETE event size");
+
+#undef XAV_ASSERT_REQ_SIZE
+#undef XAV_ASSERT_REQ_PREFIX
 #undef XAV_STATIC_ASSERT
 
 #endif /* XAVERIUS_H */
