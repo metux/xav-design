@@ -225,7 +225,6 @@
 #define XAV_XGE_HEADER_BYTES 32U
 #define XAV_XGE_GENERIC_EVENT 35U
 #define XAV_MAX_REQUEST_WORDS 65535U
-#define XAV_PAD4(n) (((n) + 3U) & ~3U)
 
 /* Wire structures and fixed-size declarations. */
 #include <X11/X.h>
