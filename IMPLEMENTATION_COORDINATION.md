@@ -722,14 +722,10 @@ The canonical non-overlapping handler split is Ship B: subopcode 1; Ship C: 2–
 The previous 2026-10-30 baseline references in older coordination-history sections are historical snapshots; follow the current `docs/restructure-2026-10-21` branch and `spec/freeze-checklist.md`, not those old pinned hashes.
 
 
-## Shared client/server protocol headers — 2026-11-02
+## Shared client/server protocol header audit — 2026-11-03
 
-Added the common C protocol-header package under `protocol/`:
-- `protocol/include/xaverius.h` is the umbrella include.
-- `protocol/include/xaveriusconst.h` defines all 48 request subopcodes, the nine event IDs, error offsets, and the v0.1 wire registries.
-- `protocol/include/xaveriusproto.h` declares request prefixes, variable-tail records, reply layouts, the X11 error packet, and all compute/presentation XGE event layouts.
-- `protocol/README.md` documents the include path, X11 byte order, four-byte wire packing, and checked sizing for variable packets.
+The public C wire declarations have been consolidated into the single header `protocol/include/xaverius.h`; the former split `xaveriusconst.h` and `xaveriusproto.h` files were removed. Both server and client consumers include `<xaverius.h>`. `protocol/README.md` documents the include path, X11 byte order, four-byte packing, CARD32 wire XIDs/Atoms, and checked variable-payload sizing.
 
-Wire XIDs and Atom IDs are represented as CARD32, not the potentially wider client-side Xlib typedefs. The dynamic extension major opcode remains runtime-discovered with QueryExtension. The CI workflow now compiles the shared headers against the X11 protocol headers and retains the existing wire-layout and conformance checks. This package is a projection of spec/ and registries/; those documents remain normative and must be updated first when the ABI changes.
+A full comparison against the current normative chapters and registries found no differing request/reply/event field offsets, fixed prefixes, wire sizes, or assigned numeric values. The header now statically verifies the IEEE-754 binary32 assumptions for `FLOAT32`, every fixed request size, every variable request prefix, key nested/reply payload offsets, all fixed reply sizes, and all nine XGE event sizes. The unchecked `XAV_PAD4` arithmetic macro was removed so callers must apply the specification's checked-size arithmetic rather than risk overflow.
 
-Header package and CI integration are on the authoritative branch; see the current branch tip for the latest compile/test result.
+The normative source remains `spec/` and `registries/`; this header is only their C projection. Exact-tip CI for the latest header commit is running; do not treat the prior successful header compile as verification of the later padding-helper removal. Runtime X11/XGE and Vulkan interoperability remain implementation acceptance work.
