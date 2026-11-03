@@ -1,5 +1,15 @@
-#ifndef XAVERIUS_H
-#define XAVERIUS_H
+/* SPDX-License-Identifier: X11 OR MIT OR AGPL-3.0-or-later
+ *
+ * Copyright © 2026 Enrico Weigelt, metux IT consult <info@metux.net>
+ */
+
+#ifndef __XLIBRE_XAVERIUS_PROTO_H
+#define __XLIBRE_XAVERIUS_PROTO_H
+
+#include <stddef.h>
+#include <float.h>
+#include <X11/X.h>
+#include <X11/Xmd.h>
 
 /*
  * XAverius v0.1 shared X11 wire protocol declarations.
@@ -9,6 +19,8 @@
 /* Constants, registries, request subopcodes, event IDs and flags. */
 #define XAVERIUS_MAJOR_VERSION 0
 #define XAVERIUS_MINOR_VERSION 1
+#define XAVERIUS_EXTENSION_NAME "XAVERIUS"
+
 #define XAV_REQ_QUERY_VERSION 0
 #define XAV_REQ_ENUMERATE_PHYSICAL_DEVICES 1
 #define XAV_REQ_GET_PHYSICAL_DEVICE_PROPERTY 2
@@ -225,12 +237,6 @@
 #define XAV_XGE_HEADER_BYTES 32U
 #define XAV_XGE_GENERIC_EVENT 35U
 #define XAV_MAX_REQUEST_WORDS 65535U
-
-/* Wire structures and fixed-size declarations. */
-#include <X11/X.h>
-#include <X11/Xmd.h>
-#include <stddef.h>
-#include <float.h>
 
 /* Wire XIDs/Atoms are always CARD32; Xlib XID/Atom may be wider on LP64. */
 typedef float xavFloat32;
@@ -567,4 +573,4 @@ XAV_STATIC_ASSERT(sizeof(xavPresentationCompleteEvent) == sz_xavPresentationComp
 #undef XAV_ASSERT_REQ_PREFIX
 #undef XAV_STATIC_ASSERT
 
-#endif /* XAVERIUS_H */
+#endif /* __XLIBRE_XAVERIUS_PROTO_H */
