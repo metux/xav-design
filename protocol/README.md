@@ -1,14 +1,14 @@
-XAverius shared protocol headers
+XAverius shared protocol header
 ================================
 
-This directory contains implementation-neutral C wire declarations shared by X server and client code.
+This directory contains the implementation-neutral C wire declarations shared by X server and client code.
 
-- include/xaveriusconst.h: stable request, event, error, flag and registry values.
-- include/xaveriusproto.h: request, reply, event and nested-record wire structures plus fixed-size constants.
-- include/xaverius.h: umbrella include.
+- `include/xaverius.h` is the single public header. It contains all request subopcodes, event IDs, error codes, flags, registry values, request/reply/event structures, nested variable-tail records, and fixed-size constants.
 
-The build environment must provide the X11 protocol headers (Xmd.h; on Debian-family systems install libx11-dev or the xproto development package). Add protocol/include to the compiler include path and include <xaverius.h>. Discover the dynamic extension major opcode with X11 QueryExtension; it is not a compile-time constant. Multi-byte fields use the X11 connection byte order. These declarations describe wire offsets, not host-order accessors; use X11 byte-order helpers when encoding and decoding.
+The build environment must provide the X11 protocol headers (`X.h` and `Xmd.h`; on Debian-family systems install `libx11-dev` or the xproto development package). Add `protocol/include` to the compiler include path and include `<xaverius.h>`.
 
-Variable-length structures use a one-element trailing member for compatibility with traditional X11 protocol headers. sz_xav* constants describe the fixed prefix. Calculate actual sizes with checked arithmetic and enforce XAV_MAX_REQUEST_BYTES; never use sizeof(struct) as the size of a variable-length packet.
+Discover the dynamic extension major opcode with X11 `QueryExtension`; it is not a compile-time constant. Multi-byte fields use the X11 connection byte order. These declarations describe wire offsets, not host-order accessors; use X11 byte-order helpers when encoding and decoding. Wire XIDs and Atom IDs are represented as `CARD32`, independent of the host Xlib typedef widths.
 
-The structures are packed to four-byte alignment because some XGE 64-bit fields occur at offsets that are four-byte aligned but not eight-byte aligned. The normative source remains spec/ and registries/. Update these headers together with any normative wire-layout or registry change. No server implementation behavior or Vulkan handles are defined here.
+All wire structures use four-byte packing. Do not cast arbitrary network buffers to these structures on architectures or compilers where unaligned access is unsafe; copy fields or use suitable accessors. Variable-tail replies and records must be sized from their explicit counts and lengths with overflow checks before allocation or access. The ordinary X11 request length limit applies; BIG-REQUESTS is not part of this protocol.
+
+The normative source remains the specification under `spec/` and the registries under `registries/`. Update those first when changing the ABI, then keep this header synchronized.
