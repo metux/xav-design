@@ -10,7 +10,7 @@ There is no independent Vulkan-ICD candidate inventory, no candidate-list callba
 
 ## Module-role control record
 
-A `GpuModuleRole` exists only to pin unloadable DDX code and shared module resources, coordinate callback admission, and establish module-wide quiescence. It is not an execution backend. The role context accessor, if used, returns only shared module-level state; per-device context and native handles are passed directly through the exact DeviceBackendBinding.
+A `GpuModuleRole` exists only to pin unloadable DDX code and shared module resources, coordinate callback admission, and establish module-wide quiescence. It is not an execution backend. There is no generic module-role context accessor. Per-device context and native handles are passed directly through the exact DeviceBackendBinding; module-role APIs expose only lifetime and quiescence operations.
 
 The role generation and binding generation are separate, non-reusable identities. A binding retains its role. Operation tokens carry both identities as needed to reject stale callbacks. Module-role shutdown closes admission and drains every binding owned by that role; binding removal affects only one PhysicalDevice. ScreenAttachment teardown remains independent.
 
@@ -18,7 +18,7 @@ The role generation and binding generation are separate, non-reusable identities
 
 - The DDX binding retains its native handle and device context until all logical Devices, backend objects, synchronous calls, accepted operation tokens, and callbacks that can access them have retired.
 - The module role retains its loader lease until all bindings, callbacks, shared contexts, and module-owned workers have quiesced.
-- A completion callback identifies a server-owned operation token by token ID and generation, plus the exact binding/module-role generations. It never resolves a raw provider pointer or client XID.
+- A completion callback identifies a server-owned operation token by token ID and generation, plus the exact binding/module-role generations. It never resolves a raw module-role or binding pointer or client XID.
 - A terminal callback does not prove backend quiescence. If later backend access cannot be excluded, retain or quarantine the binding and module lease.
 - A Screen close detaches only that Screen generation. It does not unregister a shared DDX device binding.
 
