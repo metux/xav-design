@@ -858,4 +858,12 @@ The implementation test suite SHOULD include at least:
 69. Configure no Xorg primary bus so `xf86platformPrimary()` uses its first-platform-device fallback, then permute platform/Screen enumeration: XAverius canonical inventory order, provider selection, and `CreateDefaultDevice` remain unchanged.
 
 
+70. Close a GPU Screen through the XLibre sequence `dixScreenRaiseClose()` → `RemoveGPUScreen()` → `xf86DeleteScreen()`. Verify that the exact ScreenAttachment is detached before Screen-private data is freed, while the shared provider registration, selected PhysicalDevice, and provider module lease remain live if any other Screen, logical Device, route, or provider operation still references them.
+71. In `FreeScreen()`, drop the ordinary Xorg Screen/module reference while an accepted provider operation is still pending. Verify that the independent provider/module lease prevents unloading every provider operation, callback, trampoline, and userdata address reachable by that operation.
+72. Race a provider terminal callback with `retire_operation`. SUCCESS MUST NOT be returned until the callback has returned to the server-owned sink and no further callback for that exact token can begin. The server may process its copied completion record after provider callback code has returned and the provider module remains otherwise pinned.
+73. Begin provider-wide quiescence while callbacks, worker tasks, and operation tokens are outstanding. PENDING MUST retain the module/context and reject new operations; SUCCESS is permitted only after all callbacks/workers are unreachable and all operation tokens are retired. Inject an unquiesceable worker and verify quarantine rather than module unload.
+74. Unload a DDX module that implements topology and provider roles while a second Screen still uses the same PhysicalDevice through a different DDX. Verify that topology-role withdrawal detaches only the unloading DDX's ScreenAttachments, while the shared PhysicalDevice and separately owned provider remain available.
+75. Use a provider callback bridge that enters DDX code and then queues a server-owned completion. Verify that both provider and DDX module leases remain held until the bridge returns; retirement of the backend token alone cannot release the DDX module while bridge callback code is still executing.
+
+
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
