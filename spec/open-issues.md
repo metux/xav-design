@@ -98,3 +98,6 @@ The `GpuRegistryAttachScreen()` API sketch now explicitly treats its `ScreenPtr`
 ### Registry API audit follow-up — 2026-11-04
 
 The registry API sketch has been strengthened in `device-registry-architecture.md` §7. It now defines failure/result semantics, output sentinels, reference ownership, source and module-role registration, server-assigned binding generations, callback/role lifetime, transactional publication, provider output ownership, and async token/completion contracts. Vectors 97–114 were added. Exact-tip CI is pending; this is not a wire-design blocker and changes no protocol assignments. Runtime acceptance still needs evidence that the implementation's concrete registry/loader structures satisfy these contracts.
+
+
+The registry API audit also closed the server/provider operation-token handoff. Token preparation occurs before provider entry; provider return is committed or rejected explicitly; callbacks arriving before commit are buffered; and per-token retirement has PENDING/SUCCESS/FAILURE outcomes. Failure to prove retirement quarantines the token and blocks provider-wide quiescence. Vectors 115–119 exercise these races. Exact-tip CI is pending; this remains an internal implementation contract, not a wire-design gap.
