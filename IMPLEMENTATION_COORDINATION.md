@@ -1082,3 +1082,16 @@ The request-specific central error matrix and static checker were brought into l
 Additional reconciliation commits: c63ec52, 5d8d301, 667a90b, bb5ad54, 7b7cf35, 21842c6.
 
 The exact status strings and the principal checker-required contract strings were statically compared against the current files. The checker and Python tests have not been executed; GitHub has not yet reported CI for the resulting tip.
+
+
+### Final presentation/status consistency sweep — 2026-11-04
+
+A further line-by-line sweep removed stale presentation/conformance wording that still used the pre-DEVICE_UNAVAILABLE lifecycle order. The consistent order is DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > OUT_OF_DATE, subject to earlier request validation and first-terminal-outcome rules.
+
+- CreateSwapchain preparation returns DEVICE_UNAVAILABLE when provider unavailability wins before publication; Device Loss remains higher priority.
+- Pending AcquireNextImage and accepted QueuePresent lifecycle prose includes provider unavailability. After QueuePresent SUCCESS, later provider unavailability maps to PRESENTATION_FAILED.
+- Acquire timeout/infinite-wait/signal-reservation rollback, QueuePresent reply-status, and swapchain-preparation conformance vectors include DEVICE_UNAVAILABLE.
+- Static checker literals were aligned. Exact status and precedence phrases were statically compared against the current spec files.
+- Commits: c293c65, fdb8bb8, 88fa798.
+
+Final verification remains pending: GitHub status/workflow queries returned empty lists, and no local checker/test suite was executed. Runtime backend/WSI behavior, especially safe late-acquire retirement and provider quiescence, remains untested.
