@@ -98,6 +98,16 @@ The capability contract must report: (a) whether the Device/Surface pair can pre
 
 Capability results are a snapshot, not a permanent promise. Window resize, surface loss, backend reconfiguration, or device loss may invalidate the snapshot. A zero-sized/minimized window must be reported explicitly as temporarily not presentable (rather than returning a fabricated nonzero extent or blocking indefinitely); the client can query again after a later geometry change. A false presentation-support result is a normal capability result, not a reason to migrate the Swapchain to another Device.
 
+### Render GPU versus scanout GPU
+
+The Surface's target Screen is fixed by the retained X11 Window identity. The render PhysicalDevice is fixed by the logical Device. These are independent identities and MAY differ. The server MUST NOT select the scanout GPU as a replacement execution device merely because it owns the Screen's scanout path.
+
+A selected provider MAY implement an explicit cross-GPU presentation bridge, including a PRIME/DRI3 import/copy/composition path, but it MUST report support only when the entire path is usable for the exact Device/Surface pair. This includes image format and usage compatibility, extent constraints, synchronization and ownership transfer, queue-family semantics, and the image-release/completion milestones defined below. A topology hint or ScreenAttachment is not proof that the bridge works. If the selected provider cannot establish such a route, the pair has no present-capable queue and `CreateSwapchain` fails with `UNSUPPORTED_CONFIGURATION`; the server MUST NOT silently use another PhysicalDevice, provider, Screen, or output.
+
+The route selected for a successful Swapchain is fixed for that Swapchain generation. If its underlying Screen/scanout/bridge topology changes, the old Swapchain becomes `OUT_OF_DATE` and must be recreated after a fresh capability query. The server MUST NOT transparently reroute an existing Swapchain because image importability, synchronization, or completion guarantees may differ. Route failure alone does not mark the render PhysicalDevice `REMOVED` or its logical Device `DEVICE_LOST`; those states require their own independent lifecycle evidence.
+
+
+
 
 ## 4.1 Swapchain image identity and usage
 
