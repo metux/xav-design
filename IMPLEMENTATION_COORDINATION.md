@@ -235,3 +235,8 @@ A further API review made asynchronous status notifications generation- and sequ
 Discovery observations and removal evidence now carry a source_event_sequence captured when the source event occurred. This prevents a delayed removal callback from arriving after a newer add/update and incorrectly removing the current incarnation. The registry derives removal authority from registered source capabilities/trust policy; the evidence struct no longer accepts a caller-supplied authority value. Architecture vectors now extend through 137.
 
 Please verify that your udev/provider adapters preserve event sequence at observation time (not callback dispatch time), and that all binding-scoped provider loss/recovery callbacks carry binding_generation. Also confirm the effective availability state is composed rather than overwritten by a context recovery.
+
+
+### Complete async resource pin sets
+
+The current six asynchronous operation kinds all require an exact logical-Device generation and a nonempty resource set before provider entry. The spec now states the minimum set by operation: Buffer+Memory for Write/ReadBuffer; Semaphore for host SignalSemaphore; Queue plus the complete validated dependency graph for QueueSubmit; and exact Swapchain plus all backend-accessible image/synchronization/route objects for AcquireNextImage/QueuePresent. Resource IDs must be unique in a token, even across generations. Vector 138 tests missing dependencies and atomic rejection. Please compare the actual resource graph builder against this list; do not treat a primary-resource pointer as a substitute for the retained dependency set.
