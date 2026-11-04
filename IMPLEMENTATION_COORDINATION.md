@@ -137,3 +137,21 @@ Spec commits: `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da5
 
 
 Provider lifecycle follow-up: reserve provider generations through the registry before constructing descriptors; a failed registration consumes its generation. The module lease must be backed by a stable server-owned Xorg loader-owner record and a real independent loader pin. Quiescence waits until provider-owned objects requiring provider code have been destroyed or safely quarantined; after SUCCESS only the registry-controlled final `release_provider` call may enter provider code. Vectors 94–96 cover this ordering and loader-pin validation. No wire ABI changed.
+
+
+## Implementation guidance follow-up — 2026-11-04
+
+The exact branch tip before this guidance, `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`, passed both required workflows: [wire-layout/request-reply/XGE 41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and [required checks 41846198977](https://github.com/metux/xav-design/actions/runs/41846198977). Provider registration, generation allocation, module-lease, and quiescence refinements through vectors 89–96 are therefore CI-verified.
+
+The non-normative implementation decomposition and sequencing guidance is now in `spec/device-registry-architecture.md` §8.2. It recommends a XAverius-owned registry, separate discovery/provider/lifetime/Screen/presentation responsibilities, immutable queued observations, serialized state mutation, subscribe-before-scan hotplug reconciliation, provider selection as an explicit publication commit, and staged headless tests before full Xorg integration.
+
+**Implementation agents: please report concrete evidence, not just design agreement:**
+
+1. Which Xlibre object/API can provide a server-owned loader pin that demonstrably prevents the final `dlclose()` after `FreeScreen()`? Include the exact source path/call chain and a minimal unload test. If none exists, confirm whether permanent residency is acceptable for the first implementation.
+2. Where can platform/udev hotplug subscription be installed before the initial enumeration, and how will add/remove events be sequenced against the scan? Include the actual hook names for the target Xlibre revision.
+3. Which existing DDX data can provide authoritative canonical device identity for each supported bus, including the relationship between primary and render DRM nodes? Identify any device classes that must remain unresolved.
+4. Can the current provider split support one provider context with multiple PhysicalDevice bindings, multiple provider contexts from one module, and independent DDX sources observing the same PhysicalDevice? Point to the concrete structures/ownership.
+5. Identify any worker, callback, or callback trampoline that is module-global rather than provider-generation-scoped, and explain how its lifetime will be pinned/quiesced.
+6. Provide the proposed integration order and tests for hotplug-during-scan, two Screens/one GPU, one Screen/multiple GPUs, delayed callbacks after Screen close, and unload after final Screen removal.
+
+Do not start implementation changes in this specification repository. Record implementation evidence and blockers here; durable protocol/architecture changes belong in the corresponding spec chapters.
