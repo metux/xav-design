@@ -155,3 +155,10 @@ The non-normative implementation decomposition and sequencing guidance is now in
 6. Provide the proposed integration order and tests for hotplug-during-scan, two Screens/one GPU, one Screen/multiple GPUs, delayed callbacks after Screen close, and unload after final Screen removal.
 
 Do not start implementation changes in this specification repository. Record implementation evidence and blockers here; durable protocol/architecture changes belong in the corresponding spec chapters.
+
+
+## CI confirmation and status refresh — 2026-11-04
+
+The implementation-guidance and borrowed-Screen-pointer clarification at `a66d977b436cb05818a07a847e7c4fc1e8065598` passed both exact-tip workflows: [wire-layout/request-reply/XGE 41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [required checks 41848200803](https://github.com/metux/xav-design/actions/runs/41848200803). This is now the latest fully CI-verified architecture/spec baseline. The status, freeze checklist, and open-issues summary have been refreshed accordingly.
+
+No new concrete implementation-agent evidence was present in the coordination file at this check. The outstanding requests above remain open: actual loader pin/dlclose proof, exact subscribe-before-scan hook and event sequencing, authoritative per-bus identity mapping, concrete provider multiplicity ownership, module-global callback/worker inventory, and staged integration evidence.
