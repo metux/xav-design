@@ -1003,3 +1003,23 @@ spec/conformance.md now includes provider-injection integration vectors for:
 - Review the provider result taxonomy against every request-specific error/status mapping; especially ensure provider STATUS is never used to override server-owned timeout decisions.
 - Run the repository wire checker, wire vectors, Python suite, and exact-tip CI. The documentation changes above have not yet been verified by CI.
 - Runtime backend conformance, including safe WSI late-acquire retirement and provider unload/quiescence, remains untested.
+
+
+### Synchronization ownership correction — 2026-11-04
+
+The request-by-request audit found that the first provider inventory overstated provider ownership of host waits. The synchronization chapter defines WaitSemaphores and WaitForFence as server-side registrations over the server's observable Timeline-counter and Fence state; they do not need provider-side blocking waits or provider operation tokens.
+
+The architecture contract now explicitly assigns:
+- Provider: semaphore/fence backend create/destroy, host Timeline SignalSemaphore backend operation, queue-side semaphore signal/wait integration, fence reset, and queue/fence completion reporting.
+- Server: observable Timeline counter, Fence state, GetSemaphoreCounterValue, GetFenceStatus, WaitSemaphores/WaitForFence predicates, registrations, timeout, cancellation, and first-terminal-outcome arbitration.
+- Provider completion publishes successful counter/Fence state through the serialized server path; that publication reevaluates affected wait registrations.
+- Removed the unnecessary provider cancel_host_wait operation. Host-wait cancellation is a server-side registration transition; it does not cancel or retire the underlying QueueSubmit/host-signal provider operation.
+
+This supersedes the earlier board wording that listed provider host-wait/cancel-host-wait operations. The corresponding conformance vector was corrected.
+
+Commits:
+- 50d76ea — make Timeline/Fence host waits server-owned.
+- 9498445 — specify observable synchronization state ownership.
+- 5c6904a — align host-wait conformance vector.
+
+Remaining review: verify the provider synchronization operation table in any implementation-facing interface mirrors this split; do not add vkWaitSemaphores/vkWaitForFences as a required provider operation for XAverius host waits.
