@@ -876,3 +876,54 @@ No implementation source has been changed.
 
 
 Registry-location clarification: the registry itself remains in the XAverius subsystem (`Xext/xaverius/`) for both Xorg and Xvfb. Only Xorg-specific platform/udev discovery adapters belong in `hw/xfree86/common/` and `config/`. Generic DIX is not made Vulkan-aware. This supersedes any earlier suggestion to place an Xorg-only registry beside `xf86platformBus.c`.
+
+
+## Provider operation, error, and lifetime contract — 2026-11-04
+
+The XAverius architecture contract now defines the provider boundary beyond discovery and identity. This is specification/architecture work only; no backend or Xserver implementation was added.
+
+### Provider operation groups
+
+The selected provider is responsible for:
+- one coherent pre-publication physical-device snapshot;
+- exact logical-device creation, queue acquisition, and logical-device destruction;
+- Buffer/Memory operations;
+- Shader, Descriptor, and Pipeline object operations;
+- CommandPool/CommandBuffer creation, recording, reset, and destruction;
+- Semaphore/Fence creation and host/device synchronization operations;
+- queue submission and completion retirement;
+- presentation support/capability queries for the exact Device/Surface pair, plus swapchain/acquire/present operations when the presentation profile is enabled.
+
+The provider operation names in the architecture document are semantic, not a public ABI. The server remains responsible for all XAverius wire validation, XID/resource ownership, request ordering, error precedence, and public state transitions. Backend handles remain opaque and provider-local.
+
+### Provider result mapping
+
+The internal result classes are SUCCESS, UNSUPPORTED, UNAVAILABLE, DEVICE_LOST, OUT_OF_HOST_MEMORY, OUT_OF_DEVICE_MEMORY, TRANSFER_FAILURE, EXECUTION_FAILURE, CANCELLED, and FATAL. Mapping to XAverius errors is now recorded in the architecture document and cross-linked from spec/errors.md:
+- During CreateDevice, backend Device Lost before a logical Device exists means PhysicalDevice UNAVAILABLE + DEVICE_UNAVAILABLE; no phantom Device/XID and no Device-Loss event.
+- After logical Device creation, positive loss of that exact logical Device enters its DEVICE_LOST state machine.
+- Allocation failures map to ALLOCATION_FAILED; synchronous transfer failures to TRANSFER_FAILED; accepted execution/transfer failures use their defined terminal status/event, never a delayed X11 request error.
+- UNSUPPORTED after publication of the corresponding capability is a provider contract violation (INTERNAL_SERVER_ERROR), not client BadMatch, and does not mutate the published snapshot.
+- Provider-context unavailability alone does not synthesize Device Loss for existing logical Devices.
+
+### Lifetime and callback contract
+
+- Every live logical Device pins the selected provider and exact PhysicalDevice/provider generations.
+- Every asynchronous operation separately pins the provider, logical Device, queue, and all backend objects it can access until callback retirement proves backend quiescence.
+- Provider callbacks carry immutable operation/device/provider/resource generations and only enqueue completion records; server-serialized state transitions decide terminal outcomes and X11 events.
+- Accepted asynchronous operations get exactly one terminal outcome. First committed outcome wins against loss, destroy, timeout, and disconnect.
+- DestroyDevice/disconnect invalidate public XIDs at the existing linearization point, but do not imply backend quiescence. Provider modules/contexts and backend objects remain retained or quarantined if safe release cannot be proven.
+- Provider teardown is forbidden while any provider call, logical Device, accepted operation, callback, or deferred cleanup can still execute provider code or access provider objects.
+
+### Files/commits
+
+- spec/device-registry-architecture.md: operation groups, snapshot/create semantics, classified result contract, sync/async model, pinning/teardown rules, and architecture tests. Commits: 37010a0, 6f50455, 4c2468d.
+- spec/devices.md: explicit link and CreateDevice-vs-existing-Device loss distinction. Commit: 3d07304.
+- spec/errors.md: central provider-result mapping cross-reference and normative summary. Commit: fa169fc.
+
+### Remaining review points
+
+- Cross-check every provider operation family against the exact request chapters and ensure no v0.1 request has no provider operation owner.
+- Check whether any currently synchronous request chapter can return an asynchronous provider result without defining a completion path.
+- Validate that WSI provider operations cover all presentation-profile requests, including surface lifetime and swapchain teardown.
+- Add/align conformance vectors for provider-result mapping and callback/lifecycle races; architecture tests 13–22 are required implementation tests, not yet executable conformance vectors.
+- No runtime backend behavior or provider-quiescence mechanism has been tested. CI for the commits above has not yet been verified.
