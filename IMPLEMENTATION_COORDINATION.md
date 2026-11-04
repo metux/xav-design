@@ -770,3 +770,13 @@ The first CI run after adding the XCB client prototype exposed a gate-scope bug:
 ### Shared-header CI include-path correction — 2026-11-04
 
 After the client-only handler-gate exclusion passed, CI reached the shared-header compile and exposed a stale workflow include of the removed `xaverius_proto.h`. The canonical header is `protocol/include/xaverius.h`; the wire-layout workflow now compiles against that path. The previous CI run did not reach wire vectors or the Python suite because this compile step failed.
+
+
+## Client XGE event selection and decoding — 2026-11-04
+
+The client prototype now has:
+- xav_connection_select_events(): checked 32-byte SelectEvents request, requiring successful per-connection XGE 1.0+ negotiation and returning server X11 errors to the caller.
+- xav_event_decode(): non-consuming decoder for all nine registered event types. The application continues to own and poll the shared XCB event queue; unrelated events are left to the application. Unknown XAverius event IDs are surfaced with a borrowed payload view.
+- Exact fixed payload-length and reserved-byte checks, host-order decoded scalar fields, and tests for every event layout.
+
+Important XCB ABI detail: xcb_ge_generic_event_t contains full_sequence at byte 32, so XCB's in-memory event-specific payload starts at byte 36 even though the XGE wire payload starts at byte 32. The decoder accounts for that insertion. No live XAverius server has yet exercised selection or delivery; the client-side synthetic event tests are the current validation.

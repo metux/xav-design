@@ -17,6 +17,7 @@ REQUIRED_CHECKS = {
     "handler_gate_tests": "python tests/test_handler_ci_gate.py",
     "py_compile": "python -m py_compile",
     "header_compile": "cc -std=c11 -Wall -Wextra -Werror -I protocol/include",
+    "client_build": "make -C client clean check",
     "wire_layout": "python tools/check-wire-layout.py",
     "timeline": "python tests/run_timeline_regressions.py",
     "python_suite": "python -m unittest discover -s tests -p 'test_*.py' -v",

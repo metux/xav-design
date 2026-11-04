@@ -47,8 +47,11 @@ jobs:
         id: header_compile
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev
+          sudo apt-get install -y libx11-dev libxcb1-dev
           printf '%s\n' '#include <xaverius.h>' '#include <stddef.h>' '_Static_assert(sizeof(xavReqHeader) == 8, "request header");' '_Static_assert(sizeof(xavErrorPacket) == 32, "X11 error packet");' '_Static_assert(offsetof(xavGetPhysicalDevicePropertyReply, value) == 32, "property reply payload");' '_Static_assert(offsetof(xavGetPhysicalDeviceMemoryPropertiesReply, records) == 32, "memory reply payload");' '_Static_assert(sz_xavGetSurfaceCapabilitiesReply == 64, "capabilities reply prefix");' '_Static_assert(sizeof(xavQueryVersionReply) == 32, "version reply");' '_Static_assert(offsetof(xavGetSurfaceCapabilitiesReply, records) == 64, "capability payload");' '_Static_assert(sizeof(xavAsyncErrorEvent) == 60, "async event");' '_Static_assert(sizeof(xavPresentationCompleteEvent) == 64, "presentation event");' '_Static_assert(sizeof(xavCreateSwapchainReq) == 48, "create swapchain");' '_Static_assert(sizeof(xavQueuePresentReq) == 44, "queue present");' 'int main(void) { return XAV_REQ_QUEUE_PRESENT != 47; }' | cc -std=c11 -Wall -Wextra -Werror -I protocol/include -x c -fsyntax-only -
+      - name: Build and test XCB client prototype
+        id: client_build
+        run: make -C client clean check
       - name: Validate request/reply matrix and XGE event layouts
         id: wire_layout
         run: python tools/check-wire-layout.py
@@ -72,13 +75,14 @@ jobs:
           CALLBACK_GENERATION_TESTS_OUTCOME: ${{ steps.callback_generation_tests.outcome }}
           PY_COMPILE_OUTCOME: ${{ steps.py_compile.outcome }}
           HEADER_COMPILE_OUTCOME: ${{ steps.header_compile.outcome }}
+          CLIENT_BUILD_OUTCOME: ${{ steps.client_build.outcome }}
           WIRE_LAYOUT_OUTCOME: ${{ steps.wire_layout.outcome }}
           TIMELINE_OUTCOME: ${{ steps.timeline.outcome }}
           PYTHON_SUITE_OUTCOME: ${{ steps.python_suite.outcome }}
         run: |
           set -eu
           failed=0
-          for check in CHECKOUT SETUP_PYTHON SHELL_SYNTAX BACKEND_TESTS HANDLER_SIGNATURES HANDLER_GATE HANDLER_GATE_TESTS CALLBACK_GENERATION_TESTS PY_COMPILE HEADER_COMPILE WIRE_LAYOUT TIMELINE PYTHON_SUITE; do
+          for check in CHECKOUT SETUP_PYTHON SHELL_SYNTAX BACKEND_TESTS HANDLER_SIGNATURES HANDLER_GATE HANDLER_GATE_TESTS CALLBACK_GENERATION_TESTS PY_COMPILE HEADER_COMPILE CLIENT_BUILD WIRE_LAYOUT TIMELINE PYTHON_SUITE; do
             eval "outcome=\$"${check}_OUTCOME
             if [ "$outcome" != success ]; then
               echo "::error::Required CI check $check did not succeed (outcome: $outcome)"

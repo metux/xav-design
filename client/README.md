@@ -29,6 +29,8 @@ The static library is `client/libxaverius-client.a`. Link with `-lxcb` and add `
 1. Discover the extension and dynamic major opcode.
 2. Send XAverius `QueryVersion` (subopcode 0), validate the reply envelope and reject incompatible major/older minor versions.
 3. Send `EnumeratePhysicalDevices` (subopcode 1), validate every variable-length PHYSICALDEVICEINFO record, and return host-order records.
+4. Negotiate XGE 1.0+ and atomically replace event selections with checked SelectEvents requests.
+5. Decode all nine registered XGE events from caller-polled XCB events, validating exact lengths and reserved fields while preserving unknown event payloads.
 
 The runtime exposes xav_connection_negotiate_xge() for the standard Generic Event Extension GEQueryVersion request. Call it successfully before selecting XAverius XGE events or issuing CreateDevice. xav_connection_select_events() sends a checked SelectEvents request, and xav_event_decode() decodes all nine registered XAverius XGE event types. It accepts events already obtained from the caller-owned XCB event queue; it does not poll or consume that queue.
 
