@@ -41,6 +41,17 @@ def main():
         if result.returncode != 0 or "SKIP" not in result.stdout:
             raise SystemExit("source-free checkout should skip cleanly:\n" + result.stdout + result.stderr)
 
+        client_root = Path(temp) / "client-only"
+        client_root.mkdir()
+        setup_repo(client_root)
+        client_source = client_root / "client" / "src" / "connection.c"
+        client_source.parent.mkdir(parents=True)
+        client_source.write_text("int xav_client_stub(void) { return 0; }\\n", encoding="utf-8")
+        git(client_root, "add", "client/src/connection.c")
+        result = run_gate(client_root)
+        if result.returncode != 0 or "SKIP" not in result.stdout:
+            raise SystemExit("client-only sources must not trigger the native handler audit:\\n" + result.stdout + result.stderr)
+
         source_root = Path(temp) / "source-without-db"
         source_root.mkdir()
         setup_repo(source_root)

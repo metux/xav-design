@@ -23,6 +23,8 @@ def tracked_sources(root):
         (root / name.decode("utf-8")).resolve()
         for name in result.stdout.split(b"\0") if name
         if not any(part in SKIP_DIRS for part in Path(name.decode("utf-8")).parts)
+        # The root client/ tree is a standalone XCB library, not native server handlers.
+        if Path(name.decode("utf-8")).parts[0] != "client"
     )
 
 
