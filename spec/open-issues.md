@@ -129,3 +129,7 @@ Runtime acceptance must verify fatal quarantine blocks subsequent provider quies
 ### Registry API lifetime addendum — 2026-11-04
 
 The second API pass added a normative supplement in [registry-api-lifetime-addendum.md](registry-api-lifetime-addendum.md). It clarifies the provider-context accessor result/borrow contract, nested operation-table storage and code lifetime, canonical shared module-lease identity, final lease-release barrier, terminal source/binding/Screen removal semantics, complete provider-quiescence preconditions, and temporary operation-token pointer confinement. Architecture vectors 143–150 cover these cases. These are specification refinements, not wire-design changes. Exact-tip CI is required; implementation acceptance still needs evidence for the actual Xlibre loader and provider callback paths.
+
+### Provider operation-table completeness — 2026-11-04
+
+The audit found the four typed provider operation tables were opaque forward declarations only. [provider-operation-matrix.md](provider-operation-matrix.md) now normatively defines their operation signatures and maps all request subopcodes 0–47. It also closes the missing Buffer destroy callback, asynchronous classification, create/destroy symmetry, output initialization, command-stream boundary, and presentation capability result completeness. Vectors 151–162 cover the new requirements. Implementation-agent signature comparison and runtime acceptance remain open; exact-tip CI is pending.
