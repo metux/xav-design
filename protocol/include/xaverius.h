@@ -3,7 +3,7 @@
  * Copyright © 2026 Enrico Weigelt, metux IT consult <info@metux.net>
  */
 
-#ifndef __XLIBRE_XAVERIUS_PROTO_H
+#ifndef XAVERIUS_H
 #define __XLIBRE_XAVERIUS_PROTO_H
 
 #include <stddef.h>

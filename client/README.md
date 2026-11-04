@@ -11,7 +11,7 @@ This directory contains the first buildable slice of the client-side protocol ru
 - Replies: XCB's reply machinery is used; the runtime validates the standard 32-byte reply envelope and all variable-tail record bounds before exposing data.
 - Ownership: the connection and its event queue belong to the caller. Returned device arrays and their names belong to the library and are released with `xav_free_physical_devices()`.
 
-The shared wire declarations currently live in `protocol/include/xaverius_proto.h`; the client includes that protocol header rather than maintaining duplicate ABI declarations.
+The shared wire declarations currently live in `protocol/include/xaverius.h`; the client includes that protocol header rather than maintaining duplicate ABI declarations.
 
 ## Build
 

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <xcb/xcb.h>
 #include <xcb/xcbext.h>
-#include <xaverius_proto.h>
+#include <xaverius.h>
 #include "xaverius_client.h"
 struct xav_connection {
     xcb_connection_t *xcb;
