@@ -298,3 +298,6 @@ The architecture conformance suite MUST cover:
 - **160 — Result-field invariants:** malformed combinations of provider result code/status/availability fields quarantine the provider.
 - **161 — DestroyResource dispatch:** resource type selects exactly the matching typed destroy operation; no generic untyped destroy fallback.
 - **162 — Server-only request isolation:** QueryVersion, snapshot queries, host waits, status queries and SelectEvents do not call provider code directly.
+
+- **163 — Command-buffer native allocation:** first logical CommandBuffer allocation creates exactly one provider command buffer from the exact pool; failure rolls back XID and pool child-list insertion.
+- **164 — Command-buffer native free:** pool destruction and command-buffer invalidation free each native command buffer exactly once, only after pending submissions and all backend references retire; no free occurs for a reused XID's replacement generation.
