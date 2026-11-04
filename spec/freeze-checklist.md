@@ -126,4 +126,9 @@ The registry removal authority rule is also explicit: a caller cannot elevate it
 
 ### Xlibre/Xorg integration contract — 2026-11-04
 
-The registry architecture now specifies distinct platform-discovery, DDX-topology, and Vulkan-provider adapter roles; a startup barrier that does not wait for Screens; hotplug subscription/scan reconciliation; explicit behavior for failed and late discovery sources; and generation-safe Screen/module teardown. The contract change `b260b88fff58b1d6824f62b8d4af7761a94da033` passed workflow 41841990539. Follow-up architecture vectors 61–66 at `4eb0d35938def3f74de579a7bb2e7729a304325f` are pending exact-tip CI. This closes a normative integration-architecture gap, not the runtime Xlibre conformance gate.
+The registry architecture now specifies distinct platform-discovery, DDX-topology, and Vulkan-provider adapter roles; a startup barrier that does not wait for Screens; hotplug subscription/scan reconciliation; explicit behavior for failed and late discovery sources; and generation-safe Screen/module teardown. The combined contract and vectors 61–66 passed exact-tip workflow 41842074182 at `4eb0d35938def3f74de579a7bb2e7729a304325f` (4,963 wire checks, 72 Timeline tests, 693 Python tests, all required audits). A non-normative source mapping to XLibre master and vectors 67–69 are newer and pending exact-tip CI. This closes a normative integration-architecture gap, not the runtime Xlibre conformance gate.
+
+
+### XLibre source-level integration mapping — 2026-11-04
+
+The architecture guidance now maps the registry contract to the current XLibre startup and hotplug flow. It identifies the early `xf86BusProbe()`/`xf86platformProbe()` discovery path, the `card*`-only udev enumeration limitation, DDX GPU-Screen add/remove as topology lifecycle, and the Xorg first-platform-device primary fallback. XAverius must not derive identity or default-device policy from those conventions. Source-mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and follow-up vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) are pending exact-tip CI.
