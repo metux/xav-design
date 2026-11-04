@@ -397,6 +397,8 @@ For `QueuePresent`, status replies (`OUT_OF_DATE`, `SURFACE_LOST`, `DEVICE_LOST`
 
 ## Synchronous versus Asynchronous Errors
 
-An error before acceptance is reported by an X11 error or the explicitly defined normal error reply. The request MUST NOT leave partial state.
+Acceptance in this section means the request's **XAverius protocol acceptance point**, not the provider's internal acceptance of an asynchronous operation token. A provider token is an implementation detail and MUST NOT change the request's externally defined completion channel.
 
-An error after acceptance is reported through XAverius events and synchronization state. A delayed X11 error for an already accepted request is prohibited.
+An error before the protocol acceptance point is reported by an X11 error or the explicitly defined normal status reply. The request MUST NOT leave partial state. A reply-bearing request that is still waiting for its defined reply/status/error has not crossed a protocol acceptance point merely because the provider accepted backend work or the server installed an internal wait/operation registration. Such requests continue to use their chapter-defined final reply, normal status, or permitted X11 error. This includes WriteBuffer, ReadBuffer, WaitSemaphores, WaitForFence, and AcquireNextImage; their request-specific chapters control whether a backend failure is an X11 error or a reply status.
+
+For QueueSubmit, protocol acceptance occurs when the server accepts the void request after all synchronous validation and atomic acceptance steps. For QueuePresent, protocol acceptance occurs when the request returns `SUCCESS`. After either point, later execution/presentation failures are reported through XAverius events and synchronization/image state. A delayed X11 error for an already protocol-accepted request is prohibited. Disconnect suppresses delivery but does not undo accepted backend work or bypass safe retirement.
