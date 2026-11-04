@@ -206,7 +206,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
         stage = errors.split("Resolve lifecycle/capability outcomes before mutable image/semaphore eligibility:", 1)[1].split("\n8.", 1)[0]
         self.assertIn("one serialized snapshot", stage)
-        self.assertIn("DEVICE_LOST` wins over `SURFACE_LOST`", stage)
+        self.assertIn("DEVICE_LOST` wins over `DEVICE_UNAVAILABLE`, which wins over `SURFACE_LOST`", stage)
 
     def test_status_precedence_is_consistent_across_normative_chapters(self) -> None:
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
