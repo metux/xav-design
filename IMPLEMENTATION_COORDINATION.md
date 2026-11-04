@@ -1145,3 +1145,8 @@ Verification: branch tip before this update was `0eb4e8ce2d6448b58e926bb432aba58
 ### CI failure: missing explicit device status enum and UUID correlation wording — 2026-11-04
 
 The owner supplied workflow run `41821464018`, job `126545373361` (`wire-layout`). The checker failed exactly two of 4,872 assertions: explicit Physical-Device status enum wording and the direct `deviceUUID` correlation statement. The underlying status-vs-logical-Device-Loss rule and UUID semantics were already present, but the checker-required normative statements were not explicit enough. `spec/devices.md` has been clarified; no wire ABI or opcode changes. Header compilation and client prototype tests passed in the failing run; Timeline and full Python suite were skipped after the wire-layout failure. Fresh CI remains required.
+
+
+### Provider availability scope clarified — 2026-11-04
+
+The provider lifecycle audit found that `UNAVAILABLE` needed explicit scope for providers serving multiple PhysicalDevices. The spec now distinguishes context-wide failure from one provider-local PhysicalDevice binding failure, defines affected selected bindings, excludes non-selected correlation providers, and makes recovery generation-exact. Registry API sketch and conformance vectors updated. No wire ABI/opcode change.
