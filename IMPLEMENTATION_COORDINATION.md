@@ -1123,3 +1123,13 @@ Commits `cf20155`, `55f5f88`, and `916c140` correct the final cross-file inconsi
 ### Host-wait ownership checker coverage — 2026-11-04
 
 Commit `9e140a7` extends `tools/check-wire-layout.py` with explicit cross-document assertions that (1) WaitSemaphores/WaitForFence remain server-owned and token-free, (2) provider UNAVAILABLE alone does not terminalize them, and (3) provider-token acceptance vectors exclude them. This makes the ownership correction fail the static consistency check if stale wording is reintroduced. The checker has not been executed locally; rely on exact-tip CI for execution evidence.
+
+
+### Provider terminal outcome versus backend quiescence — 2026-11-04
+
+The lifecycle audit found ambiguous wording that could be read as allowing an accepted provider token to omit its terminal callback when backend quiescence cannot be established, despite the descriptor contract requiring exactly one callback. Commits `8056353`, `0fe8185`, `87bfc63`, and `3fdc226` clarify and test the distinction:
+- Every accepted provider token gets exactly one terminal outcome notification, including a classified failure if successful completion cannot be established.
+- That notification is not proof of backend quiescence. If the provider cannot prove that no further backend access is possible, it withholds retirement/quiescence confirmation and the server quarantines the token, resources, and provider context.
+- Duplicate callbacks and attempted unload cannot release references or unload code while backend access remains possible.
+- Added architecture and integration conformance vectors plus static-checker assertions.
+No wire ABI changed. Exact-tip CI remains the required execution evidence.
