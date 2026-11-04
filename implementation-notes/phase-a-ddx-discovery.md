@@ -38,7 +38,7 @@ Do not implement Phase B's full operation-table redesign, Phase C's complete dup
 
 Provide one explicit DDX-wide entry point with these semantic properties:
 
-- It is invoked for each DDX device-enumerator/module-role instance independently of Screens. Do not conflate the adapter/pass lifetime with the registry's non-reusable module-role generation or each per-device binding generation: every successful per-device registration is still one exact binding with its own registry-assigned generation.
+- It is invoked for each DDX device-enumerator instance independently of Screens and is associated with the exact registered module-role generation that pins its code/resources. Do not conflate the adapter/pass lifetime with that module-role generation or with each per-device binding generation: every successful per-device registration is still one exact binding with its own registry-assigned generation.
 - It receives or resolves a DDX-owned context whose lifetime is independent of `ScrnInfo` and Screen private storage.
 - It enumerates the complete device set owned/served by that DDX context.
 - It submits each exact device registration directly to the XAverius registry.
@@ -112,7 +112,7 @@ The normative §2.4 startup barrier is part of Phase A's required integration co
 - The DDX MUST deduplicate aliases it discovers for one physical incarnation (including handles obtained through multiple Vulkan instances) before submitting per-device registrations. Cross-DDX identity canonicalization and deterministic binding selection remain registry responsibilities; Phase A MUST use that normative registry contract and MUST NOT implement a competing DDX-side global arbitration policy.
 - Multiple Screens referring to one GPU do not cause repeated device registration.
 - One Screen may later attach to multiple PhysicalDevices; Screen topology does not define inventory membership.
-- Two distinct PhysicalDevices in one DDX context must retain distinct native handles and contexts even if they share module code.
+- Two distinct PhysicalDevices in one DDX context must retain distinct exact native handles and distinct binding records. Each binding MUST reference its correct context; the contexts MAY be one explicitly retained shared DDX context where the normative binding contract permits that, or separate per-device contexts. Sharing module code/context MUST NOT collapse device handles or binding identity.
 - Repeated pass invocation for the same DDX generation must be idempotent. It must not overwrite a previously published binding ("last writer wins" is forbidden).
 - An ambiguous or conflicting identity is left unpublished and reported. Do not guess by vendor/device ID, name, enumeration order, or first-Screen selection.
 
@@ -167,7 +167,7 @@ Commit the implementation to `X11Libre/xserver:wip/xaverius`. Then append one co
 5. **Lifecycle proof:** why this runs without `ScrnInfoPtr`/`ScreenPtr`; where it runs relative to initial inventory exposure; how no-Screen devices are covered.
 6. **Modesetting decision:** exact source call chain and why chosen hook is valid; or a precise blocker explaining why modesetting cannot yet serve as the XAverius DDX.
 7. **Screen separation:** show that the three callbacks are gone from `XaveriusDDXOps` and Screen close cannot unregister a PhysicalDevice.
-8. **Tests:** A1–A8 individually PASS/FAIL/BLOCKED, exact commands, exit status, output summary.
+8. **Tests:** A1–A9 individually PASS/FAIL/BLOCKED, exact commands, exit status, output summary.
 9. **Open blockers:** exact missing APIs/ownership assumptions. Do not call a blocked item complete.
 
 No Phase B work is authorized until the Phase A implementation is reviewed and accepted. If a required later-phase registry API blocks a test, report the dependency; do not implement an ad-hoc replacement.
