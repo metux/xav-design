@@ -122,3 +122,8 @@ The registry API now requires provenance-bearing evidence to confirm physical re
 
 
 The registry removal authority rule is also explicit: a caller cannot elevate its source by setting the evidence authority field. The registry derives or verifies the allowed authority class from the registered source, validates the exact source/observation/device generations, and rejects insufficient or stale evidence without changing status. This clarification is verified by exact-tip workflow 41840947750 at `53883de2201029de82b63a03f6acc2ba77280e6a`.
+
+
+### Xlibre/Xorg integration contract — 2026-11-04
+
+The registry architecture now specifies distinct platform-discovery, DDX-topology, and Vulkan-provider adapter roles; a startup barrier that does not wait for Screens; hotplug subscription/scan reconciliation; explicit behavior for failed and late discovery sources; and generation-safe Screen/module teardown. The contract change `b260b88fff58b1d6824f62b8d4af7761a94da033` passed workflow 41841990539. Follow-up architecture vectors 61–66 at `4eb0d35938def3f74de579a7bb2e7729a304325f` are pending exact-tip CI. This closes a normative integration-architecture gap, not the runtime Xlibre conformance gate.
