@@ -9,7 +9,7 @@ The server MUST maintain one process-wide Physical-Device registry. It MUST NOT 
 The model has four distinct object classes:
 
 1. **PhysicalDevice** — one canonical physical-device incarnation exposed by the server. It owns the server-lifetime identity, immutable published metadata snapshot, current discovery status, and one selected executable DDX binding. It is the sole source for XAverius Physical-Device enumeration and properties.
-2. **Device backend binding** — the per-PhysicalDevice association containing the typed operation vectors, opaque backend context, and native/provider-local physical-device handle supplied by the responsible DDX. It is the direct dispatch target for requests; it is not a separately selected backend object.
+2. **Device backend binding** — the per-PhysicalDevice association containing the typed operation vectors, opaque backend context, and native/DDX-local physical-device handle supplied by the responsible DDX. It is the direct dispatch target for requests; it is not a separately selected backend object.
 3. **ScreenAttachment** — a relationship between one live X11 Screen generation and one PhysicalDevice. It records that a Screen/DDX path uses or can access a device for a particular role. It does not own either endpoint and does not establish Vulkan presentation support.
 4. **PresentationRoute** — an internal, generation-checked route for one exact logical-Device/Surface pair. It identifies the selected PhysicalDevice binding, the retained Window/Screen generation, and any explicit scanout/bridge path needed to present images produced by that logical Device. It is not a PhysicalDevice, Screen, Vulkan Device, or client-visible XAverius resource; it owns no endpoint and allocates no XID.
 
@@ -55,7 +55,7 @@ A discovery source is a producer of identity/lifecycle evidence, not an executab
 The registration paths are:
 
 1. **Observe platform identity.** Platform/udev sources may submit identity and hotplug evidence. The registry canonicalizes it but does not publish an executable device from this evidence alone.
-2. **Register each served PhysicalDevice.** The responsible DDX submits the canonical identity evidence, provider-local device handle, per-device backend context where needed, and the call-vector binding. It MUST enumerate/register all devices it serves, not just the GPU associated with the first Screen.
+2. **Register each served PhysicalDevice.** The responsible DDX submits the canonical identity evidence, DDX-local device handle, per-device backend context where needed, and the call-vector binding. It MUST enumerate/register all devices it serves, not just the GPU associated with the first Screen.
 3. **Validate and snapshot.** The registry validates the registration and obtains the complete immutable snapshot through that device's bound operations. It then publishes the canonical PhysicalDevice and allocates its server-owned XID. No Screen initialization order participates.
 4. **Attach Screen topology.** A DDX/Screen path separately attaches the live Screen generation to one or more registered PhysicalDevices with explicit roles. This does not create a second PhysicalDevice or change its selected call vectors.
 5. **Report lifecycle observations.** The DDX and platform sources report binding/device loss, recovery, Screen detach, and confirmed physical removal as distinct generation-checked events.
@@ -87,12 +87,12 @@ The following evidence classes define the v0.1 matching policy:
 2. **DRM-device equivalence.** Primary and render nodes MUST be correlated through the kernel's underlying DRM device identity (for example, `drmGetDevice2`/`drmDevicesEqual`, or equivalent bus information and canonical sysfs ancestry). Both nodes are access interfaces for one device, not separate devices. A node's basename, major/minor, `dev_t`, or DRM minor is only an observation locator and MUST NOT be the canonical key. Different DRM nodes MUST NOT be merged merely because they have the same vendor/device IDs.
 3. **Backend-handle correlation.** A valid nonzero Vulkan `deviceUUID`, when the DDX uses Vulkan internally, is strong corroborating evidence for joining a DDX-local `VkPhysicalDevice` handle to a platform identity. It MUST be checked against authoritative platform evidence when both are available. Equal UUIDs with incompatible authoritative platform identities are a conflict, not permission to merge; differing UUIDs for handles claimed to represent the same authoritative platform identity are also a conflict that MUST be resolved before registration or publication.
 4. **Derived-device identity.** A mediated, SR-IOV virtual function, partition, MIG instance, or other derived device MUST be distinguished from its parent and from sibling instances by an authoritative instance-specific identity. Parent identity alone MUST NOT merge children. A parent/child relation MAY be retained as descriptive topology, but it is not identity equality.
-5. **Provider-scoped fallback identity.** A software, virtual, or non-enumerable device without a usable platform identity MAY be represented only when its discovery provider supplies a stable namespace and instance identity that distinguishes it from every other concurrently exposed instance. That key is provider-scoped and MUST NOT be treated as proof that another provider's candidate is the same device. Cross-provider merging requires independent corroboration.
+5. **Provider-scoped fallback identity.** A software, virtual, or non-enumerable device without a usable platform identity MAY be represented only when its discovery provider supplies a stable namespace and instance identity that distinguishes it from every other concurrently exposed instance. That key is provider-scoped and MUST NOT be treated as proof that another DDX binding's candidate is the same device. Cross-provider merging requires independent corroboration.
 6. **Descriptive metadata.** Vendor/device/subsystem IDs, names, driver strings, API versions, and marketing descriptions MAY reject an obviously inconsistent candidate but MUST NOT establish identity or incarnation equality by themselves.
 
 The registry MUST apply these outcomes:
 
-- Matching authoritative platform identity and compatible incarnation evidence joins observations into one canonical identity, even if provider handles or Vulkan UUIDs differ; a conflicting UUID is recorded and must be resolved before that provider binding is eligible.
+- Matching authoritative platform identity and compatible incarnation evidence joins observations into one canonical identity, even if provider handles or Vulkan UUIDs differ; a conflicting UUID is recorded and must be resolved before that DDX device binding is eligible.
 - Matching valid `deviceUUID` without conflicting platform evidence MAY join provider observations. If either observation later gains contradictory authoritative platform evidence, the registry MUST quarantine the conflicting observation/binding and MUST NOT merge the platform devices.
 - Equal UUIDs without enough evidence to distinguish two simultaneously present devices are ambiguous. The candidates remain unpublished until resolved; the registry MUST NOT collapse them solely to avoid duplicate enumeration.
 - Different UUIDs with no authoritative platform correlation do not establish either sameness or difference. The candidates remain distinct pending stronger evidence; the registry MUST NOT infer sameness from names or model IDs.
@@ -134,11 +134,11 @@ A confirmed physical removal is server-wide and independent of Screen membership
 
 | Component | May report/register | MUST NOT decide |
 |---|---|---|
-| Xorg platform bus / udev adapter | Bus identity, DRM node observations, authoritative add/remove evidence | PhysicalDevice XID, Vulkan provider selection, published capabilities |
+| Xorg platform bus / udev adapter | Bus identity, DRM node observations, authoritative add/remove evidence | PhysicalDevice XID, Vulkan DDX-binding selection, published capabilities |
 | DDX driver | Enumerate and register every PhysicalDevice it serves; provide per-device identity evidence, native handle, backend context/call vectors, complete snapshot, loss/removal events, and ScreenAttachment roles | Server-wide identity deduplication, XID allocation, global publication/default-device policy, request validation |
 | Platform/udev adapter | Canonical bus/sysfs identity and authoritative add/remove evidence | Executable device registration, backend call vectors, XAverius XIDs |
-| XAverius registry/resource layer | Canonical identity, provider selection, snapshot publication, PhysicalDevice XID, status/event serialization | Direct dereference of provider-private Vulkan handles |
-| WSI/presentation path | Exact provider-local Surface and Device/Surface capability operations | Infer presentation support from ScreenAttachment or Screen number |
+| XAverius registry/resource layer | Canonical identity, DDX-binding selection, snapshot publication, PhysicalDevice XID, status/event serialization | Direct dereference of provider-private Vulkan handles |
+| WSI/presentation path | Exact DDX-local Surface and Device/Surface capability operations | Infer presentation support from ScreenAttachment or Screen number |
 
 On Xlibre/Xorg, the required arrangement is one XAverius-owned registry service. Each DDX registers all PhysicalDevices it serves, including headless/render-only devices and GPUs not selected by its first Screen. Platform/udev integration supplies identity and hotplug evidence only. Screen initialization attaches topology to already registered devices. The registry merges duplicate observations/registrations across DDX instances and controls publication; it does not enumerate Vulkan ICDs independently to invent another device inventory.
 
@@ -157,7 +157,7 @@ The Xlibre integration SHOULD expose three adapter roles:
 - **DDX device-registration adapter:** enumerates and registers every PhysicalDevice served by that DDX, with its per-device backend operations/context and identity evidence. It separately creates ScreenAttachments for actual Screens. It MUST NOT choose the server-wide default device or allocate XIDs.
 - There is no independent Vulkan-ICD inventory adapter in this profile. A DDX may use Vulkan internally, but the resulting physical-device handles and call vectors are registered through that DDX's device-registration path.
 
-One module MAY implement more than one role, but it MUST register and retire each role independently. In particular, unloading a DDX module MUST NOT implicitly deregister a provider context owned by another module, and closing a Screen MUST NOT imply removal of the underlying GPU.
+One module MAY implement more than one role, but it MUST register and retire each role independently. In particular, unloading a DDX module MUST NOT implicitly deregister a DDX module-role context owned by another module, and closing a Screen MUST NOT imply removal of the underlying GPU.
 
 #### Startup discovery barrier
 
@@ -167,7 +167,7 @@ Before XAverius exposes its initial PhysicalDevice inventory, each configured DD
 
 A failed or unavailable DDX registration pass is not evidence that a device was removed. The registry MUST NOT fabricate a backend binding or publish a PhysicalDevice without a complete snapshot from its registered DDX call vectors. A later successful DDX pass MAY register and publish a previously unavailable device through the ordinary canonicalize/snapshot/publish sequence.
 
-An adapter registered after the initial barrier has closed MUST use the late-registration path. It MUST NOT reopen the barrier, reorder existing inventory, replace a selected provider, or mutate an already published snapshot. A newly discovered physical-device incarnation follows the same per-device publication sequence without blocking unrelated existing devices.
+An adapter registered after the initial barrier has closed MUST use the late-registration path. It MUST NOT reopen the barrier, reorder existing inventory, replace a selected DDX binding, or mutate an already published snapshot. A newly discovered physical-device incarnation follows the same per-device publication sequence without blocking unrelated existing devices.
 
 #### Xorg/DRM identity hand-off
 
@@ -195,22 +195,22 @@ The Xserver Screen lifecycle MUST be treated as a topology lifetime only. In the
 Accordingly:
 
 - `CloseScreen`, `FreeScreen`, `RemoveGPUScreen`, `xf86DeleteScreen`, or a zero `DriverPtr.refCount` MUST NOT be treated as proof of backend-operation completion, callback quiescence, or permission to release DDX backend userdata.
-- The DDX MUST detach the ScreenAttachment for the exact Screen generation before releasing Screen-private data. The ScreenAttachment MUST NOT own the provider context or provider module lease.
-- A Screen close MUST NOT unregister a shared BackendProvider merely because the provider was first discovered or opened through that Screen. Provider registration lifetime is independent of every ScreenAttachment lifetime. If a provider truly has per-Screen backend state, that state MUST be a separately retained child of the provider context and MUST retire only after its own Screen-generation work is quiescent.
-- A DDX module that supplies provider operation functions, completion callback functions, callback trampolines, or callback userdata MUST acquire a provider/module lease independent of Xorg's Screen-held module reference and driver Screen reference count. The lease MUST cover every function pointer and data object that can be reached by an accepted operation or a callback, including deferred cleanup and retirement paths.
+- The DDX MUST detach the ScreenAttachment for the exact Screen generation before releasing Screen-private data. The ScreenAttachment MUST NOT own the DDX module-role context or DDX module lease.
+- A Screen close MUST NOT unregister a shared DdxModuleRole merely because the provider was first discovered or opened through that Screen. Provider registration lifetime is independent of every ScreenAttachment lifetime. If a provider truly has per-Screen backend state, that state MUST be a separately retained child of the DDX module-role context and MUST retire only after its own Screen-generation work is quiescent.
+- A DDX module that supplies backend operation functions, completion callback functions, callback trampolines, or callback userdata MUST acquire a provider/module lease independent of Xorg's Screen-held module reference and driver Screen reference count. The lease MUST cover every function pointer and data object that can be reached by an accepted operation or a callback, including deferred cleanup and retirement paths.
 
-- No asynchronous provider operation, worker, or callback may retain or later dereference a raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or pointer into storage owned by `FreeScreen()`. Before crossing an asynchronous boundary, the DDX MUST copy the required immutable values or create a separately reference-counted ScreenAttachment context that contains no borrowed Xserver Screen/`ScrnInfo` pointers. Closing the Screen marks that context detached and prevents new Screen-facing work; the detached context may remain alive solely for callback bookkeeping until its own references retire. A callback after `CloseScreen` may complete backend cleanup using that detached context, but MUST NOT call Screen hooks, access RandR objects, or re-enter the deleted Screen.
+- No asynchronous backend operation, worker, or callback may retain or later dereference a raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or pointer into storage owned by `FreeScreen()`. Before crossing an asynchronous boundary, the DDX MUST copy the required immutable values or create a separately reference-counted ScreenAttachment context that contains no borrowed Xserver Screen/`ScrnInfo` pointers. Closing the Screen marks that context detached and prevents new Screen-facing work; the detached context may remain alive solely for callback bookkeeping until its own references retire. A callback after `CloseScreen` may complete backend cleanup using that detached context, but MUST NOT call Screen hooks, access RandR objects, or re-enter the deleted Screen.
 - A DDX backend callback that has entered module code MUST hold a callback-execution reference until it has returned to the server-owned completion sink. The sink MUST copy/enqueue the immutable completion before returning; the provider callback MUST NOT retain server-owned transient payload pointers after that return.
 
 Provider/module shutdown is a two-phase operation, not an ordinary Screen cleanup:
 
-1. **Close admission.** Atomically mark the exact provider generation as QUIESCING. Reject new operations and new provider bindings for that generation. Stop new discovery callbacks from that module and unregister its callback/event sources. This does not cancel accepted operations or release any existing reference.
+1. **Close admission.** Atomically mark the exact DDX module-role generation as QUIESCING. Reject new operations and new DDX device bindings for that generation. Stop new discovery callbacks from that module and unregister its callback/event sources. This does not cancel accepted operations or release any existing reference.
 2. **Withdraw topology and observations.** Detach every ScreenAttachment owned by the module for its exact Screen generations and withdraw its discovery observations. These operations do not imply physical removal and do not implicitly retire a provider owned by another module.
-3. **Drain accepted work.** Obtain exactly one terminal outcome for every accepted provider-operation token. Then retire each exact token. A token is retired only when the provider confirms both that no backend access can remain and that the token's completion callback has returned; a queued server-side immutable completion record may still be processed because it no longer references provider code or callback userdata.
-4. **Quiesce provider callbacks.** An explicit provider-wide quiescence operation (or equivalent contract) MUST confirm that no callback is executing, queued for invocation, or can begin for this provider generation, and that no new operation can be accepted. It MUST also confirm that every provider-owned worker/task capable of entering module code has stopped or no longer holds such a path. Merely observing zero outstanding tokens in the server is insufficient.
+3. **Drain accepted work.** Obtain exactly one terminal outcome for every accepted provider-operation token. Then retire each exact token. A token is retired only when the provider confirms both that no backend access can remain and that the token's completion callback has returned; a queued server-side immutable completion record may still be processed because it no longer references DDX backend code or callback userdata.
+4. **Quiesce provider callbacks.** An explicit module-role-wide quiescence operation (or equivalent contract) MUST confirm that no callback is executing, queued for invocation, or can begin for this DDX module-role generation, and that no new operation can be accepted. It MUST also confirm that every provider-owned worker/task capable of entering module code has stopped or no longer holds such a path. Merely observing zero outstanding tokens in the server is insufficient.
 5. **Release provider and module.** Only after all selected PhysicalDevice, logical-Device, route, provider-object, callback-execution, and operation-token references have retired MAY the final provider reference be released and the module lease dropped. Xorg may then unload the DDX module through its ordinary module-reference mechanism.
 
-The provider-wide `quiesce_provider` hook is mandatory for any provider whose code or callback path can be unloaded independently of server shutdown. It MUST be idempotent and generation-scoped. The first call closes provider-internal admission and callback dispatch; subsequent calls poll the same quiescence attempt. It MAY report PENDING while workers or callbacks are draining. SUCCESS has the strong meaning in step 4; FAILURE leaves the module pinned. The server MUST stop calling ordinary provider operations before invoking this hook. `release_provider` MUST NOT be the mechanism that initiates quiescence, because it is an infallible reference-count operation and MUST NOT block or invoke backend work. If a callback/worker cannot be stopped or its reachability cannot be disproved, the provider context, module lease, callback code, and userdata MUST be quarantined until server shutdown or a later proven-safe retirement. The server MUST NOT block Xorg's Screen close indefinitely waiting for GPU progress: Screen topology can be detached while the independent provider/module lease remains retained.
+The module-role-wide `quiesce_provider` hook is mandatory for any provider whose code or callback path can be unloaded independently of server shutdown. It MUST be idempotent and generation-scoped. The first call closes provider-internal admission and callback dispatch; subsequent calls poll the same quiescence attempt. It MAY report PENDING while workers or callbacks are draining. SUCCESS has the strong meaning in step 4; FAILURE leaves the module pinned. The server MUST stop calling ordinary backend operations before invoking this hook. `release_provider` MUST NOT be the mechanism that initiates quiescence, because it is an infallible reference-count operation and MUST NOT block or invoke backend work. If a callback/worker cannot be stopped or its reachability cannot be disproved, the DDX module-role context, module lease, callback code, and userdata MUST be quarantined until server shutdown or a later proven-safe retirement. The server MUST NOT block Xorg's Screen close indefinitely waiting for GPU progress: Screen topology can be detached while the independent provider/module lease remains retained.
 
 If one DDX module implements both the topology adapter and provider, it MUST still maintain these independent references. If the provider implementation is in a separate module/library, the DDX Screen may close and unload without affecting that provider, provided no callback path from the provider retains DDX Screen-private data. Any bridge callback crossing those module boundaries MUST retain both sides' exact-generation leases until the bridge callback has returned and its associated backend operation is retired.
 
@@ -219,17 +219,17 @@ If one DDX module implements both the topology adapter and provider, it MUST sti
 At XLibre source commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`, `xf86platformRemoveDevice()` calls `dixScreenRaiseClose()`, then `RemoveGPUScreen()`, then `xf86DeleteScreen()`. `xf86DeleteScreen()` calls the DDX `FreeScreen()` hook before `UnloadModule(pScrn->module)` and decrementing `pScrn->drv->refCount`. This sequence is the Screen/DDX cleanup boundary; XAverius MUST complete ScreenAttachment detachment before Screen-private release, but provider/module quiescence is governed by the independent lease protocol above. Implementations MUST NOT assume that the Xorg module reference held by a particular `ScrnInfo` is sufficient for provider callbacks that outlive that Screen.
 
 
-The loader implementation reinforces this separation. In the same source revision, `DuplicateModule()` copies the module handle into a per-`ScrnInfo` descriptor and marks that descriptor as duplicated; `UnloadModule()` skips `LoaderUnload()` for such duplicates. The original module descriptor eventually reaches `LoaderUnload()`, which calls `dlclose()`. The `DriverPtr.refCount` is a count of Xorg Screen/driver use, not a count of provider operations or callbacks. Therefore neither a duplicated `ModuleDesc` nor a positive/zero driver Screen reference count is a provider-lifetime pin. A DDX that exports provider callbacks MUST use a distinct loader/module pin whose acquisition and final release are tied to the provider reference/quiescence contract. The pin MUST remain effective even after the last `ScrnInfo` and GPU Screen have been deleted.
+The loader implementation reinforces this separation. In the same source revision, `DuplicateModule()` copies the module handle into a per-`ScrnInfo` descriptor and marks that descriptor as duplicated; `UnloadModule()` skips `LoaderUnload()` for such duplicates. The original module descriptor eventually reaches `LoaderUnload()`, which calls `dlclose()`. The `DriverPtr.refCount` is a count of Xorg Screen/driver use, not a count of backend operations or callbacks. Therefore neither a duplicated `ModuleDesc` nor a positive/zero driver Screen reference count is a provider-lifetime pin. A DDX that exports provider callbacks MUST use a distinct loader/module pin whose acquisition and final release are tied to the provider reference/quiescence contract. The pin MUST remain effective even after the last `ScrnInfo` and GPU Screen have been deleted.
 
 #### Xlibre-specific conformance requirements
 
 An Xlibre/Xorg integration MUST demonstrate at least the following:
 
-1. Two Screens initialized in either order produce the same canonical PhysicalDevice inventory and selected providers.
+1. Two Screens initialized in either order produce the same canonical PhysicalDevice inventory and selected DDX bindings.
 2. A single Screen attached to two GPUs creates two ScreenAttachments without duplicating either PhysicalDevice; two Screens using one GPU share one PhysicalDevice identity.
 3. Primary and render DRM nodes for one device produce one PhysicalDevice; removing one node does not remove the device while authoritative evidence for the same incarnation remains.
-4. A Screen close/recreate cycle changes only ScreenAttachment generations and cannot change PhysicalDevice identity, XID, provider selection, or published snapshot.
-5. A DDX that only supplies topology cannot become the selected provider or publish a device; a DDX registered as a provider must satisfy the full provider contract.
+4. A Screen close/recreate cycle changes only ScreenAttachment generations and cannot change PhysicalDevice identity, XID, DDX-binding selection, or published snapshot.
+5. A DDX that only supplies topology cannot become the selected DDX binding or publish a device; a DDX registered as a provider must satisfy the full provider contract.
 6. A failed or late discovery adapter does not block already completed devices, fabricate removal, reopen the startup barrier, or mutate published records.
 7. Hotplug add/remove events racing with initial enumeration cannot lose an event, resurrect a tombstone, or apply a stale removal to a replacement incarnation.
 8. DDX unload with pending callbacks/operations cannot unload reachable callback code or release userdata before provider/operation retirement.
@@ -240,15 +240,15 @@ These requirements are server-integration conformance tests. They do not add wir
 
 In the Xlibre/Xorg integration profile, the DDX is the sole component that registers executable PhysicalDevices for the hardware it serves. A DDX MUST enumerate and register every such device, not merely the device associated with the first Screen. This includes headless, render-only, compute-only, and otherwise Screen-unattached devices that the DDX can serve.
 
-The executable backend is bound directly to each canonical PhysicalDevice registration. The binding contains (or references) the typed operation vectors, opaque backend context, and provider-local/native physical-device handle required to execute that device. Request dispatch resolves the PhysicalDevice's selected binding and calls its operation vector directly. It MUST NOT perform a second lookup through a separately selected BackendProvider object on every operation.
+The executable backend is bound directly to each canonical PhysicalDevice registration. The binding contains (or references) the typed operation vectors, opaque backend context, and DDX-local/native physical-device handle required to execute that device. Request dispatch resolves the PhysicalDevice's selected binding and calls its operation vector directly. It MUST NOT perform a second lookup through a separately selected DdxModuleRole object on every operation.
 
-The term **BackendProvider** remains useful only as a registration/lifetime identity for the implementation code and shared module resources. It is not an additional per-device execution object and MUST NOT obscure the direct binding. A provider registration/control block MAY own shared module lease, callback sink, admission/quiescence state, and references to immutable operation-table storage. The per-device binding owns the device-specific context/handle and points directly to the applicable operation tables. If the DDX uses one shared backend context for several devices, the binding MAY reference that shared context with explicit references; it MUST NOT create a duplicate provider wrapper solely to dispatch calls.
+The term **DdxModuleRole** remains useful only as a registration/lifetime identity for the implementation code and shared module resources. It is not an additional per-device execution object and MUST NOT obscure the direct binding. A provider registration/control block MAY own shared module lease, callback sink, admission/quiescence state, and references to immutable operation-table storage. The per-device binding owns the device-specific context/handle and points directly to the applicable operation tables. If the DDX uses one shared backend context for several devices, the binding MAY reference that shared context with explicit references; it MUST NOT create a duplicate provider wrapper solely to dispatch calls.
 
 A DDX registration MUST include:
 - stable DDX/module-role identity and non-reusable DDX registration generation;
 - canonical PhysicalDevice identity evidence and exact device-incarnation reference;
 - immutable typed operation-vector pointers covering the capabilities advertised for this device;
-- opaque per-device backend context and provider-local physical-device handle;
+- opaque per-device backend context and DDX-local physical-device handle;
 - binding generation and availability/lifecycle state;
 - references that keep all reachable code, operation-table storage, context, and callback userdata alive through operation retirement and quiescence.
 
@@ -262,46 +262,32 @@ A selected binding becoming temporarily unavailable makes the PhysicalDevice UNA
 
 Logical-device creation pins the exact selected binding, DDX registration generation, and PhysicalDevice incarnation. Every logical Device and asynchronous backend operation MUST retain the relevant binding, context, code/module, and resource references until all backend accesses and callbacks have quiesced. Unloading the DDX module or destroying its context while any such reference exists is forbidden. If quiescence cannot be proven, the backend objects and module references MUST be retained or quarantined.
 
-### 3.1 DDX binding, implementation control record, and module multiplicity
+### 3.1 DDX module-role and per-device binding lifetimes
 
-The terms `BackendProvider`, `provider_generation`, and `GpuBackendProvider` retained in the legacy internal API sketch denote a shared DDX implementation/module-role control record only. They MUST NOT denote an extra per-device execution object or an intermediate dispatch lookup. The PhysicalDevice's selected DDX binding contains/references the per-device operations, context, and native handle and is the direct call target. The shared control record exists only where needed for registration identity, shared code/table storage, module lease, callback admission, and quiescence. DDX/module-role identity, per-device backend bindings, discovery observations, and module ownership are separate lifetimes. The following cardinalities and rules are normative:
+A DDX registers one module-role control record when it has unloadable code, callbacks, or shared resources whose lifetime spans multiple PhysicalDevices. This record is not an execution backend and is never selected by a PhysicalDevice. Its sole purposes are module pinning, callback admission, shared-resource lifetime, and module-wide quiescence.
 
-- One DDX module-role generation MAY own bindings for many canonical PhysicalDevices. Each binding identifies exactly one PhysicalDevice incarnation and one DDX-local native physical-device instance.
-- A PhysicalDevice MAY receive identity observations from multiple sources and duplicate registration claims from multiple DDX instances. All claims MUST resolve to the same canonical PhysicalDevice identity. Only one executable binding is selected in v0.1; the others MUST NOT be merged into it or used for failover.
-- For a given pair of (DDX registration generation, PhysicalDevice incarnation), there MUST be at most one active executable binding. If one DDX enumerates multiple Vulkan handles for the same canonical device through different Vulkan instances, it MUST correlate and deduplicate those aliases inside its DDX-owned context and choose one native handle before registration. If it cannot prove that the handles are aliases of the same incarnation, it MUST keep the candidates unresolved rather than register competing bindings.
-- A DDX registration generation MAY own bindings for multiple PhysicalDevices. A module-wide failure affects every selected binding backed by that exact registration/module role; a device-binding failure affects only the named PhysicalDevice. A failure of a non-selected duplicate registration MUST NOT change the public status of the PhysicalDevice.
-- A DDX module MAY own one or more independent module-role registrations and may also provide identity/hotplug callbacks or Screen topology. Each independently unloadable role MUST have its own generation, admission state, retained references, and teardown result. A shared module-owner lease MAY aggregate the loader pin for those roles, but it MUST NOT collapse distinct device bindings or their lifecycle state.
-- Every unloadable DDX module-role generation MUST retain a module lease covering all operation vectors, completion callback code, callback userdata, shared contexts, and every trampoline reachable from accepted work. Each independently registered role acquires its own reference to the shared module-owner lease. A DDX topology/discovery adapter that can receive callbacks after Screen close MUST likewise retain a role-specific module lease until its callbacks and detached contexts have retired. Xorg ModuleDesc duplication and DriverPtr.refCount are not substitutes for these leases.
+Each served PhysicalDevice has its own **DeviceBackendBinding**. That binding directly contains or references:
+- the immutable typed `GpuDeviceBackendOps` table(s);
+- the exact opaque native PhysicalDevice handle;
+- the per-device backend context, or an explicitly retained shared context;
+- the DDX module-role generation that pins the code and shared resources;
+- the binding generation, availability state, and retained lifetime references.
+
+The PhysicalDevice's selected binding is the direct dispatch target. A request resolves the PhysicalDevice/logical Device and calls the operation vector in that binding. No separately selected DDX binding/backend object, DDX-local numeric handle lookup, or second dispatch indirection exists.
+
+The DDX module-role record MAY be shared by many bindings. It MUST NOT contain a mutable "current device" selector or require callers to look up a device by Screen, enumeration index, or DDX-local ID. Device-specific state remains in the binding. A DDX with no shared module state may use a minimal role token for generation/lifetime accounting; it need not allocate a heavyweight backend object.
+
+In v0.1, one canonical PhysicalDevice has exactly one executable DDX binding. The responsible DDX is the authority for enumerating and registering all devices it serves. Platform/udev sources contribute identity and hotplug evidence only; they do not register executable candidates. If duplicate DDX claims resolve to the same canonical hardware incarnation, the registry applies deterministic policy before publication and selects one complete binding. It MUST NOT merge operation tables, contexts, handles, or snapshots. After publication, another DDX registration cannot silently replace the selected binding. There is no transparent binding failover in v0.1.
+
+A DDX module-role generation MAY own bindings for many PhysicalDevices. A device-binding failure affects only that PhysicalDevice; a module-role failure affects every binding whose code/context depends on that role. Closing a Screen detaches its ScreenAttachment only; it does not remove a shared binding or module role. DDX unload closes admission, withdraws that DDX's registrations and observations, drains operations/callbacks, quiesces the module role, and releases the module lease only after all reachable code and data have retired.
+
+The server assigns nonzero, non-reusable module-role and binding generations. A failed registration consumes its reserved generation. Every binding retains its module role and any shared context it uses. The module-role lease covers operation tables, callbacks, callback userdata, shared contexts, and all trampolines reachable by accepted work. A binding separately retains its device context and native handle until all logical Devices, backend objects, operations, and callbacks that can access them have retired. If quiescence cannot be proven, the affected binding/context and module lease MUST be retained or quarantined rather than unloaded.
 
 
-The legacy provider-registration call is the registration of a DDX module-role control record, not registration of a backend execution object. The server obtains a fresh, nonzero role generation before constructing the descriptor; the DDX MUST NOT choose or reuse this value. A reserved generation is consumed even if registration fails and MUST NOT be recycled. The registry retains the shared role control record and its module lease once for that role. The role generation is carried in callback/token identity where needed. Registering additional PhysicalDevice bindings references this existing role control record and MUST NOT repeat descriptor installation or acquire duplicate role/module references. Per-device operation dispatch still goes directly through the selected PhysicalDevice binding.
-
-A DDX module-role generation MUST be registered before any of its device bindings or operations can be accepted. It MUST remain ACTIVE until the corresponding shutdown transition serializes. The registry MUST reject duplicate active role generations and reject binding registration against an unknown, stale, QUIESCING, or QUIESCED role. Binding registration is atomic: failure MUST leave no partial binding, observation ownership, or extra module reference. A role with zero bindings MAY remain registered while the DDX is initializing or owns shared callback resources, but it is never itself selected as a PhysicalDevice.
-
-The module lease is a server-owned loader pin, not a provider callback and not a substitute for provider reference counting. The Xlibre/Xorg loader adapter creates one lease object for a loaded module-owner identity. module_owner MUST be a stable server-owned loader-owner record/handle, not a ScrnInfo, DriverPtr, duplicated ModuleDesc, or transient DDX-private pointer. Creating the lease MUST acquire a real independent loader pin; duplicating a ModuleDesc or incrementing a Screen/driver reference count is insufficient. If the loader cannot provide such a pin, registration of unloadable provider code MUST fail or the module MUST be treated as permanently resident. The same lease object MAY be shared by several provider generations and adapter roles from that module. Each registered provider generation retains one lease reference; each independently registered adapter/callback role that can enter module code retains its own reference. The server-owned lease retain/release operations MUST be safe while the module is pinned and MUST NOT call into the module being pinned. A module-owner identity MUST resolve to one shared lease object for that loaded module instance; creating independent lease objects for aliases of the same unloadable handle is forbidden because it would split the final-unload count. A lease release MUST NOT unload the module while any lease reference remains. For a provider generation, the registry first performs its final provider-context release while the lease is still held, then releases that generation's lease reference as its final action; no provider function pointer or provider-owned userdata may be touched afterward.
-
-TryQuiesceProvider is permitted only after shutdown admission is closed, all bindings owned by the provider generation have been removed from selection/publication, all accepted operation tokens have terminalized and retired, all externally initiated provider calls and cross-module callback bridges have returned, and every provider-owned object whose destruction requires provider code has either been destroyed or placed in a quarantine that requires no further provider-code execution. Provider-internal workers are deliberately stopped and joined by the quiesce_provider hook itself; they MUST NOT be assumed stopped before that hook runs. After quiescence SUCCESS, the only permitted provider-module entry is the registry's one final release_provider call during finalization; no backend operation, object destroy, callback, or worker entry is permitted. It invokes the provider's quiesce_provider hook for that exact generation. PENDING leaves the generation and module lease pinned and may be retried; FAILURE places the generation in quarantine and MUST NOT release its module lease. A stale/unknown provider generation is returned as GPU_REGISTRY_STALE_GENERATION without invoking the hook; unmet server-side preconditions return GPU_REGISTRY_PENDING with out_quiescence set to PENDING; SUCCESS records provider-generation quiescence but does not by itself release the provider object or module lease while logical-device/provider-object references or adapter roles remain. Finalization is a separate step and is allowed only when the registry's provider reference count has reached its final registry-owned reference and all provider-owned objects have been destroyed or quarantined without requiring provider code. The finalization operation calls release_provider while the module lease remains held, then releases the module lease exactly once.
-
-
-Discovery observations remain source-owned. Multiple DDX, platform, and provider sources MAY contribute independent observations for one canonical PhysicalDevice. The registry MUST retain each observation's exact source key, source generation, and observation ID. Withdrawing or replacing one source's observation MUST affect only that observation; it MUST NOT withdraw another source's evidence, another provider's binding, a ScreenAttachment owned by another DDX, or the PhysicalDevice identity while other valid evidence remains. A provider binding is not itself ownership of the canonical identity. Removing a provider binding MUST NOT implicitly remove the provider's discovery observation unless the same registration explicitly owns that exact observation and withdraws it through the source-observation operation.
-
-Provider selection remains exactly one execution provider per published PhysicalDevice in v0.1. The selected provider supplies the complete immutable snapshot. Other providers MAY remain registered as discovery/correlation providers, but their metadata, queue capabilities, features, and properties MUST NOT be unioned with the selected snapshot. A provider registered after publication remains non-selected for that PhysicalDevice's lifetime. It MUST NOT become an implicit replacement when the selected provider is removed, unavailable, or quiescing. In particular, removing the selected binding makes that PhysicalDevice UNAVAILABLE under the existing status contract; the presence of another registered binding does not authorize failover, snapshot replacement, or XID replacement. Removing a non-selected binding has no public status effect.
-
-Provider-generation shutdown and binding removal are distinct operations:
-
-1. **Begin shutdown.** Atomically change the exact provider generation from ACTIVE to QUIESCING. Close admission for new operations and new bindings across that provider generation. This transition is idempotent for the same generation; a stale generation is rejected. A concurrent operation or registration is accepted only if its admission point serialized before this transition.
-2. **Remove bindings.** Remove each binding owned by that provider generation using its exact PhysicalDevice, provider, and binding generations. Removing one binding MUST NOT remove any other binding or discovery observation. If the removed binding was selected, the PhysicalDevice becomes UNAVAILABLE and stays bound to that selected-provider identity; another provider is not promoted.
-3. **Withdraw owned observations and topology.** Withdraw only discovery observations and ScreenAttachments owned by the unloading adapter/module and exact generations. Do not withdraw observations or attachments owned by another source/module merely because they refer to the same PhysicalDevice.
-4. **Drain and quiesce.** Drain accepted operations, obtain exactly one terminal outcome for each token, retire each exact token, and invoke provider-wide quiescence for that provider generation as specified in Sections 2.4 and 4. A DDX module-role generation with several PhysicalDevice bindings is quiesced as one shared code/context lifetime; a binding-local loss is not a module-role shutdown.
-5. **Release the provider lease.** Release that provider generation's module-lease reference only after its bindings, logical-device/provider-object references, callback executions, operation tokens, and provider context have retired. The shared module owner remains pinned while any other provider generation, adapter role, or callback bridge from that module retains a lease.
-
-The lifecycle serializer MUST arbitrate competing Screen close, source withdrawal, provider-binding removal, provider-generation shutdown, provider quiescence, and physical-removal transitions by exact generations. Each operation is idempotent for its own generation and MUST NOT broaden its scope when another teardown has already started. A Screen close detaches only the exact ScreenAttachment. A source withdrawal removes only the exact observation. Provider shutdown closes only the exact provider generation. Physical removal terminalizes only the exact PhysicalDevice incarnation and does not itself unload providers. If physical removal wins before provider shutdown, the tombstone remains while provider references retire; if provider shutdown wins first, the PhysicalDevice follows the ordinary selected-provider UNAVAILABLE rule unless and until authoritative physical-removal evidence commits REMOVED. Neither ordering permits resurrection, provider promotion, or mutation of a replacement generation.
-
-Quiescence is scoped. quiesce_provider SUCCESS proves that no callback, worker, or operation belonging to that exact provider generation can enter its module code again; it does not prove that another provider generation from the same module is quiescent. The module may be unloaded only after every provider and adapter role backed by that module has independently stopped admission, drained its accepted work/callbacks, and released its lease. A module-global callback or worker that can enter more than one provider generation MUST be accounted for by every affected role and MUST keep the common module lease pinned until it is no longer reachable. Quiescing one provider MUST NOT release the module pin while another provider generation or adapter role remains live.
 
 ## 4. Provider operation interface
 
-The device backend operation interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The DDX binding owns the actual backend calls and every device-local handle. Request handlers MUST call the operation vector stored in the exact selected PhysicalDevice binding; they MUST NOT resolve a second BackendProvider dispatch object.
+The device backend operation interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The DDX binding owns the actual backend calls and every device-local handle. Request handlers MUST call the operation vector stored in the exact selected PhysicalDevice binding; they MUST NOT resolve a second DdxModuleRole dispatch object.
 
 ### 4.1 Operation groups
 
@@ -313,7 +299,7 @@ The selected DDX device binding MUST implement the following operation groups fo
 | Logical-device lifecycle | `create_logical_device`, `get_queue`, `destroy_logical_device` | Create the Vulkan logical device with the exact validated queues/features/extensions; obtain queues for the requested family/index; destroy the logical device after its dependent work is quiescent. |
 | Buffer and memory | `create_buffer`, `get_buffer_memory_requirements`, `allocate_memory`, `free_memory`, `bind_buffer_memory`, `write_buffer`, `read_buffer` | Implement the Buffer/Memory semantics, alignment and range rules, upload/readback snapshot barriers, and transfer completion contracts in `memory-buffers.md`. |
 | Shader, descriptor, and pipeline objects | create/destroy ShaderModule, DescriptorSetLayout, DescriptorPool, DescriptorSet, PipelineLayout, and ComputePipeline operations; descriptor updates | Implement the exact validated object descriptions and Vulkan dependency/lifetime ordering in `shaders-pipelines.md`. |
-| Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-recording.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
+| Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-recording.md`. The DDX binding MUST NOT reinterpret or reorder XAverius request ordering. |
 | Synchronization | create/destroy semaphores and fences; host timeline signal; queue signal/wait integration; fence reset and completion publication | Implement binary/timeline semaphore and fence behavior in `synchronization.md`, including the specified WAIT_ANY/WAIT_ALL and timeout semantics. |
 | Queue execution | `queue_submit` and any backend completion/retirement operation | Submit the already validated dependency graph to the exact queue. Accepted submissions complete asynchronously and report one terminal outcome through the server's serialized completion path. |
 | Presentation | provider-scoped surface create/destroy; exact Device/Surface route and queue-family support query; route create/retire; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. The selected execution provider owns the route for its logical Device; it may implement a direct or explicitly bridged scanout path, but MUST NOT migrate execution to another PhysicalDevice/provider. ScreenAttachment MUST NOT substitute for the exact route query. |
@@ -322,7 +308,7 @@ Synchronization ownership is split deliberately: the provider implements Semapho
 
 ### 4.1.1 Request ownership map
 
-The following map closes the provider boundary against the complete request registry. "Server-owned" means the request is implemented from XAverius state/metadata and does not invoke a provider operation for that request itself; it does not mean that earlier backend operations are irrelevant to its state.
+The following map closes the provider boundary against the complete request registry. "Server-owned" means the request is implemented from XAverius state/metadata and does not invoke a backend operation for that request itself; it does not mean that earlier backend operations are irrelevant to its state.
 
 | Requests | Provider responsibility | Server responsibility |
 |---|---|---|
@@ -338,15 +324,15 @@ The following map closes the provider boundary against the complete request regi
 | `SelectEvents` (40) | None | Connection/device/queue event-mask replacement and event routing. |
 | Presentation requests (41–47) | Provider-scoped Surface; exact physical-device Surface support; Swapchain; acquire/cancel/late-image retirement; queue present | X11 Window identity, Surface/Swapchain XIDs, validation/status precedence, image/token/synchronization state, timeout and event arbitration. |
 
-Command entries (`CMD_*`) are not request subopcodes. The server validates their wire encoding and state effects; the provider receives only the validated command representation for backend recording. Likewise, chunk transport for ShaderModuleData and CommandBufferData is server-owned; provider object creation/recording occurs only at the specified validated commit/finalization point. SelectEvents and QueryVersion are entirely server-side.
+Command entries (`CMD_*`) are not request subopcodes. The server validates their wire encoding and state effects; the provider receives only the validated command representation for backend recording. Likewise, chunk transport for ShaderModuleData and CommandBufferData is server-owned; backend object creation/recording occurs only at the specified validated commit/finalization point. SelectEvents and QueryVersion are entirely server-side.
 
-The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
+The names above describe semantic operations, not mandatory C symbol names. A DDX binding MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete backend object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the DDX binding MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
-The DDX device-registration descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Operation-table entry points receive the exact device-binding context and opaque device handle directly. A shared DDX/module-role control record may be retained for code lifetime and quiescence, but it is not resolved as an extra dispatch object. Provider code MUST NOT cache or release that pointer independently. Each completion MUST carry the exact provider generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+The DDX device-registration descriptor MUST install a completion sink equivalent to `GpuBackendCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Operation-table entry points receive the exact device-binding context and opaque device handle directly. A shared DDX/module-role control record may be retained for code lifetime and quiescence, but it is not resolved as an extra dispatch object. Provider code MUST NOT cache or release that pointer independently. Each completion MUST carry the exact DDX module-role generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The DDX binding MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into backend operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw module-role pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged backend object references.
 
 ### 4.2 Physical snapshot operation
 
-`query_physical_snapshot` MUST run before publication and return a single internally consistent snapshot. The snapshot MUST include every value needed by all v0.1 physical-device enumeration and query requests and every device limit/capability used to validate later creation requests. It MUST be tied to the same provider-local physical-device handle that will be passed to `create_logical_device`.
+`query_physical_snapshot` MUST run before publication and return a single internally consistent snapshot. The snapshot MUST include every value needed by all v0.1 physical-device enumeration and query requests and every device limit/capability used to validate later creation requests. It MUST be tied to the same DDX-local physical-device handle that will be passed to `create_logical_device`.
 
 The operation MUST distinguish an unsupported optional property from a transient query failure. A missing optional property is recorded as unavailable/not supported according to the property registry; it MUST NOT be fabricated. A failure to obtain a mandatory baseline property, queue-family data, memory properties, or a coherent limit set makes that provider ineligible for selection. The server MUST NOT publish a partial snapshot and MUST NOT fill missing fields from another provider.
 
@@ -354,22 +340,22 @@ After publication, request handlers MUST answer physical-device property and que
 
 ### 4.3 Logical-device creation and queue binding
 
-Before calling `create_logical_device`, the server MUST complete all XAverius wire, XID, ownership, queue, feature, extension, and physical-device-state validation in the normative order in `devices.md` and `errors.md`. The provider receives a fully validated immutable create description; it MUST include the exact provider-local binding ID and registry binding generation, and the provider MUST resolve that pair to the native physical-device handle retained for that binding. It MUST NOT independently choose a different PhysicalDevice, queue family, queue count, feature set, or extension set.
+Before calling `create_logical_device`, the server MUST complete all XAverius wire, XID, ownership, queue, feature, extension, and physical-device-state validation in the normative order in `devices.md` and `errors.md`. The provider receives a fully validated immutable create description; it MUST include the exact DDX-local binding ID and registry binding generation, and the DDX binding MUST resolve that pair to the native physical-device handle retained for that binding. It MUST NOT independently choose a different PhysicalDevice, queue family, queue count, feature set, or extension set.
 
-The provider MUST create the logical device with the mandatory v0.1 `timelineSemaphore` feature enabled and exactly the validated queue requests and enabled optional features/extensions. It MUST return an opaque logical-device handle plus a queue handle for every requested (family,index) tuple, or fail atomically. Queue handles remain private to the provider and are reachable only through the logical-device context.
+The DDX binding MUST create the logical device with the mandatory v0.1 `timelineSemaphore` feature enabled and exactly the validated queue requests and enabled optional features/extensions. It MUST return an opaque logical-device handle plus a queue handle for every requested (family,index) tuple, or fail atomically. Queue handles remain private to the provider and are reachable only through the logical-device context.
 
-The server publishes the logical Device XID only after provider creation and all required queue acquisition succeed. If any stage fails, the server MUST destroy or quarantine every partial backend object, release temporary references when safe, leave the requested XID unallocated, and return the mapped error. The provider MUST NOT retain a live logical device after reporting a failed create unless it is explicitly quarantined and inaccessible to all later XAverius operations.
+The server publishes the logical Device XID only after provider creation and all required queue acquisition succeed. If any stage fails, the server MUST destroy or quarantine every partial backend object, release temporary references when safe, leave the requested XID unallocated, and return the mapped error. The DDX binding MUST NOT retain a live logical device after reporting a failed create unless it is explicitly quarantined and inaccessible to all later XAverius operations.
 
 ### 4.4 Provider result and error contract
 
-Every provider operation MUST return a classified result. A provider MAY additionally retain the native backend/Vulkan result for diagnostics, but the native result MUST NOT bypass the classification or change the protocol mapping. At minimum, the internal result classes are:
+Every backend operation MUST return a classified result. A DDX binding MAY additionally retain the native backend/Vulkan result for diagnostics, but the native result MUST NOT bypass the classification or change the protocol mapping. At minimum, the internal result classes are:
 
 | Provider result | Meaning | Required server treatment |
 |---|---|---|
 | `SUCCESS` | Operation completed successfully | Commit the request's specified success transition. |
 | `STATUS` | A defined non-error operation outcome (for example out-of-date, surface-lost, suboptimal, or unsupported swapchain configuration) | Return the operation-specific status exactly as defined by its request chapter; do not convert it to a generic provider failure. |
-| `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject provider selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
-| `UNAVAILABLE` | Provider context or access to one specific physical-device binding is temporarily unavailable; no logical-Device-loss result has been established. The result MUST carry an explicit scope: `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE`. | For `PROVIDER_CONTEXT`, mark every PhysicalDevice for which this exact provider generation is the selected execution provider UNAVAILABLE. For `PHYSICAL_DEVICE`, mark only the named PhysicalDevice binding UNAVAILABLE. Do not affect devices merely discovered by or attached to the provider as a non-selected/correlation provider. A request rejected before its protocol acceptance point uses its request-defined `DEVICE_UNAVAILABLE` error/reply status where defined. An already accepted asynchronous operation uses its operation-specific terminal channel (for example `EXECUTION_FAILED`, `TRANSFER_FAILED`, or `PRESENTATION_FAILED`), never a delayed X11 error. Existing logical Devices are not automatically declared lost solely by this result. |
+| `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject DDX-binding selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
+| `UNAVAILABLE` | Provider context or access to one specific physical-device binding is temporarily unavailable; no logical-Device-loss result has been established. The result MUST carry an explicit scope: `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE`. | For `PROVIDER_CONTEXT`, mark every PhysicalDevice for which this exact DDX module-role generation is the selected execution provider UNAVAILABLE. For `PHYSICAL_DEVICE`, mark only the named PhysicalDevice binding UNAVAILABLE. Do not affect devices merely discovered by or attached to the provider as a non-selected/correlation provider. A request rejected before its protocol acceptance point uses its request-defined `DEVICE_UNAVAILABLE` error/reply status where defined. An already accepted asynchronous operation uses its operation-specific terminal channel (for example `EXECUTION_FAILED`, `TRANSFER_FAILED`, or `PRESENTATION_FAILED`), never a delayed X11 error. Existing logical Devices are not automatically declared lost solely by this result. |
 | `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Reply-pending requests use their request-defined final reply/status or X11 error; protocol-accepted operations use their defined terminal status/events. |
 | `OUT_OF_HOST_MEMORY` / `OUT_OF_DEVICE_MEMORY` | Backend allocation failed for lack of host/device memory | Map to `ALLOCATION_FAILED` where the request contract exposes a synchronous allocation error; otherwise use that operation's specified asynchronous failure result. |
 | `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for reply-bearing transfer requests such as WriteBuffer/ReadBuffer; operations whose protocol contract is event-terminal use their defined asynchronous failure path. |
@@ -377,43 +363,43 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `CANCELLED` | Operation was prevented from starting because its captured Device/resource generation was destroyed or terminalized | Complete it with the lifecycle result already committed by the server (for example `DEVICE_DESTROYED`); never invoke backend work after cancellation wins. |
 | `FATAL` | Unclassified backend/provider failure or violated provider contract | Fail with `INTERNAL_SERVER_ERROR` if a synchronous request is still awaiting a result; mark the provider unavailable if its continued correctness cannot be trusted. Preserve all references until safe retirement. |
 
-All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent, MUST return a classified result, and MUST release only the exact operation-token generation supplied to it. If retirement fails, the server MUST retain/quarantine the token and provider context rather than assuming quiescence.
+All backend operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuBackendResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and DDX module-role context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent, MUST return a classified result, and MUST release only the exact operation-token generation supplied to it. If retirement fails, the server MUST retain/quarantine the token and DDX module-role context rather than assuming quiescence.
 
 `retire_operation` has one normative success meaning: `SUCCESS` confirms that the exact accepted operation token has no remaining or possible backend access, that the provider will perform no further access through that token, that the token's completion callback has returned from module code, that no further callback for that token can begin, and that the token's backend-side retirement is complete. Only this result authorizes the server to release the token's retained provider/device/resource references and retire the token record. Any non-`SUCCESS` result is not evidence of quiescence; the server MUST preserve the token record and quarantine all affected references. The server MAY retry retirement using the same exact token generation. Repeated retirement after `SUCCESS` MUST be an idempotent no-op returning `SUCCESS`; a stale token generation MUST NOT retire or release a newer token that reuses an internal slot. Retirement MUST NOT emit a second terminal outcome callback.
 
-The abstract result type below carries this scope explicitly for both synchronous operation returns and asynchronous completion records. `PHYSICAL_DEVICE` results MUST identify the exact canonical PhysicalDevice and its generation in the operation's immutable result payload; `PROVIDER_CONTEXT` results MUST identify the exact provider generation. `NONE` is required for every result code other than `UNAVAILABLE`.
+The abstract result type below carries this scope explicitly for both synchronous operation returns and asynchronous completion records. `PHYSICAL_DEVICE` results MUST identify the exact canonical PhysicalDevice and its generation in the operation's immutable result payload; `PROVIDER_CONTEXT` results MUST identify the exact DDX module-role generation. `NONE` is required for every result code other than `UNAVAILABLE`.
 
-The scope of `UNAVAILABLE` is mandatory provider-result metadata, not something the registry may guess from the provider pointer. `PROVIDER_CONTEXT` means that the provider context/generation cannot safely serve any of its PhysicalDevice bindings; it affects only PhysicalDevices whose selected execution provider is that exact provider generation. `PHYSICAL_DEVICE` means that the provider context remains usable but the named provider-local PhysicalDevice binding cannot be used; it affects only that canonical PhysicalDevice. An observation for a non-selected provider MUST NOT change the published PhysicalDevice status. A provider-context recovery MAY restore each affected PhysicalDevice to AVAILABLE only if that same provider generation and exact physical-device incarnation again satisfy the published immutable snapshot. A physical-device-scoped recovery restores only that binding. Recovery MUST NOT revive REMOVED identities or switch provider selection.
+The scope of `UNAVAILABLE` is mandatory provider-result metadata, not something the registry may guess from the module-role pointer. `PROVIDER_CONTEXT` means that the DDX module-role context/generation cannot safely serve any of its PhysicalDevice bindings; it affects only PhysicalDevices whose selected execution provider is that exact DDX module-role generation. `PHYSICAL_DEVICE` means that the DDX module-role context remains usable but the named DDX-local PhysicalDevice binding cannot be used; it affects only that canonical PhysicalDevice. An observation for a non-selected DDX binding MUST NOT change the published PhysicalDevice status. A provider-context recovery MAY restore each affected PhysicalDevice to AVAILABLE only if that same DDX module-role generation and exact physical-device incarnation again satisfy the published immutable snapshot. A physical-device-scoped recovery restores only that binding. Recovery MUST NOT revive REMOVED identities or switch DDX-binding selection.
 
-The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
+The DDX binding MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A DDX binding MUST NOT map a malformed request to a Vulkan/backend error.
 
 For `create_logical_device`, `DEVICE_LOST` occurs before a logical Device exists and therefore MUST NOT create a phantom logical Device or emit a Device-Loss event for the requested XID. The server MUST mark the selected PhysicalDevice UNAVAILABLE, fail creation with `DEVICE_UNAVAILABLE`, and leave the target XID unallocated. Allocation failures map to `ALLOCATION_FAILED`; other unclassified creation failures map to `INTERNAL_SERVER_ERROR`. A native unsupported-feature result after the server has validated the published snapshot is a provider contract violation, not a client `BadMatch`.
 
 For operations on an already-created logical Device, a positive backend Device-Loss result applies to that exact logical Device. It MUST NOT automatically mark the PhysicalDevice REMOVED. Provider-context loss without proof that the logical Vulkan Device is lost instead makes the PhysicalDevice/provider unavailable; existing logical Devices remain pinned and their operations fail according to their own subsequent backend results or safe-abort rules. Provider unavailability alone does not automatically declare an existing logical Device lost. A request that needs the unavailable provider returns `DEVICE_UNAVAILABLE` while the provider remains unavailable; the logical Device retains its identity and may become usable again if the same provider recovers. An accepted asynchronous operation that can no longer make progress because of provider unavailability MUST terminalize through that operation's existing failure channel (for example, `EXECUTION_FAILED` for QueueSubmit or `TRANSFER_FAILED` for a buffer transfer), unless a positive loss result for that exact logical Device establishes `DEVICE_LOST`.
 
-The server MUST preserve the first terminal outcome committed for each request, wait, submission, transfer, or resource operation. Later provider callbacks MUST NOT replace success, timeout, Device Loss, destruction, disconnect, or an earlier failure. A provider MUST NOT report success after it has reported a terminal failure for the same operation. For reply-pending requests, the winning provider outcome is translated through that request's reply/status/error contract. For protocol-accepted QueueSubmit and QueuePresent operations, the winning outcome is translated through their asynchronous event and synchronization/image-state contracts.
+The server MUST preserve the first terminal outcome committed for each request, wait, submission, transfer, or resource operation. Later provider callbacks MUST NOT replace success, timeout, Device Loss, destruction, disconnect, or an earlier failure. A DDX binding MUST NOT report success after it has reported a terminal failure for the same operation. For reply-pending requests, the winning provider outcome is translated through that request's reply/status/error contract. For protocol-accepted QueueSubmit and QueuePresent operations, the winning outcome is translated through their asynchronous event and synchronization/image-state contracts.
 
 ### 4.5 Synchronous and asynchronous operations
 
-An operation is synchronous when the XAverius request can be completed from the provider's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
+An operation is synchronous when the XAverius request can be completed from the DDX binding's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
 
-An operation is deferred/asynchronous when its request remains pending while backend work or a wait registration progresses. This includes QueueSubmit, WriteBuffer, ReadBuffer, AcquireNextImage, and the deferred completion portion of QueuePresent. WaitSemaphores and WaitForFence are server-owned registrations over the server's published Timeline-counter/Fence state; they MUST NOT require a blocking provider wait operation or a provider operation token. For each provider-backed deferred operation, the provider MUST return either an immediate classified rejection/status or an accepted provider-operation token. Provider-token acceptance is an internal backend fact; it is NOT by itself XAverius protocol acceptance. For every accepted provider-operation token, the provider MUST eventually deliver exactly one terminal outcome notification to the server, including when backend execution or quiescence cannot be established. If the provider cannot establish a successful outcome, it MUST report a classified terminal failure through that one notification; it MUST NOT silently omit the callback or wait indefinitely. A terminal outcome notification does not by itself prove backend quiescence. If the provider cannot prove that no further backend access can occur, it MUST withhold the quiescence/retirement confirmation and the server MUST retain or quarantine all affected objects and provider references until backend access is impossible. Server-owned WaitSemaphores/WaitForFence registrations do not call the provider, do not create provider-operation tokens, and do not receive provider completion callbacks as registrations; they are reevaluated when the underlying queue/host-signal operation publishes updated server-visible synchronization state.
+An operation is deferred/asynchronous when its request remains pending while backend work or a wait registration progresses. This includes QueueSubmit, WriteBuffer, ReadBuffer, AcquireNextImage, and the deferred completion portion of QueuePresent. WaitSemaphores and WaitForFence are server-owned registrations over the server's published Timeline-counter/Fence state; they MUST NOT require a blocking provider wait operation or a backend operation token. For each provider-backed deferred operation, the DDX binding MUST return either an immediate classified rejection/status or an accepted provider-operation token. Provider-token acceptance is an internal backend fact; it is NOT by itself XAverius protocol acceptance. For every accepted provider-operation token, the DDX binding MUST eventually deliver exactly one terminal outcome notification to the server, including when backend execution or quiescence cannot be established. If the provider cannot establish a successful outcome, it MUST report a classified terminal failure through that one notification; it MUST NOT silently omit the callback or wait indefinitely. A terminal outcome notification does not by itself prove backend quiescence. If the provider cannot prove that no further backend access can occur, it MUST withhold the quiescence/retirement confirmation and the server MUST retain or quarantine all affected objects and provider references until backend access is impossible. Server-owned WaitSemaphores/WaitForFence registrations do not call the provider, do not create provider-operation tokens, and do not receive provider completion callbacks as registrations; they are reevaluated when the underlying queue/host-signal operation publishes updated server-visible synchronization state.
 
-The protocol acceptance point is request-specific. QueueSubmit crosses it when the server accepts the void request; QueuePresent crosses it when the request returns SUCCESS. After either point, later execution/presentation failures use the defined events and synchronization/image state and MUST NOT become delayed X11 request errors. WriteBuffer, ReadBuffer, and AcquireNextImage remain reply-pending until their defined reply or error is committed; provider-token acceptance for these requests does not suppress the request chapter's final reply, normal status, or permitted X11 error. WaitSemaphores and WaitForFence are also reply-pending, but are entirely server-owned registrations and have no provider token. Disconnect suppresses delivery but does not bypass terminalization and safe retirement. Completion callbacks MUST carry immutable operation/provider generations and MUST resolve only through the server's internal operation-token record, never by public XID lookup.
+The protocol acceptance point is request-specific. QueueSubmit crosses it when the server accepts the void request; QueuePresent crosses it when the request returns SUCCESS. After either point, later execution/presentation failures use the defined events and synchronization/image state and MUST NOT become delayed X11 request errors. WriteBuffer, ReadBuffer, and AcquireNextImage remain reply-pending until their defined reply or error is committed; provider-token acceptance for these requests does not suppress the request chapter's final reply, normal status, or permitted X11 error. WaitSemaphores and WaitForFence are also reply-pending, but are entirely server-owned registrations and have no provider token. Disconnect suppresses delivery but does not bypass terminalization and safe retirement. Completion callbacks MUST carry immutable operation/DDX module-role generations and MUST resolve only through the server's internal operation-token record, never by public XID lookup.
 
-Cancellation of a server-owned WaitSemaphores/WaitForFence registration is a server-side registration transition. It does not call the provider, cancel or retire the underlying QueueSubmit or host SignalSemaphore operation, or release references held by that underlying operation. Those references remain governed by the operation's own completion and quiescence contract. For `AcquireNextImage`, `cancel_acquire` requests cancellation of the exact provider-operation token generation; successful cancellation is not itself proof of quiescence and does not replace the one terminal completion/retirement notification. The provider MUST guarantee that no later backend access can occur before the server releases references. A cancellation result indicating that acquisition already completed does not alter the server's first-terminal-outcome rule.
+Cancellation of a server-owned WaitSemaphores/WaitForFence registration is a server-side registration transition. It does not call the provider, cancel or retire the underlying QueueSubmit or host SignalSemaphore operation, or release references held by that underlying operation. Those references remain governed by the operation's own completion and quiescence contract. For `AcquireNextImage`, `cancel_acquire` requests cancellation of the exact provider-operation token generation; successful cancellation is not itself proof of quiescence and does not replace the one terminal completion/retirement notification. The DDX binding MUST guarantee that no later backend access can occur before the server releases references. A cancellation result indicating that acquisition already completed does not alter the server's first-terminal-outcome rule.
 
-`AcquireNextImage` timeout arbitration remains server-owned. The provider MUST NOT send a reply or independently commit the XAverius timeout result. If cancellation races a backend acquisition that has already acquired an image, the provider MUST return that image to a reusable swapchain state through a safe backend release mechanism, or retain/quarantine the affected swapchain and its provider resources until the acquired image can be safely retired. A presentation provider that cannot guarantee safe retirement of a late acquired image MUST NOT advertise the presentation profile. This requirement applies even when the public acquire registration has already timed out, been destroyed, or been cancelled by disconnect.
+`AcquireNextImage` timeout arbitration remains server-owned. The DDX binding MUST NOT send a reply or independently commit the XAverius timeout result. If cancellation races a backend acquisition that has already acquired an image, the DDX binding MUST return that image to a reusable swapchain state through a safe backend release mechanism, or retain/quarantine the affected swapchain and its provider resources until the acquired image can be safely retired. A presentation provider that cannot guarantee safe retirement of a late acquired image MUST NOT advertise the presentation profile. This requirement applies even when the public acquire registration has already timed out, been destroyed, or been cancelled by disconnect.
 
-The server owns WaitSemaphores and WaitForFence registrations, predicates, deadlines, and timeout arbitration. Provider completion callbacks publish the successful Timeline-counter/Fence state changes that reevaluate those registrations; the provider MUST NOT implement a second competing host-wait registry or block waiting for those predicates. AcquireNextImage is different: it is a provider-backed WSI operation, but the server still owns its XAverius timeout deadline and arbitration. The provider MUST NOT return a final TIMEOUT status for the server-owned `AcquireNextImage` deadline. `WaitSemaphores` and `WaitForFence` have no provider-side wait operation or provider timeout. An AcquireNextImage provider operation may report STATUS/NOT_READY for a nonblocking poll that found no image, but only the server decides whether the XAverius result is NOT_READY (zero timeout) or TIMEOUT (finite deadline expiry). Backend OUT_OF_DATE and SURFACE_LOST remain provider-reported lifecycle statuses. The server's serialized domain decides whether completion, timeout, Device Loss, DestroyDevice, or disconnect wins. A provider acquire MUST NOT block the X11 request dispatcher.
+The server owns WaitSemaphores and WaitForFence registrations, predicates, deadlines, and timeout arbitration. Provider completion callbacks publish the successful Timeline-counter/Fence state changes that reevaluate those registrations; the DDX binding MUST NOT implement a second competing host-wait registry or block waiting for those predicates. AcquireNextImage is different: it is a provider-backed WSI operation, but the server still owns its XAverius timeout deadline and arbitration. The DDX binding MUST NOT return a final TIMEOUT status for the server-owned `AcquireNextImage` deadline. `WaitSemaphores` and `WaitForFence` have no provider-side wait operation or provider timeout. An AcquireNextImage backend operation may report STATUS/NOT_READY for a nonblocking poll that found no image, but only the server decides whether the XAverius result is NOT_READY (zero timeout) or TIMEOUT (finite deadline expiry). Backend OUT_OF_DATE and SURFACE_LOST remain provider-reported lifecycle statuses. The server's serialized domain decides whether completion, timeout, Device Loss, DestroyDevice, or disconnect wins. A provider acquire MUST NOT block the X11 request dispatcher.
 
 Provider callbacks MAY run on arbitrary backend threads, but MUST only enqueue immutable completion records. They MUST NOT mutate XAverius state, release server resources directly, or write X11 events. The server's serialized event domain arbitrates the callback against Device Loss, DestroyDevice, disconnect, timeout, and other terminal events. Internal cleanup and public event delivery are separate: after public invalidation, callbacks may retire old internal state but MUST NOT emit events for the destroyed Device.
 
-The server MUST retain a provider/context reference, the exact logical Device generation, all provider object references used by the operation, and any dependent resource references from before provider submission until callback retirement proves no backend access remains. A completion notification alone is sufficient to release these references only if the provider contract guarantees that the backend no longer accesses them when the callback is delivered.
+The server MUST retain a provider/context reference, the exact logical Device generation, all backend object references used by the operation, and any dependent resource references from before provider submission until callback retirement proves no backend access remains. A completion notification alone is sufficient to release these references only if the provider contract guarantees that the backend no longer accesses them when the callback is delivered.
 
 ### 4.6 Lifetime, pinning, and teardown
 
-A selected provider is pinned by each published PhysicalDevice that names it. Each live logical Device takes an additional provider reference and pins the exact PhysicalDevice incarnation and provider generation used at creation. Each asynchronous operation takes its own references to the provider, logical Device, queue, and every resource/semaphore/fence/memory object the backend may access. A child resource MUST NOT outlive its owning logical Device publicly, but its internal provider object MAY remain retained after public invalidation.
+A selected DDX binding is pinned by each published PhysicalDevice that names it. Each live logical Device takes an additional provider reference and pins the exact PhysicalDevice incarnation and DDX module-role generation used at creation. Each asynchronous operation takes its own references to the provider, logical Device, queue, and every resource/semaphore/fence/memory object the backend may access. A child resource MUST NOT outlive its owning logical Device publicly, but its internal backend object MAY remain retained after public invalidation.
 
 Provider unload/context destruction is permitted only after all of the following are true:
 
@@ -421,14 +407,14 @@ Provider unload/context destruction is permitted only after all of the following
 2. No live logical Device references the provider.
 3. Every provider call currently executing has returned.
 4. Every accepted asynchronous operation has reached a terminal state and the provider has guaranteed no further access to its objects.
-5. Every completion callback and deferred cleanup item carrying the provider generation has retired.
-6. All provider-owned logical Devices, queues, resources, and loader/dispatch references have been destroyed or placed in a provider-owned quarantine that no longer requires executable provider code.
+5. Every completion callback and deferred cleanup item carrying the DDX module-role generation has retired.
+6. All provider-owned logical Devices, queues, resources, and loader/dispatch references have been destroyed or placed in a provider-owned quarantine that no longer requires executable DDX backend code.
 
-A provider MUST NOT wait indefinitely for a lost or wedged GPU as the only teardown strategy. It MAY retain/quarantine provider objects and the provider module/context until the server exits or a backend-specific safe retirement condition is met. If quiescence cannot be proven, leaking/quarantining is required over use-after-free, stale callback execution, or unloading code still reachable by a callback.
+A DDX binding MUST NOT wait indefinitely for a lost or wedged GPU as the only teardown strategy. It MAY retain/quarantine backend objects and the DDX module/context until the server exits or a backend-specific safe retirement condition is met. If quiescence cannot be proven, leaking/quarantining is required over use-after-free, stale callback execution, or unloading code still reachable by a callback.
 
-Destroying a logical Device first invalidates its public XIDs according to `devices.md` and `resource-lifetime.md`; backend destruction is deferred until dependent operations and Vulkan object dependencies permit it. The provider's `destroy_logical_device` operation is best-effort and MUST be safe after Device Loss. It MUST NOT turn successful public DestroyDevice into a protocol error, resurrect public resources, or emit new events. The provider and its dispatch/module references remain pinned until the destroy operation and all earlier backend accesses have safely retired.
+Destroying a logical Device first invalidates its public XIDs according to `devices.md` and `resource-lifetime.md`; backend destruction is deferred until dependent operations and Vulkan object dependencies permit it. The DDX binding's `destroy_logical_device` operation is best-effort and MUST be safe after Device Loss. It MUST NOT turn successful public DestroyDevice into a protocol error, resurrect public resources, or emit new events. The provider and its dispatch/module references remain pinned until the destroy operation and all earlier backend accesses have safely retired.
 
-Disconnect follows the same internal reference and quiescence rules as DestroyDevice, but does not send replies/events to the disconnected client. Physical-device removal prevents new logical-device creation; it does not authorize premature destruction of provider objects still referenced by existing logical Devices or operations.
+Disconnect follows the same internal reference and quiescence rules as DestroyDevice, but does not send replies/events to the disconnected client. Physical-device removal prevents new logical-device creation; it does not authorize premature destruction of backend objects still referenced by existing logical Devices or operations.
 
 ## 5. ScreenAttachment contract
 
@@ -445,7 +431,7 @@ A ScreenAttachment MUST NOT:
 
 Surface presentation support MUST continue to be evaluated for the exact logical Device/Surface pair by the presentation capability path. ScreenAttachment is discovery/topology information, not a substitute for a Vulkan surface-support query.
 
-A provider surface object is scoped to the provider's Vulkan instance/context, not to one logical Device. A single XAverius Surface may therefore have separate provider-local surface objects when queried against Devices created by different providers. Such objects MUST be keyed by the exact provider generation and retained Window/Screen generation; they MUST NOT be shared across provider instances or treated as proof that another provider supports presentation. Creation MAY be lazy at the first exact Device/Surface capability query. DestroySurface retires every provider-local surface object for that Surface only after no swapchain or in-flight WSI operation can reference it. Each provider-local surface object pins its provider context until destruction is safe.
+A provider surface object is scoped to the DDX binding's Vulkan instance/context, not to one logical Device. A single XAverius Surface may therefore have separate DDX-local surface objects when queried against Devices created by different providers. Such objects MUST be keyed by the exact DDX module-role generation and retained Window/Screen generation; they MUST NOT be shared across provider instances or treated as proof that another provider supports presentation. Creation MAY be lazy at the first exact Device/Surface capability query. DestroySurface retires every DDX-local surface object for that Surface only after no swapchain or in-flight WSI operation can reference it. Each DDX-local surface object pins its DDX module-role context until destruction is safe.
 
 A ScreenAttachment MUST be detached when its exact Screen generation is destroyed or replaced. A late detach event from an old Screen generation MUST NOT detach a newer Screen that reuses the same numeric server-side index or pointer slot.
 
@@ -455,25 +441,25 @@ A presentation target is the exact retained Window identity and its owning Scree
 
 ScreenAttachment roles MUST distinguish at least the following topology facts when known: render access, scanout/display control, and discovery-only association. These roles describe which server path observes or services a PhysicalDevice; they are not capability bits and MUST NOT be used as a substitute for an exact Device/Surface query. A Screen may have separate render and scanout PhysicalDevices, and either may be absent from the XAverius inventory if it has no eligible execution provider. The same PhysicalDevice may have different roles on different Screens.
 
-The selected execution provider of the PhysicalDevice from which a logical Device was created remains the sole owner of that logical Device, its queues, and its swapchain-facing provider objects. A presentation route for a particular (logical Device, Surface) pair MUST be established through that selected provider. The route MAY be implemented as native WSI on the render PhysicalDevice, or as an explicit provider-managed bridge to the scanout/display path (for example, a PRIME/DRI3 import, copy, or composition path). Such a bridge is an implementation detail of the selected provider's presentation operation; it MUST NOT create a synthetic PhysicalDevice, change the logical Device's PhysicalDevice, combine metadata snapshots, transfer Vulkan handles between providers, or select another execution provider as a fallback.
+The selected execution provider of the PhysicalDevice from which a logical Device was created remains the sole owner of that logical Device, its queues, and its swapchain-facing backend objects. A presentation route for a particular (logical Device, Surface) pair MUST be established through that selected DDX binding. The route MAY be implemented as native WSI on the render PhysicalDevice, or as an explicit provider-managed bridge to the scanout/display path (for example, a PRIME/DRI3 import, copy, or composition path). Such a bridge is an implementation detail of the selected DDX binding's presentation operation; it MUST NOT create a synthetic PhysicalDevice, change the logical Device's PhysicalDevice, combine metadata snapshots, transfer Vulkan handles between providers, or select another execution provider as a fallback.
 
-If the render PhysicalDevice and the Screen's scanout PhysicalDevice differ, the provider MUST report presentation support only if it can establish and operate a complete route for the exact Window/Screen generation and the exact logical Device. The route must cover the advertised formats/color spaces, image usage, extent constraints, queue-family support, synchronization, image ownership/transfer, and completion/release guarantees. Merely finding a PRIME-capable DRM node, a scanout ScreenAttachment, a matching vendor/device ID, or another GPU on the same Screen is insufficient. A route that requires unsupported cross-device import/export or synchronization MUST be reported as unsupported.
+If the render PhysicalDevice and the Screen's scanout PhysicalDevice differ, the DDX binding MUST report presentation support only if it can establish and operate a complete route for the exact Window/Screen generation and the exact logical Device. The route must cover the advertised formats/color spaces, image usage, extent constraints, queue-family support, synchronization, image ownership/transfer, and completion/release guarantees. Merely finding a PRIME-capable DRM node, a scanout ScreenAttachment, a matching vendor/device ID, or another GPU on the same Screen is insufficient. A route that requires unsupported cross-device import/export or synchronization MUST be reported as unsupported.
 
-The provider's `query_surface_support` and capability operations MUST evaluate the actual route for every queue family. `present_supported = 1` means that the selected provider can accept presentation from that queue family through the exact route and meet the full presentation lifetime contract. If no such route exists, the query returns a successful capability result with no present-capable queue family, and swapchain creation fails with `UNSUPPORTED_CONFIGURATION`; it MUST NOT silently migrate the logical Device to the scanout GPU or another Screen.
+The DDX binding's `query_surface_support` and capability operations MUST evaluate the actual route for every queue family. `present_supported = 1` means that the selected DDX binding can accept presentation from that queue family through the exact route and meet the full presentation lifetime contract. If no such route exists, the query returns a successful capability result with no present-capable queue family, and swapchain creation fails with `UNSUPPORTED_CONFIGURATION`; it MUST NOT silently migrate the logical Device to the scanout GPU or another Screen.
 
 A successful `CreateSwapchain` binds the Swapchain to the exact presentation route generation selected for that Device/Surface pair. All images and accepted presentation operations for that Swapchain use that route. The route and its backend references remain pinned until the Swapchain and all in-flight presentation operations have safely retired. A later topology, bridge, or route-generation change MUST NOT silently reroute an existing Swapchain. It makes that Swapchain `OUT_OF_DATE` for new acquire/present operations; the client must query again and create a replacement Swapchain. A stale route callback MUST be rejected by its captured route, provider, Surface, Screen, and Swapchain generations.
 
-The selected provider is the route coordinator and MUST retain a non-reusable route generation plus references to the exact target Screen, scanout binding, and any bridge resources. A server-side DDX/display adapter MAY participate through an explicit private bridge interface (for example, import/export of an OS shared-resource handle and a defined synchronization handoff); it MUST NOT receive or dereference another provider's Vulkan dispatchable handles. Any cross-device resource transfer MUST have explicit importability, format/modifier, ownership, cache-coherency, and completion guarantees. If those guarantees cannot be established, the route is unsupported. The route coordinator remains responsible for ensuring that QueuePresent acceptance and terminal/image-release milestones cover the complete bridge path, not merely completion of the render-GPU copy submission.
+The selected DDX binding is the route coordinator and MUST retain a non-reusable route generation plus references to the exact target Screen, scanout binding, and any bridge resources. A server-side DDX/display adapter MAY participate through an explicit private bridge interface (for example, import/export of an OS shared-resource handle and a defined synchronization handoff); it MUST NOT receive or dereference another DDX binding's Vulkan dispatchable handles. Any cross-device resource transfer MUST have explicit importability, format/modifier, ownership, cache-coherency, and completion guarantees. If those guarantees cannot be established, the route is unsupported. The route coordinator remains responsible for ensuring that QueuePresent acceptance and terminal/image-release milestones cover the complete bridge path, not merely completion of the render-GPU copy submission.
 
 A route that is temporarily unavailable is reported for the exact Device/Surface pair as `DEVICE_UNAVAILABLE`; this status does not by itself transition the render PhysicalDevice or logical Device to UNAVAILABLE/DEVICE_LOST. A route that is permanently unsupported returns `SUCCESS` with no present-capable queue from GetSurfaceCapabilities and `UNSUPPORTED_CONFIGURATION` from CreateSwapchain. If a pinned route generation changes, the associated live Swapchain becomes `OUT_OF_DATE`. If a route operation fails after QueuePresent acceptance without a more specific lifecycle cause, the accepted presentation terminates as `PRESENTATION_FAILED`. These mappings do not weaken the independent provider-context and exact logical-Device loss rules.
 
-A route may be direct even when the ScreenAttachment topology names a different scanout GPU, provided the selected provider proves a valid backend path. Conversely, a ScreenAttachment naming the same PhysicalDevice as the logical Device does not guarantee native WSI support. Compute availability and PhysicalDevice status remain independent of presentation-route availability: loss of a display/bridge path MUST NOT by itself mark the render PhysicalDevice `REMOVED` or the logical Device `DEVICE_LOST`. A route failure is reported through the presentation operation's defined status/error contract and invalidates only the affected Surface/Swapchain route state unless the provider separately reports an exact logical-Device loss or PhysicalDevice/provider unavailability.
+A route may be direct even when the ScreenAttachment topology names a different scanout GPU, provided the selected DDX binding proves a valid backend path. Conversely, a ScreenAttachment naming the same PhysicalDevice as the logical Device does not guarantee native WSI support. Compute availability and PhysicalDevice status remain independent of presentation-route availability: loss of a display/bridge path MUST NOT by itself mark the render PhysicalDevice `REMOVED` or the logical Device `DEVICE_LOST`. A route failure is reported through the presentation operation's defined status/error contract and invalidates only the affected Surface/Swapchain route state unless the provider separately reports an exact logical-Device loss or PhysicalDevice/provider unavailability.
 
 
 
 ## 6. Lifecycle and event serialization
 
-All registry mutations that can affect PhysicalDevice status, publication, provider selection, ScreenAttachment membership, or XAverius events MUST be serialized through the X server's main/event thread or an equivalent server-owned serialization domain. Backend worker threads MAY detect conditions, but MUST enqueue immutable observations to that domain; they MUST NOT mutate registry objects or send X11 events directly.
+All registry mutations that can affect PhysicalDevice status, publication, DDX-binding selection, ScreenAttachment membership, or XAverius events MUST be serialized through the X server's main/event thread or an equivalent server-owned serialization domain. Backend worker threads MAY detect conditions, but MUST enqueue immutable observations to that domain; they MUST NOT mutate registry objects or send X11 events directly.
 
 The registry/presentation subsystem distinguishes at least these operations:
 
@@ -489,7 +475,7 @@ Provider loss and physical-device removal are different events. A lost ICD conte
 
 The existing PhysicalDevice status state machine remains authoritative: AVAILABLE and UNAVAILABLE may recover between each other; either may transition to terminal REMOVED. REMOVED records remain tombstones until server shutdown. Registry state transitions and the corresponding `XAverius.deviceStatus` value/event MUST have one serialization point.
 
-The registry/presentation subsystem MUST use generation-checked internal references for PhysicalDevice, BackendProvider, ScreenAttachment, PresentationRoute, Surface, and Swapchain lifetimes. Numeric XIDs, DRM node numbers, array indices, and raw pointers without a lifetime generation MUST NOT be used to resolve delayed callbacks. A callback captured for an old provider/device/screen generation MUST NOT mutate a replacement object that reuses an address, index, node number, or public XID.
+The registry/presentation subsystem MUST use generation-checked internal references for PhysicalDevice, DdxModuleRole, ScreenAttachment, PresentationRoute, Surface, and Swapchain lifetimes. Numeric XIDs, DRM node numbers, array indices, and raw pointers without a lifetime generation MUST NOT be used to resolve delayed callbacks. A callback captured for an old provider/device/screen generation MUST NOT mutate a replacement object that reuses an address, index, node number, or public XID.
 
 ## 7. Suggested internal API boundary
 
@@ -500,30 +486,30 @@ The following is an abstract C interface sketch, not a public ABI and not a wire
 
 typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
-typedef struct GpuBackendProvider GpuBackendProvider;
-typedef struct GpuProviderModuleLease GpuProviderModuleLease;
-typedef struct GpuProviderOperationToken GpuProviderOperationToken;
+typedef struct GpuDdxModuleRole GpuDdxModuleRole;
+typedef struct GpuModuleLease GpuModuleLease;
+typedef struct GpuBackendOperationToken GpuBackendOperationToken;
 typedef struct GpuPhysicalDeviceCandidateList GpuPhysicalDeviceCandidateList;
 typedef struct GpuPhysicalDeviceCandidate GpuPhysicalDeviceCandidate;
 typedef struct GpuPhysicalDeviceSnapshot GpuPhysicalDeviceSnapshot;
-typedef struct GpuProviderDevice GpuProviderDevice;
-typedef struct GpuProviderQueue GpuProviderQueue;
-typedef struct GpuProviderSurface GpuProviderSurface;
-typedef struct GpuProviderSwapchain GpuProviderSwapchain;
-typedef struct GpuProviderBufferMemoryOps GpuProviderBufferMemoryOps;
-typedef struct GpuProviderShaderPipelineOps GpuProviderShaderPipelineOps;
-typedef struct GpuProviderCommandOps GpuProviderCommandOps;
-typedef struct GpuProviderSynchronizationOps GpuProviderSynchronizationOps;
+typedef struct GpuBackendDevice GpuBackendDevice;
+typedef struct GpuBackendQueue GpuBackendQueue;
+typedef struct GpuBackendSurface GpuBackendSurface;
+typedef struct GpuBackendSwapchain GpuBackendSwapchain;
+typedef struct GpuBackendBufferMemoryOps GpuBackendBufferMemoryOps;
+typedef struct GpuBackendShaderPipelineOps GpuBackendShaderPipelineOps;
+typedef struct GpuBackendCommandOps GpuBackendCommandOps;
+typedef struct GpuBackendSynchronizationOps GpuBackendSynchronizationOps;
 typedef struct GpuDeviceCreateInfo GpuDeviceCreateInfo;
-typedef struct GpuProviderSubmitInfo GpuProviderSubmitInfo;
-typedef struct GpuProviderSurfaceInfo GpuProviderSurfaceInfo;
-typedef struct GpuProviderSurfaceSupport GpuProviderSurfaceSupport;
-typedef struct GpuProviderSwapchainInfo GpuProviderSwapchainInfo;
-typedef struct GpuProviderAcquireInfo GpuProviderAcquireInfo;
-typedef struct GpuProviderPresentInfo GpuProviderPresentInfo;
+typedef struct GpuBackendSubmitInfo GpuBackendSubmitInfo;
+typedef struct GpuBackendSurfaceInfo GpuBackendSurfaceInfo;
+typedef struct GpuBackendSurfaceSupport GpuBackendSurfaceSupport;
+typedef struct GpuBackendSwapchainInfo GpuBackendSwapchainInfo;
+typedef struct GpuBackendAcquireInfo GpuBackendAcquireInfo;
+typedef struct GpuBackendPresentInfo GpuBackendPresentInfo;
 typedef struct GpuModuleRole GpuModuleRole;
 typedef struct GpuScreenAttachment GpuScreenAttachment;
-typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
+typedef struct GpuBackendPresentationRoute GpuBackendPresentationRoute;
 
 /* Registry API outcomes. PENDING/AMBIGUOUS retain an unpublished observation;
    neither outcome allocates an XID. Stale or invalid removal evidence is
@@ -553,10 +539,10 @@ typedef enum {
    ScrnInfo/DriverPtr/ModuleDesc. Creation acquires a real independent loader
    pin and returns one owned ref. NULL means no lease/pin was acquired;
    retain/release never enter module code. */
-GpuProviderModuleLease *GpuProviderModuleLeaseCreate(
+GpuModuleLease *GpuModuleLeaseCreate(
     void *module_owner, GpuRegistryResult *out_result);
-GpuRegistryResult GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
-GpuRegistryResult GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
+GpuRegistryResult GpuModuleLeaseRetain(GpuModuleLease *lease);
+GpuRegistryResult GpuModuleLeaseRelease(GpuModuleLease *lease);
 
 typedef enum {
     GPU_MODULE_ROLE_DISCOVERY_SOURCE,
@@ -584,10 +570,10 @@ typedef struct {
 } GpuDeviceIdentity;
 
 /* Candidate data is borrowed from the candidate list until its release hook.
-   provider_local_binding_id is unique and non-reusable within one provider
-   generation. Native handles remain private in the provider's ID-to-handle map. */
+   backend_binding_id is unique and non-reusable within one provider
+   generation. Native handles remain private in the DDX binding's ID-to-handle map. */
 struct GpuPhysicalDeviceCandidate {
-    uint64_t provider_local_binding_id;
+    uint64_t backend_binding_id;
     GpuDeviceIdentity identity;
 };
 
@@ -616,7 +602,7 @@ typedef struct {
     uint64_t screen_generation;
     uint64_t scanout_device_generation; /* zero when no separate scanout device is used */
     uint32_t route_kind; /* direct WSI or provider-managed bridge; private enum */
-} GpuProviderPresentationRouteInfo;
+} GpuBackendPresentationRouteInfo;
 
 /* Classified provider result. Native VkResult may be retained for diagnostics. */
 /* STATUS is a non-error, operation-specific status only where the
@@ -635,23 +621,23 @@ typedef enum {
     GPU_PROVIDER_EXECUTION_FAILURE,
     GPU_PROVIDER_CANCELLED,
     GPU_PROVIDER_FATAL
-} GpuProviderResultCode;
+} GpuBackendResultCode;
 
 typedef enum {
     GPU_PROVIDER_UNAVAILABLE_SCOPE_NONE = 0,
     GPU_PROVIDER_UNAVAILABLE_SCOPE_PROVIDER_CONTEXT = 1,
     GPU_PROVIDER_UNAVAILABLE_SCOPE_PHYSICAL_DEVICE = 2
-} GpuProviderUnavailableScope;
+} GpuBackendUnavailableScope;
 
 typedef enum {
     GPU_PROVIDER_STATUS_NOT_READY = 1,
     GPU_PROVIDER_STATUS_OUT_OF_DATE = 2,
     GPU_PROVIDER_STATUS_SURFACE_LOST = 3,
     GPU_PROVIDER_STATUS_ALREADY_COMPLETED = 4
-} GpuProviderStatusCode;
+} GpuBackendStatusCode;
 
 typedef struct {
-    GpuProviderResultCode code;
+    GpuBackendResultCode code;
     /* Nonzero only when code is STATUS; values are operation-specific. */
     uint32_t status_code;
     /* Nonzero only for UNAVAILABLE; monotonic within its exact context or
@@ -660,12 +646,12 @@ typedef struct {
     /* Diagnostic only; MUST NOT override the classified code/status. */
     int32_t native_result;
     /* MUST be NONE except when code is UNAVAILABLE. */
-    GpuProviderUnavailableScope unavailable_scope;
-    /* Required for PHYSICAL_DEVICE scope; identifies the exact provider-local
-       binding within this provider generation. Zero for other scopes. */
+    GpuBackendUnavailableScope unavailable_scope;
+    /* Required for PHYSICAL_DEVICE scope; identifies the exact DDX-local
+       binding within this DDX module-role generation. Zero for other scopes. */
     uint64_t physical_device_binding_id;
     uint64_t physical_device_generation;
-} GpuProviderResult;
+} GpuBackendResult;
 
 typedef enum {
     GPU_PROVIDER_OP_WRITE_BUFFER = 1,
@@ -674,59 +660,59 @@ typedef enum {
     GPU_PROVIDER_OP_QUEUE_SUBMIT,
     GPU_PROVIDER_OP_ACQUIRE_NEXT_IMAGE,
     GPU_PROVIDER_OP_QUEUE_PRESENT
-} GpuProviderOperationKind;
+} GpuBackendOperationKind;
 
 typedef struct {
-    uint64_t provider_generation;
+    uint64_t module_role_generation;
     uint64_t operation_generation;
     uint64_t operation_token_id;
-    GpuProviderOperationKind operation_kind;
-    uint64_t provider_local_binding_id;
+    GpuBackendOperationKind operation_kind;
+    uint64_t backend_binding_id;
     uint64_t binding_generation;
     uint64_t physical_device_generation;
     uint64_t logical_device_id;         /* server-assigned; zero for non-Device operations */
     uint64_t logical_device_generation;
     uint64_t resource_id;               /* server-assigned; zero when no resource is targeted */
     uint64_t resource_generation;
-    GpuProviderResult result;
+    GpuBackendResult result;
     /* Borrowed immutable bytes; valid only until completion_sink returns.
        NULL/zero when the operation has no payload. */
     const void *payload;
     uint32_t payload_size;
-} GpuProviderCompletion;
+} GpuBackendCompletion;
 
-typedef void (*GpuProviderCompletionFn)(
+typedef void (*GpuBackendCompletionFn)(
     void *completion_userdata,
-    const GpuProviderCompletion *completion);
+    const GpuBackendCompletion *completion);
 
 typedef enum {
     GPU_PROVIDER_QUIESCENCE_PENDING,
     GPU_PROVIDER_QUIESCENCE_SUCCESS,
     GPU_PROVIDER_QUIESCENCE_FAILURE
-} GpuProviderQuiescenceResult;
+} GpuModuleQuiescenceResult;
 
 typedef enum {
     GPU_PROVIDER_RETIREMENT_PENDING,
     GPU_PROVIDER_RETIREMENT_SUCCESS,
     GPU_PROVIDER_RETIREMENT_FAILURE
-} GpuProviderRetirementResult;
+} GpuBackendRetirementResult;
 
-typedef struct GpuProviderOps {
-    GpuProviderResult (*enumerate_candidates)(
-        GpuBackendProvider *, GpuPhysicalDeviceCandidateList *);
+typedef struct GpuDeviceBackendOps {
+    GpuBackendResult (*enumerate_candidates)(
+        GpuDdxModuleRole *, GpuPhysicalDeviceCandidateList *);
     void (*release_candidate_list)(
-        GpuBackendProvider *, GpuPhysicalDeviceCandidateList *);
-    GpuProviderResult (*query_physical_snapshot)(
-        GpuBackendProvider *, GpuPhysicalDeviceCandidate *,
+        GpuDdxModuleRole *, GpuPhysicalDeviceCandidateList *);
+    GpuBackendResult (*query_physical_snapshot)(
+        GpuDdxModuleRole *, GpuPhysicalDeviceCandidate *,
         GpuPhysicalDeviceSnapshot *);
 
-    GpuProviderResult (*create_logical_device)(
-        GpuBackendProvider *, const GpuDeviceCreateInfo *,
-        GpuProviderDevice **);
-    GpuProviderResult (*get_queue)(
-        GpuProviderDevice *, uint32_t family, uint32_t index,
-        GpuProviderQueue **);
-    GpuProviderResult (*destroy_logical_device)(GpuProviderDevice *);
+    GpuBackendResult (*create_logical_device)(
+        GpuDdxModuleRole *, const GpuDeviceCreateInfo *,
+        GpuBackendDevice **);
+    GpuBackendResult (*get_queue)(
+        GpuBackendDevice *, uint32_t family, uint32_t index,
+        GpuBackendQueue **);
+    GpuBackendResult (*destroy_logical_device)(GpuBackendDevice *);
 
     /* Separate typed operation tables, not a generic wire-payload dispatcher:
        buffer_memory: create/query/allocate/free/bind/read/write Buffer and Memory;
@@ -735,90 +721,90 @@ typedef struct GpuProviderOps {
        synchronization: Semaphore/Fence lifecycle, host timeline signal,
        queue signal/wait integration, fence reset, and completion publication.
        Each table implements the corresponding operations listed in Section 4.1. */
-    const GpuProviderBufferMemoryOps *buffer_memory;
-    const GpuProviderShaderPipelineOps *shader_pipeline;
-    const GpuProviderCommandOps *commands;
-    const GpuProviderSynchronizationOps *synchronization;
+    const GpuBackendBufferMemoryOps *buffer_memory;
+    const GpuBackendShaderPipelineOps *shader_pipeline;
+    const GpuBackendCommandOps *commands;
+    const GpuBackendSynchronizationOps *synchronization;
 
-    GpuProviderResult (*queue_submit)(
-        GpuProviderQueue *, const GpuProviderSubmitInfo *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*create_surface)(
-        GpuBackendProvider *, const GpuProviderSurfaceInfo *,
-        GpuProviderSurface **);
-    GpuProviderResult (*destroy_surface)(GpuBackendProvider *, GpuProviderSurface *);
-    GpuProviderResult (*query_surface_support)(
-        GpuBackendProvider *, uint64_t provider_local_binding_id,
+    GpuBackendResult (*queue_submit)(
+        GpuBackendQueue *, const GpuBackendSubmitInfo *,
+        GpuBackendOperationToken *);
+    GpuBackendResult (*create_surface)(
+        GpuDdxModuleRole *, const GpuBackendSurfaceInfo *,
+        GpuBackendSurface **);
+    GpuBackendResult (*destroy_surface)(GpuDdxModuleRole *, GpuBackendSurface *);
+    GpuBackendResult (*query_surface_support)(
+        GpuDdxModuleRole *, uint64_t backend_binding_id,
         uint64_t binding_generation, uint32_t queue_family,
-        GpuProviderSurface *, GpuProviderSurfaceSupport *);
+        GpuBackendSurface *, GpuBackendSurfaceSupport *);
     /* Create/release an exact route for this logical Device generation and
        Surface/Window/Screen generation after physical-device capability
        probing. The route MUST be distinct per logical Device, even when two
        Devices share one PhysicalDevice and Surface. create_swapchain pins
        this route until swapchain retirement. */
-    GpuProviderResult (*create_presentation_route)(
-        GpuProviderDevice *, GpuProviderSurface *,
-        GpuProviderPresentationRoute **,
-        GpuProviderPresentationRouteInfo *);
-    GpuProviderResult (*destroy_presentation_route)(
-        GpuBackendProvider *, GpuProviderPresentationRoute *);
-    GpuProviderResult (*create_swapchain)(
-        GpuProviderDevice *, GpuProviderSurface *,
-        GpuProviderPresentationRoute *,
-        const GpuProviderSwapchainInfo *, GpuProviderSwapchain **);
-    GpuProviderResult (*destroy_swapchain)(GpuProviderSwapchain *);
-    GpuProviderResult (*acquire_next_image)(
-        GpuProviderDevice *, GpuProviderSwapchain *,
-        const GpuProviderAcquireInfo *, GpuProviderOperationToken *);
-    GpuProviderResult (*queue_present)(
-        GpuProviderQueue *, const GpuProviderPresentInfo *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*cancel_acquire)(GpuProviderOperationToken *);
-    GpuProviderResult (*release_late_acquired_image)(
-        GpuProviderSwapchain *, uint32_t image_index);
+    GpuBackendResult (*create_presentation_route)(
+        GpuBackendDevice *, GpuBackendSurface *,
+        GpuBackendPresentationRoute **,
+        GpuBackendPresentationRouteInfo *);
+    GpuBackendResult (*destroy_presentation_route)(
+        GpuDdxModuleRole *, GpuBackendPresentationRoute *);
+    GpuBackendResult (*create_swapchain)(
+        GpuBackendDevice *, GpuBackendSurface *,
+        GpuBackendPresentationRoute *,
+        const GpuBackendSwapchainInfo *, GpuBackendSwapchain **);
+    GpuBackendResult (*destroy_swapchain)(GpuBackendSwapchain *);
+    GpuBackendResult (*acquire_next_image)(
+        GpuBackendDevice *, GpuBackendSwapchain *,
+        const GpuBackendAcquireInfo *, GpuBackendOperationToken *);
+    GpuBackendResult (*queue_present)(
+        GpuBackendQueue *, const GpuBackendPresentInfo *,
+        GpuBackendOperationToken *);
+    GpuBackendResult (*cancel_acquire)(GpuBackendOperationToken *);
+    GpuBackendResult (*release_late_acquired_image)(
+        GpuBackendSwapchain *, uint32_t image_index);
 
     /* Provider-context ownership hooks, distinct from the server-side
-       GpuBackendProviderRetain/Release reference API. The registry calls
+       GpuDdxModuleRoleRetain/Release reference API. The registry calls
        retain_provider once after pinning the module and release_provider
        exactly once during finalization while the module lease is still held.
        These hooks MUST be infallible and MUST NOT be called under registry lock. */
-    void (*retain_provider)(GpuBackendProvider *);
-    void (*release_provider)(GpuBackendProvider *);
-    void (*retain_device)(GpuProviderDevice *);
-    void (*release_device)(GpuProviderDevice *);
-    GpuProviderRetirementResult (*retire_operation)(GpuProviderOperationToken *);
+    void (*retain_provider)(GpuDdxModuleRole *);
+    void (*release_provider)(GpuDdxModuleRole *);
+    void (*retain_device)(GpuBackendDevice *);
+    void (*release_device)(GpuBackendDevice *);
+    GpuBackendRetirementResult (*retire_operation)(GpuBackendOperationToken *);
     /* Idempotently stop provider-internal workers/callback dispatch for this
        generation. PENDING keeps every module/context reference pinned;
        SUCCESS proves no callback is executing or can begin and no worker can
-       enter provider module code again. */
-    GpuProviderQuiescenceResult (*quiesce_provider)(GpuBackendProvider *);
-} GpuProviderOps;
+       enter DDX module code again. */
+    GpuModuleQuiescenceResult (*quiesce_provider)(GpuDdxModuleRole *);
+} GpuDeviceBackendOps;
 
 typedef struct {
-    /* Stable provider identity/configuration, opaque provider context,
+    /* Stable provider identity/configuration, opaque DDX module-role context,
        and operation table. PhysicalDevice handles remain private to the
-       provider and are indexed by provider-local binding IDs. */
+       provider and are indexed by DDX-local binding IDs. */
     const char *canonical_provider_key;
     void *provider_context;
-    GpuProviderModuleLease *module_lease; /* required for unloadable provider code */
-    const GpuProviderOps *ops;
-    GpuProviderCompletionFn completion_sink;
+    GpuModuleLease *module_lease; /* required for unloadable DDX backend code */
+    const GpuDeviceBackendOps *ops;
+    GpuBackendCompletionFn completion_sink;
     void *completion_userdata;
-    uint64_t provider_generation;
-} GpuProviderDescriptor;
+    uint64_t module_role_generation;
+} GpuBackendDescriptor;
 
 /* Descriptor and callback lifetime contract:
    - RegisterProvider installs this descriptor exactly once for the exact
-     provider generation. RegisterProviderBinding refers to the resulting
-     GpuBackendProvider and MUST NOT reinstall or recopy this descriptor.
+     DDX module-role generation. RegisterProviderBinding refers to the resulting
+     GpuDdxModuleRole and MUST NOT reinstall or recopy this descriptor.
    - canonical_provider_key is borrowed for registration only; the registry
      copies its canonical bytes before returning.
-   - module_lease is retained once for this provider generation and remains
+   - module_lease is retained once for this DDX module-role generation and remains
      effective until that generation's final provider reference is released
      after successful quiescence; it may be shared by other provider/adapter
      registrations from the same loaded module.
    - ops, completion_sink, and completion_userdata remain valid and immutable
-     for this provider generation until release_provider has been called for
+     for this DDX module-role generation until release_provider has been called for
      the final retained reference and all operation tokens are retired.
    - provider_context is managed only through the provider retain/release
      contract; the registry MUST NOT retain an unowned raw context pointer.
@@ -828,7 +814,7 @@ typedef struct {
      reference-counted before the call returns. */
 
 /* Server startup/shutdown; one registry per X server process. */
-void *GpuBackendProviderGetContext(GpuBackendProvider *provider);
+void *GpuDdxModuleRoleGetContext(GpuDdxModuleRole *provider);
 GpuRegistry *GpuRegistryCreate(GpuRegistryResult *out_result);
 GpuRegistryResult GpuRegistryBeginShutdown(GpuRegistry *registry);
 GpuRegistryResult GpuRegistryDestroy(GpuRegistry *registry);
@@ -837,7 +823,7 @@ GpuRegistryResult GpuRegistryDestroy(GpuRegistry *registry);
    and DriverPtr references. owner_key is copied; role_generation is assigned
    by the registry. The lease is retained once for this role. */
 GpuRegistryResult GpuRegistryRegisterModuleRole(
-    GpuRegistry *registry, GpuProviderModuleLease *module_lease,
+    GpuRegistry *registry, GpuModuleLease *module_lease,
     GpuModuleRoleKind role_kind, const char *owner_key,
     GpuModuleRole **out_role, uint64_t *out_role_generation);
 GpuRegistryResult GpuRegistryUnregisterModuleRole(
@@ -872,21 +858,21 @@ GpuRegistryResult GpuPhysicalDeviceRelease(
     GpuPhysicalDevice *device, uint64_t device_generation);
 
 /* Provider execution binding is registered separately from observation.
-   The provider's native PhysicalDevice handle remains private to its context
-   and is resolved by the exact provider-local binding ID. */
+   The DDX binding's native PhysicalDevice handle remains private to its context
+   and is resolved by the exact DDX-local binding ID. */
 /* Reserve a non-reusable generation for the next provider descriptor.
    Failed registration does not return the generation to the allocator. */
 GpuRegistryResult GpuRegistryAllocateProviderGeneration(
-    GpuRegistry *registry, uint64_t *out_provider_generation);
+    GpuRegistry *registry, uint64_t *out_module_role_generation);
 
 GpuRegistryResult GpuRegistryRegisterProvider(
-    GpuRegistry *registry, const GpuProviderDescriptor *descriptor,
-    GpuBackendProvider **out_provider);
+    GpuRegistry *registry, const GpuBackendDescriptor *descriptor,
+    GpuDdxModuleRole **out_provider);
 
 GpuRegistryResult GpuRegistryRegisterProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, uint64_t provider_generation,
-    uint64_t provider_local_binding_id, uint64_t *out_binding_generation);
+    uint64_t device_generation, uint64_t module_role_generation,
+    uint64_t backend_binding_id, uint64_t *out_binding_generation);
 
 enum {
     GPU_PROVIDER_RESOURCE_ACCESS_READ = 1u << 0,
@@ -900,13 +886,13 @@ typedef struct {
     uint64_t resource_id;
     uint64_t resource_generation;
     uint32_t access_flags; /* GPU_PROVIDER_RESOURCE_ACCESS_* bitmask */
-} GpuProviderOperationResourceRef;
+} GpuBackendOperationResourceRef;
 
-/* Prepare a server-owned operation token before entering provider code.
-   out_token is a borrowed, call-scoped opaque pointer; provider code MUST NOT
+/* Prepare a server-owned operation token before entering DDX backend code.
+   out_token is a borrowed, call-scoped opaque pointer; DDX backend code MUST NOT
    retain or dereference it after the operation entry point returns. The
-   provider copies token ID/generation through GpuProviderOperationTokenGetId()
-   and GpuProviderOperationTokenGetGeneration() for backend callback userdata.
+   provider copies token ID/generation through GpuBackendOperationTokenGetId()
+   and GpuBackendOperationTokenGetGeneration() for backend callback userdata.
    The server-owned token itself remains alive until successful retirement.
    On failure all outputs are zero. The complete resource set is copied and
    retained by the registry before return. Each entry's access_flags MUST
@@ -924,53 +910,53 @@ typedef struct {
    may touch. A resource ID MUST NOT appear more than once even with different
    generations. */
 GpuRegistryResult GpuRegistryPrepareOperation(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     GpuPhysicalDevice *device, uint64_t device_generation,
     uint64_t binding_generation,
     uint64_t logical_device_id, uint64_t logical_device_generation,
-    const GpuProviderOperationResourceRef *resources,
-    size_t resource_count, GpuProviderOperationKind operation_kind,
-    GpuProviderOperationToken **out_token,
+    const GpuBackendOperationResourceRef *resources,
+    size_t resource_count, GpuBackendOperationKind operation_kind,
+    GpuBackendOperationToken **out_token,
     uint64_t *out_operation_token_id,
     uint64_t *out_operation_generation);
-GpuRegistryResult GpuProviderOperationTokenGetId(
-    const GpuProviderOperationToken *token, uint64_t *out_token_id);
-GpuRegistryResult GpuProviderOperationTokenGetGeneration(
-    const GpuProviderOperationToken *token, uint64_t *out_generation);
+GpuRegistryResult GpuBackendOperationTokenGetId(
+    const GpuBackendOperationToken *token, uint64_t *out_token_id);
+GpuRegistryResult GpuBackendOperationTokenGetGeneration(
+    const GpuBackendOperationToken *token, uint64_t *out_generation);
 /* Commit is idempotent for the exact already-accepted token. */
 GpuRegistryResult GpuRegistryCommitOperationSubmission(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     uint64_t operation_token_id, uint64_t operation_generation);
 /* Reject is legal only before acceptance and only if no callback/backend
    access occurred. Otherwise the token is quarantined. */
 GpuRegistryResult GpuRegistryRejectOperationSubmission(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     uint64_t operation_token_id, uint64_t operation_generation);
 /* SUCCESS maps retirement SUCCESS; PENDING maps retirement PENDING;
    QUARANTINED maps retirement FAILURE. */
 GpuRegistryResult GpuRegistryRetireOperationToken(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     uint64_t operation_token_id, uint64_t operation_generation);
 
-/* Close admission for this exact provider generation. This does not
+/* Close admission for this exact DDX module-role generation. This does not
    remove bindings, retire accepted operations, or prove quiescence. */
 GpuRegistryResult GpuRegistryBeginProviderShutdown(
-    GpuRegistry *registry, uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t module_role_generation);
 
-/* Drives provider-wide quiescence after the registry has verified the
+/* Drives module-role-wide quiescence after the registry has verified the
    shutdown/drain preconditions. PENDING/FAILURE retain the module lease. */
 GpuRegistryResult GpuRegistryTryQuiesceProvider(
-    GpuRegistry *registry, uint64_t provider_generation,
-    GpuProviderQuiescenceResult *out_quiescence);
+    GpuRegistry *registry, uint64_t module_role_generation,
+    GpuModuleQuiescenceResult *out_quiescence);
 
 /* Final provider-context release followed by exactly one module-lease
    release. Returns PENDING until all non-registry provider references retire. */
 GpuRegistryResult GpuRegistryFinalizeProviderShutdown(
-    GpuRegistry *registry, uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t module_role_generation);
 
 GpuRegistryResult GpuRegistryRemoveProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, uint64_t provider_generation,
+    uint64_t device_generation, uint64_t module_role_generation,
     uint64_t binding_generation);
 
 GpuRegistryResult GpuRegistryRemoveObservation(
@@ -981,21 +967,21 @@ GpuRegistryResult GpuRegistryRemoveObservation(
    changing calls return a classified result; stale generations and unknown
    bindings are observable rejections, never silent no-ops.
    Context-wide failure/recovery affects all PhysicalDevices for which this
-   exact provider generation is the selected execution provider. */
+   exact DDX module-role generation is the selected execution provider. */
 GpuRegistryResult GpuRegistryProviderContextUnavailable(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     uint64_t availability_sequence);
 GpuRegistryResult GpuRegistryProviderContextRecovered(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     uint64_t availability_sequence);
 
 /* Device-scoped failure/recovery affects only this exact binding generation. */
 GpuRegistryResult GpuRegistryProviderDeviceUnavailable(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     GpuPhysicalDevice *device, uint64_t device_generation,
     uint64_t binding_generation, uint64_t availability_sequence);
 GpuRegistryResult GpuRegistryProviderDeviceRecovered(
-    GpuRegistry *registry, uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t module_role_generation,
     GpuPhysicalDevice *device, uint64_t device_generation,
     uint64_t binding_generation, uint64_t availability_sequence);
 GpuRegistryResult GpuRegistryConfirmDeviceRemoved(
@@ -1034,14 +1020,14 @@ GpuRegistryResult XaPhysicalDeviceGetXid(
    A successful Swapchain pins it until all presentation and image-release
    milestones have retired; stale route callbacks are generation-rejected. */
 
-/* Logical-device creation pins the selected provider and generations. */
+/* Logical-device creation pins the selected DDX binding and generations. */
 GpuRegistryResult GpuPhysicalDeviceAcquireExecutionProvider(
     GpuPhysicalDevice *device, uint64_t device_generation,
-    GpuBackendProvider **out_provider, uint64_t *out_provider_generation);
-GpuRegistryResult GpuBackendProviderRetain(
-    GpuBackendProvider *provider, uint64_t provider_generation);
-GpuRegistryResult GpuBackendProviderRelease(
-    GpuBackendProvider *provider, uint64_t provider_generation);
+    GpuDdxModuleRole **out_provider, uint64_t *out_module_role_generation);
+GpuRegistryResult GpuDdxModuleRoleRetain(
+    GpuDdxModuleRole *provider, uint64_t module_role_generation);
+GpuRegistryResult GpuDdxModuleRoleRelease(
+    GpuDdxModuleRole *provider, uint64_t module_role_generation);
 ```
 
 
@@ -1053,12 +1039,12 @@ The declarations above define ownership and failure semantics, not merely illust
 - Every output parameter MUST be initialized to its documented failure sentinel before validation. On non-`SUCCESS`, pointer outputs are NULL, generations/IDs are zero, and XID outputs are `None`/zero, except where `PENDING` or `AMBIGUOUS` explicitly means a valid observation was retained. Callers MUST NOT inspect outputs not authorized by the returned result.
 - `SUCCESS` means the state transition committed in the registry serialization domain; it does not mean asynchronous GPU work completed. `PENDING` means a valid request/observation was retained but its condition is unresolved. `AMBIGUOUS` means identity evidence was retained without canonical merge or publication. Other errors leave requested state unchanged, except non-reusable generation reservations and explicitly retained pending/ambiguous observations.
 - `INVALID_ARGUMENT` covers null required pointers, zero/invalid generations, malformed keys, unknown role bits, and inconsistent input/output combinations. The discovery-source capability bits are limited to the declared `GPU_DISCOVERY_SOURCE_*` values; unknown bits are invalid. `NOT_FOUND` means a well-formed object/key does not exist; `NOT_REGISTERED` means a required source/provider registration is absent; `ALREADY_EXISTS` means a conflicting live registration owns a unique key; `STALE_GENERATION` means only a different generation exists; `BUSY` means a live dependency prevents the requested transition; `SHUTTING_DOWN` means admission is closed; `UNSUPPORTED` means the requested role is not implemented; `QUARANTINED` means a provider explicitly failed quiescence and cannot be finalized; `STALE_EVENT` means an older availability notification was superseded within the same scope; `OUT_OF_MEMORY` means allocation failed. Implementations MUST preserve these distinctions rather than silently ignore errors.
-- All mutations are linearized in the server serialization domain. Calls from other threads MUST NOT mutate registry state directly. A synchronous caller may wait for serialization only where that cannot deadlock; otherwise the API MUST use an explicitly asynchronous completion form and MUST NOT report `SUCCESS` before commit. No structural registry lock may be held while invoking provider code, Xorg hooks, loader operations, or completion callbacks.
+- All mutations are linearized in the server serialization domain. Calls from other threads MUST NOT mutate registry state directly. A synchronous caller may wait for serialization only where that cannot deadlock; otherwise the API MUST use an explicitly asynchronous completion form and MUST NOT report `SUCCESS` before commit. No structural registry lock may be held while invoking DDX backend code, Xorg hooks, loader operations, or completion callbacks.
 - Every object pointer returned by an API is a retained caller-owned reference unless explicitly documented otherwise. The caller MUST release it exactly once through its matching release function, passing the same generation returned with the reference; registry-owned references are separate. Retain/release functions validate that generation. Every delayed use MUST carry the associated generation. A pointer alone is never a stable identity. Stale/double release MUST be diagnosed and MUST NOT decrement another generation's count. New retains are accepted only while the referenced object is in a state that admits new work: provider retain is rejected after provider shutdown/quarantine begins; ScreenAttachment retain is rejected after detach begins; ModuleRole retain is rejected after role unregister begins. Releases of already-held references remain permitted during teardown. PhysicalDevice tombstones remain retainable while their exact generation remains registry-addressable, but cannot be used to acquire execution providers or create new bindings/devices.
-- Input pointers and strings are borrowed only for the call unless explicitly transferred. Every retained key, identity field, role descriptor, and variable-length input MUST be copied or separately retained before return. Provider operation tables, callbacks, callback userdata, and provider context remain immutable and pinned until final provider release.
+- Input pointers and strings are borrowed only for the call unless explicitly transferred. Every retained key, identity field, role descriptor, and variable-length input MUST be copied or separately retained before return. Provider operation tables, callbacks, callback userdata, and DDX module-role context remain immutable and pinned until final provider release.
 - Mutations are atomic. Validation/allocation failure MUST roll back all partial entries, reference increments, module-lease retains, observations, bindings, XID/resource allocation, and callback registration. Only reserved non-reusable generations and explicitly retained `PENDING`/`AMBIGUOUS` observations survive a non-success return.
 - Repeated calls are idempotent only where specified. Same-generation/same-payload repetition MUST NOT duplicate objects or references; conflicting payload returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. A stale generation is never idempotent success for a replacement.
-- `GpuRegistryBeginShutdown` closes admission for new module roles, sources, observations, providers, bindings, attachments, execution-provider acquisitions, and operation-token preparation. It does not implicitly remove existing objects or skip provider quiescence. Module-role unregister and provider finalization remain explicit; shutdown MUST NOT drop a lease on behalf of an adapter or provider. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded provider code.
+- `GpuRegistryBeginShutdown` closes admission for new module roles, sources, observations, providers, bindings, attachments, execution-provider acquisitions, and operation-token preparation. It does not implicitly remove existing objects or skip provider quiescence. Module-role unregister and provider finalization remain explicit; shutdown MUST NOT drop a lease on behalf of an adapter or provider. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded DDX backend code.
 
 Specific operation contracts:
 
@@ -1068,30 +1054,30 @@ Specific operation contracts:
 - Each source generation has its own monotonically increasing event sequence. `ObserveDevice` requires a nonzero source_event_sequence captured when the source event was observed, not when its callback is eventually dispatched. A lower sequence returns `STALE_EVENT`; replaying the same sequence with the same semantic payload is idempotent and returns the existing observation ID, while a different payload for the same sequence returns `IDENTITY_CONFLICT`. Sequences start at one and MUST NOT wrap or be reused within a source generation; on exhaustion, the source generation is retired and replaced. Removal evidence MUST carry the sequence of its exact observation; a delayed removal from an older source event is rejected even if its callback arrives after a newer add/update event.
 - `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation, source-event sequence, and same semantic payload returns the same observation ID and, when the result is SUCCESS, one additional caller-owned PhysicalDevice reference for that successful call; it does not create a duplicate source observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
 - `RegisterProvider` returns one retained provider reference. It validates the descriptor and required operation-table entries, retains a non-NULL module lease for unloadable code (NULL is permitted only for permanently resident code), then calls `retain_provider` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate provider-generation reference. The provider-context retain hook MUST be infallible and pair exactly once with the final `release_provider`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains, including a compensating `release_provider` if `retain_provider` already ran, and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
-- `enumerate_candidates` returns a complete provider-owned candidate list. Every candidate has a nonzero provider-local binding ID unique for that provider generation and a structured identity; native handles remain private in the provider's own ID-to-handle map. A successful list has a non-NULL items pointer iff count is nonzero; failure leaves an empty list. The registry MUST copy candidate identity and query the complete snapshot while the list is valid, then call `release_candidate_list` exactly once. The provider MUST keep each candidate's native mapping alive until its binding is removed and all operations using it have retired. Candidate list storage itself MUST NOT be retained by the registry or by a binding.
-- `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a provider pointer to remain live at the call site. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. The provider-local binding ID MUST have appeared in a successful candidate list for that provider generation and MUST resolve to the same canonical identity. The provider keeps the native handle mapping alive until binding removal and operation retirement. It retains provider and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
+- `enumerate_candidates` returns a complete provider-owned candidate list. Every candidate has a nonzero DDX-local binding ID unique for that DDX module-role generation and a structured identity; native handles remain private in the DDX binding's own ID-to-handle map. A successful list has a non-NULL items pointer iff count is nonzero; failure leaves an empty list. The registry MUST copy candidate identity and query the complete snapshot while the list is valid, then call `release_candidate_list` exactly once. The DDX binding MUST keep each candidate's native mapping alive until its binding is removed and all operations using it have retired. Candidate list storage itself MUST NOT be retained by the registry or by a binding.
+- `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a module-role pointer to remain live at the call site. It validates exact device/DDX module-role generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. The DDX-local binding ID MUST have appeared in a successful candidate list for that DDX module-role generation and MUST resolve to the same canonical identity. The provider keeps the native handle mapping alive until binding removal and operation retirement. It retains provider and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`, and the caller retries the same exact operation until terminal success. Screen detach is addressed by attachment generation so the caller may release its attachment handle while callback retirement is pending. No removal broadens to another source, binding, Screen, or incarnation.
-- Unavailable/recovered transitions are scoped and sequenced. Context-wide sequence numbers are strictly increasing per provider generation; device-scoped sequence numbers are strictly increasing per exact (provider generation, binding generation). Sequences start at one and MUST NOT wrap or be reused; exhaustion requires retiring the affected provider generation or binding and allocating a new generation. A lower sequence returns `STALE_EVENT`; reusing the same sequence with the same state is idempotent `SUCCESS`, while reusing it with a different state is `IDENTITY_CONFLICT`. Device-scoped calls MUST include the exact registry binding generation. Effective availability is the conjunction of provider-context availability, exact-binding availability, and non-REMOVED PhysicalDevice state: recovery at one scope MUST NOT clear unavailability at another scope. Recovery after binding removal, provider shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
+- Unavailable/recovered transitions are scoped and sequenced. Context-wide sequence numbers are strictly increasing per DDX module-role generation; device-scoped sequence numbers are strictly increasing per exact (DDX module-role generation, binding generation). Sequences start at one and MUST NOT wrap or be reused; exhaustion requires retiring the affected DDX module-role generation or binding and allocating a new generation. A lower sequence returns `STALE_EVENT`; reusing the same sequence with the same state is idempotent `SUCCESS`, while reusing it with a different state is `IDENTITY_CONFLICT`. Device-scoped calls MUST include the exact registry binding generation. Effective availability is the conjunction of provider-context availability, exact-binding availability, and non-REMOVED PhysicalDevice state: recovery at one scope MUST NOT clear unavailability at another scope. Recovery after binding removal, provider shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
 - `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. An unloadable DDX MUST pass its live owner role/generation; server-resident DDX code MAY pass NULL/zero. The attachment retains a non-NULL owner role once. `GpuScreenAttachmentRetain` is accepted only before detach begins; after detach, existing holders may release but no new attachment references are admitted. If the DDX callback code is unloadable, the attachment MUST retain the supplied live owner role and generation; the role remains pinned until detach and all attachment callbacks have retired. At least one role MUST be set; DISCOVERY_ONLY is mutually exclusive with RENDER_ACCESS, SCANOUT, and DISPLAY_CONTROL, while RENDER_ACCESS and SCANOUT MAY coexist. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
-- `XaPhysicalDevicePublish` requires resolved identity, selected provider binding, complete immutable snapshot, and an open publication gate. XID allocation and DIX resource insertion are one transaction. On insertion failure the provisional XID is freed and no published state is visible. Repeated publication returns the same XID. Stale or removed incarnations cannot be newly published. `GetXid` returns `NOT_FOUND` before publication and `STALE_GENERATION` for an old incarnation.
+- `XaPhysicalDevicePublish` requires resolved identity, selected DDX binding binding, complete immutable snapshot, and an open publication gate. XID allocation and DIX resource insertion are one transaction. On insertion failure the provisional XID is freed and no published state is visible. Repeated publication returns the same XID. Stale or removed incarnations cannot be newly published. `GetXid` returns `NOT_FOUND` before publication and `STALE_GENERATION` for an old incarnation.
 - Execution-provider acquisition returns a retained reference only while the PhysicalDevice is `AVAILABLE` and its selected binding is active. It returns `NOT_FOUND` if no provider is selected and `BUSY` if unavailable or shutting down. The returned generation MUST equal the pinned selection and is released exactly once.
 - Registry shutdown is idempotent and does not silently destroy live objects. `BUSY` reports outstanding ownership; callers retry after teardown. A failed `Destroy` does not invalidate existing references.
-- `TryQuiesceProvider` initializes `out_quiescence` to PENDING. A successful hook returns registry SUCCESS/quiescence SUCCESS; an unmet precondition or hook PENDING returns registry PENDING/quiescence PENDING; hook FAILURE returns `GPU_REGISTRY_QUARANTINED`/quiescence FAILURE and permanently forbids finalization unless a separate server-controlled recovery proves safety. Stale/unknown provider generations return STALE_GENERATION without calling the hook.
-- `FinalizeProviderShutdown` returns PENDING while any caller reference, logical Device, provider-owned object, operation token, callback bridge, or adapter role still depends on the provider generation. The registration caller MUST release its caller-owned provider reference before expecting finalization to succeed; the finalization API uses only the server-assigned generation and the registry-owned record. It calls the final provider-context release exactly once while the module lease is held, then drops exactly that generation's lease reference. Repeated finalization after success returns NOT_FOUND and MUST NOT release either reference again. `TryQuiesceProvider` repeated after recorded quiescence SUCCESS returns SUCCESS/ SUCCESS without re-entering the hook; after finalization it returns NOT_FOUND.
+- `TryQuiesceProvider` initializes `out_quiescence` to PENDING. A successful hook returns registry SUCCESS/quiescence SUCCESS; an unmet precondition or hook PENDING returns registry PENDING/quiescence PENDING; hook FAILURE returns `GPU_REGISTRY_QUARANTINED`/quiescence FAILURE and permanently forbids finalization unless a separate server-controlled recovery proves safety. Stale/unknown DDX module-role generations return STALE_GENERATION without calling the hook.
+- `FinalizeProviderShutdown` returns PENDING while any caller reference, logical Device, provider-owned object, operation token, callback bridge, or adapter role still depends on the DDX module-role generation. The registration caller MUST release its caller-owned provider reference before expecting finalization to succeed; the finalization API uses only the server-assigned generation and the registry-owned record. It calls the final provider-context release exactly once while the module lease is held, then drops exactly that generation's lease reference. Repeated finalization after success returns NOT_FOUND and MUST NOT release either reference again. `TryQuiesceProvider` repeated after recorded quiescence SUCCESS returns SUCCESS/ SUCCESS without re-entering the hook; after finalization it returns NOT_FOUND.
 
-Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuProviderResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. The four typed operation-table structures are intentionally opaque in this architecture sketch; their operation-specific declarations MUST follow the corresponding protocol chapter, use `GpuProviderResult` for fallible calls, initialize every output before validation, and use `GpuProviderOperationToken` for every asynchronous operation enumerated below. No operation may use an undocumented `void` return to hide failure; only infallible reference hooks and the candidate-list release hook are void. The server MUST validate that result code and unavailable-scope fields form one of the documented combinations; `UNAVAILABLE` with `NONE`, or any non-UNAVAILABLE code with a non-NONE scope, is a provider-contract violation. For `PHYSICAL_DEVICE` scope, the binding ID and PhysicalDevice generation MUST identify one active binding of that provider generation, and availability_sequence MUST be monotonic within that exact binding generation. For `PROVIDER_CONTEXT` scope, both binding/device fields MUST be zero, and availability_sequence MUST be monotonic within that provider generation. Provider result validation requires `status_code == 0` unless code is STATUS, and `status_code` MUST be a value defined for that exact operation when STATUS is returned. `availability_sequence` MUST be nonzero exactly when code is UNAVAILABLE and zero for all other codes. `GPU_PROVIDER_STATUS_NOT_READY` is valid only for `acquire_next_image`; `GPU_PROVIDER_STATUS_OUT_OF_DATE` and `GPU_PROVIDER_STATUS_SURFACE_LOST` are valid only for presentation operations that define those outcomes; `GPU_PROVIDER_STATUS_ALREADY_COMPLETED` is valid only as the result of `cancel_acquire`. Unknown or operation-inapplicable status values are FATAL provider-contract violations. `native_result` is diagnostic only. `unavailable_scope == NONE` and zero binding/device fields are required unless code is UNAVAILABLE; PROVIDER_CONTEXT scope requires zero binding/device fields; PHYSICAL_DEVICE scope requires a nonzero registered provider-local binding ID and exact nonzero PhysicalDevice generation. Unknown enum values or inconsistent combinations are FATAL provider-contract violations. A `GPU_PROVIDER_FATAL` result, whether returned directly or detected by server validation, immediately quarantines that provider generation: close its operation/binding admission, mark selected PhysicalDevices UNAVAILABLE without declaring physical removal, retain provider context/module leases and dependent objects, and forbid normal finalization. Recovery requires a separate server-controlled proof-of-safety path; absent such a path, quarantine lasts until process exit. Once quarantined, `GpuRegistryTryQuiesceProvider` returns `GPU_REGISTRY_QUARANTINED` with FAILURE output without invoking `quiesce_provider`; `GpuRegistryFinalizeProviderShutdown` likewise returns QUARANTINED without calling `release_provider`. Only an explicitly specified server-controlled recovery path may make either hook callable again. `GPU_PROVIDER_CANCELLED` is valid only as the terminal completion of an already accepted cancellable operation; it is not a synchronous submission-acceptance result. `GPU_PROVIDER_DEVICE_LOST` is scoped to the exact logical Device/operation and MUST NOT by itself mark the PhysicalDevice or provider context unavailable. Plain query outputs (snapshot/support structures) contain no provider-owned pointers; variable candidate lists are released only through `release_candidate_list`. Successful create operations transfer one provider-owned object handle to the server, which MUST destroy it exactly once through the matching operation before provider quiescence. A successful `create_logical_device` transfers one owned provider-device reference to the server. `retain_device` and `release_device` manage additional provider-device wrapper references held by asynchronous operations or deferred cleanup; every retain is paired exactly once. `destroy_logical_device` destroys the native logical device exactly once after backend dependencies drain, but wrapper storage remains until all provider-device references have been released. The server calls the final `release_device` only after destroy completion or safe quarantine. These hooks are infallible and MUST NOT be called under the registry lock. Queue handles returned by `get_queue` are borrowed from and bounded by their logical Device lifetime. For asynchronous functions, the server calls `GpuRegistryPrepareOperation` and registers the token before entering provider code. The token pointer is call-scoped and MUST NOT be retained, dereferenced after return, assigned, altered, or recycled. The provider copies its ID and generation through the two token accessors for later callback userdata. The asynchronous provider operations are exactly `write_buffer`, `read_buffer`, host `signal_semaphore`, `queue_submit`, `acquire_next_image`, and `queue_present`; each receives one prepared token and uses the matching `GpuProviderOperationKind`. The typed operation-table declarations MUST expose that token parameter for every listed operation. All other provider operations are synchronous unless a later version explicitly adds an operation kind and conformance coverage. If the provider entry point returns `GPU_PROVIDER_SUCCESS`, the server MUST call `CommitOperationSubmission`; callbacks arriving before commit are buffered until acceptance commits. If the provider returns non-success, the server MUST call `RejectOperationSubmission`; the provider contract guarantees no callback or backend access can follow. If a callback was already observed or backend access cannot be excluded, rejection returns QUARANTINED. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the provider generation. The registry calls `retire_operation` through `GpuRegistryRetireOperationToken` after terminalization and after the server completion sink has returned from the provider callback. The hook MUST be idempotent: PENDING may be retried, SUCCESS remains successful, and FAILURE is terminal quarantine. Registry results map one-to-one to `GPU_REGISTRY_PENDING`, `GPU_REGISTRY_SUCCESS`, and `GPU_REGISTRY_QUARANTINED`. PENDING keeps token, resource, logical-Device, binding, provider, and module references; FAILURE quarantines them and blocks provider quiescence; SUCCESS is permitted only after backend access is impossible and all callback frames for that token have returned, then releases the token's retained references exactly once. If provider code cannot guarantee the no-callback-after-failure rule, the attempted token is quarantined and the provider generation cannot be quiesced. Repeated Commit of an already accepted exact token returns SUCCESS; Commit after REJECTED and Reject after ACCEPTED return IDENTITY_CONFLICT. Repeated Reject of the exact already rejected token returns SUCCESS without releasing references twice. Retire before a terminal outcome returns BUSY; PENDING is retried through the provider hook; after successful retirement, a repeated Retire returns NOT_FOUND and never calls the hook or releases references again.
+Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuBackendResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. The four typed operation-table structures are intentionally opaque in this architecture sketch; their operation-specific declarations MUST follow the corresponding protocol chapter, use `GpuBackendResult` for fallible calls, initialize every output before validation, and use `GpuBackendOperationToken` for every asynchronous operation enumerated below. No operation may use an undocumented `void` return to hide failure; only infallible reference hooks and the candidate-list release hook are void. The server MUST validate that result code and unavailable-scope fields form one of the documented combinations; `UNAVAILABLE` with `NONE`, or any non-UNAVAILABLE code with a non-NONE scope, is a provider-contract violation. For `PHYSICAL_DEVICE` scope, the binding ID and PhysicalDevice generation MUST identify one active binding of that DDX module-role generation, and availability_sequence MUST be monotonic within that exact binding generation. For `PROVIDER_CONTEXT` scope, both binding/device fields MUST be zero, and availability_sequence MUST be monotonic within that DDX module-role generation. Provider result validation requires `status_code == 0` unless code is STATUS, and `status_code` MUST be a value defined for that exact operation when STATUS is returned. `availability_sequence` MUST be nonzero exactly when code is UNAVAILABLE and zero for all other codes. `GPU_PROVIDER_STATUS_NOT_READY` is valid only for `acquire_next_image`; `GPU_PROVIDER_STATUS_OUT_OF_DATE` and `GPU_PROVIDER_STATUS_SURFACE_LOST` are valid only for presentation operations that define those outcomes; `GPU_PROVIDER_STATUS_ALREADY_COMPLETED` is valid only as the result of `cancel_acquire`. Unknown or operation-inapplicable status values are FATAL provider-contract violations. `native_result` is diagnostic only. `unavailable_scope == NONE` and zero binding/device fields are required unless code is UNAVAILABLE; PROVIDER_CONTEXT scope requires zero binding/device fields; PHYSICAL_DEVICE scope requires a nonzero registered DDX-local binding ID and exact nonzero PhysicalDevice generation. Unknown enum values or inconsistent combinations are FATAL provider-contract violations. A `GPU_PROVIDER_FATAL` result, whether returned directly or detected by server validation, immediately quarantines that DDX module-role generation: close its operation/binding admission, mark selected PhysicalDevices UNAVAILABLE without declaring physical removal, retain DDX module-role context/module leases and dependent objects, and forbid normal finalization. Recovery requires a separate server-controlled proof-of-safety path; absent such a path, quarantine lasts until process exit. Once quarantined, `GpuRegistryTryQuiesceProvider` returns `GPU_REGISTRY_QUARANTINED` with FAILURE output without invoking `quiesce_provider`; `GpuRegistryFinalizeProviderShutdown` likewise returns QUARANTINED without calling `release_provider`. Only an explicitly specified server-controlled recovery path may make either hook callable again. `GPU_PROVIDER_CANCELLED` is valid only as the terminal completion of an already accepted cancellable operation; it is not a synchronous submission-acceptance result. `GPU_PROVIDER_DEVICE_LOST` is scoped to the exact logical Device/operation and MUST NOT by itself mark the PhysicalDevice or DDX module-role context unavailable. Plain query outputs (snapshot/support structures) contain no provider-owned pointers; variable candidate lists are released only through `release_candidate_list`. Successful create operations transfer one provider-owned object handle to the server, which MUST destroy it exactly once through the matching operation before provider quiescence. A successful `create_logical_device` transfers one owned provider-device reference to the server. `retain_device` and `release_device` manage additional provider-device wrapper references held by asynchronous operations or deferred cleanup; every retain is paired exactly once. `destroy_logical_device` destroys the native logical device exactly once after backend dependencies drain, but wrapper storage remains until all provider-device references have been released. The server calls the final `release_device` only after destroy completion or safe quarantine. These hooks are infallible and MUST NOT be called under the registry lock. Queue handles returned by `get_queue` are borrowed from and bounded by their logical Device lifetime. For asynchronous functions, the server calls `GpuRegistryPrepareOperation` and registers the token before entering DDX backend code. The token pointer is call-scoped and MUST NOT be retained, dereferenced after return, assigned, altered, or recycled. The provider copies its ID and generation through the two token accessors for later callback userdata. The asynchronous backend operations are exactly `write_buffer`, `read_buffer`, host `signal_semaphore`, `queue_submit`, `acquire_next_image`, and `queue_present`; each receives one prepared token and uses the matching `GpuBackendOperationKind`. The typed operation-table declarations MUST expose that token parameter for every listed operation. All other backend operations are synchronous unless a later version explicitly adds an operation kind and conformance coverage. If the provider entry point returns `GPU_PROVIDER_SUCCESS`, the server MUST call `CommitOperationSubmission`; callbacks arriving before commit are buffered until acceptance commits. If the provider returns non-success, the server MUST call `RejectOperationSubmission`; the provider contract guarantees no callback or backend access can follow. If a callback was already observed or backend access cannot be excluded, rejection returns QUARANTINED. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the DDX module-role generation. The registry calls `retire_operation` through `GpuRegistryRetireOperationToken` after terminalization and after the server completion sink has returned from the provider callback. The hook MUST be idempotent: PENDING may be retried, SUCCESS remains successful, and FAILURE is terminal quarantine. Registry results map one-to-one to `GPU_REGISTRY_PENDING`, `GPU_REGISTRY_SUCCESS`, and `GPU_REGISTRY_QUARANTINED`. PENDING keeps token, resource, logical-Device, binding, provider, and module references; FAILURE quarantines them and blocks provider quiescence; SUCCESS is permitted only after backend access is impossible and all callback frames for that token have returned, then releases the token's retained references exactly once. If DDX backend code cannot guarantee the no-callback-after-failure rule, the attempted token is quarantined and the DDX module-role generation cannot be quiesced. Repeated Commit of an already accepted exact token returns SUCCESS; Commit after REJECTED and Reject after ACCEPTED return IDENTITY_CONFLICT. Repeated Reject of the exact already rejected token returns SUCCESS without releasing references twice. Retire before a terminal outcome returns BUSY; PENDING is retried through the provider hook; after successful retirement, a repeated Retire returns NOT_FOUND and never calls the hook or releases references again.
 
-The completion sink copies and validates each completion and its bounded payload into server-owned storage and enqueues it; payload MUST be NULL iff payload_size is zero, and payload_size MUST NOT exceed a server-defined hard maximum checked before allocation; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation kind, token, provider-local binding ID, registry binding generation, PhysicalDevice generation, logical-Device ID/generation, and any operation-specific primary resource ID/generation. The complete resource-generation set is retained by the server-side token record; it is not reconstructed from the completion payload. For device-scoped results, the completion binding/device fields MUST exactly equal the embedded `GpuProviderResult` binding/device fields. Logical-Device and resource IDs/generations MUST each be zero-paired or nonzero-paired according to the operation kind. The completion record carries no raw registry, Xserver, or Vulkan object pointer; the server resolves the IDs through the retained operation token. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. The serialized server domain MUST translate an UNAVAILABLE result into the matching context- or binding-scoped registry transition using the same availability_sequence and exact binding generation from the call/token record; provider callbacks MUST NOT mutate availability state directly. A completion's operation kind, provider/token generations, provider-local binding ID, registry binding generation, and PhysicalDevice generation MUST exactly match the prepared token; primary resource fields MUST match the operation's declared primary resource, or be zero when the operation has no single primary resource. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
+The completion sink copies and validates each completion and its bounded payload into server-owned storage and enqueues it; payload MUST be NULL iff payload_size is zero, and payload_size MUST NOT exceed a server-defined hard maximum checked before allocation; it MUST NOT process protocol requests or invoke DDX backend code inline. Completion identity includes exact provider, operation kind, token, DDX-local binding ID, registry binding generation, PhysicalDevice generation, logical-Device ID/generation, and any operation-specific primary resource ID/generation. The complete resource-generation set is retained by the server-side token record; it is not reconstructed from the completion payload. For device-scoped results, the completion binding/device fields MUST exactly equal the embedded `GpuBackendResult` binding/device fields. Logical-Device and resource IDs/generations MUST each be zero-paired or nonzero-paired according to the operation kind. The completion record carries no raw registry, Xserver, or Vulkan object pointer; the server resolves the IDs through the retained operation token. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. The serialized server domain MUST translate an UNAVAILABLE result into the matching context- or binding-scoped registry transition using the same availability_sequence and exact binding generation from the call/token record; provider callbacks MUST NOT mutate availability state directly. A completion's operation kind, provider/token generations, DDX-local binding ID, registry binding generation, and PhysicalDevice generation MUST exactly match the prepared token; primary resource fields MUST match the operation's declared primary resource, or be zero when the operation has no single primary resource. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
 
-Provider lifecycle APIs identify provider records by the registry-assigned provider generation, not by a caller-held provider pointer. This allows the registration caller to release its own provider reference before final quiescence/finalization; the registry-owned provider record remains addressable by generation until finalization completes.
+Provider lifecycle APIs identify provider records by the registry-assigned DDX module-role generation, not by a caller-held module-role pointer. This allows the registration caller to release its own provider reference before final quiescence/finalization; the registry-owned provider record remains addressable by generation until finalization completes.
 
 The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid()` to DDX drivers. XID allocation and protocol resource publication belong exclusively to the XAverius/server resource layer. A provider registration may return an existing canonical record or create an unpublished candidate; it MUST NOT publish a duplicate identity.
 
-The registration API SHOULD be split into candidate discovery and provider attachment internally if that is needed to finish startup-wide provider selection before publication. The simplified sketch above does not permit immediate publication during arbitrary driver probe order.
+The registration API SHOULD be split into candidate discovery and provider attachment internally if that is needed to finish startup-wide DDX-binding selection before publication. The simplified sketch above does not permit immediate publication during arbitrary driver probe order.
 
 ## 8. Xlibre/Xorg integration guidance
 
-For the current XAverius scope, the recommended ownership location is the XAverius server subsystem itself (for example, `Xext/xaverius/registry.c`), with a private server-internal interface declared in an exported header such as `include/xaverius_registry.h`. This keeps Vulkan-specific identity, provider selection, metadata snapshots, and XAverius XID publication together without making generic DIX depend on Vulkan or DRM. The interface is an internal server/module interface, not a stable client ABI or a promise of compatibility for independently built third-party modules.
+For the current XAverius scope, the recommended ownership location is the XAverius server subsystem itself (for example, `Xext/xaverius/registry.c`), with a private server-internal interface declared in an exported header such as `include/xaverius_registry.h`. This keeps Vulkan-specific identity, DDX-binding selection, metadata snapshots, and XAverius XID publication together without making generic DIX depend on Vulkan or DRM. The interface is an internal server/module interface, not a stable client ABI or a promise of compatibility for independently built third-party modules.
 
 
 The existing Xorg platform-device list (`xf86_platform_devices` in `hw/xfree86/common/xf86platformBus.c`) and udev DRM discovery (`config/udev.c`) are useful discovery inputs, not the canonical XAverius registry. The platform list is organized around device-node attributes and Xorg ownership/claiming; the current DRM udev path filters `card*` nodes and deduplicates those observations by major/minor. These are appropriate for Xorg device management but do not represent identity across DRM primary/render nodes, multiple Vulkan instances/ICDs, or hotplug generations.
@@ -1099,8 +1085,8 @@ The existing Xorg platform-device list (`xf86_platform_devices` in `hw/xfree86/c
 Recommended layering:
 
 - Xorg platform/udev code reports identity and authoritative hotplug observations to the registry.
-- DDX drivers report Screen-to-device relationships as ScreenAttachments; they register a BackendProvider only if they implement its complete Vulkan/backend operation contract.
-- Vulkan ICD/provider adapters register provider-local execution bindings separately from hardware observations.
+- DDX drivers report Screen-to-device relationships as ScreenAttachments; they register a DdxModuleRole only if they implement its complete Vulkan/backend operation contract.
+- Vulkan ICD/provider adapters register DDX-local execution bindings separately from hardware observations.
 - The server-wide registry canonicalizes candidates, selects the execution provider, and owns PhysicalDevice records.
 - XAverius enumerates only published registry records and owns their protocol XID resources.
 - Screen initialization creates/destroys ScreenAttachments only; detaching a Screen does not remove a still-discovered device.
@@ -1113,11 +1099,11 @@ The following mapping was checked against X11Libre/xserver commit `ee4bb3f96eec3
 - `InitOutput()` in `hw/xfree86/common/xf86Init.c` calls `xf86BusProbe()` before `xf86ExtensionInit()`, driver-module loading, `xf86BusConfig()`, and DDX `PreInit()`. This means a registry/hotplug bootstrap that must observe the initial platform scan cannot be deferred solely to the normal XAverius extension setup. The integration SHOULD split early registry/event-source bootstrap from later protocol-extension registration.
 - `xf86BusProbe()` in `hw/xfree86/common/xf86Bus.c` calls `xf86platformProbe()`. The latter calls `config_odev_probe(xf86PlatformDeviceProbe)` and populates `xf86_platform_devices`. This is a useful place to feed platform observations into the registry, or to snapshot the completed platform list immediately after the probe. The platform list remains an Xorg discovery/ownership structure, not the canonical XAverius inventory.
 - `config_udev_odev_probe()` in `config/udev.c` enumerates DRM subsystem nodes matching `card[0-9]*`; the event path similarly filters for `card*` and checks existing entries by major/minor. Therefore this path MUST NOT be treated as a complete primary-plus-render-node identity source. XAverius discovery must independently obtain or correlate render-node evidence (for example through libdrm/sysfs) and must use the underlying DRM device relationship rather than major/minor as identity.
-- DDX provider bindings, when a DDX genuinely implements the BackendProvider contract, can be registered during its driver probe/PreInit phase before the X11 Screen object is created. ScreenAttachments are later created only after the corresponding Screen generation exists. A DDX that does not implement the full provider contract contributes topology only.
+- DDX DDX device bindings, when a DDX genuinely implements the DdxModuleRole contract, can be registered during its driver probe/PreInit phase before the X11 Screen object is created. ScreenAttachments are later created only after the corresponding Screen generation exists. A DDX that does not implement the full provider contract contributes topology only.
 - `xf86platformAddDevice()` performs a GPU-screen probe/PreInit, creates a GPU Screen, attaches it to a configured protocol Screen, and updates RandR. `xf86platformRemoveDevice()` closes/removes that GPU Screen and removes the Xorg platform-device entry. XAverius MUST map these operations to ScreenAttachment attach/detach and source-observation withdrawal as appropriate; the screen-removal path alone is not proof of physical removal.
-- `xf86platformPrimary()` may fall back to the first platform device when no primary bus is configured. That fallback is an Xorg primary-device convention and MUST NOT feed XAverius PhysicalDevice ordering, provider selection, or `CreateDefaultDevice`.
+- `xf86platformPrimary()` may fall back to the first platform device when no primary bus is configured. That fallback is an Xorg primary-device convention and MUST NOT feed XAverius PhysicalDevice ordering, DDX-binding selection, or `CreateDefaultDevice`.
 
-A practical initial sequence is therefore: bootstrap the XAverius registry and hotplug observation before `xf86BusProbe()`; ingest platform observations during/after `xf86platformProbe()`; accept provider bindings during provider discovery and DDX probe/PreInit; close the initial discovery barrier and publish complete records before client requests are dispatched; then attach Screen generations as Xorg creates them. The exact hook placement is an XLibre integration decision, but the ordering and separation are mandatory.
+A practical initial sequence is therefore: bootstrap the XAverius registry and hotplug observation before `xf86BusProbe()`; ingest platform observations during/after `xf86platformProbe()`; accept DDX device bindings during provider discovery and DDX probe/PreInit; close the initial discovery barrier and publish complete records before client requests are dispatched; then attach Screen generations as Xorg creates them. The exact hook placement is an XLibre integration decision, but the ordering and separation are mandatory.
 
 
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
@@ -1131,7 +1117,7 @@ The following decomposition is intended to make the ownership rules practical in
 
 - `registry.c`: canonical PhysicalDevice records, identity-key construction, publication state, and generation allocation.
 - `discovery.c`: source registration, observation storage, scan/event reconciliation, and startup barrier.
-- `provider.c`: provider descriptors, provider-local bindings, deterministic provider selection, and provider operation admission.
+- `provider.c`: provider descriptors, DDX-local bindings, deterministic DDX-binding selection, and backend operation admission.
 - `provider-lifetime.c`: operation-token accounting, provider references, quiescence, quarantine, and module leases.
 - `screen-attachments.c`: Screen-generation attachment records and topology-only notifications.
 - `presentation-route.c`: exact Device/Surface route generations and bridge lifetime.
@@ -1139,23 +1125,23 @@ The following decomposition is intended to make the ownership rules practical in
 
 These may initially live in fewer source files. The important boundary is ownership: Xorg discovery structures and DDX private objects are inputs, never the registry's canonical storage.
 
-**Use server-owned IDs for retained relationships.** Internally, keep explicit records for discovery sources, observations, provider generations, provider bindings, PhysicalDevice incarnations, ScreenAttachments, operation tokens, and module leases. Index them by typed canonical keys and non-reusable generations. A binding should refer to a registered provider-generation record; it should not embed a copied provider descriptor. A ScreenAttachment should refer to a PhysicalDevice generation and a Screen generation, not own either object. Avoid using raw pointers as map keys or as asynchronous identity.
+**Use server-owned IDs for retained relationships.** Internally, keep explicit records for discovery sources, observations, DDX module-role generations, DDX device bindings, PhysicalDevice incarnations, ScreenAttachments, operation tokens, and module leases. Index them by typed canonical keys and non-reusable generations. A binding should refer to a registered provider-generation record; it should not embed a copied provider descriptor. A ScreenAttachment should refer to a PhysicalDevice generation and a Screen generation, not own either object. Avoid using raw pointers as map keys or as asynchronous identity.
 
-**Separate lookup from mutation.** Registry APIs called from DDX probe, hotplug, or worker contexts should validate/copy their input and enqueue an immutable command. One server serialization domain should commit identity joins, status transitions, provider selection, publication, and teardown. A worker callback must not directly mutate registry lists, X resources, RandR state, or client-visible status. Do not call provider code, Xorg callbacks, or module-loader operations while holding the registry's structural lock; take a retained reference, drop the lock, call out, then revalidate the exact generation before committing the result.
+**Separate lookup from mutation.** Registry APIs called from DDX probe, hotplug, or worker contexts should validate/copy their input and enqueue an immutable command. One server serialization domain should commit identity joins, status transitions, DDX-binding selection, publication, and teardown. A worker callback must not directly mutate registry lists, X resources, RandR state, or client-visible status. Do not call DDX backend code, Xorg callbacks, or module-loader operations while holding the registry's structural lock; take a retained reference, drop the lock, call out, then revalidate the exact generation before committing the result.
 
 **Make initial discovery race-free.** Subscribe to hotplug notifications before starting the initial enumeration. Record a source generation and monotonically ordered observation/event sequence for each source. Reconcile events received during the scan against the scan result before closing the startup barrier. The barrier waits for configured discovery adapters and provider-selection inputs, not for Screen creation, RandR initialization, or a particular DDX's PreInit order. A failed adapter completes as unavailable/failed; it must not fabricate physical removal. After the barrier closes, late discovery uses the per-device publication path and cannot reopen or reorder the initial inventory.
 
-**Treat provider selection as a commit, not a side effect of probing.** Collect eligible bindings first. Validate their identity correlation, operation-table completeness, stable provider key, and required capability snapshot before ranking. Apply explicit configuration preference and a deterministic stable tie-breaker; never use registration order, pointer values, ICD enumeration index, or first Screen. Publish the selected provider and immutable snapshot together. If no eligible provider exists, keep the candidate unpublished or expose only the explicitly specified unavailable state; do not publish a half-filled snapshot. A later provider must not silently replace the published selection.
+**Treat DDX-binding selection as a commit, not a side effect of probing.** Collect eligible bindings first. Validate their identity correlation, operation-table completeness, stable provider key, and required capability snapshot before ranking. Apply explicit configuration preference and a deterministic stable tie-breaker; never use registration order, pointer values, ICD enumeration index, or first Screen. Publish the selected DDX binding and immutable snapshot together. If no eligible provider exists, keep the candidate unpublished or expose only the explicitly specified unavailable state; do not publish a half-filled snapshot. A later provider must not silently replace the published selection.
 
-**Keep OS discovery handles separate from provider handles.** A DRM node path, `dev_t`, or file descriptor is an access locator, not a PhysicalDevice identity. Resolve primary/render nodes through the underlying DRM device relationship and canonical platform identity. Define who opens, duplicates, and closes every DRM file descriptor; do not let the registry close a descriptor still owned by Xorg or a provider. Provider-local Vulkan handles remain private to the provider generation. If two ICDs expose aliases, deduplicate them inside the provider before registering one executable binding.
+**Keep OS discovery handles separate from provider handles.** A DRM node path, `dev_t`, or file descriptor is an access locator, not a PhysicalDevice identity. Resolve primary/render nodes through the underlying DRM device relationship and canonical platform identity. Define who opens, duplicates, and closes every DRM file descriptor; do not let the registry close a descriptor still owned by Xorg or a provider. Provider-local Vulkan handles remain private to the DDX module-role generation. If two ICDs expose aliases, deduplicate them inside the provider before registering one executable binding.
 
 **Do not make Screen lifetime a shortcut for device lifetime.** Attach a Screen only after its generation exists and the DDX can provide a resolved canonical PhysicalDevice reference. If identity is not yet resolvable, retain a pending topology observation and retry when stronger evidence arrives; do not guess from Screen number, Entity index, or the first GPU. On close, invalidate the attachment generation before freeing Screen-private storage. Any asynchronous work must use a detached copied context and must not call back into Screen or RandR after close.
 
 **Make provider teardown observable and retryable.** Track separate counters/references for bindings, logical Devices, provider-owned objects, accepted operations, callback bridges, adapter roles, and module leases. A single generic refcount is insufficient for diagnosing why unload is blocked. Expose diagnostic state (provider key/generation, shutdown phase, outstanding token/object/bridge counts, quiescence result, and quarantine reason) through server logging or a debug dump; do not expose private pointers or mutable internals to clients. PENDING must identify what remains outstanding. FAILURE must preserve the module and context in quarantine. Do not wait synchronously for GPU progress in Screen close or hotplug handlers.
 
-**Verify the loader pin independently of Screen references.** Before relying on unloadable DDX providers, prototype the loader-owner abstraction against the actual Xlibre loader. Demonstrate that it prevents the final `dlclose()` after the last Screen's `FreeScreen()`, including duplicated `ModuleDesc` cases. If no supported independent pin exists, make the provider module permanently resident for that server lifetime rather than pretending a Screen or `DriverPtr` reference is sufficient. The lease object itself must be server-owned and shared by every provider generation and callback role from that loaded module instance.
+**Verify the loader pin independently of Screen references.** Before relying on unloadable DDX providers, prototype the loader-owner abstraction against the actual Xlibre loader. Demonstrate that it prevents the final `dlclose()` after the last Screen's `FreeScreen()`, including duplicated `ModuleDesc` cases. If no supported independent pin exists, make the DDX module permanently resident for that server lifetime rather than pretending a Screen or `DriverPtr` reference is sufficient. The lease object itself must be server-owned and shared by every DDX module-role generation and callback role from that loaded module instance.
 
-**Integrate in small, testable stages.** First land the registry and identity tests without Vulkan execution; then connect platform/udev observations; then provider registration and deterministic snapshots; then ScreenAttachments; then provider operation tokens and module quiescence; finally presentation routes and cross-GPU bridges. At each stage, test reordered initialization, hotplug during scan, duplicate primary/render observations, two Screens on one GPU, one Screen on multiple GPUs, provider failure, and teardown with delayed callbacks. Keep Xorg-specific adapter tests separate from registry model tests so the latter can run under a headless test harness.
+**Integrate in small, testable stages.** First land the registry and identity tests without Vulkan execution; then connect platform/udev observations; then provider registration and deterministic snapshots; then ScreenAttachments; then backend operation tokens and module quiescence; finally presentation routes and cross-GPU bridges. At each stage, test reordered initialization, hotplug during scan, duplicate primary/render observations, two Screens on one GPU, one Screen on multiple GPUs, provider failure, and teardown with delayed callbacks. Keep Xorg-specific adapter tests separate from registry model tests so the latter can run under a headless test harness.
 
 
 
@@ -1163,9 +1149,9 @@ These may initially live in fewer source files. The important boundary is owners
 
 The expanded API sketch in Section 7 implies several concrete data structures and sequencing rules. These are recommended to prevent the implementation from collapsing distinct lifetimes into one refcount or pointer map.
 
-**Provider candidate inventory.** Keep a provider-generation-local map from non-reusable `provider_local_binding_id` to the native Vulkan physical-device handle and its canonical identity. `enumerate_candidates` returns a temporary list of IDs and copied identity descriptions; query snapshots and registry correlation happen while that list is valid. `release_candidate_list` frees only the temporary list, not the provider's binding map. The binding map entry is removed only after binding withdrawal and all operations/provider objects using it have retired. Never store a pointer into the candidate list in the registry.
+**Provider candidate inventory.** Keep a provider-generation-local map from non-reusable `backend_binding_id` to the native Vulkan physical-device handle and its canonical identity. `enumerate_candidates` returns a temporary list of IDs and copied identity descriptions; query snapshots and registry correlation happen while that list is valid. `release_candidate_list` frees only the temporary list, not the DDX binding's binding map. The binding map entry is removed only after binding withdrawal and all operations/backend objects using it have retired. Never store a pointer into the candidate list in the registry.
 
-**Operation-token record.** Allocate one server-owned token record before each asynchronous provider call. It should contain provider generation, operation generation, token ID, operation kind, exact provider-local binding and registry binding generation, PhysicalDevice incarnation, optional logical-Device generation, and a deduplicated retained resource set with access roles. The provider receives the token pointer only for the duration of the entry-point call; it copies the token ID/generation into its backend callback userdata. Do not let backend callbacks retain a pointer to registry token storage.
+**Operation-token record.** Allocate one server-owned token record before each asynchronous provider call. It should contain DDX module-role generation, operation generation, token ID, operation kind, exact DDX-local binding and registry binding generation, PhysicalDevice incarnation, optional logical-Device generation, and a deduplicated retained resource set with access roles. The provider receives the token pointer only for the duration of the entry-point call; it copies the token ID/generation into its backend callback userdata. Do not let backend callbacks retain a pointer to registry token storage.
 
 **Submission state machine.** Model at least PREPARED, ENTRYPOINT_RUNNING, ACCEPTED, REJECTED, TERMINAL_QUEUED, RETIRING, RETIRED, and QUARANTINED. A callback racing the entry point return is copied/enqueued but held pending until the serialized domain commits ACCEPTED. Synchronous provider failure commits REJECTED only if the provider guarantees no callback/backend access; otherwise quarantine. Duplicate terminal callbacks, callbacks after rejection, or mismatched generations are diagnosed and cannot mutate state.
 
@@ -1175,7 +1161,7 @@ The expanded API sketch in Section 7 implies several concrete data structures an
 
 **Availability state composition.** Keep provider-context availability, per-binding availability, and physical-removal state as independent fields. Compute public PhysicalDevice availability from their conjunction; do not overwrite one scope when another recovers. Capture source/provider event sequence at the point the event is observed, before queueing or crossing threads. Preserve it through every adapter and reject stale sequence/generation pairs in the registry.
 
-**Module and callback lifetime.** A provider callback's in-flight count is separate from operation count: a token may already have a terminal result queued while its callback frame is still returning. `retire_operation` must remain PENDING until both backend access and callback execution have ceased. Provider-wide quiescence then closes the remaining worker/dispatch admission for that provider generation. The module lease is released only after final provider context release and all independent adapter roles have retired.
+**Module and callback lifetime.** A provider callback's in-flight count is separate from operation count: a token may already have a terminal result queued while its callback frame is still returning. `retire_operation` must remain PENDING until both backend access and callback execution have ceased. Provider-wide quiescence then closes the remaining worker/dispatch admission for that DDX module-role generation. The module lease is released only after final DDX module-role context release and all independent adapter roles have retired.
 
 **Diagnostics.** Log provider key/generation, binding generation, token ID/generation, operation kind, outstanding resource count, callback count, retirement result, and quarantine reason. Never log raw pointers as identities. A PENDING result should make the blocking category observable without exposing mutable registry internals to clients.
 
@@ -1185,12 +1171,12 @@ The implementation test suite SHOULD include at least:
 
 1. Two Screens and two DDX discovery paths report the same GPU: one PhysicalDevice record and one XAverius XID.
 2. DRM primary and render nodes report the same GPU: one record; removing one access node does not mark the hardware REMOVED while the physical device remains.
-3. Two ICDs report the same GPU with different provider handles: one record, deterministic selected provider, one coherent metadata snapshot.
-4. Reordering Screen, DDX, provider, and ICD initialization does not change canonical identity, selected provider, or CreateDefaultDevice result under a fixed configuration.
-5. The selected provider becomes unavailable while hardware remains: status becomes UNAVAILABLE, not REMOVED; a different provider is not silently substituted.
-6. A provider context shared by two selected PhysicalDevices becomes unavailable: both affected PhysicalDevices become UNAVAILABLE; a third PhysicalDevice merely discovered by that provider but selected through another provider remains AVAILABLE. Recover the same provider generation and verify only its selected bindings recover, with unchanged XIDs and snapshots.
-7. A single provider-local PhysicalDevice binding becomes unavailable while the shared provider context remains usable: only that PhysicalDevice becomes UNAVAILABLE; another PhysicalDevice selected through the same provider remains AVAILABLE. Recover the exact binding and verify only it recovers. A stale provider/device generation MUST NOT change either status.
-8. The selected provider recovers for the same incarnation: the same XID and metadata snapshot become AVAILABLE again.
+3. Two ICDs report the same GPU with different provider handles: one record, deterministic selected DDX binding, one coherent metadata snapshot.
+4. Reordering Screen, DDX, provider, and ICD initialization does not change canonical identity, selected DDX binding, or CreateDefaultDevice result under a fixed configuration.
+5. The selected DDX binding becomes unavailable while hardware remains: status becomes UNAVAILABLE, not REMOVED; a different provider is not silently substituted.
+6. A DDX module-role context shared by two selected PhysicalDevices becomes unavailable: both affected PhysicalDevices become UNAVAILABLE; a third PhysicalDevice merely discovered by that provider but selected through another provider remains AVAILABLE. Recover the same DDX module-role generation and verify only its selected bindings recover, with unchanged XIDs and snapshots.
+7. A single DDX-local PhysicalDevice binding becomes unavailable while the shared DDX module-role context remains usable: only that PhysicalDevice becomes UNAVAILABLE; another PhysicalDevice selected through the same provider remains AVAILABLE. Recover the exact binding and verify only it recovers. A stale provider/device generation MUST NOT change either status.
+8. The selected DDX binding recovers for the same incarnation: the same XID and metadata snapshot become AVAILABLE again.
 9. A physical remove followed by re-add at the same BDF/path/node number creates a new PhysicalDevice and XID; the old record remains REMOVED.
 10. A Screen is destroyed and recreated while the same GPU remains: the attachment generation changes; the PhysicalDevice and XID do not.
 11. A Screen is attached to more than one GPU, and one GPU is attached to more than one Screen: no identities are created, merged, or destroyed by attachment changes.
@@ -1200,44 +1186,44 @@ The implementation test suite SHOULD include at least:
 
 15. A provider reports `DEVICE_LOST` while `create_logical_device` is running: no logical Device/XID is published, the PhysicalDevice becomes UNAVAILABLE, and the request returns DEVICE_UNAVAILABLE.
 16. A provider returns host/device allocation failure during logical-device creation: all partial objects are rolled back or quarantined, the target XID remains free, and ALLOCATION_FAILED is returned.
-17. A provider context becomes UNAVAILABLE while a logical Device exists: the PhysicalDevice status changes, but the logical Device is not declared DEVICE_LOST without a positive loss result for that exact VkDevice.
-18. A provider operation on an existing logical Device reports DEVICE_LOST concurrently with submission completion, wait satisfaction, timeout, or DestroyDevice: the first serialized terminal outcome wins exactly once.
+17. A DDX module-role context becomes UNAVAILABLE while a logical Device exists: the PhysicalDevice status changes, but the logical Device is not declared DEVICE_LOST without a positive loss result for that exact VkDevice.
+18. A backend operation on an existing logical Device reports DEVICE_LOST concurrently with submission completion, wait satisfaction, timeout, or DestroyDevice: the first serialized terminal outcome wins exactly once.
 19. A provider reports UNSUPPORTED for a capability already included in the published snapshot: the request fails as a provider contract violation, the capability snapshot is not mutated, and no client BadMatch is fabricated.
-20. An asynchronous provider operation reports completion and then attempts a duplicate/late callback: only one terminal transition is committed and all retained references are released at most once.
-21. DestroyDevice or disconnect races with an in-flight provider call or accepted asynchronous operation: public invalidation occurs at its defined linearization point, but provider code/context and backend objects remain pinned until the provider proves no further access.
-22. A provider callback arrives after provider generation replacement or module-unload request: it is ignored for public state, cannot resolve a reused XID, and cannot execute unloaded provider code.
+20. An asynchronous backend operation reports completion and then attempts a duplicate/late callback: only one terminal transition is committed and all retained references are released at most once.
+21. DestroyDevice or disconnect races with an in-flight provider call or accepted asynchronous operation: public invalidation occurs at its defined linearization point, but DDX backend code/context and backend objects remain pinned until the provider proves no further access.
+22. A provider callback arrives after DDX module-role generation replacement or module-unload request: it is ignored for public state, cannot resolve a reused XID, and cannot execute unloaded DDX backend code.
 23. A provider reports TRANSFER_FAILURE or EXECUTION_FAILURE after asynchronous acceptance: the operation uses its defined terminal status/event and never generates a delayed X11 request error.
-24. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the provider's exact Device/Surface result controls the outcome; attachment membership does not imply support.
+24. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the DDX binding's exact Device/Surface result controls the outcome; attachment membership does not imply support.
 
 25. The same XAverius Surface is queried with logical Devices from two different providers: each provider creates/owns its own provider-scoped WSI surface object, and no VkSurfaceKHR or WSI handle crosses provider instances.
-26. WaitSemaphores/WaitForFence completion races with the server timeout while the selected provider becomes UNAVAILABLE: provider unavailability alone MUST NOT terminalize either server-owned wait or produce DEVICE_UNAVAILABLE. The wait remains governed by its server-visible predicate, timeout, exact logical-Device Loss, DestroyDevice, and disconnect. If an underlying provider operation subsequently fails, only the synchronization state transition actually published by that operation may affect the wait; no provider wait blocks the X11 dispatcher.
-27. An accepted provider-operation token cannot establish successful completion or backend quiescence: require exactly one terminal outcome callback with a classified failure, but no quiescence/retirement confirmation. The server MUST preserve the terminal protocol outcome while quarantining the token, affected resources, and provider context; duplicate callbacks are ignored, and no provider module/context is unloaded while backend access remains possible.
+26. WaitSemaphores/WaitForFence completion races with the server timeout while the selected DDX binding becomes UNAVAILABLE: provider unavailability alone MUST NOT terminalize either server-owned wait or produce DEVICE_UNAVAILABLE. The wait remains governed by its server-visible predicate, timeout, exact logical-Device Loss, DestroyDevice, and disconnect. If an underlying backend operation subsequently fails, only the synchronization state transition actually published by that operation may affect the wait; no provider wait blocks the X11 dispatcher.
+27. An accepted provider-operation token cannot establish successful completion or backend quiescence: require exactly one terminal outcome callback with a classified failure, but no quiescence/retirement confirmation. The server MUST preserve the terminal protocol outcome while quarantining the token, affected resources, and DDX module-role context; duplicate callbacks are ignored, and no DDX module/context is unloaded while backend access remains possible.
 
 28. Race positive logical-Device `DEVICE_LOST`, provider-scoped `UNAVAILABLE`, ordinary resource destroy, `DestroyDevice`, and client disconnect in every relevant pairwise serialization order. Require one public invalidation owner, first-terminal-outcome preservation, request-specific result mapping, event/reply suppression at the correct connection/Device boundary, and exactly-once reference retirement. Ordinary resource destroy is not rejected solely by provider unavailability or Device Loss; its own pending/recording blockers remain normative.
 
 29. Withhold provider quiescence after a classified terminal failure and verify that the failure is not reclassified as `DEVICE_LOST` solely because quiescence is unknown. Quarantine every potentially accessed backend object and provider reference. Separately inject a positive `DEVICE_LOST` for one exact logical Device and verify only operations still open at that serialized point are terminalized as Device Loss.
 
-30. A DDX reports a Screen-to-device observation without implementing Vulkan provider operations: it creates only a ScreenAttachment, not a BackendProvider or PhysicalDevice XID. A Vulkan provider reports the same GPU independently: both observations converge on one canonical PhysicalDevice.
-31. A single DDX Screen maps to two GPUs and two Screens map to one GPU: all attachments are represented independently; neither attachment order nor the first Screen changes provider selection, inventory order, or PhysicalDevice identity.
+30. A DDX reports a Screen-to-device observation without implementing Vulkan backend operations: it creates only a ScreenAttachment, not a DdxModuleRole or PhysicalDevice XID. A Vulkan provider reports the same GPU independently: both observations converge on one canonical PhysicalDevice.
+31. A single DDX Screen maps to two GPUs and two Screens map to one GPU: all attachments are represented independently; neither attachment order nor the first Screen changes DDX-binding selection, inventory order, or PhysicalDevice identity.
 32. A discovery source withdraws one observation or one DRM access node while another authoritative source still reports the same incarnation: the PhysicalDevice remains present and is not marked REMOVED. Detaching the final Screen also does not remove a still-discovered headless/render-only device.
 33. Two candidates cannot be unambiguously correlated: neither is silently merged nor published as a duplicate; both remain pending until stronger identity evidence resolves the match.
-34. A selected provider binding is deregistered while the physical device remains: the PhysicalDevice becomes UNAVAILABLE, no new provider generation takes over, and outstanding logical-device/operation references keep the old provider code/context pinned until safe retirement.
-35. A stale source removal, provider deregistration, or Screen detach from an earlier generation arrives after replacement: it cannot mutate the new observation, provider binding, attachment, or PhysicalDevice incarnation.
+34. A selected DDX binding binding is deregistered while the physical device remains: the PhysicalDevice becomes UNAVAILABLE, no new DDX module-role generation takes over, and outstanding logical-device/operation references keep the old DDX backend code/context pinned until safe retirement.
+35. A stale source removal, provider deregistration, or Screen detach from an earlier generation arrives after replacement: it cannot mutate the new observation, DDX device binding, attachment, or PhysicalDevice incarnation.
 36. The DRM primary and render nodes are observed in either order and through different discovery sources: both resolve to one canonical identity using the underlying DRM device relationship; withdrawing either node alone does not remove the identity.
-37. Two Vulkan instances/ICDs report different handles for the same platform device and compatible valid `deviceUUID`: the observations join one PhysicalDevice, while provider bindings remain distinct and provider selection follows the configured stable policy.
+37. Two Vulkan instances/ICDs report different handles for the same platform device and compatible valid `deviceUUID`: the observations join one PhysicalDevice, while DDX device bindings remain distinct and DDX-binding selection follows the configured stable policy.
 38. Two simultaneously present devices report the same `deviceUUID` but have incompatible authoritative platform identities: they are not merged; the conflict is surfaced and each candidate remains independently represented only when its platform identity is unambiguous.
 39. Two observations have the same BDF but belong to different confirmed hotplug incarnations: the later incarnation receives a new PhysicalDevice/XID and a delayed removal from the earlier source generation cannot remove it.
 40. A mediated, SR-IOV, partitioned, or MIG-like child reports its parent identity but lacks a unique instance discriminator: it is not merged with the parent or a sibling and remains unpublished until its instance identity is resolved.
-41. A software/virtual provider supplies a stable provider-scoped instance key: it may publish as a distinct device, but a second provider's matching display name or vendor/device IDs do not merge with it.
+41. A software/virtual provider supplies a stable provider-scoped instance key: it may publish as a distinct device, but a second DDX binding's matching display name or vendor/device IDs do not merge with it.
 42. Two providers have duplicate stable provider keys, or one configured preference identifier matches multiple provider instances: startup reports a configuration error; registration order and enumeration order cannot break the tie.
 43. A preferred provider has a binding with conflicting UUID/platform evidence or cannot produce a complete snapshot: it is ineligible before publication and the next eligible provider in configured order is considered.
-44. Reordering ICD enumeration, provider registration, DRM node discovery, and Screen creation while holding source evidence and server configuration constant produces the same canonical identities and selected providers.
+44. Reordering ICD enumeration, provider registration, DRM node discovery, and Screen creation while holding source evidence and server configuration constant produces the same canonical identities and selected DDX bindings.
 45. With no explicit default-device preference, permuting discovery/provider/Screen order while keeping the same set of canonical identities and queue capabilities yields the same `CreateDefaultDevice` target according to the canonical ordering key.
 46. An explicit default-device selector resolves to exactly one canonical PhysicalDevice; a selector matching zero or multiple identities is handled as a configuration error and never falls back based on XID, Screen, or enumeration order.
 47. A preferred PhysicalDevice that is UNAVAILABLE, lacks timelineSemaphore support, or cannot supply the requested compute queue count is filtered before ranking; the next suitable preference is selected, or DEVICE_UNAVAILABLE is returned if none remains.
-48. A logical Device created from render GPU A is queried against a Surface whose Screen has scanout GPU B: support is true only if A's selected provider establishes a complete direct or explicit bridge route; B's ScreenAttachment alone does not imply support.
-49. A PRIME/DRI3-capable topology exists but the selected provider cannot import/export the required format or synchronize the transfer: the exact Device/Surface query reports no present-capable queue and CreateSwapchain returns UNSUPPORTED_CONFIGURATION.
-50. The selected provider establishes a cross-GPU bridge route and reports supported queue families/formats/usages: QueuePresent uses that route, preserves the required source/destination synchronization, and never passes provider-local Vulkan handles across provider boundaries.
+48. A logical Device created from render GPU A is queried against a Surface whose Screen has scanout GPU B: support is true only if A's selected DDX binding establishes a complete direct or explicit bridge route; B's ScreenAttachment alone does not imply support.
+49. A PRIME/DRI3-capable topology exists but the selected DDX binding cannot import/export the required format or synchronize the transfer: the exact Device/Surface query reports no present-capable queue and CreateSwapchain returns UNSUPPORTED_CONFIGURATION.
+50. The selected DDX binding establishes a cross-GPU bridge route and reports supported queue families/formats/usages: QueuePresent uses that route, preserves the required source/destination synchronization, and never passes DDX-local Vulkan handles across provider boundaries.
 51. A Surface belongs to Screen S1 while a different Screen S2 has an available scanout GPU: capability queries and presentation remain bound to S1; the server never redirects to S2 based on enumeration or attachment order.
 52. A route generation changes after Swapchain creation: the old Swapchain becomes OUT_OF_DATE, no new operation is accepted on it, and a replacement query/create may select the new route; old callbacks cannot mutate the new route or Swapchain generation.
 53. A scanout/bridge route fails while the render PhysicalDevice and logical Device remain healthy: presentation is failed/invalidated under its own status contract, but the render PhysicalDevice is not marked REMOVED and the logical Device is not declared DEVICE_LOST without an exact positive backend loss result.
@@ -1249,9 +1235,9 @@ The implementation test suite SHOULD include at least:
 
 58. A discovery source attempts to confirm physical removal without authoritative evidence for the exact current incarnation, or submits evidence from a stale source/device generation: the registry rejects the transition and MUST NOT mark the PhysicalDevice REMOVED. A later valid removal observation for the current incarnation commits REMOVED exactly once.
 
-59. Provider context/device unavailable or recovery is submitted with an unknown provider, stale provider generation, stale PhysicalDevice generation, or absent selected binding: the registry returns a classified non-success result and leaves all statuses unchanged. A valid transition returns SUCCESS and affects only the exact selected provider context/binding scope.
+59. Provider context/device unavailable or recovery is submitted with an unknown provider, stale DDX module-role generation, stale PhysicalDevice generation, or absent selected binding: the registry returns a classified non-success result and leaves all statuses unchanged. A valid transition returns SUCCESS and affects only the exact selected DDX binding context/binding scope.
 
-60. A caller releases or mutates a temporary source/provider key or descriptor immediately after a registry call returns: the registry's canonical keys and retained state remain valid because retained input bytes were copied or explicitly reference-counted before return. Conversely, provider operation tables, callback code, callback userdata, and provider context remain pinned until the final provider reference and every operation token are safely retired; module/context teardown before that point is forbidden.
+60. A caller releases or mutates a temporary source/provider key or descriptor immediately after a registry call returns: the registry's canonical keys and retained state remain valid because retained input bytes were copied or explicitly reference-counted before return. Conversely, backend operation tables, callback code, callback userdata, and DDX module-role context remain pinned until the final provider reference and every operation token are safely retired; module/context teardown before that point is forbidden.
 
 
 
@@ -1260,87 +1246,87 @@ The implementation test suite SHOULD include at least:
 63. Make one configured discovery adapter fail or report unavailable during startup: the barrier completes with that source unavailable, no candidate from it is falsely marked REMOVED, no incomplete snapshot is published, and unrelated fully discovered devices remain publishable.
 64. Register a discovery adapter after the startup barrier closes: it cannot reopen the barrier or reorder/mutate existing PhysicalDevices; a newly discovered candidate follows the independent per-device publication path.
 65. Have a DDX report a Screen mapping using only a Screen index, Entity index, private pointer, or unverified DRM pathname: the mapping remains unresolved and cannot create, merge, or attach a PhysicalDevice.
-66. Unload a DDX/provider module while an old Screen-generation callback or provider operation remains outstanding: new callbacks are stopped, old references remain pinned or quarantined, and neither module code nor callback userdata is released until exact-generation retirement proves quiescence.
+66. Unload a DDX/DDX module while an old Screen-generation callback or backend operation remains outstanding: new callbacks are stopped, old references remain pinned or quarantined, and neither module code nor callback userdata is released until exact-generation retirement proves quiescence.
 
 
 67. On an XLibre build whose udev DRM discovery enumerates only `card[0-9]*` and deduplicates by major/minor, independently discover/correlate the render node for the same DRM device. Verify one canonical PhysicalDevice and prove that neither major/minor equality nor node name is used as its identity key.
 68. Invoke the Xorg GPU-screen removal path for a device whose underlying hardware remains present: the exact ScreenAttachment and Xorg discovery observation are retired, but the PhysicalDevice is not marked REMOVED while authoritative platform/provider evidence for the same incarnation remains.
-69. Configure no Xorg primary bus so `xf86platformPrimary()` uses its first-platform-device fallback, then permute platform/Screen enumeration: XAverius canonical inventory order, provider selection, and `CreateDefaultDevice` remain unchanged.
+69. Configure no Xorg primary bus so `xf86platformPrimary()` uses its first-platform-device fallback, then permute platform/Screen enumeration: XAverius canonical inventory order, DDX-binding selection, and `CreateDefaultDevice` remain unchanged.
 
 
-70. Close a GPU Screen through the XLibre sequence `dixScreenRaiseClose()` → `RemoveGPUScreen()` → `xf86DeleteScreen()`. Verify that the exact ScreenAttachment is detached before Screen-private data is freed, while the shared provider registration, selected PhysicalDevice, and provider module lease remain live if any other Screen, logical Device, route, or provider operation still references them.
-71. In `FreeScreen()`, drop the ordinary Xorg Screen/module reference while an accepted provider operation is still pending. Verify that the independent provider/module lease prevents unloading every provider operation, callback, trampoline, and userdata address reachable by that operation.
-72. Race a provider terminal callback with `retire_operation`. SUCCESS MUST NOT be returned until the callback has returned to the server-owned sink and no further callback for that exact token can begin. The server may process its copied completion record after provider callback code has returned and the provider module remains otherwise pinned.
-73. Begin provider-wide quiescence while callbacks, worker tasks, and operation tokens are outstanding. PENDING MUST retain the module/context and reject new operations; SUCCESS is permitted only after all callbacks/workers are unreachable and all operation tokens are retired. Inject an unquiesceable worker and verify quarantine rather than module unload.
+70. Close a GPU Screen through the XLibre sequence `dixScreenRaiseClose()` → `RemoveGPUScreen()` → `xf86DeleteScreen()`. Verify that the exact ScreenAttachment is detached before Screen-private data is freed, while the shared provider registration, selected PhysicalDevice, and DDX module lease remain live if any other Screen, logical Device, route, or backend operation still references them.
+71. In `FreeScreen()`, drop the ordinary Xorg Screen/module reference while an accepted backend operation is still pending. Verify that the independent provider/module lease prevents unloading every backend operation, callback, trampoline, and userdata address reachable by that operation.
+72. Race a provider terminal callback with `retire_operation`. SUCCESS MUST NOT be returned until the callback has returned to the server-owned sink and no further callback for that exact token can begin. The server may process its copied completion record after provider callback code has returned and the DDX module remains otherwise pinned.
+73. Begin module-role-wide quiescence while callbacks, worker tasks, and operation tokens are outstanding. PENDING MUST retain the module/context and reject new operations; SUCCESS is permitted only after all callbacks/workers are unreachable and all operation tokens are retired. Inject an unquiesceable worker and verify quarantine rather than module unload.
 74. Unload a DDX module that implements topology and provider roles while a second Screen still uses the same PhysicalDevice through a different DDX. Verify that topology-role withdrawal detaches only the unloading DDX's ScreenAttachments, while the shared PhysicalDevice and separately owned provider remain available.
 75. Use a provider callback bridge that enters DDX code and then queues a server-owned completion. Verify that both provider and DDX module leases remain held until the bridge returns; retirement of the backend token alone cannot release the DDX module while bridge callback code is still executing.
 
 
-76. Duplicate a DDX `ModuleDesc` for a GPU Screen, then remove that Screen and drop its `DriverPtr.refCount` while a provider token remains live. Verify that the provider's independent loader/module pin prevents `dlclose()` and keeps operation/callback code executable until exact provider quiescence.
-77. Delete the final Xorg Screen using a DDX that also implements a provider. Verify that Xorg's normal driver/module cleanup cannot unload the provider while a PhysicalDevice, logical Device, accepted operation, callback, or deferred backend destroy still retains the provider generation; after successful provider-wide quiescence and final release, the loader pin is dropped exactly once.
+76. Duplicate a DDX `ModuleDesc` for a GPU Screen, then remove that Screen and drop its `DriverPtr.refCount` while a provider token remains live. Verify that the DDX binding's independent loader/module pin prevents `dlclose()` and keeps operation/callback code executable until exact provider quiescence.
+77. Delete the final Xorg Screen using a DDX that also implements a provider. Verify that Xorg's normal driver/module cleanup cannot unload the provider while a PhysicalDevice, logical Device, accepted operation, callback, or deferred backend destroy still retains the DDX module-role generation; after successful module-role-wide quiescence and final release, the loader pin is dropped exactly once.
 
 
 78. Close and delete a GPU Screen while a provider callback still holds attachment-scoped state. Verify that the callback has no raw `ScreenPtr`/`ScrnInfoPtr` or `FreeScreen()`-owned pointer to dereference; it uses only a detached, generation-checked retained context, performs no Screen/RandR callback after close, and releases that context only after callback return and operation retirement.
 
 
 
-79. Register two providers from different modules against the same canonical PhysicalDevice. Verify that both bindings remain independently owned, exactly one is selected before publication, and the published snapshot comes wholly from that provider. Removing or quiescing the non-selected provider MUST NOT change PhysicalDevice status, XID, snapshot, or selected-provider identity.
+79. Register two providers from different modules against the same canonical PhysicalDevice. Verify that both bindings remain independently owned, exactly one is selected before publication, and the published snapshot comes wholly from that provider. Removing or quiescing the non-selected DDX binding MUST NOT change PhysicalDevice status, XID, snapshot, or selected-provider identity.
 
-80. Register one provider generation against several PhysicalDevices, then report a binding-scoped unavailable/removal transition for one device. Verify that only that exact binding/device is affected. A provider-context-wide failure affects every PhysicalDevice selected through that exact provider generation, but does not affect devices for which it is only a non-selected discovery provider.
+80. Register one DDX module-role generation against several PhysicalDevices, then report a binding-scoped unavailable/removal transition for one device. Verify that only that exact binding/device is affected. A provider-context-wide failure affects every PhysicalDevice selected through that exact DDX module-role generation, but does not affect devices for which it is only a non-selected discovery provider.
 
-81. Have two DDX/platform sources independently observe the same canonical PhysicalDevice. Withdraw or unload one source while the other remains authoritative. Verify that only the first source's observation and its owned ScreenAttachments disappear; the PhysicalDevice identity, other source observation, and unrelated provider binding remain.
+81. Have two DDX/platform sources independently observe the same canonical PhysicalDevice. Withdraw or unload one source while the other remains authoritative. Verify that only the first source's observation and its owned ScreenAttachments disappear; the PhysicalDevice identity, other source observation, and unrelated DDX device binding remain.
 
-82. Have one DDX module register two independent BackendProvider generations with distinct contexts and provider keys. Quiesce and unregister one generation while the other still serves a PhysicalDevice. Verify that the first generation rejects new operations and eventually releases only its own references, while the common module lease remains pinned and the second provider continues operating unchanged.
+82. Have one DDX module register two independent DdxModuleRole generations with distinct contexts and provider keys. Quiesce and unregister one generation while the other still serves a PhysicalDevice. Verify that the first generation rejects new operations and eventually releases only its own references, while the common module lease remains pinned and the second provider continues operating unchanged.
 
 83. Race Screen close, source withdrawal, selected/non-selected binding removal, provider-generation shutdown, and authoritative physical removal in both serialization orders. Verify that each transition affects only its exact generation and ownership scope; REMOVED is terminal, stale callbacks are rejected, and no operation implicitly performs another transition's broader cleanup.
 
-84. Remove or quiesce the selected provider while another provider binding for the same PhysicalDevice remains available. Verify that the PhysicalDevice becomes UNAVAILABLE and is not transparently rebound, that the published snapshot is unchanged, and that no existing logical Device silently migrates to the other provider.
+84. Remove or quiesce the selected DDX binding while another DDX device binding for the same PhysicalDevice remains available. Verify that the PhysicalDevice becomes UNAVAILABLE and is not transparently rebound, that the published snapshot is unchanged, and that no existing logical Device silently migrates to the other provider.
 
-85. Register multiple provider-local Vulkan aliases for one canonical PhysicalDevice through one provider generation. Verify that the provider deduplicates them and registers exactly one executable binding; if alias identity is ambiguous, no competing binding or PhysicalDevice publication is permitted.
+85. Register multiple DDX-local Vulkan aliases for one canonical PhysicalDevice through one DDX module-role generation. Verify that the provider deduplicates them and registers exactly one executable binding; if alias identity is ambiguous, no competing binding or PhysicalDevice publication is permitted.
 
-86. Attach two Screens through different DDX modules to one PhysicalDevice and one shared provider. Close/unload one DDX module. Verify that only its ScreenAttachment and adapter role retire; the other ScreenAttachment, selected provider, PhysicalDevice, and provider module lease remain live.
+86. Attach two Screens through different DDX modules to one PhysicalDevice and one shared provider. Close/unload one DDX module. Verify that only its ScreenAttachment and adapter role retire; the other ScreenAttachment, selected DDX binding, PhysicalDevice, and DDX module lease remain live.
 
-87. Quiesce one of several provider generations backed by the same module while another generation still has a pending callback. Verify that SUCCESS for the first provider does not release the common module pin or make the second provider's callback unreachable; final module unload occurs only after all role-specific leases and callback bridges have retired.
+87. Quiesce one of several DDX module-role generations backed by the same module while another generation still has a pending callback. Verify that SUCCESS for the first provider does not release the common module pin or make the second DDX binding's callback unreachable; final module unload occurs only after all role-specific leases and callback bridges have retired.
 
-88. Race BeginProviderShutdown against a new operation and a new provider-binding registration for the same generation. If shutdown serializes first, both are rejected without partial state; if either admission serializes first, it is retained and drained before quiescence. Repeated shutdown calls are idempotent, while a stale provider generation is rejected without affecting its replacement.
+88. Race BeginProviderShutdown against a new operation and a new provider-binding registration for the same generation. If shutdown serializes first, both are rejected without partial state; if either admission serializes first, it is retained and drained before quiescence. Repeated shutdown calls are idempotent, while a stale DDX module-role generation is rejected without affecting its replacement.
 
 
 
-89. Register one provider descriptor and then register bindings for several PhysicalDevices. Verify that descriptor installation, provider-context retention, and module-lease retention occur exactly once for the provider generation; removing one binding does not release the provider or module lease while another binding or reference remains.
+89. Register one provider descriptor and then register bindings for several PhysicalDevices. Verify that descriptor installation, provider-context retention, and module-lease retention occur exactly once for the DDX module-role generation; removing one binding does not release the provider or module lease while another binding or reference remains.
 
-90. Attempt to register a binding before provider registration, against a stale generation, and after BeginProviderShutdown. Verify each attempt is rejected atomically and creates no binding, callback path, or extra provider/module reference. Registering the same provider generation twice is rejected; a new generation may register only after the old generation is no longer addressable by stale callbacks.
+90. Attempt to register a binding before provider registration, against a stale generation, and after BeginProviderShutdown. Verify each attempt is rejected atomically and creates no binding, callback path, or extra provider/module reference. Registering the same DDX module-role generation twice is rejected; a new generation may register only after the old generation is no longer addressable by stale callbacks.
 
-91. Register two provider generations and one DDX adapter role sharing a single module lease. Quiesce/finalize one provider while the other provider has an outstanding operation and the adapter role remains active. Verify the first provider context is released while the shared module remains pinned; only after all provider and adapter role references are released may the loader perform final module unload.
+91. Register two DDX module-role generations and one DDX adapter role sharing a single module lease. Quiesce/finalize one provider while the other provider has an outstanding operation and the adapter role remains active. Verify the first DDX module-role context is released while the shared module remains pinned; only after all provider and adapter role references are released may the loader perform final module unload.
 
 92. Make quiesce_provider return PENDING, then FAILURE, then SUCCESS in separate runs. Verify PENDING retains the provider/module lease and permits retry; FAILURE quarantines without finalization; SUCCESS records quiescence but still does not release the module lease while logical-device/provider-object references remain. Verify finalization calls release_provider before the final lease release, exactly once.
 
-93. Attempt provider finalization while a logical Device, deferred backend destroy, callback bridge, or provider-owned object still retains the provider generation. Verify the operation remains pending and no provider context, operation table, callback userdata, or module lease is released.
+93. Attempt provider finalization while a logical Device, deferred backend destroy, callback bridge, or provider-owned object still retains the DDX module-role generation. Verify the operation remains pending and no DDX module-role context, operation table, callback userdata, or module lease is released.
 
 
 
-94. Begin provider shutdown while a deferred backend destroy and a live provider-owned object remain. Verify that quiescence is not invoked until the destroy has completed or the object is quarantined without further provider-code requirements. After quiescence SUCCESS, attempt a backend destroy and verify that it is rejected; only the single registry-controlled final release_provider call may enter provider module code before the module-lease reference is dropped.
+94. Begin provider shutdown while a deferred backend destroy and a live provider-owned object remain. Verify that quiescence is not invoked until the destroy has completed or the object is quarantined without further provider-code requirements. After quiescence SUCCESS, attempt a backend destroy and verify that it is rejected; only the single registry-controlled final release_provider call may enter DDX module code before the module-lease reference is dropped.
 
-95. Create a provider module lease using a duplicated Xorg ModuleDesc, a ScrnInfo pointer, or a DriverPtr reference without an independent loader pin. Verify that lease creation/registration is rejected or the module is marked permanently resident; none of these Screen-scoped references may be accepted as proof against final dlclose(). Verify that a valid server-owned loader-owner record yields one shared lease for all provider and adapter roles in that loaded module instance.
+95. Create a DDX module lease using a duplicated Xorg ModuleDesc, a ScrnInfo pointer, or a DriverPtr reference without an independent loader pin. Verify that lease creation/registration is rejected or the module is marked permanently resident; none of these Screen-scoped references may be accepted as proof against final dlclose(). Verify that a valid server-owned loader-owner record yields one shared lease for all provider and adapter roles in that loaded module instance.
 
 
 
-96. Reserve provider generations, fail registration after descriptor validation/allocation, and then register a replacement provider. Verify that the failed generation is never reused, stale completion records carrying it are rejected, and the replacement receives a distinct generation before any binding or operation is accepted.
+96. Reserve DDX module-role generations, fail registration after descriptor validation/allocation, and then register a replacement provider. Verify that the failed generation is never reused, stale completion records carrying it are rejected, and the replacement receives a distinct generation before any binding or operation is accepted.
 
 97. Call registry APIs with required pointers omitted, zero generations, unknown role bits, malformed keys, and inconsistent input/output pairs. Verify `INVALID_ARGUMENT`, initialized output sentinels, no mutation, and no leaked references.
 
-98. Obtain PhysicalDevice, BackendProvider, ModuleRole, and ScreenAttachment references from successful APIs, then race release against detach, binding removal, provider shutdown, and registry shutdown. Verify each acquired reference is consumed exactly once and storage is not reclaimed while any reference or callback remains.
+98. Obtain PhysicalDevice, DdxModuleRole, ModuleRole, and ScreenAttachment references from successful APIs, then race release against detach, binding removal, provider shutdown, and registry shutdown. Verify each acquired reference is consumed exactly once and storage is not reclaimed while any reference or callback remains.
 
 99. Register and unregister a discovery source while observations and delayed callbacks exist. Verify source generations are server-assigned/non-reusable, unregister returns PENDING while callbacks remain, and late observations from the closed generation are rejected without affecting a replacement source.
 
 100. Register a provider with an incomplete operation table, invalid module lease, or failing descriptor validation. Verify no provider is installed and every acquired lease/context reference is unwound exactly once; successful registration returns exactly one caller-owned provider reference.
 
-101. Register a binding with a stale PhysicalDevice/provider generation, duplicate provider-local binding, or conflicting identity. Verify the registry assigns the binding generation, rejects invalid cases atomically, and never creates duplicate references or active bindings.
+101. Register a binding with a stale PhysicalDevice/DDX module-role generation, duplicate DDX-local binding, or conflicting identity. Verify the registry assigns the binding generation, rejects invalid cases atomically, and never creates duplicate references or active bindings.
 
 102. Attach a Screen with stale device generation, zero Screen generation, unknown role bits, or a Screen already closing. Verify a classified failure and no retained Screen pointer; exact duplicate attachment returns the same attachment generation without duplicate registry state.
 
 103. Force XID allocation and DIX resource insertion to fail at each publication step. Verify no partial client-visible resource, no leaked provisional XID, and no published flag; retry succeeds with one stable XID. Repeated publication returns that same XID.
 
-104. Acquire the selected provider while the PhysicalDevice is pending, unavailable, removed, or its provider is shutting down. Verify no provider reference leaks and no stale provider generation is returned; success pins the exact selected provider until release.
+104. Acquire the selected DDX binding while the PhysicalDevice is pending, unavailable, removed, or its provider is shutting down. Verify no provider reference leaks and no stale DDX module-role generation is returned; success pins the exact selected DDX binding until release.
 
 105. Call BeginShutdown while source unregister, provider quiescence, Screen detach, and publication are pending. Verify admission closes, Destroy returns BUSY without invalidating existing references, and final Destroy succeeds only after every object/callback/module lease is retired.
 
@@ -1348,20 +1334,20 @@ The implementation test suite SHOULD include at least:
 
 107. Return PENDING and AMBIGUOUS from ObserveDevice and verify a nonzero observation ID is returned while device pointer/generation remain NULL/zero; withdraw that exact observation and verify no other source evidence is affected.
 
-108. Return FAILURE from quiesce_provider. Verify TryQuiesceProvider returns QUARANTINED with FAILURE output, does not call final release_provider, and retains provider context and module lease permanently unless an explicit safe-recovery contract is added.
+108. Return FAILURE from quiesce_provider. Verify TryQuiesceProvider returns QUARANTINED with FAILURE output, does not call final release_provider, and retains DDX module-role context and module lease permanently unless an explicit safe-recovery contract is added.
 
 109. Return PENDING from UnregisterDiscoverySource and DetachScreen while callbacks still run. Retry with the same exact generation after callback return and verify one final retirement, no duplicate detach, and no premature object reclamation.
 
-110. Verify completion records identify the exact provider generation, operation token, provider-local binding, PhysicalDevice generation, logical-Device ID/generation, and resource ID/generation without carrying a raw Xserver or registry object pointer. Reused addresses/XIDs cannot redirect a completion.
+110. Verify completion records identify the exact DDX module-role generation, operation token, DDX-local binding, PhysicalDevice generation, logical-Device ID/generation, and resource ID/generation without carrying a raw Xserver or registry object pointer. Reused addresses/XIDs cannot redirect a completion.
 
-111. Race GpuProviderModuleLeaseCreate/Retain/Release with provider registration/finalization and adapter-role teardown. Verify one shared lease per loaded module-owner identity, no underflow/double unpin, and no final loader release before every role has released its reference.
+111. Race GpuModuleLeaseCreate/Retain/Release with provider registration/finalization and adapter-role teardown. Verify one shared lease per loaded module-owner identity, no underflow/double unpin, and no final loader release before every role has released its reference.
 
-112. Force provider retain/context initialization and module-pin acquisition failures at each registration stage. Verify registration is atomic, the caller's original lease remains owned by the caller, registry-acquired references are unwound exactly once, and provider code is never called after its lease is released.
+112. Force provider retain/context initialization and module-pin acquisition failures at each registration stage. Verify registration is atomic, the caller's original lease remains owned by the caller, registry-acquired references are unwound exactly once, and DDX backend code is never called after its lease is released.
 
 113. Register a DDX module role, attach a discovery source and multiple ScreenAttachments to it, then request role unregister. Verify admission closes immediately, unregister remains PENDING until the source, attachments, and callback bridges retire, and the shared module lease is released exactly once afterward. A caller-held role reference may keep only the inert server-owned role record alive and does not delay module unpin. A second DDX role sharing the same lease remains active.
 114. Attempt to retain or register new callbacks against a module role after unregister begins. Verify SHUTTING_DOWN and no new reference/callback admission; releasing already-held references remains permitted until the role retires.
 
-115. Prepare an operation token against an unknown/stale provider generation, removed binding, unavailable PhysicalDevice, or stale logical-Device/resource generation. Verify a classified rejection, zeroed outputs, and no provider entry or retained reference.
+115. Prepare an operation token against an unknown/stale DDX module-role generation, removed binding, unavailable PhysicalDevice, or stale logical-Device/resource generation. Verify a classified rejection, zeroed outputs, and no provider entry or retained reference.
 
 116. Complete an operation callback before CommitOperationSubmission returns. Verify the completion is buffered and cannot affect public state until the provider entry point returns SUCCESS and commit is serialized. If the provider returns failure after callback/backend acceptance, verify QUARANTINED rather than token release.
 
@@ -1383,25 +1369,25 @@ The implementation test suite SHOULD include at least:
 
 125. Attempt to set removal-evidence authority from caller-controlled input. Verify no such field is accepted: the registry derives authority solely from the registered source capabilities, source generation, observation provenance, and server trust policy.
 
-126. Call BeginShutdown while PrepareOperation races new submissions. Verify shutdown serialization closes operation-token admission, while already prepared/accepted tokens remain pinned and drain under their provider generation.
+126. Call BeginShutdown while PrepareOperation races new submissions. Verify shutdown serialization closes operation-token admission, while already prepared/accepted tokens remain pinned and drain under their DDX module-role generation.
 
 127. Return STATUS/ALREADY_COMPLETED from cancel_acquire after the backend image acquisition has already terminalized. Verify cancellation does not create a second completion or change the first terminal outcome; the server still performs late-image release/retention as required.
 
-128. Return candidate lists with zero entries, malformed count/items combinations, duplicate provider-local binding IDs, duplicate or conflicting canonical identities, and a failure after partial allocation. Verify successful lists are released exactly once, failed lists expose no partial entries, and candidate storage is never referenced after release_candidate_list.
+128. Return candidate lists with zero entries, malformed count/items combinations, duplicate DDX-local binding IDs, duplicate or conflicting canonical identities, and a failure after partial allocation. Verify successful lists are released exactly once, failed lists expose no partial entries, and candidate storage is never referenced after release_candidate_list.
 
-129. Remove a provider binding while an operation or deferred object still references its provider-local binding ID. Verify the provider's native handle mapping remains alive until all operation/object references retire; a removed binding ID is never reused within that provider generation.
+129. Remove a DDX device binding while an operation or deferred object still references its DDX-local binding ID. Verify the DDX binding's native handle mapping remains alive until all operation/object references retire; a removed binding ID is never reused within that DDX module-role generation.
 
-130. Enumerate one provider's candidates, register bindings for several PhysicalDevices, then release the candidate list. Verify copied identity/snapshot data remains valid, provider-native handle mappings remain usable by binding ID, and one provider context can serve all bindings without sharing mutable candidate-list storage.
+130. Enumerate one DDX binding's candidates, register bindings for several PhysicalDevices, then release the candidate list. Verify copied identity/snapshot data remains valid, provider-native handle mappings remain usable by binding ID, and one DDX module-role context can serve all bindings without sharing mutable candidate-list storage.
 
-131. Race GpuBackendProviderGetContext against provider finalization and module quiescence. Verify the accessor is callable only while an exact provider reference is held, returns a borrowed pointer, and cannot extend or outlive provider-context/module lifetime.
+131. Race GpuDdxModuleRoleGetContext against provider finalization and module quiescence. Verify the accessor is callable only while an exact provider reference is held, returns a borrowed pointer, and cannot extend or outlive provider-context/module lifetime.
 
-132. Deliver a completion with the correct provider-local binding ID and PhysicalDevice generation but a stale or mismatched registry binding generation. Verify it is rejected and cannot affect a replacement binding for the same PhysicalDevice/provider generation.
+132. Deliver a completion with the correct DDX-local binding ID and PhysicalDevice generation but a stale or mismatched registry binding generation. Verify it is rejected and cannot affect a replacement binding for the same PhysicalDevice/DDX module-role generation.
 
 133. Deliver provider-context unavailable/recovered notifications out of order, with lower, duplicate-same-state, and duplicate-conflicting availability sequences. Verify stale events return STALE_EVENT, exact duplicates are idempotent, conflicting reuse is rejected, and an old loss cannot overwrite a newer recovery.
 
-134. Remove and re-register a provider binding for the same provider generation/PhysicalDevice incarnation, then deliver an availability notification from the old binding generation. Verify it is rejected without changing the replacement binding.
+134. Remove and re-register a DDX device binding for the same DDX module-role generation/PhysicalDevice incarnation, then deliver an availability notification from the old binding generation. Verify it is rejected without changing the replacement binding.
 
-135. Make the provider context unavailable while one binding is independently unavailable, then recover the context only. Verify the PhysicalDevice remains UNAVAILABLE until the exact binding also recovers; recovery at one scope never clears the other scope's failure.
+135. Make the DDX module-role context unavailable while one binding is independently unavailable, then recover the context only. Verify the PhysicalDevice remains UNAVAILABLE until the exact binding also recovers; recovery at one scope never clears the other scope's failure.
 
 136. Deliver discovery-source events out of order across concurrent scan/hotplug callbacks. Verify the per-source event sequence rejects older observations, exact replay is idempotent, and the same sequence with conflicting payload returns IDENTITY_CONFLICT.
 
@@ -1409,13 +1395,13 @@ The implementation test suite SHOULD include at least:
 
 138. Prepare each defined operation kind with missing logical-Device identity, an empty resource set, incomplete WriteBuffer/ReadBuffer memory pins, a QueueSubmit dependency set missing one referenced object, or an Acquire/Present token missing its Swapchain/route/synchronization references. Verify rejection before provider entry and no partial reference retention.
 
-139. Return GPU_PROVIDER_FATAL from a provider operation and separately trigger a server-detected contract violation. Verify immediate provider-generation quarantine, closed admission, UNAVAILABLE status for its selected devices without REMOVED, retained module/context/object references, and no normal finalization. Return DEVICE_LOST from one logical Device and verify other Devices/PhysicalDevices remain available; return CANCELLED only through an accepted operation's terminal completion.
+139. Return GPU_PROVIDER_FATAL from a backend operation and separately trigger a server-detected contract violation. Verify immediate provider-generation quarantine, closed admission, UNAVAILABLE status for its selected devices without REMOVED, retained module/context/object references, and no normal finalization. Return DEVICE_LOST from one logical Device and verify other Devices/PhysicalDevices remain available; return CANCELLED only through an accepted operation's terminal completion.
 
 140. Race new provider, ModuleRole, and ScreenAttachment Retain calls against shutdown/unregister/detach. Verify admission closes at the serialized transition, new retains fail with SHUTTING_DOWN, and existing references can still be released. Repeat Commit/Reject/Retire/Quiesce/Finalize calls in every terminal state and verify the documented idempotent SUCCESS versus NOT_FOUND/IDENTITY_CONFLICT outcomes without duplicate release.
 
 141. Replay a successful ObserveDevice call with the same source event sequence and payload while the caller still holds the previous PhysicalDevice reference. Verify the observation ID is unchanged, the source observation is not duplicated, and the repeated SUCCESS returns exactly one additional caller-owned reference that must be released independently.
 
-142. Quarantine a provider generation through GPU_PROVIDER_FATAL, then call TryQuiesceProvider and FinalizeProviderShutdown. Verify both return QUARANTINED without entering provider module code or dropping provider/context/module/object references.
+142. Quarantine a DDX module-role generation through GPU_PROVIDER_FATAL, then call TryQuiesceProvider and FinalizeProviderShutdown. Verify both return QUARANTINED without entering DDX module code or dropping provider/context/module/object references.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
