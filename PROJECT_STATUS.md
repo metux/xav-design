@@ -98,3 +98,6 @@ The borrowed `ScreenPtr` lifetime clarification in the `GpuRegistryAttachScreen(
 ## Registry API audit — 2026-11-04 (pending exact-tip CI)
 
 A focused API audit expanded `spec/device-registry-architecture.md` §7 with classified error outcomes, initialized output sentinels, atomic rollback, retained-reference ownership, server-assigned binding/source/module-role generations, source and module-role registration, retryable unregister/detach/quiescence, transactional XID publication, provider output ownership, asynchronous token acceptance and completion identity. Architecture vectors 97–114 cover invalid inputs, references, source/module-role teardown, publication failures, quiescence quarantine, and late/duplicate completions. Changes are newer than the verified baseline above; do not treat them as CI-verified until the exact branch tip passes.
+
+
+The registry API audit now also defines the operation-token admission path: prepare before provider entry, commit/reject after the synchronous provider return, buffer early callbacks until commit, and retire only after backend access and callback frames are gone. Per-token retirement has explicit PENDING/SUCCESS/FAILURE results and quarantine behavior. Architecture vectors now extend through 119. These latest additions remain pending exact-tip CI.
