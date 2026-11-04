@@ -15,12 +15,12 @@ The model has four distinct object classes:
 
 The relationships are:
 
-- One PhysicalDevice MAY have zero or more BackendProviders.
+- One PhysicalDevice has exactly one selected executable DDX device binding in v0.1.
 - One PhysicalDevice MAY have zero or more ScreenAttachments.
 - One Screen MAY have zero or more ScreenAttachments; a Screen is not required to map to exactly one GPU.
 - One Surface MAY have distinct PresentationRoutes for different logical Devices; a route is scoped to one exact logical-Device generation and Surface/Window/Screen generation.
-- A PresentationRoute MAY reference a scanout PhysicalDevice/ScreenAttachment and a private bridge adapter, but it MUST NOT change the logical Device's render PhysicalDevice or selected execution provider.
-- A BackendProvider MUST NOT be implicitly created or destroyed with a ScreenAttachment.
+- A PresentationRoute MAY reference a scanout PhysicalDevice/ScreenAttachment and a private bridge adapter, but it MUST NOT change the logical Device's render PhysicalDevice or selected DDX device binding.
+- A DDX device binding MUST NOT be implicitly created or destroyed with a ScreenAttachment.
 - Destroying a Screen or detaching a provider MUST NOT destroy the PhysicalDevice identity.
 - A PhysicalDevice MUST NOT be destroyed while its tombstone or any logical-device/backend reference remains live.
 
@@ -113,7 +113,7 @@ The key MUST be a typed, normalized tuple and MUST NOT contain provider registra
 
 1. Platform-backed devices: bus-type tag, normalized bus identity (for PCI, the complete domain:bus:device.function; for other buses, the canonical bus/subsystem identity), and the normalized instance discriminator when required.
 2. Derived devices: derived-device class tag, canonical parent identity key, and authoritative child-instance discriminator.
-3. Provider-scoped software/virtual devices: software/virtual class tag, stable provider namespace key, and provider-supplied stable instance key.
+3. DDX-scoped software/virtual devices: software/virtual class tag, stable DDX/backend namespace key, and DDX-supplied stable instance key.
 4. Devices with no platform identity but a valid, unambiguous cross-instance `deviceUUID`: UUID-only class tag and the exact 16 UUID bytes.
 
 Comparison is bytewise lexicographic over the canonical tuple encoding, with fixed-width numeric fields encoded in a documented normalized order and variable strings length-delimited. Implementations MUST use one canonical encoding and comparison function throughout the registry; locale-sensitive string collation is forbidden. A collision between two distinct live canonical records is an identity ambiguity and MUST be resolved before either record is published. An incarnation token distinguishes removal/re-addition for lifecycle and stale-event rejection, but MUST NOT make a replacement device sort as the old published incarnation or permit tombstone resurrection.
@@ -194,13 +194,13 @@ The Xserver Screen lifecycle MUST be treated as a topology lifetime only. In the
 
 Accordingly:
 
-- `CloseScreen`, `FreeScreen`, `RemoveGPUScreen`, `xf86DeleteScreen`, or a zero `DriverPtr.refCount` MUST NOT be treated as proof of provider-operation completion, callback quiescence, or permission to release provider userdata.
+- `CloseScreen`, `FreeScreen`, `RemoveGPUScreen`, `xf86DeleteScreen`, or a zero `DriverPtr.refCount` MUST NOT be treated as proof of backend-operation completion, callback quiescence, or permission to release DDX backend userdata.
 - The DDX MUST detach the ScreenAttachment for the exact Screen generation before releasing Screen-private data. The ScreenAttachment MUST NOT own the provider context or provider module lease.
 - A Screen close MUST NOT unregister a shared BackendProvider merely because the provider was first discovered or opened through that Screen. Provider registration lifetime is independent of every ScreenAttachment lifetime. If a provider truly has per-Screen backend state, that state MUST be a separately retained child of the provider context and MUST retire only after its own Screen-generation work is quiescent.
 - A DDX module that supplies provider operation functions, completion callback functions, callback trampolines, or callback userdata MUST acquire a provider/module lease independent of Xorg's Screen-held module reference and driver Screen reference count. The lease MUST cover every function pointer and data object that can be reached by an accepted operation or a callback, including deferred cleanup and retirement paths.
 
 - No asynchronous provider operation, worker, or callback may retain or later dereference a raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or pointer into storage owned by `FreeScreen()`. Before crossing an asynchronous boundary, the DDX MUST copy the required immutable values or create a separately reference-counted ScreenAttachment context that contains no borrowed Xserver Screen/`ScrnInfo` pointers. Closing the Screen marks that context detached and prevents new Screen-facing work; the detached context may remain alive solely for callback bookkeeping until its own references retire. A callback after `CloseScreen` may complete backend cleanup using that detached context, but MUST NOT call Screen hooks, access RandR objects, or re-enter the deleted Screen.
-- A provider callback that has entered module code MUST hold a callback-execution reference until it has returned to the server-owned completion sink. The sink MUST copy/enqueue the immutable completion before returning; the provider callback MUST NOT retain server-owned transient payload pointers after that return.
+- A DDX backend callback that has entered module code MUST hold a callback-execution reference until it has returned to the server-owned completion sink. The sink MUST copy/enqueue the immutable completion before returning; the provider callback MUST NOT retain server-owned transient payload pointers after that return.
 
 Provider/module shutdown is a two-phase operation, not an ordinary Screen cleanup:
 
@@ -301,11 +301,11 @@ Quiescence is scoped. quiesce_provider SUCCESS proves that no callback, worker, 
 
 ## 4. Provider operation interface
 
-The provider interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The provider owns the actual backend calls and every provider-local handle. Request handlers MUST call the selected provider only through the operation interface bound to the exact PhysicalDevice and logical-Device generations.
+The device backend operation interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The DDX binding owns the actual backend calls and every device-local handle. Request handlers MUST call the operation vector stored in the exact selected PhysicalDevice binding; they MUST NOT resolve a second BackendProvider dispatch object.
 
 ### 4.1 Operation groups
 
-A selected provider MUST implement the following operation groups for every capability it advertises. An operation that is not applicable to the selected backend MAY be absent only when the corresponding XAverius capability is not advertised.
+The selected DDX device binding MUST implement the following operation groups for every capability it advertises. An operation that is not applicable to the selected backend MAY be absent only when the corresponding XAverius capability is not advertised.
 
 | Group | Required operations | Contract |
 |---|---|---|
@@ -342,7 +342,7 @@ Command entries (`CMD_*`) are not request subopcodes. The server validates their
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
-The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Operation-table entry points receive the server-owned provider wrapper; provider code obtains its opaque context only through `GpuBackendProviderGetContext()`, which returns a borrowed pointer valid while the provider generation is retained. Provider code MUST NOT cache or release that pointer independently. Each completion MUST carry the exact provider generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+The DDX device-registration descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Operation-table entry points receive the exact device-binding context and opaque device handle directly. A shared DDX/module-role control record may be retained for code lifetime and quiescence, but it is not resolved as an extra dispatch object. Provider code MUST NOT cache or release that pointer independently. Each completion MUST carry the exact provider generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
 
 ### 4.2 Physical snapshot operation
 
