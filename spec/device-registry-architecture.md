@@ -257,9 +257,12 @@ typedef struct GpuProviderOps {
         GpuProviderQueue **);
     void (*destroy_logical_device)(GpuProviderDevice *);
 
-    /* These are separate typed operation tables, not a generic wire-payload
-       dispatcher. Each table provides the create/query/update/execute/destroy
-       operations listed in Section 4.1 for its object family. */
+    /* Separate typed operation tables, not a generic wire-payload dispatcher:
+       buffer_memory: create/query/allocate/free/bind/read/write Buffer and Memory;
+       shader_pipeline: Shader, Descriptor, Pipeline create/update/destroy;
+       commands: CommandPool/CommandBuffer lifecycle and command recording;
+       synchronization: Semaphore/Fence lifecycle, host signal/wait, query/reset.
+       Each table implements the corresponding operations listed in Section 4.1. */
     const GpuProviderBufferMemoryOps *buffer_memory;
     const GpuProviderShaderPipelineOps *shader_pipeline;
     const GpuProviderCommandOps *commands;
@@ -268,24 +271,6 @@ typedef struct GpuProviderOps {
     GpuProviderResult (*queue_submit)(
         GpuProviderQueue *, const GpuProviderSubmitInfo *,
         GpuProviderOperationToken *);
-    GpuProviderResult (*read_buffer)(
-        GpuProviderDevice *, const GpuProviderReadInfo *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*write_buffer)(
-        GpuProviderDevice *, const GpuProviderWriteInfo *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*wait_semaphores)(
-        GpuProviderDevice *, const GpuProviderWaitInfo *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*wait_for_fence)(
-        GpuProviderDevice *, GpuProviderFence *,
-        GpuProviderOperationToken *);
-    GpuProviderResult (*query_semaphore_counter)(
-        GpuProviderDevice *, GpuProviderSemaphore *, uint64_t *value);
-    GpuProviderResult (*host_signal_semaphore)(
-        GpuProviderDevice *, GpuProviderSemaphore *, uint64_t value);
-    GpuProviderResult (*query_fence_status)(
-        GpuProviderDevice *, GpuProviderFence *, GpuProviderWaitResult *);
     GpuProviderResult (*create_surface)(
         GpuBackendProvider *, const GpuProviderSurfaceInfo *,
         GpuProviderSurface **);
