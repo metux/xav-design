@@ -3751,6 +3751,14 @@ def check_provider_host_wait_ownership(c: Check) -> None:
         and "Terminal provider failure without quiescence vector" in conformance,
         "Provider terminal outcome callbacks must remain distinct from backend quiescence and retirement",
     )
+    c.require(
+        "`retire_operation` has one normative success meaning" in architecture
+        and "Any non-`SUCCESS` result is not evidence of quiescence" in architecture
+        and "Repeated retirement after `SUCCESS` MUST be an idempotent no-op" in architecture
+        and "Provider operation-token retirement and quiescence" in conformance
+        and "Terminal token retirement failure and retry" in conformance,
+        "Provider token retirement must prove quiescence, preserve failed tokens, and be generation-safe/idempotent",
+    )
 
 
 def check_read_buffer_ordering_and_lifecycle(c: Check) -> None:
