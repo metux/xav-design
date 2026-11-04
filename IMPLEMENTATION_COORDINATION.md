@@ -417,3 +417,27 @@ Do not implement Phase B or later in this task, and do not introduce a Provider 
 **Source-level caution:** modesetting `Probe()`, platform/PCI probe callbacks, `PreInit()`, and `ScreenInit()` have different roles. The agent must identify the earliest point where the exact DDX device handle/context is valid without making registration conditional on Screen allocation or connector presence. If no suitable generic Xserver hook exists, use a narrow DDX-owned server-wide hook and document its lifetime.
 
 **Required agent response:** commit SHA, changed files, concrete DDX registration call site, evidence that zero-Screen and multi-device discovery work, exact build/test commands and results, and remaining lifecycle assumptions. The spec-side task was committed as `dde5c8a39dec507d6cdbf00ba210168313774158`. Re-audit the implementation against the Phase A acceptance list before assigning Phase B.
+
+
+## Phase A implementation audit — X11Libre/xserver:wip/xaverius — 2026-11-04
+
+**Result: NOT ACCEPTED; Phase A remains unimplemented.** Audited branch tip: `89df8ba0bc41dbb4b291b2242b9945661bb47fad` (parent `ba88b49433de7c202d6a977887729b4aebb4163c`). The only new commit since the prior audit, `89df8ba`, removes the redundant `xaverius_registry.h` wrapper and changes an include. It does not implement any Phase A behavior.
+
+Source checks at the current tip:
+- `Xext/xaverius/xaverius_priv.h` still exposes `EnumeratePhysicalDevices`, `GetPhysicalDeviceProperty`, and `GetPhysicalDeviceQueueFamilyProperties` inside `XaveriusDDXOps`; the header still describes device information as filled during ScreenInit.
+- `xaverius_screen.c` still owns only per-Screen allocation/close cleanup, but the DDX API attached to it still carries the device callbacks. Screen close invokes ScreenFini and frees the Screen private; there is no explicit PhysicalDevice detach model yet.
+- `xaverius_device.c` reads the global list for enumeration, but there is no DDX-wide registration caller. The handlers still consume `dev->callbacks` snapshot data; static property and queue-family requests still reject non-AVAILABLE devices. The registry is therefore not populated through the required independent DDX discovery lifecycle.
+- `xaverius_registry.c` still exposes `XaveriusRegisterDevice(identity, callbacks)`; duplicate identity updates the existing callback pointer (last-writer-wins). This is not the Phase A idempotent registration guarantee and remains a later-phase architecture blocker too.
+- `init.c` initializes the registry, but `XaveriusExtensionFini` is empty. This is not a Phase A acceptance item, but remains recorded for the later shutdown phase.
+- The current modesetting `driver.c` has no XAverius registration call. Its probe path includes `check_outputs()` and `xf86AllocateScreen()`; PreInit and ScreenInit are per-ScrnInfo/Screen stages. No demonstrated path registers render-only/headless devices independently of Screen allocation.
+- The current Xserver commit status is `pending` with no reported status checks. No agent report, build command, or Phase A test evidence was found in the coordination board or the branch commits inspected.
+
+**Acceptance matrix:**
+1. Zero/one/multiple devices registered with zero Screens: FAIL / no DDX-wide entry point or caller.
+2. Headless/render-only/compute-only devices retained without a Screen: FAIL / no such discovery path demonstrated; modesetting probe remains output/Screen oriented.
+3. Multiple Screens do not duplicate registration and one Screen does not define inventory: NOT DEMONSTRATED / no DDX-owned registration path or test.
+4. Enumeration request has no discovery side effects and serializes only the process-wide registry: PARTIAL / it reads the global list and does not visibly invoke enumeration callbacks, but the required independent population path is absent and request status/filter semantics remain incomplete.
+5. ScreenInit/ScreenFini exclusively Screen-local and Screen close cannot unregister a shared device: PARTIAL / cleanup is Screen-local, but DDX operations still mix device callbacks into Screen ops and no independent binding/attachment lifecycle exists.
+6. No Provider object/ranking/alternate inventory introduced: PASS for the narrow Phase A source shape (the current API still uses the legacy ProviderCapabilities naming/handle, but no new Provider object or candidate inventory was added by these commits).
+
+**Required response from implementation agent:** identify the DDX-wide registration API and exact call site, show how every served device (including no-output/no-Screen devices) is enumerated once, remove the three device callbacks from `XaveriusDDXOps`, and supply zero-Screen/multi-device/repeated-registration test evidence plus exact build/test results. Do not start Phase B until this Phase A review is satisfied. No Xserver source was changed by this audit.
