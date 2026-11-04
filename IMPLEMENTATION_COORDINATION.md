@@ -1042,3 +1042,28 @@ The synchronization ownership correction in 50d76ea/9498445 is normative: do not
 Current remaining work is a final pass over STATUS/error mapping and exact-tip automated verification; runtime Vulkan/WSI conformance remains outside what documentation-only edits can establish.
 
 Final verification note (2026-11-04): request inventory and ownership map re-read from the branch tip; provider callback/cancellation, status/timeout, and protocol-acceptance wording checked for consistency. Latest board commit: 770b72308ee99d7e5416057b1779037cbce98500. GitHub combined status and commit workflow-run queries returned empty lists for this tip; CI remains unverified. No repository tests were executed in this environment.
+
+
+### Provider UNAVAILABLE result/status mapping audit — 2026-11-04
+
+The request-specific error/status cross-check found one real gap: the architecture mapped provider UNAVAILABLE to DEVICE_UNAVAILABLE for every provider-backed operation, but the presentation reply enums did not yet contain that status. Returning DEVICE_LOST would incorrectly claim loss of an existing logical VkDevice; TEMPORARILY_NOT_PRESENTABLE is reserved for a zero-extent Window.
+
+Corrected by adding append-only, request-local DEVICE_UNAVAILABLE values:
+- GetSurfaceCapabilities: 4 (after SUCCESS, TEMPORARILY_NOT_PRESENTABLE, SURFACE_LOST, DEVICE_LOST).
+- CreateSwapchain: 6 (after the existing ALLOCATION_FAILED=5).
+- QueuePresent: 4 (after DEVICE_LOST=3).
+- AcquireNextImage: 7 (after DEVICE_DESTROYED=6).
+
+The precedence is now DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > OUT_OF_DATE, subject to each request's earlier framing/XID/type/ownership phases and its existing terminal first-wins rules. All non-success capability replies remain the exact fixed 64-byte prefix with zero capability fields; all non-success CreateSwapchain replies leave the target XID unallocated; Acquire failure does not signal either sync object; rejected QueuePresent consumes no waits or token.
+
+After QueuePresent has already returned SUCCESS, later provider unavailability maps to PRESENTATION_FAILED in the presentation completion event, not to DEVICE_LOST and not to a delayed X11 error. AcquireNextImage pending registration may terminalize with DEVICE_UNAVAILABLE unless another terminal outcome wins first.
+
+Updated:
+- spec/presentation.md — request-local status enums, precedence, and pending/accepted operation behavior.
+- spec/errors.md — provider UNAVAILABLE/DEVICE_LOST mapping through request-specific error/status/reply channels.
+- spec/conformance.md — provider-unavailability precedence, status vectors, and QueuePresent post-acceptance behavior.
+- tools/check-wire-layout.py — exact status-enum and precedence assertions.
+
+Commits: 6317a1f, 18c206e, bd27b25, d434ea6, b7f1eae, eb73d4d, 85e2ad4, 559a70e, 63c4471, 7bb4094.
+
+CI is still unverified; no local test suite has been executed. The latest status mapping has not yet been validated by an exact-tip CI run.
