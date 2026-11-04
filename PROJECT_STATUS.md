@@ -131,3 +131,7 @@ Fatal quarantine now explicitly prevents both quiesce_provider and release_provi
 ## Registry API lifetime audit follow-up — 2026-11-04
 
 The branch now includes `spec/registry-api-lifetime-addendum.md`, a normative supplement to device-registry architecture §7/§7.1. It closes the pointer-returning provider-context accessor ambiguity, nested operation-table storage lifetime, shared module-lease identity/reference semantics, terminal source/binding/Screen removal barriers, complete provider-quiescence preconditions, and call-scoped operation-token pointer confinement. New architecture vectors: 143–150. No wire ABI or opcode changes. Exact-tip CI for this documentation/API delta is required before marking it verified; runtime Xlibre/provider-loader acceptance remains separate.
+
+## Provider operation-table audit — 2026-11-04
+
+Added `spec/provider-operation-matrix.md` as a normative supplement. The audit found the four typed provider tables were only forward-declared, without operation signatures. The new document defines their required operations, maps every request subopcode 0–47 to provider or server-only work, adds the missing Buffer destruction callback `free_buffer`, specifies the six asynchronous operations and complete resource pin sets, and closes typed destroy/result/rollback contracts. Architecture conformance vectors now extend through 162. Exact-tip CI remains required; runtime implementation acceptance is separate.
