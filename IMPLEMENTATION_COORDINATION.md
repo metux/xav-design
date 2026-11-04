@@ -803,3 +803,15 @@ Additional cross-checks:
 Implementation follow-up (not a specification gap): the server's Physical-Device registry must be server-wide even if screen-specific backends initialize independently. The implementation must preserve one canonical server-owned Physical-Device identity for the same underlying device and must keep per-Surface presentation support separate from that inventory. Client code must not infer presentation support from enumeration or device properties; it must use the exact Surface-scoped capability query. The paused client event-dispatcher work should remain paused until its device-selection path follows this sequence.
 
 No protocol IDs, layouts, error precedence, or normative rules were changed by this review.
+
+
+## Physical-Device canonical identity, UUID and hotplug lifecycle — 2026-11-04
+
+A cross-Screen identity audit found that the previous text prohibited duplicate identities in principle but did not define the canonicalization boundary, the limits of Vulkan UUID uniqueness, how newly connected clients learn current status, or whether a removed identity can be resurrected. The normative spec now defines:
+- One server-wide canonical Physical-Device registry shared by every X11 Screen/backend discovery path. Duplicate discoveries of the same underlying device map to one identity/XID before publication; backend handles and pointers are not cross-instance keys.
+- `deviceUUID` is a preferred correlation value, not an infallible globally unique key. Equal UUIDs require platform/backend identity cross-check when ambiguous; driverUUID and pipelineCacheUUID are not physical-device identity keys. An all-zero deviceUUID is invalid/NOT_AVAILABLE. If UUID is unavailable, platform/backend identity still must deduplicate.
+- `XAverius.deviceStatus` (CARD32: AVAILABLE=0, UNAVAILABLE=1, REMOVED=2) lets clients connecting after a transition discover current status without depending on an earlier event. The property is a serialized server-state snapshot.
+- Enumeration includes each retained identity once, including UNAVAILABLE entries and REMOVED tombstones. AVAILABLE/UNAVAILABLE may transition recoverably with the same XID; REMOVED is terminal. Tombstones and metadata remain queryable through server shutdown. A replacement after removal gets a new XID even if UUID/properties match. Physical-Device XIDs are never reused during one X-server lifetime; no cross-restart stability is promised.
+- Added conformance vectors for cross-Screen duplicate discovery, UUID collision/fallback, status query after connect, hotplug/removal/replacement, and XID non-reuse.
+
+The Vulkan UUID guidance was checked against the current Vulkan specification: deviceUUID is intended to correlate a device across instances/processes/driver APIs and is immutable for a given device, but Khronos explicitly notes that uniqueness cannot be guaranteed by conformance testing. Therefore XAverius does not equate UUID equality with proof of identity. No request opcode or fixed wire layout changed; the property registry gained one append-only property.
