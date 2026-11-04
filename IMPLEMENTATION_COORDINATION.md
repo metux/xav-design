@@ -832,3 +832,16 @@ The Physical-Device identity audit now separates canonical hardware identity fro
 - Implementation architecture recommendation: keep the registry independent of `ScreenRec`; provide a narrow server-owned registration API with opaque provider handles and immutable identity evidence. DDX drivers report observations and lifecycle changes; the registry performs deduplication and status serialization; XAverius owns protocol XID publication and query handling. Provider callbacks should be marshalled to the server's serialized event/request context, and provider/module references must outlive all dependent Vulkan objects and callbacks.
 
 No backend implementation work is part of this specification change. The conformance vectors and static checker now require the provider, Linux hotplug, and group distinctions. Runtime behavior still requires implementation testing.
+
+
+### Xlibre source-architecture observations — 2026-11-04
+
+A source review of X11Libre/xserver's current Xorg DDX confirms that it already has a global platform-device discovery path (`xf86_platform_devices` in `xf86platformBus.c`) and DRM hotplug enumeration in `config/udev.c`. These are useful integration points, but they are not a sufficient XAverius canonical-identity registry:
+
+- The current platform list is primarily organized around platform/DRM device nodes and Xorg entity/Screen claiming. The udev DRM path filters `card*` nodes; `xf86_find_platform_device_by_devnum()` matches major/minor numbers. Those are discovery/access-node bookkeeping, not stable GPU identity across primary/render nodes, ICDs, or hotplug generations.
+- Do not simply reuse `xf86_platform_devices` as the XAverius identity table, and do not equate an Xorg Entity, `ScrnInfoRec`, `ScreenRec`, RandR output, or DRM node with a Physical Device.
+- Preferred integration: feed the existing udev/platform discovery events into a separate server-wide GPU identity registry. Add a provider registration interface at a server-core boundary, then let Xorg DDX drivers register provider observations and let XAverius consume canonical registry entries. Keep the identity registry independent of Screen/Entity allocation.
+- For an initial Xorg-only prototype, the registry implementation can live near the Xorg platform-device infrastructure, but its API and object model should not expose Screen-local ownership; if XAverius is intended to work with other DDX server variants, move the registry service to a DIX/server-core layer and keep Xorg discovery as one provider.
+- `CreateDefaultDevice` is now explicitly Screen-independent: when several devices qualify, choose deterministically from server policy and canonical identity, never “the first Screen that supports XAverius”.
+
+This is architecture guidance only; no Xserver source files or backend implementation were changed.
