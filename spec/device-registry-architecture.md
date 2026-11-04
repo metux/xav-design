@@ -649,6 +649,8 @@ The implementation test suite SHOULD include at least:
 52. A route generation changes after Swapchain creation: the old Swapchain becomes OUT_OF_DATE, no new operation is accepted on it, and a replacement query/create may select the new route; old callbacks cannot mutate the new route or Swapchain generation.
 53. A scanout/bridge route fails while the render PhysicalDevice and logical Device remain healthy: presentation is failed/invalidated under its own status contract, but the render PhysicalDevice is not marked REMOVED and the logical Device is not declared DEVICE_LOST without an exact positive backend loss result.
 54. Two Screens attach the same render GPU but have different scanout GPUs: each (Device, Surface) query independently reports its actual route and capability set; no global per-PhysicalDevice present-support bit is inferred.
+55. A temporary bridge-route outage occurs without a route-generation change: GetSurfaceCapabilities and new/pre-acceptance operations report DEVICE_UNAVAILABLE, but the render PhysicalDevice and logical Device remain AVAILABLE; a pending acquire and accepted QueuePresent use their respective first-terminal mappings.
+56. Route invalidation races with acquire timeout, accepted presentation terminalization, and image release in both serialization orders: OUT_OF_DATE is committed only when route invalidation wins the relevant gate; an earlier terminal result or image-release milestone is never rewritten or retracted.
 
 
 
