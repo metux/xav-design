@@ -63,3 +63,5 @@ The 2026-11-04 provider-operation audit found no remaining protocol design gap a
 ### Host-wait/provider-unavailability boundary — 2026-11-04
 
 The final cross-file provider audit now explicitly states that WaitSemaphores/WaitForFence have no provider token and do not fail solely because the selected provider becomes UNAVAILABLE. Their terminal outcomes derive from published server-visible synchronization state, timeout, exact logical-Device Loss, DestroyDevice, or disconnect. Provider failures can affect them only through state transitions actually published by the underlying operation. The stale provider-token acceptance list and ambiguous unavailability test were corrected in commits `cf20155`, `55f5f88`, and `916c140`; the coordination board records the result. This changes no wire ABI. The earlier CI evidence does not cover these commits; exact-tip CI is required before marking the new tip verified.
+
+The static checker was extended in `9e140a7` to enforce this host-wait/provider boundary and the corrected provider-token inventory. Its execution is covered by exact-tip CI, not claimed from source inspection alone.
