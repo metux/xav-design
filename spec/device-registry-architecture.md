@@ -95,7 +95,7 @@ A selected provider MUST implement the following operation groups for every capa
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
-The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Each completion MUST identify the exact provider, operation, logical Device (if any), and resource generations captured at submission. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Each completion MUST identify the exact provider, operation, logical Device (if any), and resource generations captured at submission. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
 
 ### 4.2 Physical snapshot operation
 
@@ -253,7 +253,7 @@ typedef struct {
     uint64_t operation_generation;
     uint64_t device_generation;
     uint64_t resource_generation;
-    GpuProviderOperationToken *token;
+    uint64_t operation_token_id;
     GpuProviderResult result;
     /* Operation-specific immutable result payload follows. */
 } GpuProviderCompletion;
