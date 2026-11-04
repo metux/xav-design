@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`  
-**Status:** Normative v0.1 specification work is substantially complete; exact-tip static CI is green through `72f3f17`. Provider registration/module-lease lifecycle refinements at `1029787`, `63c5339`, `7545bda`, and `dc6c858` are newer and pending exact-tip CI. Runtime implementation acceptance remains open.
+**Latest exact-tip CI-verified tip:** `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`  
+**Status:** Normative v0.1 specification work is substantially complete. Exact-tip CI is green, including provider registration/module-lease lifecycle refinements and architecture vectors 89–96. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41844649170](https://github.com/metux/xav-design/actions/runs/41844649170) — SUCCESS on `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`.
+- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and [required-check workflow 41846198977](https://github.com/metux/xav-design/actions/runs/41846198977) — SUCCESS on `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`.
 - Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
-- This includes vectors 76–78 and the multi-provider ownership refinement vectors 79–88 from `c88668e023ba31fa38293dba4aef5a827adedb64`, which also passed exact-tip workflow [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352). The newer explicit provider-registration, module-lease retain/release, finalization-order, and quiescence-result API refinement at `63c5339ca702a913f7da55747e877177782492a5` adds vectors 89–93 and is pending exact-tip CI.
+- This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, shared module leases, finalization ordering, and quiescence vectors 89–96. All required static/specification gates passed.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -85,3 +85,8 @@ Provider shutdown now has an explicit generation-scoped admission-close step, fo
 ## Provider registration and final module-lease release — 2026-11-04
 
 The provider API now separates registering a provider generation from registering its PhysicalDevice bindings. One descriptor/context/module lease is installed once per provider generation; additional bindings refer to that registered provider. The server reserves the non-reusable provider generation before descriptor creation. Module leases are server-owned loader pins shared by all provider and adapter roles from the same loaded module; they must acquire a real loader reference, not rely on a duplicated ModuleDesc or Screen refcount. Quiescence and finalization are separate: provider-internal workers are stopped by `quiesce_provider`; PENDING/FAILURE retain the lease; SUCCESS does not release it until provider objects and references are gone. Provider-owned objects requiring module calls must be destroyed or safely quarantined before quiescence; after SUCCESS only the registry's final `release_provider` call may enter the module. Finalization calls that release while the module remains pinned, then drops the generation's lease reference exactly once. Architecture vectors 89–96 cover these transitions. Commits `1029787`, `63c5339`, `7545bda`, and `dc6c858`; exact-tip CI pending.
+
+
+## Xlibre implementation guidance — 2026-11-04
+
+The architecture chapter now includes a practical non-normative decomposition and staged integration sequence in §8.2: XAverius-owned registry; separate discovery, provider, lifetime, ScreenAttachment, and PresentationRoute responsibilities; immutable queued observations; serialized state mutation; subscribe-before-scan hotplug reconciliation; explicit provider-selection/publication commit; independent loader-pin verification; and staged headless tests. Implementation feedback is requested in [IMPLEMENTATION_COORDINATION.md](IMPLEMENTATION_COORDINATION.md). No Xserver/backend implementation was added to this repository.
