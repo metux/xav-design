@@ -4,7 +4,7 @@
  */
 
 #ifndef XAVERIUS_H
-#define __XLIBRE_XAVERIUS_PROTO_H
+#define XAVERIUS_H
 
 #include <stddef.h>
 #include <float.h>
@@ -573,4 +573,4 @@ XAV_STATIC_ASSERT(sizeof(xavPresentationCompleteEvent) == sz_xavPresentationComp
 #undef XAV_ASSERT_REQ_PREFIX
 #undef XAV_STATIC_ASSERT
 
-#endif /* __XLIBRE_XAVERIUS_PROTO_H */
+#endif /* XAVERIUS_H */
