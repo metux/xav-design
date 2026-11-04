@@ -8,11 +8,11 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 - The presentation-capable profile is specified separately. Its assigned requests and events do not imply support from a compute-only server.
 - Wire assignments are stable for a frozen release; any later incompatible change requires an explicit protocol-version decision, not a silent edit.
 
-## Current audit assessment — 2026-11-02
+## Current audit assessment — 2026-11-04
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The latest verified branch tip is `0b9c40e0907592f7f96687912d948abf221123d0` on `docs/restructure-2026-10-21`. Exact-tip wire-layout CI run [41476931362](https://github.com/metux/xav-design/actions/runs/41476931362) passed 4,836 static checks, 72 Timeline regressions, and all 692 Python tests; the branch-tip monitor [41476931297](https://github.com/metux/xav-design/actions/runs/41476931297) also passed. This includes the post-merge audit delta: absolute memory-reply offsets, the `QueuePresent` wait-count bound, fixed and variable request-length negatives, the 16-Reply inventory, XGE sequence-number clarification, Device-XID event-selection isolation, and four presentation-event golden vectors in both byte orders. The earlier PR #3 merge baseline `a6019f53fbc14f0cf2824889f14d92de6629694d` and content candidates `61e4e5517c94074d11cb5319f747528a8fc3f148` and `6a752174e0e4b4d455623752c8b45378ea42b1a7` remain historical evidence only. Normative design gates are checked; Phase 1 ship confirmations and a named shared integration-interface owner remain project-coordination sign-offs, not unresolved wire-protocol rules.
+The current verified branch tip is `7f2620726f88bbd28ff6ac5c21a27d87659301e7` on `docs/restructure-2026-10-21`. Exact-tip workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed 4,873 wire-layout checks, 72 Timeline regressions, and all 693 Python tests; shared-header compilation, XCB client prototype build, request/reply/XGE validation, and the required-check audit also passed. This tip includes the provider operation/lifetime corrections, multi-device UNAVAILABLE scoping, the discovery/provider/Screen registration contract, and the registry architecture conformance additions. Earlier candidates and their CI runs remain historical evidence only. Normative design gates are checked; Phase 1 ship confirmations and a named shared integration-interface owner remain project-coordination sign-offs, not unresolved wire-protocol rules.
 
 ### Provider operation contract audit — 2026-11-04
 
@@ -55,20 +55,16 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The v0.1 protocol design was previously assessed as freeze-ready at an earlier candidate, but that assessment does **not** apply to the current branch tip. Subsequent provider-lifecycle, multi-device availability, and presentation status/error changes are normative changes and require exact-tip verification.
+The v0.1 normative contract is **CI-verified at the current specification tip** `7f2620726f88bbd28ff6ac5c21a27d87659301e7`. Exact-tip workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed all required static checks: 4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit.
 
-At the current audit point, the spec is **not yet CI-verified and must not be declared frozen**. The owner-provided failing run 41821464018/job 126545373361 was corrected by explicit Physical-Device status and UUID wording. Later changes also added provider-unavailability scope and presentation `DEVICE_UNAVAILABLE` statuses. The current branch tip must pass the complete wire-layout checker, Timeline regressions, and Python suite before a freeze decision is restored.
+The normative design gates are assessed as complete. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
+- [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
+- [ ] Validate live X11/XGE interoperability against an actual server and XAverius implementation.
+- [ ] Validate end-to-end compute execution and lifecycle behavior against a real Vulkan backend.
+- [ ] If the presentation-capable profile is implemented, validate its runtime Window/Surface/swapchain/acquire/present lifecycle separately.
+- [ ] Preserve exact-tip CI verification after subsequent specification or checker changes.
 
-Remaining freeze gates:
-- [ ] Exact current-tip CI passes all required jobs (wire-layout/static consistency, C header/client prototype compilation, Timeline regressions, and full Python tests).
-- [ ] Provider operation inventory is confirmed against every request and advertised capability; server-owned waits remain excluded from provider tokens.
-- [ ] Provider result/error mappings are exhaustive for each request's synchronous, reply-pending, and accepted-asynchronous phase.
-- [ ] Multi-device provider context/device-scoped UNAVAILABLE and generation-safe recovery pass conformance.
-- [ ] Device Loss, provider unavailability, Surface loss, resize, DestroyDevice, timeout, and completion races preserve phase ordering and first-terminal-outcome rules.
-- [ ] Implementation coordination confirms shared registry/provider interfaces; this is an integration sign-off, not permission to change the normative wire contract without a spec update.
-- [ ] Runtime X11/XGE and Vulkan lifecycle tests remain implementation acceptance gates; they are not claimed by static spec CI.
-
-No implementation work is authorized by this checklist. The current work remains specification-only.
+Static CI does not prove runtime interoperability or backend conformance. No implementation work is authorized by this checklist; the current repository work remains specification-only.
 
 ### Host-wait/provider-unavailability boundary — 2026-11-04
 
