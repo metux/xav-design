@@ -1258,7 +1258,13 @@ Concrete findings:
    and `ProcXAveriusGetPhysicalDeviceQueueFamilyProperties` are redundantly
    declared in `xaverius_device.h` and `xaverius.h` under `-Werror`.
    The SDK image job `126847001542` also fails at link time with undefined
-   references to `XaveriusExtensionInit` and `noXaveriusExtension`.
+   references to `XaveriusExtensionInit` and `noXaveriusExtension`. Root
+   cause is visible in the diff: the old `init.c` exports those exact names,
+   while new `xaverius.c` replaces them with a static `XAveriusExtensionInit`
+   and lowercase `xaverius_extension_init`, and does not define
+   `noXaveriusExtension`. This unnecessary file/API rename broke the existing
+   `miinitext.c` contract. Preserve the established `init.c` entry points and
+   wire registry lifecycle there instead.
    The overall run conclusion is FAILURE; no successful build evidence exists.
 
 Required corrective action for the next implementation commit:
