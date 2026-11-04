@@ -209,4 +209,4 @@ The registry API audit addendum in [registry-api-lifetime-addendum.md](registry-
 
 ### Provider operation-table audit delta — 2026-11-04
 
-The provider operation matrix now defines concrete typed operations for all four provider sub-tables and an exhaustive request 0–47 ownership map. It adds Buffer `free_buffer`, create/destroy symmetry, six-operation async classification, output/rollback rules, full resource pin sets, surface capability result completeness, and provider-result invariants. See [provider-operation-matrix.md](provider-operation-matrix.md), vectors 151–162. Exact-tip CI and implementation/runtime acceptance remain separate gates.
+The provider operation matrix now defines concrete typed operations for all four provider sub-tables and an exhaustive request 0–47 ownership map. It adds Buffer `free_buffer`, create/destroy symmetry, six-operation async classification, output/rollback rules, full resource pin sets, surface capability result completeness, and provider-result invariants. See [provider-operation-matrix.md](provider-operation-matrix.md), vectors 151–164. Exact-tip CI and implementation/runtime acceptance remain separate gates.
