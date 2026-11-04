@@ -137,3 +137,7 @@ The second API pass added a normative supplement in [registry-api-lifetime-adden
 ### DDX backend operation-table completeness — 2026-11-04
 
 The audit found the four typed DDX backend operation tables were opaque forward declarations only. [DDX backend-operation-matrix.md](DDX backend-operation-matrix.md) now normatively defines their operation signatures and maps all request subopcodes 0–47. It also closes the missing Buffer destroy callback, asynchronous classification, create/destroy symmetry, output initialization, command-stream boundary, and presentation capability result completeness. Vectors 151–164 cover the new requirements. Implementation-agent signature comparison and runtime acceptance remain open; exact-tip CI is pending.
+
+### DDX binding API supersedes provider-object API — 2026-11-04
+
+The current normative design supersedes the historical provider-generation/candidate-binding API described in earlier entries. The DDX owns complete device enumeration and registers every served PhysicalDevice directly, with native handle, per-device context, and typed operations on the binding. The module-role control record exists only for shared code/module lifetime and quiescence. No independent Vulkan-ICD inventory, candidate-list API, provider-local numeric handle map, generic provider context accessor, or per-request provider-object dispatch is part of the current design. Earlier entries below document historical decisions and are not current API requirements where they conflict with this superseding model.
