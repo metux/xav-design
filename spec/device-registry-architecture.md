@@ -44,31 +44,31 @@ The registry applies the identity rules in `devices.md`. In particular, node pat
 
 A PhysicalDevice has an internal, non-reusable server identity (for example, an opaque pointer paired with a generation or a monotonically allocated 64-bit registry ID). That internal identity is distinct from the protocol XID. The XAverius layer allocates exactly one server-owned Physical-Device XID when the canonical record is published, and retains the mapping until server shutdown. The registry MUST NOT expose a mechanism for a DDX/provider to choose or allocate that XID.
 
-Provider discovery MUST have a defined completion point before first publication. For initial server startup, implementations SHOULD complete the configured discovery pass and deterministic provider selection before XAverius makes the inventory visible to clients. A provider discovered later MAY be attached to an already published PhysicalDevice, but MUST NOT silently replace its selected execution provider or mutate its published metadata snapshot. This avoids making identity, capabilities, or default-device selection depend on whichever ICD or Screen happened to initialize first.
+DDX device registration MUST have a defined completion point before first publication. Each DDX is responsible for registering every PhysicalDevice that it actually serves or exposes to XAverius; it MUST NOT register only the first Screen GPU or infer the server-wide inventory from Screen zero. The registry canonicalizes registrations from all DDX instances into one server-wide inventory. Platform/udev observation may supply identity and removal evidence, but it does not independently publish executable PhysicalDevices. A device registration arriving after publication follows the late-device path and MUST NOT replace the selected operations/context or mutate the published snapshot.
 
 ## 2.1 Discovery-source and driver-registration contract
 
-Discovery, execution-provider registration, Screen topology, and XAverius publication are separate operations. A driver or discovery adapter MUST NOT perform all four implicitly.
+PhysicalDevice registration, Screen topology attachment, and XAverius publication are distinct operations. In the Xlibre integration profile, the DDX is the sole producer of executable PhysicalDevice registrations for devices it serves. The registry, not the DDX, performs canonicalization and publication.
 
-A discovery source is a producer of observations, not a fourth persistent registry object. It may be the Xorg platform bus, udev, a DDX driver, a Vulkan ICD/provider, or another server backend. A source has a stable source key and a non-reusable source generation. Its observations are immutable identity evidence plus source-local metadata; they do not themselves create a PhysicalDevice XID or select an execution provider.
+A discovery source is a producer of identity/lifecycle evidence, not an executable-device registrar. Platform bus and udev sources may report canonical hardware identity and authoritative add/remove evidence. The DDX reports the actual devices it can serve and supplies the backend operations/context for each registration. A source has a stable source key and non-reusable generation; its observations do not themselves create a PhysicalDevice XID or provide executable call vectors.
 
 The registration paths are:
 
-1. **Observe hardware identity.** A discovery source submits a candidate identity to the process-wide registry. The registry canonicalizes it and returns an internal generation-checked PhysicalDevice reference, or leaves it unpublished while identity evidence is incomplete or ambiguous. An observation may enrich identity evidence but MUST NOT overwrite an already published immutable property snapshot.
-2. **Register an execution provider binding.** A Vulkan-capable provider registers its private provider context and the provider-local physical-device binding against the canonical PhysicalDevice reference. This is a separate operation from observing the hardware. A provider may register bindings for many PhysicalDevices; one PhysicalDevice may have bindings from multiple providers.
-3. **Select and snapshot.** During the initial discovery pass, the server selects exactly one eligible execution provider per PhysicalDevice according to Section 3, queries the complete snapshot through that provider, and only then publishes the PhysicalDevice and allocates its server-owned XID. No Screen or DDX initialization order participates.
-4. **Attach Screen topology.** A DDX/Screen path attaches the live Screen generation to one or more already canonicalized PhysicalDevices with explicit roles. This does not create an identity, register a Vulkan provider, select the execution provider, or prove WSI support.
-5. **Report lifecycle observations.** Sources report provider-context loss/recovery, provider-local binding loss/recovery, Screen detach, and confirmed physical removal as distinct observations. The registry serializes them and applies the lifecycle rules in Sections 5–6.
+1. **Observe platform identity.** Platform/udev sources may submit identity and hotplug evidence. The registry canonicalizes it but does not publish an executable device from this evidence alone.
+2. **Register each served PhysicalDevice.** The responsible DDX submits the canonical identity evidence, provider-local device handle, per-device backend context where needed, and the call-vector binding. It MUST enumerate/register all devices it serves, not just the GPU associated with the first Screen.
+3. **Validate and snapshot.** The registry validates the registration and obtains the complete immutable snapshot through that device's bound operations. It then publishes the canonical PhysicalDevice and allocates its server-owned XID. No Screen initialization order participates.
+4. **Attach Screen topology.** A DDX/Screen path separately attaches the live Screen generation to one or more registered PhysicalDevices with explicit roles. This does not create a second PhysicalDevice or change its selected call vectors.
+5. **Report lifecycle observations.** The DDX and platform sources report binding/device loss, recovery, Screen detach, and confirmed physical removal as distinct generation-checked events.
 
-A component MAY implement more than one role, but it MUST register each role explicitly and MUST obey each role's ownership boundary. In particular, a DDX that only discovers or drives scanout MUST report identity/topology observations; it MUST NOT be registered as a BackendProvider unless it actually implements the complete provider operation contract required by the capabilities it advertises. Conversely, a Vulkan provider MUST NOT create ScreenAttachments merely because it enumerated a PhysicalDevice.
+The DDX is the owner of the executable registration for each device it serves. The registration binds that device directly to its operations and backend context; there is no separately discoverable Vulkan-ICD provider whose candidates compete to populate the Xaverius inventory. A DDX that cannot implement the required XAverius operation contract MUST NOT register that device as executable for the corresponding capability. Screen attachment remains a separate topology operation.
 
 ### Registration semantics
 
 The internal registration API SHOULD expose distinct operations equivalent to:
 
 - `GpuRegistryObserveDevice(source, source_generation, identity_evidence)`: submit or update an observation. Returns a generation-checked canonical record reference only when identity matching is unambiguous; it never allocates a protocol XID.
-- `GpuRegistryRegisterProviderBinding(device_ref, provider_descriptor, provider_local_binding)`: attach a provider-local handle to the exact canonical identity. It does not publish the PhysicalDevice or select the provider by registration order.
-- `GpuRegistryRemoveProviderBinding(device_ref, provider_generation, binding_generation)`: stop new calls through that binding and apply the selected-provider unavailability rules; it is not physical removal.
+- `GpuRegistryRegisterDeviceBackend(device_ref, ddx_role, device_backend_binding)`: bind the exact canonical identity to the DDX-owned per-device call vectors, context, and native device handle. It does not publish the PhysicalDevice until the snapshot is complete.
+- `GpuRegistryRemoveDeviceBackend(device_ref, ddx_generation, binding_generation)`: stop new calls through that exact DDX/device binding and apply the selected-binding unavailability rules; it is not physical removal.
 - `GpuRegistryRemoveObservation(source_generation, observation_id)`: withdraw only that source's evidence. It MUST NOT mark hardware REMOVED while other authoritative evidence still establishes the same incarnation.
 - `GpuRegistryConfirmDeviceRemoved(device_ref, device_generation, removal_evidence)`: commit terminal REMOVED only on authoritative evidence that the physical incarnation was removed.
 - `GpuRegistryAttachScreen(device_ref, screen_generation, roles)` and `GpuRegistryDetachScreen(attachment_generation)`: manage only the non-owning topology relation.
@@ -135,12 +135,12 @@ A confirmed physical removal is server-wide and independent of Screen membership
 | Component | May report/register | MUST NOT decide |
 |---|---|---|
 | Xorg platform bus / udev adapter | Bus identity, DRM node observations, authoritative add/remove evidence | PhysicalDevice XID, Vulkan provider selection, published capabilities |
-| DDX driver | Screen-to-device identity mapping, ScreenAttachment roles, driver-owned provider context if it implements the full provider contract | Server-wide identity deduplication, global inventory membership, default-device choice |
-| Vulkan ICD/provider adapter | Provider identity, provider-local physical binding, complete snapshot, classified availability/loss results, backend operations | XAverius XIDs, Screen ownership, request validation, public state/event mutation |
+| DDX driver | Enumerate and register every PhysicalDevice it serves; provide per-device identity evidence, native handle, backend context/call vectors, complete snapshot, loss/removal events, and ScreenAttachment roles | Server-wide identity deduplication, XID allocation, global publication/default-device policy, request validation |
+| Platform/udev adapter | Canonical bus/sysfs identity and authoritative add/remove evidence | Executable device registration, backend call vectors, XAverius XIDs |
 | XAverius registry/resource layer | Canonical identity, provider selection, snapshot publication, PhysicalDevice XID, status/event serialization | Direct dereference of provider-private Vulkan handles |
 | WSI/presentation path | Exact provider-local Surface and Device/Surface capability operations | Infer presentation support from ScreenAttachment or Screen number |
 
-On Xlibre/Xorg, the recommended arrangement is one XAverius-owned registry service with thin adapters: platform/udev discovery feeds identity observations; DDX Screen initialization feeds attachments; Vulkan ICD/provider adapters register executable bindings. This keeps the registry independent of any one DDX and prevents the first XAverius-capable Screen from becoming an accidental global GPU selector.
+On Xlibre/Xorg, the required arrangement is one XAverius-owned registry service. Each DDX registers all PhysicalDevices it serves, including headless/render-only devices and GPUs not selected by its first Screen. Platform/udev integration supplies identity and hotplug evidence only. Screen initialization attaches topology to already registered devices. The registry merges duplicate observations/registrations across DDX instances and controls publication; it does not enumerate Vulkan ICDs independently to invent another device inventory.
 
 
 ### 2.4 Xlibre/Xorg discovery and DDX integration profile
@@ -153,9 +153,9 @@ The XAverius registry MUST be one server-process service, initialized independen
 
 The Xlibre integration SHOULD expose three adapter roles:
 
-- **Platform discovery adapter:** enumerates platform devices and observes kernel/DRM add, change, and remove events. It supplies canonical bus/sysfs identity and DRM-node equivalence evidence where available. A udev monitor is an event source, not a separate device inventory.
-- **DDX topology adapter:** reports which canonical PhysicalDevice identities a Screen can access and the roles of those relationships. It MUST NOT select a global device, provider, or default device. A DDX MAY additionally register as a BackendProvider only if it implements the complete provider operation and lifetime contract for every capability it advertises.
-- **Vulkan provider adapter:** enumerates provider-local physical-device candidates, correlates them with canonical platform identities, queries the complete immutable snapshot, and registers executable bindings. It MUST NOT create ScreenAttachments or infer presentation support from Xorg Screen state.
+- **Platform identity/hotplug adapter:** observes kernel/DRM devices and add/remove events, supplying canonical bus/sysfs identity and DRM-node equivalence evidence. It is not an executable-device inventory.
+- **DDX device-registration adapter:** enumerates and registers every PhysicalDevice served by that DDX, with its per-device backend operations/context and identity evidence. It separately creates ScreenAttachments for actual Screens. It MUST NOT choose the server-wide default device or allocate XIDs.
+- There is no independent Vulkan-ICD inventory adapter in this profile. A DDX may use Vulkan internally, but the resulting physical-device handles and call vectors are registered through that DDX's device-registration path.
 
 One module MAY implement more than one role, but it MUST register and retire each role independently. In particular, unloading a DDX module MUST NOT implicitly deregister a provider context owned by another module, and closing a Screen MUST NOT imply removal of the underlying GPU.
 
@@ -163,9 +163,9 @@ One module MAY implement more than one role, but it MUST register and retire eac
 
 The server MUST establish the platform hotplug observation path before beginning the corresponding initial enumeration, so that add/remove events racing with enumeration are not lost. The implementation MUST reconcile the initial scan with queued events using source generations and observation ordering; it MUST NOT publish two incarnations or accept an old remove event against a newly observed incarnation.
 
-Before XAverius exposes its initial PhysicalDevice inventory, each configured platform-discovery and provider-discovery adapter MUST report one of: initial pass complete, or initial pass unavailable/failed. The barrier waits only for these declared discovery participants. It MUST NOT wait for Screen creation, RandR initialization, a DDX ScreenAttachment, or a window to exist.
+Before XAverius exposes its initial PhysicalDevice inventory, each configured DDX device-registration pass and the platform identity/hotplug pass MUST report complete or unavailable/failed. The barrier MUST NOT wait for Screen creation, RandR initialization, a DDX ScreenAttachment, or a window to exist. A DDX pass is complete only after it has reported every PhysicalDevice it serves, including devices not attached to a Screen.
 
-A failed or unavailable discovery participant is not evidence that a device was removed. Its candidates are simply unavailable for that pass; unresolved candidates remain unpublished. The server MUST NOT fabricate a provider binding, synthesize a partial snapshot, or publish a PhysicalDevice without the selected provider and complete snapshot required by Sections 2 and 3. A later successful discovery pass MAY publish a previously unresolved or unserved candidate through the ordinary canonicalize/select/snapshot/publish sequence.
+A failed or unavailable DDX registration pass is not evidence that a device was removed. The registry MUST NOT fabricate a backend binding or publish a PhysicalDevice without a complete snapshot from its registered DDX call vectors. A later successful DDX pass MAY register and publish a previously unavailable device through the ordinary canonicalize/snapshot/publish sequence.
 
 An adapter registered after the initial barrier has closed MUST use the late-registration path. It MUST NOT reopen the barrier, reorder existing inventory, replace a selected provider, or mutate an already published snapshot. A newly discovered physical-device incarnation follows the same per-device publication sequence without blocking unrelated existing devices.
 
