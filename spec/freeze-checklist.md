@@ -213,7 +213,7 @@ The registry API audit addendum in [registry-api-lifetime-addendum.md](registry-
 
 ### DDX backend operation-table audit delta — 2026-11-04
 
-The DDX backend operation matrix now defines concrete typed operations for all four DDX backend sub-tables and an exhaustive request 0–47 ownership map. It adds Buffer `free_buffer`, create/destroy symmetry, six-operation async classification, output/rollback rules, full resource pin sets, surface capability result completeness, and DDX backend-result invariants. See [DDX backend-operation-matrix.md](DDX backend-operation-matrix.md), vectors 151–164. Exact-tip CI and implementation/runtime acceptance remain separate gates.
+The DDX backend operation matrix now defines concrete typed operations for all four DDX backend sub-tables and an exhaustive request 0–47 ownership map. It adds Buffer `free_buffer`, create/destroy symmetry, six-operation async classification, output/rollback rules, full resource pin sets, surface capability result completeness, and DDX backend-result invariants. See [DDX backend operation matrix](provider-operation-matrix.md), vectors 151–164. Exact-tip CI and implementation/runtime acceptance remain separate gates.
 
 ### DDX registration and direct device dispatch — 2026-11-04
 
@@ -237,3 +237,8 @@ See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implemen
 - [ ] Confirm all callback, completion, error-scope, and Surface cache identities use exact binding and module-role generations.
 
 Exact-tip CI and implementation-agent source review are pending.
+
+
+### Follow-up DDX binding consistency audit — 2026-11-04
+
+The second pass removed residual candidate-list/backend-key ranking assumptions from §8.2 and updated conformance vectors 42–44 and 88–90 to exercise direct per-device registration and module-role shutdown. The API contract now names `GpuPhysicalDeviceAcquireBackendBinding` as the exact binding acquisition operation. Historical provider-object vectors and status entries remain only as superseded audit history; they are not current API requirements. Exact-tip CI and implementation-agent source review remain pending.
