@@ -340,7 +340,7 @@ class PresentationReplyWireTests(unittest.TestCase):
             "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6, "DEVICE_UNAVAILABLE": 7,
         })
         self.assertEqual(expected["queue_present"], {
-            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
+            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3, "DEVICE_UNAVAILABLE": 4,
         })
 
         tested = {
