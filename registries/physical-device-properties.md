@@ -10,10 +10,10 @@ Names are exact, case-sensitive ASCII strings. Property names are registered by 
 |---|---|---|---|
 | `XAverius.deviceUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes as defined by Vulkan; no integer endianness conversion | `NOT_AVAILABLE` if the backend does not provide a valid device UUID |
 | `XAverius.driverUUID` | `BYTE_ARRAY` (5) | Exactly 16 raw bytes as defined by Vulkan; no integer endianness conversion | `NOT_AVAILABLE` if the backend does not provide a valid driver UUID |
-| `XAverius.deviceStatus` | `CARD32` (1) | `0 = AVAILABLE`, `1 = UNAVAILABLE`, `2 = REMOVED`; values match `DEVICE_STATUS_CHANGED.new_status` | Always available; returns the current server-stored status |
 | `XAverius.compute.maxWorkGroupInvocations` | `CARD32` (1) | One unsigned 32-bit integer | Available when the selected Physical Device exposes the corresponding compute limit |
 | `XAverius.compute.maxWorkGroupSize` | `CARD32_ARRAY` (6) | Exactly three unsigned 32-bit integers in X, Y, Z order | Available when the selected Physical Device exposes the corresponding compute limit |
 | `XAverius.timelineSemaphore` | `CARD32` (1) | `1` if the Physical Device supports the Vulkan `timelineSemaphore` feature; otherwise `0` | Always available; the server MUST query the feature and MUST NOT infer it solely from `api_version` |
+| `XAverius.deviceStatus` | `CARD32` (1) | `0 = AVAILABLE`, `1 = UNAVAILABLE`, `2 = REMOVED`; values match `DEVICE_STATUS_CHANGED.new_status` | Always available; returns the current server-stored status |
 
 The numeric property-type IDs in the table refer to the normative `GetPhysicalDeviceProperty` type table in [device discovery and logical devices](../spec/devices.md). They are repeated here only to make each property row self-contained; the devices chapter remains the sole authority for the type-ID namespace.
 
