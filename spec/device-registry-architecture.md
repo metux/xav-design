@@ -401,4 +401,7 @@ The implementation test suite SHOULD include at least:
 21. A provider reports TRANSFER_FAILURE or EXECUTION_FAILURE after asynchronous acceptance: the operation uses its defined terminal status/event and never generates a delayed X11 request error.
 22. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the provider's exact Device/Surface result controls the outcome; attachment membership does not imply support.
 
+23. The same XAverius Surface is queried with logical Devices from two different providers: each provider creates/owns its own provider-scoped WSI surface object, and no VkSurfaceKHR or WSI handle crosses provider instances.
+24. WaitSemaphores/WaitForFence completion races with the server timeout and provider unavailability: the server deadline and serialized first-terminal-outcome rule decide the result; no provider wait blocks the X11 dispatcher.
+
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
