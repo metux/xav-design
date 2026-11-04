@@ -142,6 +142,66 @@ A confirmed physical removal is server-wide and independent of Screen membership
 
 On Xlibre/Xorg, the recommended arrangement is one XAverius-owned registry service with thin adapters: platform/udev discovery feeds identity observations; DDX Screen initialization feeds attachments; Vulkan ICD/provider adapters register executable bindings. This keeps the registry independent of any one DDX and prevents the first XAverius-capable Screen from becoming an accidental global GPU selector.
 
+
+### 2.4 Xlibre/Xorg discovery and DDX integration profile
+
+This subsection defines the required integration behavior for an Xlibre/Xorg server. It deliberately does not prescribe private Xserver hook names or a particular DDX module layout: those vary between server versions and drivers. An implementation MUST provide equivalent lifecycle points and preserve the ownership and ordering rules below.
+
+#### Registry service and adapter roles
+
+The XAverius registry MUST be one server-process service, initialized independently of individual Screen creation. It MUST NOT be instantiated per Screen, per Xorg Entity, per DDX module, per DRM file descriptor, or per Vulkan instance. All adapters MUST register with that same service and use its generation-checked registration operations.
+
+The Xlibre integration SHOULD expose three adapter roles:
+
+- **Platform discovery adapter:** enumerates platform devices and observes kernel/DRM add, change, and remove events. It supplies canonical bus/sysfs identity and DRM-node equivalence evidence where available. A udev monitor is an event source, not a separate device inventory.
+- **DDX topology adapter:** reports which canonical PhysicalDevice identities a Screen can access and the roles of those relationships. It MUST NOT select a global device, provider, or default device. A DDX MAY additionally register as a BackendProvider only if it implements the complete provider operation and lifetime contract for every capability it advertises.
+- **Vulkan provider adapter:** enumerates provider-local physical-device candidates, correlates them with canonical platform identities, queries the complete immutable snapshot, and registers executable bindings. It MUST NOT create ScreenAttachments or infer presentation support from Xorg Screen state.
+
+One module MAY implement more than one role, but it MUST register and retire each role independently. In particular, unloading a DDX module MUST NOT implicitly deregister a provider context owned by another module, and closing a Screen MUST NOT imply removal of the underlying GPU.
+
+#### Startup discovery barrier
+
+The server MUST establish the platform hotplug observation path before beginning the corresponding initial enumeration, so that add/remove events racing with enumeration are not lost. The implementation MUST reconcile the initial scan with queued events using source generations and observation ordering; it MUST NOT publish two incarnations or accept an old remove event against a newly observed incarnation.
+
+Before XAverius exposes its initial PhysicalDevice inventory, each configured platform-discovery and provider-discovery adapter MUST report one of: initial pass complete, or initial pass unavailable/failed. The barrier waits only for these declared discovery participants. It MUST NOT wait for Screen creation, RandR initialization, a DDX ScreenAttachment, or a window to exist.
+
+A failed or unavailable discovery participant is not evidence that a device was removed. Its candidates are simply unavailable for that pass; unresolved candidates remain unpublished. The server MUST NOT fabricate a provider binding, synthesize a partial snapshot, or publish a PhysicalDevice without the selected provider and complete snapshot required by Sections 2 and 3. A later successful discovery pass MAY publish a previously unresolved or unserved candidate through the ordinary canonicalize/select/snapshot/publish sequence.
+
+An adapter registered after the initial barrier has closed MUST use the late-registration path. It MUST NOT reopen the barrier, reorder existing inventory, replace a selected provider, or mutate an already published snapshot. A newly discovered physical-device incarnation follows the same per-device publication sequence without blocking unrelated existing devices.
+
+#### Xorg/DRM identity hand-off
+
+A platform adapter SHOULD use the canonical kernel device relationship as the identity anchor. For DRM devices, primary and render nodes MUST be correlated using the underlying DRM device identity (for example, libdrm device information/equivalence and canonical sysfs ancestry), not by node basename, minor number, open-file-description identity, or which node a DDX happened to open first.
+
+A DDX reporting a ScreenAttachment MUST resolve its DRM/platform device to the registry's canonical PhysicalDevice reference using structured identity evidence. If it has only a Screen number, Entity index, driver-private pointer, or DRM node pathname without a verified canonical relationship, the attachment MUST remain unresolved; it MUST NOT create a new PhysicalDevice or attach to an arbitrary matching vendor/device ID. A Screen may report multiple attachments, including distinct render-access and scanout/display-control roles. The same PhysicalDevice may be attached to multiple Screens.
+
+The platform adapter's source key and source generation identify the adapter instance and its observation stream, not the device. A DDX Screen generation is separate from both. Recreating a Screen or reloading a DDX creates a new Screen/source generation as applicable; it does not create a new PhysicalDevice incarnation unless authoritative physical-removal evidence closed the previous incarnation.
+
+#### Hotplug, Screen lifecycle, and teardown
+
+The hotplug path MUST follow the same per-device order as startup: collect identity evidence; canonicalize or leave ambiguous; correlate provider-local bindings; select an eligible provider; obtain a complete snapshot; publish one server-owned XID; then allow DDX adapters to attach any live Screens. The implementation MAY perform these steps asynchronously, but no client-visible partial PhysicalDevice is permitted.
+
+A kernel/udev remove event MUST first be correlated to the exact current source observation and PhysicalDevice incarnation. Loss of one DRM node, closing a DRM file descriptor, DDX unload, Screen close, or loss of display ownership MUST NOT alone be treated as physical removal. If the event proves only that one access path disappeared, withdraw that observation and recompute availability from remaining evidence. Only the validated authoritative removal operation may transition the PhysicalDevice to terminal REMOVED.
+
+On Screen close or replacement, the DDX topology adapter MUST detach every ScreenAttachment for that exact Screen generation before releasing Screen-private data. Any asynchronous work referring to the Screen MUST retain a generation-checked reference and MUST be retired or cancelled before the Screen-private data is freed. A late callback or detach for the old generation MUST be ignored with a stale-generation result; it MUST NOT affect a replacement Screen that reuses an Xorg index or address.
+
+On DDX module unload, the module MUST first stop new adapter callbacks, withdraw its own observations and ScreenAttachments, and retire its provider registrations independently. Module code and callback userdata MUST remain pinned until all callbacks, operation tokens, and retained references that can reach them have retired. If quiescence cannot be proven, the module/provider state MUST be quarantined rather than unloaded. This is in addition to, not a replacement for, the BackendProvider lifetime contract.
+
+#### Xlibre-specific conformance requirements
+
+An Xlibre/Xorg integration MUST demonstrate at least the following:
+
+1. Two Screens initialized in either order produce the same canonical PhysicalDevice inventory and selected providers.
+2. A single Screen attached to two GPUs creates two ScreenAttachments without duplicating either PhysicalDevice; two Screens using one GPU share one PhysicalDevice identity.
+3. Primary and render DRM nodes for one device produce one PhysicalDevice; removing one node does not remove the device while authoritative evidence for the same incarnation remains.
+4. A Screen close/recreate cycle changes only ScreenAttachment generations and cannot change PhysicalDevice identity, XID, provider selection, or published snapshot.
+5. A DDX that only supplies topology cannot become the selected provider or publish a device; a DDX registered as a provider must satisfy the full provider contract.
+6. A failed or late discovery adapter does not block already completed devices, fabricate removal, reopen the startup barrier, or mutate published records.
+7. Hotplug add/remove events racing with initial enumeration cannot lose an event, resurrect a tombstone, or apply a stale removal to a replacement incarnation.
+8. DDX unload with pending callbacks/operations cannot unload reachable callback code or release userdata before provider/operation retirement.
+
+These requirements are server-integration conformance tests. They do not add wire requests, XIDs, properties, or status values.
+
 ## 3. BackendProvider contract
 
 Provider selection MUST use the following v0.1 policy:
