@@ -899,7 +899,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
 
         for phrase in (
-            "Device loss beats Surface loss and accepted-token reuse",
+            "Device loss beats Device Unavailable, which beats Surface loss and accepted-token reuse",
             "Surface loss and OUT_OF_DATE beat accepted-token reuse",
             "accepted-token reuse returns `BadValue` before image-state and semaphore-eligibility checks",
         ):
