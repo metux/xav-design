@@ -747,12 +747,12 @@ def check_other_numeric_registries(c: Check) -> None:
         and "MUST NOT reuse a Physical-Device XID" in devices,
         "Physical-Device identity: canonical server-wide deduplication, UUID limits, terminal removal, and stable XIDs must be explicit",
     )
-    provider_contracts = (
-        "A backend provider is one concrete driver/ICD/backend context",
-        "MUST attach it to the existing canonical identity",
-        "exactly one selected execution provider",
-        "MUST NOT combine properties or capabilities from different providers",
-        "MUST be deterministic for a given server configuration",
+    ddx_binding_contracts = (
+        "For v0.1, each published Physical Device MUST have exactly one selected execution DDX backend.",
+        "The registry validates the DDX registration and publishes the Physical Device only after a complete snapshot has been obtained through that exact binding.",
+        "The server MUST obtain that Physical Device's published properties, queue-family snapshot, memory properties, and device-dependent limits from that same DDX backend.",
+        "It MUST NOT combine properties or capabilities from different DDX backends into a synthetic union, intersection, or hybrid snapshot.",
+        "the registry applies a deterministic configured policy before publication",
         "fixed for the lifetime of that Physical-Device XID",
         "MUST NOT be used as transparent failover in v0.1",
         "cardN",
@@ -768,7 +768,7 @@ def check_other_numeric_registries(c: Check) -> None:
         "MUST NOT depend on Screen initialization order",
         "stable ordering derived from canonical Physical-Device identity",
     )
-    for contract in provider_contracts:
+    for contract in ddx_binding_contracts:
         c.require(contract in devices,
                   f"Physical-Device provider/platform identity contract missing: {contract}")
     conformance = read("spec/conformance.md")
@@ -3727,36 +3727,36 @@ def check_provider_host_wait_ownership(c: Check) -> None:
     errors = read("spec/errors.md")
     conformance = read("spec/conformance.md")
     c.require(
-        "WaitSemaphores and WaitForFence are also reply-pending, but are entirely server-owned registrations and have no provider token." in architecture
-        and "do not create provider-operation tokens" in architecture,
+        "WaitSemaphores and WaitForFence are server-owned registrations over the server's published Timeline-counter/Fence state; they MUST NOT require a blocking DDX backend wait operation or a backend operation token." in architecture
+        and "do not create DDX backend-operation tokens" in architecture,
         "Host waits must remain server-owned and must not acquire provider operation tokens",
     )
     c.require(
-        "MUST NOT fail solely because the provider is UNAVAILABLE" in errors
-        and "failures of underlying provider operations affect it only through state transitions actually published by those operations" in errors,
+        "MUST NOT fail solely because the selected DDX backend is UNAVAILABLE" in errors
+        and "failures of underlying DDX backend operations affect it only through state transitions actually published by those operations" in errors,
         "Provider UNAVAILABLE must not directly terminalize server-owned host waits",
     )
     c.require(
-        "provider unavailability alone neither terminalizes the wait nor returns DEVICE_UNAVAILABLE" in conformance
-        and "The wait registration has no provider operation token" in conformance,
+        "DDX backend unavailability alone neither terminalizes the wait nor returns DEVICE_UNAVAILABLE" in conformance
+        and "The wait registration has no backend operation token" in conformance,
         "Host-wait conformance must cover provider unavailability without inventing a provider wait operation",
     )
     c.require(
-        "provider-token acceptance for reply-pending WriteBuffer, ReadBuffer, and AcquireNextImage" in conformance
-        and "WaitSemaphores and WaitForFence remain reply-pending but are server-owned registrations with no provider token" in conformance,
+        "DDX backend-token acceptance for reply-pending WriteBuffer, ReadBuffer, and AcquireNextImage" in conformance
+        and "WaitSemaphores and WaitForFence remain reply-pending but are server-owned registrations with no DDX backend token" in conformance,
         "Provider-token acceptance inventory must exclude server-owned WaitSemaphores/WaitForFence",
     )
     c.require(
         "exactly one terminal outcome notification to the server" in architecture
         and "does not by itself prove backend quiescence" in architecture
-        and "Terminal provider failure without quiescence vector" in conformance,
-        "Provider terminal outcome callbacks must remain distinct from backend quiescence and retirement",
+        and "Terminal DDX backend failure without quiescence vector" in conformance,
+        "DDX backend terminal outcome callbacks must remain distinct from backend quiescence and retirement",
     )
     c.require(
         "`retire_operation` has one normative success meaning" in architecture
         and "Any non-`SUCCESS` result is not evidence of quiescence" in architecture
         and "Repeated retirement after `SUCCESS` MUST be an idempotent no-op" in architecture
-        and "Provider operation-token retirement and quiescence" in conformance
+        and "DDX backend operation-token retirement and quiescence" in conformance
         and "Terminal token retirement failure and retry" in conformance,
         "Provider token retirement must prove quiescence, preserve failed tokens, and be generation-safe/idempotent",
     )
