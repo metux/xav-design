@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `53883de2201029de82b63a03f6acc2ba77280e6a`  
+**Latest exact-tip CI-verified tip:** `b260b88fff58b1d6824f62b8d4af7761a94da033`  
 **Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later status-document refreshes are pending exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41840947750](https://github.com/metux/xav-design/actions/runs/41840947750) — SUCCESS on `53883de2201029de82b63a03f6acc2ba77280e6a`.
+- Exact-tip CI for the Xlibre/Xorg integration-contract commit: [workflow 41841990539](https://github.com/metux/xav-design/actions/runs/41841990539) — SUCCESS on `b260b88fff58b1d6824f62b8d4af7761a94da033`. The subsequent architecture-vector commit `4eb0d35938def3f74de579a7bb2e7729a304325f` is pending exact-tip CI.
 - Results: 4,963 wire-layout checks, 72 Timeline regression tests, and 693 Python tests passed. Required handler/backend checks, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit also passed; all 19 workflow steps completed successfully.
-- This verifies the logical-Device PresentationRoute binding, evidence-bearing physical-removal API with source-authority validation, generation-checked provider status transitions, registry result classifications, and architecture vectors through 60, including provider descriptor and callback pointer lifetimes.
+- This verifies the Xlibre/Xorg adapter-role and lifecycle contract in addition to the previously verified logical-Device PresentationRoute binding, evidence-bearing physical-removal API, generation-checked provider status transitions, registry result classifications, and architecture vectors through 60. Architecture vectors 61–66 were added afterward and remain pending their own CI run.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -31,7 +31,7 @@ The server-wide inventory is independent of Screen initialization:
 4. DDX/Screen drivers report generation-checked ScreenAttachments. A Screen may attach to multiple GPUs and a GPU to multiple Screens; this does not imply WSI support.
 5. Provider loss, Screen detach, DRM-node disappearance, and confirmed physical removal are distinct lifecycle inputs. v0.1 has no transparent provider failover.
 
-The detailed contracts, suggested registry API, driver-facing responsibilities, startup barrier, hotplug path, generation-checked provider state transitions, and architecture vectors are in [device-registry architecture](spec/device-registry-architecture.md). The provider operation and lifecycle contracts are in [devices](spec/devices.md) and [resource lifetime](spec/resource-lifetime.md).
+The detailed contracts, suggested registry API, driver-facing responsibilities, Xlibre/Xorg adapter roles, startup barrier independent of Screen initialization, hotplug scan/event reconciliation, generation-checked provider state transitions, and architecture vectors are in [device-registry architecture](spec/device-registry-architecture.md). The provider operation and lifecycle contracts are in [devices](spec/devices.md) and [resource lifetime](spec/resource-lifetime.md).
 
 ## Open implementation acceptance gates
 
@@ -61,3 +61,6 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 - [Physical-device registry architecture](spec/device-registry-architecture.md)
 - [Live implementation coordination](IMPLEMENTATION_COORDINATION.md)
 - [Historical status log](PROJECT_STATUS_HISTORY_2026-11-04.md)
+
+
+The Xlibre/Xorg integration profile now specifies platform-discovery, DDX-topology, and Vulkan-provider adapters; a Screen-independent startup barrier; hotplug reconciliation; late discovery; and safe Screen/module teardown. Runtime mapping to the exact Xlibre hooks and driver-supplied identity evidence remains unverified.
