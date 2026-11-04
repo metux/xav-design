@@ -47,7 +47,7 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 3. **Request ownership:** maintain exactly one handler owner per request. Shared helpers have a separately named owner; request ownership does not imply shared-file ownership.
 4. **Lifecycle integration:** report any implementation assumption that conflicts with provider pinning, generation checks, accepted-operation terminalization, or quarantine rules.
 5. **Verification:** every implementation/spec change report must include branch, commit SHA, exact test commands or CI run, result, and remaining unverified runtime behavior.
-6. **Xlibre startup/hotplug integration:** the normative adapter and barrier contract is now in `spec/device-registry-architecture.md` §2.4. Runtime feedback is still needed on the actual Xlibre platform-bus/udev hook points and how each driver supplies authoritative device identity; do not substitute Screen indices or DDX initialization order.
+6. **Xlibre startup/hotplug integration:** the normative adapter/barrier contract and source-level hook mapping are in `spec/device-registry-architecture.md` §§2.4 and 8.1. Runtime feedback is still needed on driver-supplied authoritative identity evidence and live hotplug behavior; do not substitute Screen indices or DDX initialization order.
 
 ## Latest specification update — Physical-device registration
 
@@ -99,7 +99,7 @@ The status, freeze checklist, and open-issues summaries have also been refreshed
 
 ## XLibre source mapping review — 2026-11-04
 
-The current X11Libre/xserver source was reviewed at `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. The practical mapping in `spec/device-registry-architecture.md` §8.1 records that `xf86BusProbe()` invokes `xf86platformProbe()` before extension setup; `config_udev_odev_probe()` enumerates DRM `card[0-9]*` and deduplicates by major/minor; GPU-screen add/remove is a separate DDX/Screen lifecycle; and `xf86platformPrimary()` may fall back to the first platform device. XAverius must not use those Xorg-specific conventions as canonical identity or default-device policy. The §8.1 mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and conformance vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) are awaiting exact-tip CI.
+The current X11Libre/xserver source was reviewed at `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. The practical mapping in `spec/device-registry-architecture.md` §8.1 records that `xf86BusProbe()` invokes `xf86platformProbe()` before extension setup; `config_udev_odev_probe()` enumerates DRM `card[0-9]*` and deduplicates by major/minor; GPU-screen add/remove is a separate DDX/Screen lifecycle; and `xf86platformPrimary()` may fall back to the first platform device. XAverius must not use those Xorg-specific conventions as canonical identity or default-device policy. The §8.1 mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` passed workflow 41842380756, and conformance vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) passed workflow 41842404893. The follow-up Screen-close/module-quiescence contract and vectors 70–75 are covered by the later verified baseline `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`.
 
 
 ## Latest specification update — DDX Screen close and provider module quiescence — 2026-11-04
