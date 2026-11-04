@@ -106,10 +106,10 @@ class PresentationLifecycleContractTests(unittest.TestCase):
             "### X11 Screen identity and multi-Screen servers", 1
         )[1].split("\n### ", 1)[0]
         for phrase in (
-            "server-wide, not scoped to an X11 Screen",
-            "first X11 Screen",
-            "order of returned records has no device-selection or presentation meaning",
-            "makes no promise",
+            "one server-wide registry shared by all X11 Screens",
+            "MUST NOT depend on Screen initialization order, the first Screen with XAverius support, backend enumeration order",
+            "stable ordering derived from canonical Physical-Device identity",
+            "MUST select one Physical Device only and MUST NOT combine devices or infer presentation compatibility from a Screen association",
         ):
             with self.subTest(device_rule=phrase):
                 self.assertIn(phrase, devices)
@@ -224,7 +224,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertLess(queue.index("out-of-range image index is `BadValue`"), queue.index("`SURFACE_LOST` takes precedence over `OUT_OF_DATE`"))
         self.assertLess(errors_precedence.index("check Device availability"), errors_precedence.index("Validate request-specific indices"))
         self.assertLess(errors_precedence.index("Validate request-specific indices"), errors_precedence.index("Resolve lifecycle/capability outcomes"))
-        self.assertIn("Device loss takes precedence over Surface loss and all later mutable-state checks.", errors_precedence)
+        self.assertIn("Device loss takes precedence over provider unavailability, Surface loss, and all later mutable-state checks.", errors_precedence)
 
     def test_acquire_sync_eligibility_precedes_timeout_and_never_signals_on_failure(self) -> None:
         errors = (ROOT / "spec" / "errors.md").read_text(encoding="utf-8")
@@ -341,7 +341,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("DEVICE_LOST", presentation_status)
         self.assertIn("SURFACE_LOST", presentation_status)
         self.assertIn("OUT_OF_DATE", presentation_status)
-        self.assertIn("Device loss takes precedence over Surface loss", errors_precedence)
+        self.assertIn("Device loss takes precedence over provider unavailability, Surface loss", errors_precedence)
         self.assertIn("queue/index", errors_precedence)
         self.assertIn("CreateSwapchain", errors_precedence)
 
