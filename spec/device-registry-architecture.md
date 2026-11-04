@@ -43,6 +43,59 @@ A PhysicalDevice has an internal, non-reusable server identity (for example, an 
 
 Provider discovery MUST have a defined completion point before first publication. For initial server startup, implementations SHOULD complete the configured discovery pass and deterministic provider selection before XAverius makes the inventory visible to clients. A provider discovered later MAY be attached to an already published PhysicalDevice, but MUST NOT silently replace its selected execution provider or mutate its published metadata snapshot. This avoids making identity, capabilities, or default-device selection depend on whichever ICD or Screen happened to initialize first.
 
+## 2.1 Discovery-source and driver-registration contract
+
+Discovery, execution-provider registration, Screen topology, and XAverius publication are separate operations. A driver or discovery adapter MUST NOT perform all four implicitly.
+
+A discovery source is a producer of observations, not a fourth persistent registry object. It may be the Xorg platform bus, udev, a DDX driver, a Vulkan ICD/provider, or another server backend. A source has a stable source key and a non-reusable source generation. Its observations are immutable identity evidence plus source-local metadata; they do not themselves create a PhysicalDevice XID or select an execution provider.
+
+The registration paths are:
+
+1. **Observe hardware identity.** A discovery source submits a candidate identity to the process-wide registry. The registry canonicalizes it and returns an internal generation-checked PhysicalDevice reference, or leaves it unpublished while identity evidence is incomplete or ambiguous. An observation may enrich identity evidence but MUST NOT overwrite an already published immutable property snapshot.
+2. **Register an execution provider binding.** A Vulkan-capable provider registers its private provider context and the provider-local physical-device binding against the canonical PhysicalDevice reference. This is a separate operation from observing the hardware. A provider may register bindings for many PhysicalDevices; one PhysicalDevice may have bindings from multiple providers.
+3. **Select and snapshot.** During the initial discovery pass, the server selects exactly one eligible execution provider per PhysicalDevice according to Section 3, queries the complete snapshot through that provider, and only then publishes the PhysicalDevice and allocates its server-owned XID. No Screen or DDX initialization order participates.
+4. **Attach Screen topology.** A DDX/Screen path attaches the live Screen generation to one or more already canonicalized PhysicalDevices with explicit roles. This does not create an identity, register a Vulkan provider, select the execution provider, or prove WSI support.
+5. **Report lifecycle observations.** Sources report provider-context loss/recovery, provider-local binding loss/recovery, Screen detach, and confirmed physical removal as distinct observations. The registry serializes them and applies the lifecycle rules in Sections 5–6.
+
+A component MAY implement more than one role, but it MUST register each role explicitly and MUST obey each role's ownership boundary. In particular, a DDX that only discovers or drives scanout MUST report identity/topology observations; it MUST NOT be registered as a BackendProvider unless it actually implements the complete provider operation contract required by the capabilities it advertises. Conversely, a Vulkan provider MUST NOT create ScreenAttachments merely because it enumerated a PhysicalDevice.
+
+### Registration semantics
+
+The internal registration API SHOULD expose distinct operations equivalent to:
+
+- `GpuRegistryObserveDevice(source, source_generation, identity_evidence)`: submit or update an observation. Returns a generation-checked canonical record reference only when identity matching is unambiguous; it never allocates a protocol XID.
+- `GpuRegistryRegisterProviderBinding(device_ref, provider_descriptor, provider_local_binding)`: attach a provider-local handle to the exact canonical identity. It does not publish the PhysicalDevice or select the provider by registration order.
+- `GpuRegistryRemoveProviderBinding(device_ref, provider_generation, binding_generation)`: stop new calls through that binding and apply the selected-provider unavailability rules; it is not physical removal.
+- `GpuRegistryRemoveObservation(source_generation, observation_id)`: withdraw only that source's evidence. It MUST NOT mark hardware REMOVED while other authoritative evidence still establishes the same incarnation.
+- `GpuRegistryConfirmDeviceRemoved(device_ref, device_generation, removal_evidence)`: commit terminal REMOVED only on authoritative evidence that the physical incarnation was removed.
+- `GpuRegistryAttachScreen(device_ref, screen_generation, roles)` and `GpuRegistryDetachScreen(attachment_generation)`: manage only the non-owning topology relation.
+
+These names are semantic API guidance, not required exported symbols. Registration and removal calls from worker threads MUST enqueue immutable observations into the server serialization domain; they MUST NOT mutate registry state directly. All returned references and handles MUST be opaque and generation checked. A source/provider MUST NOT retain or resolve a record by a bare pointer, XID, array index, DRM minor, or Screen number after the call returns.
+
+An ambiguous identity match is not a license to merge or publish. The registry MUST keep the candidate unpublished and report the ambiguity to the registering source/server log until stronger evidence resolves it. If evidence proves that two published identities were duplicates, the implementation MUST NOT silently reassign or reuse a client-visible XID; this is a server consistency fault requiring controlled recovery, not an ordinary hotplug merge.
+
+### Startup, late registration, and removal
+
+Initial publication has a server-wide discovery barrier: all configured discovery sources and providers complete their initial candidate pass, identity canonicalization, deterministic provider selection, and snapshot query before the XAverius inventory is exposed. Enumeration order and Screen initialization order MUST NOT affect the resulting inventory or selected provider.
+
+A provider or source discovered after publication MAY add corroborating evidence or a non-selected provider binding to an existing identity. It MUST NOT replace the selected provider, mutate the published snapshot, or cause a second XID. v0.1 does not support transparent execution-provider failover. If the selected provider binding is withdrawn or its provider context is permanently deregistered, the PhysicalDevice becomes UNAVAILABLE and remains so until the same selected provider generation can recover; a new provider generation is not transparent recovery. The PhysicalDevice becomes REMOVED only after confirmed removal of that hardware incarnation.
+
+A DDX unload or Screen teardown MUST detach every ScreenAttachment owned by that exact Screen generation before its Screen-private state is freed. It MUST also withdraw any discovery observations and provider registrations that it owns, each through their distinct lifecycle operations. Detaching the last Screen does not remove a PhysicalDevice: headless, off-screen, render-only, or temporarily unbound devices remain in the server-wide inventory if their physical/provider discovery remains valid. Similarly, removing one DRM access node does not prove physical removal if another node or authoritative source still identifies the same device.
+
+A confirmed physical removal is server-wide and independent of Screen membership. It invalidates future logical-device creation for that incarnation and leaves its PhysicalDevice tombstone/XID in the inventory. A stale remove or detach observation carrying an older source, provider, Screen, or device generation MUST NOT affect a replacement incarnation.
+
+### Driver-facing responsibilities
+
+| Component | May report/register | MUST NOT decide |
+|---|---|---|
+| Xorg platform bus / udev adapter | Bus identity, DRM node observations, authoritative add/remove evidence | PhysicalDevice XID, Vulkan provider selection, published capabilities |
+| DDX driver | Screen-to-device identity mapping, ScreenAttachment roles, driver-owned provider context if it implements the full provider contract | Server-wide identity deduplication, global inventory membership, default-device choice |
+| Vulkan ICD/provider adapter | Provider identity, provider-local physical binding, complete snapshot, classified availability/loss results, backend operations | XAverius XIDs, Screen ownership, request validation, public state/event mutation |
+| XAverius registry/resource layer | Canonical identity, provider selection, snapshot publication, PhysicalDevice XID, status/event serialization | Direct dereference of provider-private Vulkan handles |
+| WSI/presentation path | Exact provider-local Surface and Device/Surface capability operations | Infer presentation support from ScreenAttachment or Screen number |
+
+On Xlibre/Xorg, the recommended arrangement is one XAverius-owned registry service with thin adapters: platform/udev discovery feeds identity observations; DDX Screen initialization feeds attachments; Vulkan ICD/provider adapters register executable bindings. This keeps the registry independent of any one DDX and prevents the first XAverius-capable Screen from becoming an accidental global GPU selector.
+
 ## 3. BackendProvider contract
 
 Provider selection MUST use the following v0.1 policy:
@@ -486,5 +539,12 @@ The implementation test suite SHOULD include at least:
 28. Race positive logical-Device `DEVICE_LOST`, provider-scoped `UNAVAILABLE`, ordinary resource destroy, `DestroyDevice`, and client disconnect in every relevant pairwise serialization order. Require one public invalidation owner, first-terminal-outcome preservation, request-specific result mapping, event/reply suppression at the correct connection/Device boundary, and exactly-once reference retirement. Ordinary resource destroy is not rejected solely by provider unavailability or Device Loss; its own pending/recording blockers remain normative.
 
 29. Withhold provider quiescence after a classified terminal failure and verify that the failure is not reclassified as `DEVICE_LOST` solely because quiescence is unknown. Quarantine every potentially accessed backend object and provider reference. Separately inject a positive `DEVICE_LOST` for one exact logical Device and verify only operations still open at that serialized point are terminalized as Device Loss.
+
+30. A DDX reports a Screen-to-device observation without implementing Vulkan provider operations: it creates only a ScreenAttachment, not a BackendProvider or PhysicalDevice XID. A Vulkan provider reports the same GPU independently: both observations converge on one canonical PhysicalDevice.
+31. A single DDX Screen maps to two GPUs and two Screens map to one GPU: all attachments are represented independently; neither attachment order nor the first Screen changes provider selection, inventory order, or PhysicalDevice identity.
+32. A discovery source withdraws one observation or one DRM access node while another authoritative source still reports the same incarnation: the PhysicalDevice remains present and is not marked REMOVED. Detaching the final Screen also does not remove a still-discovered headless/render-only device.
+33. Two candidates cannot be unambiguously correlated: neither is silently merged nor published as a duplicate; both remain pending until stronger identity evidence resolves the match.
+34. A selected provider binding is deregistered while the physical device remains: the PhysicalDevice becomes UNAVAILABLE, no new provider generation takes over, and outstanding logical-device/operation references keep the old provider code/context pinned until safe retirement.
+35. A stale source removal, provider deregistration, or Screen detach from an earlier generation arrives after replacement: it cannot mutate the new observation, provider binding, attachment, or PhysicalDevice incarnation.
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
