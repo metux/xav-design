@@ -241,6 +241,8 @@ The canonical identity denotes the underlying physical-device incarnation expose
 A valid device UUID is the exact 16-byte Vulkan `VkPhysicalDeviceIDProperties::deviceUUID` value. An all-zero value is invalid and MUST be reported as `NOT_AVAILABLE`, not used as a deduplication key, and not replaced with a fabricated value. A UUID is an identity/correlation property, not a promise of persistence across server restarts, physical removal/reinsertion, or hardware relocation. XAverius MUST NOT persist or recycle Physical-Device XIDs by UUID across X-server restarts.
 
 
+Implementation architecture: the server-wide registry, object ownership boundaries, provider API, Screen attachments, callback generations, and Xlibre integration guidance are specified in [Server-Side Physical-Device Registry Architecture](device-registry-architecture.md). The architecture document does not change the wire ABI.
+
 ### Backend providers and platform identity
 
 A backend provider is one concrete driver/ICD/backend context capable of querying a Physical Device and creating logical Devices for it. A provider is an implementation endpoint, not a Physical-Device identity. Multiple providers, Vulkan instances, DRM nodes, or Screen discovery paths MAY refer to the same canonical Physical Device; registering another provider MUST attach it to the existing canonical identity and MUST NOT create another Physical-Device XID.
