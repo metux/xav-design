@@ -139,3 +139,7 @@ The branch now includes `spec/registry-api-lifetime-addendum.md`, a normative su
 ## Provider operation-table audit — 2026-11-04
 
 Added `spec/provider-operation-matrix.md` as a normative supplement. The audit found the four typed provider tables were only forward-declared, without operation signatures. The new document defines their required operations, maps every request subopcode 0–47 to provider or server-only work, adds the missing Buffer destruction callback `free_buffer`, specifies the six asynchronous operations and complete resource pin sets, and closes typed destroy/result/rollback contracts. Architecture conformance vectors now extend through 164. Exact-tip CI remains required; runtime implementation acceptance is separate.
+
+## DDX-owned device registration and direct dispatch — 2026-11-04
+
+The registry architecture now makes the DDX the sole executable PhysicalDevice registrar in the Xlibre/Xorg profile. Each DDX must register all devices it serves, including devices not attached to a Screen. Platform/udev supplies identity and hotplug evidence only. Per-device operation vectors, backend context, and native handle are bound directly to the selected PhysicalDevice record; BackendProvider remains only as a shared module/lifetime/quiescence control concept, not an extra dispatch object. Implementation guidance: `implementation-notes/ddx-device-registration.md`. No wire ABI/opcode change. Exact-tip CI and implementation-agent conformance review remain pending.
