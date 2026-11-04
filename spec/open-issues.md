@@ -125,3 +125,7 @@ Runtime acceptance should verify repeated successful ObserveDevice replay increm
 
 
 Runtime acceptance must verify fatal quarantine blocks subsequent provider quiesce/final release hooks and preserves all module/context/object references. Vector 142 added.
+
+### Registry API lifetime addendum — 2026-11-04
+
+The second API pass added a normative supplement in [registry-api-lifetime-addendum.md](registry-api-lifetime-addendum.md). It clarifies the provider-context accessor result/borrow contract, nested operation-table storage and code lifetime, canonical shared module-lease identity, final lease-release barrier, terminal source/binding/Screen removal semantics, complete provider-quiescence preconditions, and temporary operation-token pointer confinement. Architecture vectors 143–150 cover these cases. These are specification refinements, not wire-design changes. Exact-tip CI is required; implementation acceptance still needs evidence for the actual Xlibre loader and provider callback paths.
