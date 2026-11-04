@@ -3294,7 +3294,7 @@ def check_presentation_profile(c: Check) -> None:
     )
     c.require(capability_failure_contract in presentation,
               "GetSurfaceCapabilities: non-success statuses must define zeroed capability fields")
-    c.require("Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified." in conformance,
+    c.require("Temporary-not-presentable, surface-lost, device-lost, and device-unavailable statuses return zeroed capability fields as specified." in conformance,
               "presentation conformance: capability failure statuses must cover zeroed fields")
     c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED/DEVICE_UNAVAILABLE are not X11 framing errors" in presentation and
               "DEVICE_DESTROYED=6" in presentation,
