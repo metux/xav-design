@@ -432,12 +432,29 @@ typedef struct {
 GpuRegistry *GpuRegistryCreate(void);
 void GpuRegistryDestroy(GpuRegistry *registry);
 
-/* Discovery/provider registration. Returns the canonical record to which
-   this observation belongs; it does not allocate a protocol XID. */
-GpuPhysicalDevice *GpuRegistryRegisterProvider(
-    GpuRegistry *registry,
-    const GpuDeviceIdentity *identity,
-    const GpuProviderDescriptor *provider);
+/* Discovery-source observation. Returns a canonical, generation-checked
+   record only when identity matching is unambiguous; pending/ambiguous
+   candidates remain unpublished and receive no protocol XID. */
+GpuRegistryResult GpuRegistryObserveDevice(
+    GpuRegistry *registry, const char *source_key,
+    uint64_t source_generation, const GpuDeviceIdentity *identity,
+    GpuPhysicalDevice **out_device, uint64_t *out_device_generation);
+
+/* Provider execution binding is registered separately from observation.
+   The provider-local handle remains private to this provider generation. */
+GpuRegistryResult GpuRegistryRegisterProviderBinding(
+    GpuRegistry *registry, GpuPhysicalDevice *device,
+    uint64_t device_generation, const GpuProviderDescriptor *provider,
+    uint64_t provider_local_binding_id, uint64_t binding_generation);
+
+GpuRegistryResult GpuRegistryRemoveProviderBinding(
+    GpuRegistry *registry, GpuPhysicalDevice *device,
+    uint64_t device_generation, GpuBackendProvider *provider,
+    uint64_t provider_generation, uint64_t binding_generation);
+
+GpuRegistryResult GpuRegistryRemoveObservation(
+    GpuRegistry *registry, const char *source_key,
+    uint64_t source_generation, uint64_t observation_id);
 
 /* Provider availability is distinct from physical removal. */
 /* Context-wide failure/recovery affects all PhysicalDevices for which this
@@ -493,11 +510,12 @@ The existing Xorg platform-device list (`xf86_platform_devices` in `hw/xfree86/c
 
 Recommended layering:
 
-- Xorg platform/udev code reports discovery and removal observations to the registry.
-- DDX drivers register provider contexts after they have a usable backend device.
-- The server-wide registry canonicalizes candidates and owns PhysicalDevice records.
+- Xorg platform/udev code reports identity and authoritative hotplug observations to the registry.
+- DDX drivers report Screen-to-device relationships as ScreenAttachments; they register a BackendProvider only if they implement its complete Vulkan/backend operation contract.
+- Vulkan ICD/provider adapters register provider-local execution bindings separately from hardware observations.
+- The server-wide registry canonicalizes candidates, selects the execution provider, and owns PhysicalDevice records.
 - XAverius enumerates only published registry records and owns their protocol XID resources.
-- Screen initialization creates/destroys ScreenAttachments only.
+- Screen initialization creates/destroys ScreenAttachments only; detaching a Screen does not remove a still-discovered device.
 - Surface/WSI code performs the actual Device/Surface presentation-support query; it must not infer support from a ScreenAttachment.
 
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
