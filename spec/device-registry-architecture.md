@@ -95,7 +95,7 @@ A selected provider MUST implement the following operation groups for every capa
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
-The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Each completion MUST identify the exact provider, operation, logical Device (if any), and resource generations captured at submission. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
 
 ### 4.2 Physical snapshot operation
 
@@ -130,6 +130,8 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `CANCELLED` | Operation was prevented from starting because its captured Device/resource generation was destroyed or terminalized | Complete it with the lifecycle result already committed by the server (for example `DEVICE_DESTROYED`); never invoke backend work after cancellation wins. |
 | `FATAL` | Unclassified backend/provider failure or violated provider contract | Fail with `INTERNAL_SERVER_ERROR` if a synchronous request is still awaiting a result; mark the provider unavailable if its continued correctness cannot be trusted. Preserve all references until safe retirement. |
 
+All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent and MUST release only the exact operation-token generation supplied to it.
+
 The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
 
 For `create_logical_device`, `DEVICE_LOST` occurs before a logical Device exists and therefore MUST NOT create a phantom logical Device or emit a Device-Loss event for the requested XID. The server MUST mark the selected PhysicalDevice UNAVAILABLE, fail creation with `DEVICE_UNAVAILABLE`, and leave the target XID unallocated. Allocation failures map to `ALLOCATION_FAILED`; other unclassified creation failures map to `INTERNAL_SERVER_ERROR`. A native unsupported-feature result after the server has validated the published snapshot is a provider contract violation, not a client `BadMatch`.
@@ -143,6 +145,10 @@ The server MUST preserve the first terminal outcome committed for each request, 
 An operation is synchronous when the XAverius request can be completed from the provider's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
 
 An operation is deferred/asynchronous when its request remains open pending backend work or a protocol chapter defines acceptance separately from completion. This includes QueueSubmit, WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence registrations, AcquireNextImage, and any other transfer/presentation path explicitly defined as deferred. The provider MUST return either an immediate classified rejection/status or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
+
+For asynchronous waits and image acquisition, cancellation is a separate provider operation. `cancel_host_wait` and `cancel_acquire` request cancellation of the exact token generation; successful cancellation is not itself proof of quiescence and does not replace the one terminal completion callback. The provider MUST still deliver exactly one completion/retirement notification and MUST guarantee that no later backend access can occur before the server releases references. A cancellation result indicating that the operation already completed does not alter the server's first-terminal-outcome rule.
+
+`AcquireNextImage` timeout arbitration remains server-owned. The provider MUST NOT send a reply or independently commit the XAverius timeout result. If cancellation races a backend acquisition that has already acquired an image, the provider MUST return that image to a reusable swapchain state through a safe backend release mechanism, or retain/quarantine the affected swapchain and its provider resources until the acquired image can be safely retired. A presentation provider that cannot guarantee safe retirement of a late acquired image MUST NOT advertise the presentation profile. This requirement applies even when the public acquire registration has already timed out, been destroyed, or been cancelled by disconnect.
 
 The server, not the provider, owns X11 wait deadlines and timeout arbitration for WaitSemaphores and WaitForFence. A provider wait registration reports only backend predicate completion or a classified backend failure; the server's serialized domain decides whether completion, timeout, Device Loss, DestroyDevice, or disconnect wins. A provider wait MUST NOT block the X11 request dispatcher.
 
@@ -242,6 +248,20 @@ typedef enum {
     GPU_PROVIDER_FATAL
 } GpuProviderResult;
 
+typedef struct {
+    uint64_t provider_generation;
+    uint64_t operation_generation;
+    uint64_t device_generation;
+    uint64_t resource_generation;
+    GpuProviderOperationToken *token;
+    GpuProviderResult result;
+    /* Operation-specific immutable result payload follows. */
+} GpuProviderCompletion;
+
+typedef void (*GpuProviderCompletionFn)(
+    void *completion_userdata,
+    const GpuProviderCompletion *completion);
+
 typedef struct GpuProviderOps {
     GpuProviderResult (*enumerate_candidates)(
         GpuBackendProvider *, GpuPhysicalDeviceCandidateList *);
@@ -255,7 +275,7 @@ typedef struct GpuProviderOps {
     GpuProviderResult (*get_queue)(
         GpuProviderDevice *, uint32_t family, uint32_t index,
         GpuProviderQueue **);
-    void (*destroy_logical_device)(GpuProviderDevice *);
+    GpuProviderResult (*destroy_logical_device)(GpuProviderDevice *);
 
     /* Separate typed operation tables, not a generic wire-payload dispatcher:
        buffer_memory: create/query/allocate/free/bind/read/write Buffer and Memory;
@@ -274,21 +294,28 @@ typedef struct GpuProviderOps {
     GpuProviderResult (*create_surface)(
         GpuBackendProvider *, const GpuProviderSurfaceInfo *,
         GpuProviderSurface **);
-    void (*destroy_surface)(GpuBackendProvider *, GpuProviderSurface *);
+    GpuProviderResult (*destroy_surface)(GpuBackendProvider *, GpuProviderSurface *);
     GpuProviderResult (*query_surface_support)(
-        GpuProviderDevice *, GpuProviderSurface *,
+        GpuBackendProvider *, GpuProviderPhysicalDevice *,
+        uint32_t queue_family, GpuProviderSurface *,
         GpuProviderSurfaceSupport *);
     GpuProviderResult (*create_swapchain)(
         GpuProviderDevice *, GpuProviderSurface *,
         const GpuProviderSwapchainInfo *, GpuProviderSwapchain **);
-    void (*destroy_swapchain)(GpuProviderSwapchain *);
+    GpuProviderResult (*destroy_swapchain)(GpuProviderSwapchain *);
     GpuProviderResult (*acquire_next_image)(
         GpuProviderDevice *, GpuProviderSwapchain *,
         const GpuProviderAcquireInfo *, GpuProviderOperationToken *);
     GpuProviderResult (*queue_present)(
         GpuProviderQueue *, const GpuProviderPresentInfo *,
         GpuProviderOperationToken *);
+    GpuProviderResult (*cancel_host_wait)(GpuProviderOperationToken *);
+    GpuProviderResult (*cancel_acquire)(GpuProviderOperationToken *);
+    GpuProviderResult (*release_late_acquired_image)(
+        GpuProviderSwapchain *, uint32_t image_index);
 
+    /* Completion sink is installed when the provider context is created.
+       Provider callbacks invoke it only to enqueue immutable records. */
     void (*retain_provider)(GpuBackendProvider *);
     void (*release_provider)(GpuBackendProvider *);
     void (*retain_device)(GpuProviderDevice *);
