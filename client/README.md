@@ -30,11 +30,11 @@ The static library is `client/libxaverius-client.a`. Link with `-lxcb` and add `
 2. Send XAverius `QueryVersion` (subopcode 0), validate the reply envelope and reject incompatible major/older minor versions.
 3. Send `EnumeratePhysicalDevices` (subopcode 1), validate every variable-length PHYSICALDEVICEINFO record, and return host-order records.
 
-The current slice does not negotiate XGE and therefore does not yet expose logical-device creation or asynchronous event handling. `CreateDevice` must not be used until successful XGE 1.0+ negotiation has been completed.
+The runtime exposes `xav_connection_negotiate_xge()` for the standard Generic Event Extension `GEQueryVersion` request. Call it successfully before selecting XAverius XGE events or issuing `CreateDevice`. Event decoding/dispatch is the next slice; this prototype currently negotiates XGE but does not yet consume XAverius events.
 
 ## Next slices
 
-- Complete bootstrap: XGE `GEQueryVersion`, event dispatcher, Atom interning, device-property and queue-family/memory queries.
+- Complete bootstrap: XGE event dispatcher, Atom interning, device-property and queue-family/memory queries.
 - Device/resource wrappers, XID allocation, Buffer/Memory requests and checked variable-size encoders.
 - Shader uploads, command recording, submission and asynchronous error correlation.
 - Semaphore/fence APIs and event-driven completion.

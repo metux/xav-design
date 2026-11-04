@@ -4,7 +4,7 @@ PKG_CONFIG ?= pkg-config
 CPPFLAGS += -Iinclude -I../protocol/include $(shell $(PKG_CONFIG) --cflags xcb)
 CFLAGS ?= -O2 -g
 CFLAGS += -std=c11 -Wall -Wextra -Wpedantic -Werror
-SOURCES := src/connection.c src/devices.c
+SOURCES := src/connection.c src/devices.c src/xge.c
 OBJECTS := $(SOURCES:.c=.o)
 
 .PHONY: all clean check

@@ -10,6 +10,8 @@ struct xav_connection {
     xcb_connection_t *xcb;
     const xcb_query_extension_reply_t *extension;
     uint8_t major_opcode;
+    int xge_negotiated;
+    xav_version xge_version;
 };
 uint16_t xav_get_u16(const struct xav_connection *, const uint8_t *);
 uint32_t xav_get_u32(const struct xav_connection *, const uint8_t *);
