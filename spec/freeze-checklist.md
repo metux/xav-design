@@ -12,7 +12,7 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The current verified branch tip is `d9a20fe325d99136c86ac1acb1aa3a4958e1eacc` on `docs/restructure-2026-10-21`. Exact-tip workflow [41835720127](https://github.com/metux/xav-design/actions/runs/41835720127) passed 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully. This includes the explicit PresentationRoute object, provider route create/retire operations, and route-generation lifecycle references.
+The current verified branch tip is `df2d09ac8992229934cb407506baed2865a0416d` on `docs/restructure-2026-10-21`. Exact-tip workflow [41836070379](https://github.com/metux/xav-design/actions/runs/41836070379) passed 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully. This includes the explicit PresentationRoute object, provider route create/retire operations, and route-generation lifecycle references.
 
 ### Render-GPU / scanout-GPU routing audit — 2026-11-04
 
@@ -69,7 +69,7 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The render/scanout routing contract, explicit PresentationRoute object, route create/retire operations, and route-generation lifecycle are verified at `d9a20fe325d99136c86ac1acb1aa3a4958e1eacc` by exact-tip [workflow 41835720127](https://github.com/metux/xav-design/actions/runs/41835720127): 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits.
+The render/scanout routing contract, explicit PresentationRoute object, route create/retire operations, and route-generation lifecycle are verified at `df2d09ac8992229934cb407506baed2865a0416d` by exact-tip [workflow 41836070379](https://github.com/metux/xav-design/actions/runs/41836070379): 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits.
 
 The normative design gates are assessed as complete. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
 - [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
