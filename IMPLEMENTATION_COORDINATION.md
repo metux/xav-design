@@ -733,13 +733,17 @@ The normative source remains `spec/` and `registries/`; this header is only thei
 
 ## Client-side prototype — 2026-11-04
 
-The client prototype is being placed under `client/` on the authoritative specification branch, as requested. The intended layering is a small XCB-based protocol runtime (public XCB APIs only), with a Vulkan ICD kept as a later consumer rather than mixed into the transport.
+The client prototype lives under `client/` on the authoritative specification branch. The chosen layering is a small XCB-based protocol runtime (public XCB APIs only); a Vulkan ICD will be a later consumer, not part of the transport.
 
-Initial checked-in scaffolding:
-- `client/include/xaverius_client.h`: public opaque-connection and Physical-Device enumeration API.
-- `client/src/internal.h`: internal connection and wire-decoding interfaces.
+Implemented files:
+- `client/include/xaverius_client.h`: public opaque-connection API and host-order Physical-Device records.
+- `client/src/internal.h`: internal transport and wire-decoding interfaces.
+- `client/src/connection.c`: extension discovery, custom XCB request framing, QueryVersion and connection lifecycle.
+- `client/src/devices.c`: EnumeratePhysicalDevices and bounded variable-record decoding.
+- `client/Makefile`: static-library build.
 - `client/README.md`: architecture, ownership, build and staged implementation plan.
 
-Transport rule: XCB's extension descriptor minor opcode is zero, leaving the X11 `data` byte zero; XAverius subopcode is encoded as the first body byte at absolute offset 4. All reply fields and variable record lengths are decoded using the connection byte order and checked before exposure.
+Transport rule: XCB's extension descriptor minor opcode is zero, leaving the X11 `data` byte zero; XAverius subopcode is encoded as the first body byte at absolute offset 4. The implementation uses XCB's client byte order for protocol scalars, copies fields into aligned host objects, and checks the 32-byte reply envelope and variable-tail bounds before exposing data. The X11 connection and event queue remain caller-owned.
 
-The initial source/build-file additions were blocked by the repository-write safety check during this turn. Therefore this is currently scaffolding, **not yet a buildable or tested prototype**. Do not treat Phase 1 as implemented until the transport, QueryVersion and EnumeratePhysicalDevices source files are present and compiled against the shared protocol header.
+The first slice is source-complete but has **not yet been compiled or exercised against a live XAverius server**. No XGE negotiation, logical-device/resource requests, Vulkan ICD, or presentation support is claimed. Before using `CreateDevice`, the runtime must add successful XGE 1.0+ negotiation and event dispatch.
+
