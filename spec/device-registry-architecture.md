@@ -74,7 +74,99 @@ A selected provider becoming temporarily unavailable makes the PhysicalDevice UN
 
 Logical-device creation pins the exact selected provider and its PhysicalDevice incarnation. Every logical Device and asynchronous backend operation MUST retain a reference to the provider context and relevant internal generations until all backend accesses and callbacks have quiesced. Unloading a provider module or destroying its context while any such reference exists is forbidden. If quiescence cannot be proven, the backend objects and provider references MUST be retained or quarantined.
 
-## 4. ScreenAttachment contract
+## 4. Provider operation interface
+
+The provider interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The provider owns the actual backend calls and every provider-local handle. Request handlers MUST call the selected provider only through the operation interface bound to the exact PhysicalDevice and logical-Device generations.
+
+### 4.1 Operation groups
+
+A selected provider MUST implement the following operation groups for every capability it advertises. An operation that is not applicable to the selected backend MAY be absent only when the corresponding XAverius capability is not advertised.
+
+| Group | Required operations | Contract |
+|---|---|---|
+| Physical-device query | `query_physical_snapshot` | Return one complete, immutable snapshot containing all fields used by enumeration, property queries, queue-family queries, memory-property queries, and device-limit validation. |
+| Logical-device lifecycle | `create_logical_device`, `get_queue`, `destroy_logical_device` | Create the Vulkan logical device with the exact validated queues/features/extensions; obtain queues for the requested family/index; destroy the logical device after its dependent work is quiescent. |
+| Buffer and memory | `create_buffer`, `get_buffer_memory_requirements`, `allocate_memory`, `free_memory`, `bind_buffer_memory`, `write_buffer`, `read_buffer` | Implement the Buffer/Memory semantics, alignment and range rules, upload/readback snapshot barriers, and transfer completion contracts in `memory-buffers.md`. |
+| Shader, descriptor, and pipeline objects | create/destroy ShaderModule, DescriptorSetLayout, DescriptorPool, DescriptorSet, PipelineLayout, and ComputePipeline operations; descriptor updates | Implement the exact validated object descriptions and Vulkan dependency/lifetime ordering in `shaders-pipelines.md`. |
+| Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-buffers.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
+| Synchronization | create/destroy semaphores and fences; host signal; host wait; queue signal/wait integration; fence status/wait/reset operations | Implement binary/timeline semaphore and fence behavior in `synchronization.md`, including the specified WAIT_ANY/WAIT_ALL and timeout semantics. |
+| Queue execution | `queue_submit` and any backend completion/retirement operation | Submit the already validated dependency graph to the exact queue. Accepted submissions complete asynchronously and report one terminal outcome through the server's serialized completion path. |
+| Presentation | surface support/capability query for an exact Device/Surface pair; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. ScreenAttachment MUST NOT substitute for the exact Device/Surface support query. |
+
+The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
+
+The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+
+### 4.2 Physical snapshot operation
+
+`query_physical_snapshot` MUST run before publication and return a single internally consistent snapshot. The snapshot MUST include every value needed by all v0.1 physical-device enumeration and query requests and every device limit/capability used to validate later creation requests. It MUST be tied to the same provider-local physical-device handle that will be passed to `create_logical_device`.
+
+The operation MUST distinguish an unsupported optional property from a transient query failure. A missing optional property is recorded as unavailable/not supported according to the property registry; it MUST NOT be fabricated. A failure to obtain a mandatory baseline property, queue-family data, memory properties, or a coherent limit set makes that provider ineligible for selection. The server MUST NOT publish a partial snapshot and MUST NOT fill missing fields from another provider.
+
+After publication, request handlers MUST answer physical-device property and queue/memory-property queries from the stored snapshot. They MUST NOT re-query a different provider or silently refresh fields in place. Provider recovery MUST prove that the same provider and same physical-device incarnation still honor the published snapshot before restoring AVAILABLE.
+
+### 4.3 Logical-device creation and queue binding
+
+Before calling `create_logical_device`, the server MUST complete all XAverius wire, XID, ownership, queue, feature, extension, and physical-device-state validation in the normative order in `devices.md` and `errors.md`. The provider receives a fully validated immutable create description; it MUST NOT independently choose a different PhysicalDevice, queue family, queue count, feature set, or extension set.
+
+The provider MUST create the logical device with the mandatory v0.1 `timelineSemaphore` feature enabled and exactly the validated queue requests and enabled optional features/extensions. It MUST return an opaque logical-device handle plus a queue handle for every requested (family,index) tuple, or fail atomically. Queue handles remain private to the provider and are reachable only through the logical-device context.
+
+The server publishes the logical Device XID only after provider creation and all required queue acquisition succeed. If any stage fails, the server MUST destroy or quarantine every partial backend object, release temporary references when safe, leave the requested XID unallocated, and return the mapped error. The provider MUST NOT retain a live logical device after reporting a failed create unless it is explicitly quarantined and inaccessible to all later XAverius operations.
+
+### 4.4 Provider result and error contract
+
+Every provider operation MUST return a classified result. A provider MAY additionally retain the native backend/Vulkan result for diagnostics, but the native result MUST NOT bypass the classification or change the protocol mapping. At minimum, the internal result classes are:
+
+| Provider result | Meaning | Required server treatment |
+|---|---|---|
+| `SUCCESS` | Operation completed successfully | Commit the request's specified success transition. |
+| `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject provider selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
+| `UNAVAILABLE` | Provider context or physical-device access is temporarily unavailable; no logical-Device-loss result has been established | Mark the selected PhysicalDevice UNAVAILABLE through the registry serialization domain. A request creating a new logical Device fails with `DEVICE_UNAVAILABLE`. Existing logical Devices are not automatically declared lost solely by this result. |
+| `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Synchronous requests use `DEVICE_LOST` where their request contract specifies an X11 error; accepted asynchronous work uses its defined terminal status/events. |
+| `OUT_OF_HOST_MEMORY` / `OUT_OF_DEVICE_MEMORY` | Backend allocation failed for lack of host/device memory | Map to `ALLOCATION_FAILED` where the request contract exposes a synchronous allocation error; otherwise use that operation's specified asynchronous failure result. |
+| `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for synchronous transfer requests; asynchronous operations use their defined terminal failure path. |
+| `EXECUTION_FAILURE` | Accepted GPU execution failed without a Device-Loss classification | Do not turn it into a delayed X11 request error. Use the submission/fence terminal status and diagnostic event defined by the relevant chapter. |
+| `CANCELLED` | Operation was prevented from starting because its captured Device/resource generation was destroyed or terminalized | Complete it with the lifecycle result already committed by the server (for example `DEVICE_DESTROYED`); never invoke backend work after cancellation wins. |
+| `FATAL` | Unclassified backend/provider failure or violated provider contract | Fail with `INTERNAL_SERVER_ERROR` if a synchronous request is still awaiting a result; mark the provider unavailable if its continued correctness cannot be trusted. Preserve all references until safe retirement. |
+
+The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
+
+For `create_logical_device`, `DEVICE_LOST` occurs before a logical Device exists and therefore MUST NOT create a phantom logical Device or emit a Device-Loss event for the requested XID. The server MUST mark the selected PhysicalDevice UNAVAILABLE, fail creation with `DEVICE_UNAVAILABLE`, and leave the target XID unallocated. Allocation failures map to `ALLOCATION_FAILED`; other unclassified creation failures map to `INTERNAL_SERVER_ERROR`. A native unsupported-feature result after the server has validated the published snapshot is a provider contract violation, not a client `BadMatch`.
+
+For operations on an already-created logical Device, a positive backend Device-Loss result applies to that exact logical Device. It MUST NOT automatically mark the PhysicalDevice REMOVED. Provider-context loss without proof that the logical Vulkan Device is lost instead makes the PhysicalDevice/provider unavailable; existing logical Devices remain pinned and their operations fail according to their own subsequent backend results or safe-abort rules.
+
+The server MUST preserve the first terminal outcome committed for each request, wait, submission, transfer, or resource operation. Later provider callbacks MUST NOT replace success, timeout, Device Loss, destruction, disconnect, or an earlier failure. A provider MUST NOT report success after it has reported a terminal failure for the same operation.
+
+### 4.5 Synchronous and asynchronous operations
+
+An operation is synchronous when its XAverius request does not complete until the provider has returned a final result. Its provider call MUST either complete or return a classified failure; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
+
+An operation is asynchronous when the protocol chapter defines acceptance separately from completion (including QueueSubmit and any transfer/presentation path explicitly defined as asynchronous). The provider MUST return either an immediate classified rejection, or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
+
+Provider callbacks MAY run on arbitrary backend threads, but MUST only enqueue immutable completion records. They MUST NOT mutate XAverius state, release server resources directly, or write X11 events. The server's serialized event domain arbitrates the callback against Device Loss, DestroyDevice, disconnect, timeout, and other terminal events. Internal cleanup and public event delivery are separate: after public invalidation, callbacks may retire old internal state but MUST NOT emit events for the destroyed Device.
+
+The server MUST retain a provider/context reference, the exact logical Device generation, all provider object references used by the operation, and any dependent resource references from before provider submission until callback retirement proves no backend access remains. A completion notification alone is sufficient to release these references only if the provider contract guarantees that the backend no longer accesses them when the callback is delivered.
+
+### 4.6 Lifetime, pinning, and teardown
+
+A selected provider is pinned by each published PhysicalDevice that names it. Each live logical Device takes an additional provider reference and pins the exact PhysicalDevice incarnation and provider generation used at creation. Each asynchronous operation takes its own references to the provider, logical Device, queue, and every resource/semaphore/fence/memory object the backend may access. A child resource MUST NOT outlive its owning logical Device publicly, but its internal provider object MAY remain retained after public invalidation.
+
+Provider unload/context destruction is permitted only after all of the following are true:
+
+1. No PhysicalDevice publication or registry callback can call into the provider.
+2. No live logical Device references the provider.
+3. Every provider call currently executing has returned.
+4. Every accepted asynchronous operation has reached a terminal state and the provider has guaranteed no further access to its objects.
+5. Every completion callback and deferred cleanup item carrying the provider generation has retired.
+6. All provider-owned logical Devices, queues, resources, and loader/dispatch references have been destroyed or placed in a provider-owned quarantine that no longer requires executable provider code.
+
+A provider MUST NOT wait indefinitely for a lost or wedged GPU as the only teardown strategy. It MAY retain/quarantine provider objects and the provider module/context until the server exits or a backend-specific safe retirement condition is met. If quiescence cannot be proven, leaking/quarantining is required over use-after-free, stale callback execution, or unloading code still reachable by a callback.
+
+Destroying a logical Device first invalidates its public XIDs according to `devices.md` and `resource-lifetime.md`; backend destruction is deferred until dependent operations and Vulkan object dependencies permit it. The provider's `destroy_logical_device` operation is best-effort and MUST be safe after Device Loss. It MUST NOT turn successful public DestroyDevice into a protocol error, resurrect public resources, or emit new events. The provider and its dispatch/module references remain pinned until the destroy operation and all earlier backend accesses have safely retired.
+
+Disconnect follows the same internal reference and quiescence rules as DestroyDevice, but does not send replies/events to the disconnected client. Physical-device removal prevents new logical-device creation; it does not authorize premature destruction of provider objects still referenced by existing logical Devices or operations.
+
+## 5. ScreenAttachment contract
 
 A ScreenAttachment is a non-owning, generation-checked relation between a live Screen and a PhysicalDevice. It MAY record roles such as rendering, scanout/display control, or backend discovery association. The role vocabulary is implementation-internal in v0.1; it does not change the PhysicalDevice identity or its XAverius properties.
 
