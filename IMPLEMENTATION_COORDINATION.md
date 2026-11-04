@@ -1067,3 +1067,18 @@ Updated:
 Commits: 6317a1f, 18c206e, bd27b25, d434ea6, b7f1eae, eb73d4d, 85e2ad4, 559a70e, 63c4471, 7bb4094.
 
 CI is still unverified; no local test suite has been executed. The latest status mapping has not yet been validated by an exact-tip CI run.
+
+
+### Final provider-status/error-matrix reconciliation — 2026-11-04
+
+The request-specific central error matrix and static checker were brought into line with the newly appended presentation DEVICE_UNAVAILABLE statuses.
+
+- spec/errors.md now lists DEVICE_UNAVAILABLE in the normal reply-status sets for GetSurfaceCapabilities, CreateSwapchain, AcquireNextImage, and QueuePresent; its shared validation stages define DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > OUT_OF_DATE where those lifecycle conditions are applicable.
+- Pending AcquireNextImage registration may terminalize with DEVICE_UNAVAILABLE; a later/higher-priority condition cannot overwrite the first committed terminal outcome.
+- QueuePresent provider unavailability before SUCCESS is a DEVICE_UNAVAILABLE reply. After SUCCESS it is PRESENTATION_FAILED in the presentation completion event; it is never a delayed X11 error or a false DEVICE_LOST.
+- spec/conformance.md now covers provider-unavailability races for acquire, capability query, swapchain creation, and queue-present, including status-local numeric vectors.
+- tools/check-wire-layout.py status assertions and conformance phrase checks now expect the appended values and precedence.
+
+Additional reconciliation commits: c63ec52, 5d8d301, 667a90b, bb5ad54, 7b7cf35, 21842c6.
+
+The exact status strings and the principal checker-required contract strings were statically compared against the current files. The checker and Python tests have not been executed; GitHub has not yet reported CI for the resulting tip.
