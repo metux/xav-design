@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `3172dd2ef7579f621f3f468a6ede2028ffdf312b`  
-**Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later pointer-lifetime refinements are pending exact-tip CI. Runtime implementation acceptance remains open.
+**Latest exact-tip CI-verified tip:** `53883de2201029de82b63a03f6acc2ba77280e6a`  
+**Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later status-document refreshes are pending exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41840825348](https://github.com/metux/xav-design/actions/runs/41840825348) — SUCCESS on `3172dd2ef7579f621f3f468a6ede2028ffdf312b`.
+- Exact-tip CI: [workflow 41840947750](https://github.com/metux/xav-design/actions/runs/41840947750) — SUCCESS on `53883de2201029de82b63a03f6acc2ba77280e6a`.
 - Results: 4,963 wire-layout checks, 72 Timeline regression tests, and 693 Python tests passed. Required handler/backend checks, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit also passed; all 19 workflow steps completed successfully.
-- This verifies the logical-Device PresentationRoute binding, evidence-bearing physical-removal API with source-authority validation, generation-checked provider status transitions, registry result classifications, and architecture vectors through 59.
+- This verifies the logical-Device PresentationRoute binding, evidence-bearing physical-removal API with source-authority validation, generation-checked provider status transitions, registry result classifications, and architecture vectors through 60, including provider descriptor and callback pointer lifetimes.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
