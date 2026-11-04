@@ -49,7 +49,7 @@ The task requires:
 
 - Latest inspected Xserver tip: `189eac7532db7530f70a68f2e659216aa19df626` (sequence: `4c35fcce487f95b48252f8cf696504cbc8ca2feb` Phase-A fixup, `8f0266fd21bf6c0daf699c6fc4fbec06ad830fab` operation-table declarations, `189eac7532db7530f70a68f2e659216aa19df626` Compute Memory handlers).
 - **Phase A audit: NOT ACCEPTED; Phase B remains unauthorized.** `4c35fcc` moves the callback from `PreInit()` to the beginning of `xf86BusConfig()`, which is the right lifecycle window, but the implementation still fails critical requirements:
-  - `DriverRec::RegisterXaveriusDevices` is read with a NULL check only; this is not ABI-safe for old smaller binary DriverRec objects. There is no once-per-module-generation guard.
+  - `DriverRec::RegisterXaveriusDevices` is read with a NULL check only; this is not ABI-safe for old smaller binary DriverRec objects. There is no once-per-module-generation guard. Its callback type returns `void`, so it cannot report the required COMPLETE/PENDING/UNAVAILABLE/FAILED pass result. The modesetting callback ignores `drv` and scans global `/dev/dri` paths rather than enumerating the devices actually served by a DDX-owned context.
   - The claimed `config_udev_init()`-before-`xf86BusConfig()` ordering is false: `config_udev_init()` runs later in `InitInput()`. No early event drain/reconciliation or startup barrier was implemented.
   - The modesetting scan tries `renderD0..renderD31`, not normal Linux `renderD128+` nodes. It does not use canonical DRM device enumeration.
   - Non-PCI identity remains all-zero BDF with no stable sysfs/bus key; the comparator treats all such records as equal. The claimed devnode/`drmGetBusid` fallback does not exist in the code.
