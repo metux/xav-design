@@ -115,3 +115,6 @@ Availability/discovery ordering was tightened: provider context and binding-loca
 
 
 The token resource-set contract now requires a nonzero logical-Device identity and nonempty resource set for all six current async operation kinds, with operation-specific minimum pins (Buffer+Memory, Semaphore, Queue+full QueueSubmit graph, or Swapchain+all backend-accessible presentation objects). Duplicate resource IDs are rejected. Vector 138 added; exact-tip CI pending.
+
+
+Fatal provider results now have explicit quarantine semantics: admission closes, selected PhysicalDevices become UNAVAILABLE but not REMOVED, and provider context/module/object references remain pinned with normal finalization forbidden. DEVICE_LOST is scoped to the logical Device/operation; CANCELLED is terminal only for an accepted cancellable token. Vector 139 added. Exact-tip CI pending.
