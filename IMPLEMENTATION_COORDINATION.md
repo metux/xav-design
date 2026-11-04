@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `ceac0d09dc7e9456e372ae52cea97d46007697fc`.
-- Exact-tip CI: [workflow 41843634177](https://github.com/metux/xav-design/actions/runs/41843634177) — SUCCESS. The required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
-- This verifies architecture vectors 76–78, the XLibre `DuplicateModule()`/`dlclose()` source mapping, provider-wide `quiesce_provider` semantics, callback-return retirement, and detached Screen callback state.
-- Newer multi-provider ownership commit `c88668e023ba31fa38293dba4aef5a827adedb64` adds provider/binding/module cardinality, generation-scoped provider shutdown, source-local observation withdrawal, and vectors 79–88. Exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) is pending; do not treat this newer candidate as verified until it completes.
+- Latest exact-tip CI-verified specification commit: `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`.
+- Exact-tip CI: [workflow 41844649170](https://github.com/metux/xav-design/actions/runs/41844649170) — SUCCESS. Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
+- This verifies vectors 76–78 and multi-provider ownership/vectors 79–88; the multi-provider architecture commit `c88668e023ba31fa38293dba4aef5a827adedb64` independently passed [workflow 41844488352](https://github.com/metux/xav-design/actions/runs/41844488352).
+- Newer provider registration/module-lease lifecycle commits `1029787cbf4b7d3f0b8675264e39e9c4527da754` and `63c5339ca702a913f7da55747e877177782492a5` add vectors 89–93. Exact-tip CI is pending; do not treat this refinement as verified until it completes.
 
 ## Architecture contracts implementation must follow
 
@@ -121,3 +121,16 @@ Provider-generation shutdown now has an explicit generation-scoped BeginProvider
 **Implementation feedback requested:** confirm whether the current provider/driver split can represent (a) multiple provider contexts exported by one DDX module, (b) two independent DDX modules observing the same DRM-backed PhysicalDevice, and (c) one provider context serving several PhysicalDevices. Report any source of shared module-global workers/callbacks that cannot be attributed to an exact provider generation. Do not implement provider failover or merge snapshots to work around ownership issues.
 
 Spec commit: `c88668e023ba31fa38293dba4aef5a827adedb64`. Exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) pending.
+
+
+## Latest specification update — provider registration and module-lease finalization — 2026-11-04
+
+The API sketch now has a one-time `GpuRegistryRegisterProvider()` operation, separate from `GpuRegistryRegisterProviderBinding()`. The descriptor, provider context, and module lease are retained once per provider generation; each PhysicalDevice binding references that registered provider. The server assigns the non-reusable provider generation. This removes the earlier ambiguity in which a provider descriptor appeared to be reinstalled for every binding.
+
+The shared module lease is a server-owned loader pin, shared by all provider generations and adapter roles belonging to one loaded module instance. Provider-wide quiescence and final provider-context release are separate operations. The quiescence hook stops provider-internal workers after externally initiated calls and accepted tokens have drained. PENDING and FAILURE retain/quarantine the module. SUCCESS still does not release the lease while logical-device/provider-object references remain. Finalization performs the last provider release while the module is pinned, then releases that provider generation's lease reference exactly once.
+
+The API now separates registry errors from quiescence status: stale generations are rejected without invoking provider code; unmet preconditions return PENDING; hook FAILURE quarantines; hook SUCCESS records quiescence. Architecture vectors 89–93 exercise the registration, shared lease, and finalization cases.
+
+Implementation feedback requested: confirm that the planned provider registry can install a descriptor once and associate multiple PhysicalDevice bindings with the same provider object. Also identify the Xlibre loader-owned object that can back one shared lease across several provider generations and DDX callback roles. No implementation work is requested in this spec repository.
+
+Spec commits: `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da55747e877177782492a5`. Exact-tip CI pending.
