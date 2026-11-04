@@ -738,6 +738,8 @@ The implementation test suite SHOULD include at least:
 
 59. Provider context/device unavailable or recovery is submitted with an unknown provider, stale provider generation, stale PhysicalDevice generation, or absent selected binding: the registry returns a classified non-success result and leaves all statuses unchanged. A valid transition returns SUCCESS and affects only the exact selected provider context/binding scope.
 
+60. A caller releases or mutates a temporary source/provider key or descriptor immediately after a registry call returns: the registry's canonical keys and retained state remain valid because retained input bytes were copied or explicitly reference-counted before return. Conversely, provider operation tables, callback code, callback userdata, and provider context remain pinned until the final provider reference and every operation token are safely retired; module/context teardown before that point is forbidden.
+
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
