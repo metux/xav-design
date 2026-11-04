@@ -187,3 +187,6 @@ Completion records now carry both provider-local binding ID and registry binding
 
 
 Provider availability notifications are now sequence-checked per context/binding scope and binding-scoped notifications include exact binding_generation. Discovery source events and removal evidence carry source_event_sequence. Effective availability composes independent context/binding/physical state; caller-provided removal authority is forbidden. Architecture vectors 133–137 cover these ordering rules. Exact-tip CI pending.
+
+
+All current asynchronous operation kinds require an exact logical-Device generation and a complete nonempty resource pin set. QueueSubmit pins its entire validated dependency graph; presentation pins the exact Swapchain and all backend-accessible route/image/synchronization objects. Vector 138 checks incomplete pin sets and atomic rejection.
