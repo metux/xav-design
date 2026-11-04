@@ -214,3 +214,14 @@ The registry API audit addendum in [registry-api-lifetime-addendum.md](registry-
 ### Provider operation-table audit delta — 2026-11-04
 
 The provider operation matrix now defines concrete typed operations for all four provider sub-tables and an exhaustive request 0–47 ownership map. It adds Buffer `free_buffer`, create/destroy symmetry, six-operation async classification, output/rollback rules, full resource pin sets, surface capability result completeness, and provider-result invariants. See [provider-operation-matrix.md](provider-operation-matrix.md), vectors 151–164. Exact-tip CI and implementation/runtime acceptance remain separate gates.
+
+### DDX registration and direct device dispatch — 2026-11-04
+
+- [ ] Confirm every DDX registers all PhysicalDevices it serves, including headless/render-only/compute-only devices without ScreenAttachments.
+- [ ] Confirm platform/udev is identity/hotplug evidence only and does not create a competing executable-device inventory.
+- [ ] Confirm operation vectors, per-device context, and native handle are directly bound to the selected PhysicalDevice binding; no second provider-object lookup occurs on each request.
+- [ ] Confirm any shared BackendProvider/control record exists only for module lease, callback admission/quiescence, and shared lifetime—not as a redundant per-device dispatch layer.
+- [ ] Confirm duplicate DDX claims are canonicalized without merging snapshots, contexts, or operation tables.
+- [ ] Confirm ScreenAttachment teardown is independent of DDX device-binding and module lifetime.
+
+See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implementation-agent source review are pending.
