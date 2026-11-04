@@ -1024,7 +1024,7 @@ The completion sink copies and validates each completion and its bounded payload
 
 DDX backend lifecycle APIs identify DDX backend records by the registry-assigned DDX module-role generation, not by a caller-held module-role pointer. This allows the registration caller to release its own DDX backend reference before final quiescence/finalization; the registry-owned DDX backend record remains addressable by generation until finalization completes.
 
-The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid()` to DDX drivers. XID allocation and protocol resource publication belong exclusively to the XAverius/server resource layer. A DDX module-role registration may return an existing canonical record or create an unpublished candidate; it MUST NOT publish a duplicate identity.
+The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid()` to DDX drivers. XID allocation and protocol resource publication belong exclusively to the XAverius/server resource layer. A DDX device registration may return an existing canonical PhysicalDevice record or create an unpublished record; it MUST NOT publish a duplicate identity.
 
 The registration API SHOULD be split into candidate discovery and DDX backend attachment internally if that is needed to finish startup-wide DDX-binding selection before publication. The simplified sketch above does not permit immediate publication during arbitrary driver probe order.
 
@@ -1326,7 +1326,7 @@ The implementation test suite SHOULD include at least:
 
 130. Have one DDX module role register several PhysicalDevices with distinct native handles and per-device contexts. Verify each binding dispatches to its own handle/context while sharing only the module-role lifetime record and module lease.
 
-131. Race GpuModuleRoleGetContext against DDX backend finalization and module quiescence. Verify the accessor is callable only while an exact DDX backend reference is held, returns a borrowed pointer, and cannot extend or outlive DDX backend-context/module lifetime.
+131. Race removed generic module-role context accessor against DDX backend finalization and module quiescence. Verify the accessor is callable only while an exact DDX backend reference is held, returns a borrowed pointer, and cannot extend or outlive DDX backend-context/module lifetime.
 
 132. Deliver a completion with the correct native handle stored directly in the binding and PhysicalDevice generation but a stale or mismatched registry binding generation. Verify it is rejected and cannot affect a replacement binding for the same PhysicalDevice/DDX module-role generation.
 
