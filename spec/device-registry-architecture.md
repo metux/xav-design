@@ -776,33 +776,29 @@ GpuRegistryResult GpuRegistryRegisterProvider(
 
 GpuRegistryResult GpuRegistryRegisterProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, GpuBackendProvider *provider,
-    uint64_t provider_generation, uint64_t provider_local_binding_id,
-    uint64_t *out_binding_generation);
+    uint64_t device_generation, uint64_t provider_generation,
+    uint64_t provider_local_binding_id, uint64_t *out_binding_generation);
 
 /* Close admission for this exact provider generation. This does not
    remove bindings, retire accepted operations, or prove quiescence. */
 GpuRegistryResult GpuRegistryBeginProviderShutdown(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t provider_generation);
 
 /* Drives provider-wide quiescence after the registry has verified the
    shutdown/drain preconditions. PENDING/FAILURE retain the module lease. */
 GpuRegistryResult GpuRegistryTryQuiesceProvider(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation,
+    GpuRegistry *registry, uint64_t provider_generation,
     GpuProviderQuiescenceResult *out_quiescence);
 
 /* Final provider-context release followed by exactly one module-lease
    release. Returns PENDING until all non-registry provider references retire. */
 GpuRegistryResult GpuRegistryFinalizeProviderShutdown(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t provider_generation);
 
 GpuRegistryResult GpuRegistryRemoveProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, GpuBackendProvider *provider,
-    uint64_t provider_generation, uint64_t binding_generation);
+    uint64_t device_generation, uint64_t provider_generation,
+    uint64_t binding_generation);
 
 GpuRegistryResult GpuRegistryRemoveObservation(
     GpuRegistry *registry, const char *source_key,
@@ -814,21 +810,17 @@ GpuRegistryResult GpuRegistryRemoveObservation(
    Context-wide failure/recovery affects all PhysicalDevices for which this
    exact provider generation is the selected execution provider. */
 GpuRegistryResult GpuRegistryProviderContextUnavailable(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t provider_generation);
 GpuRegistryResult GpuRegistryProviderContextRecovered(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation);
+    GpuRegistry *registry, uint64_t provider_generation);
 
 /* Device-scoped failure/recovery affects only this canonical binding. */
 GpuRegistryResult GpuRegistryProviderDeviceUnavailable(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation, GpuPhysicalDevice *device,
-    uint64_t device_generation);
+    GpuRegistry *registry, uint64_t provider_generation,
+    GpuPhysicalDevice *device, uint64_t device_generation);
 GpuRegistryResult GpuRegistryProviderDeviceRecovered(
-    GpuRegistry *registry, GpuBackendProvider *provider,
-    uint64_t provider_generation, GpuPhysicalDevice *device,
-    uint64_t device_generation);
+    GpuRegistry *registry, uint64_t provider_generation,
+    GpuPhysicalDevice *device, uint64_t device_generation);
 GpuRegistryResult GpuRegistryConfirmDeviceRemoved(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     uint64_t device_generation,
@@ -869,7 +861,6 @@ GpuRegistryResult XaPhysicalDeviceGetXid(
 GpuRegistryResult GpuPhysicalDeviceAcquireExecutionProvider(
     GpuPhysicalDevice *device, uint64_t device_generation,
     GpuBackendProvider **out_provider, uint64_t *out_provider_generation);
-void GpuBackendProviderRetain(GpuBackendProvider *provider);
 GpuRegistryResult GpuBackendProviderRetain(
     GpuBackendProvider *provider, uint64_t provider_generation);
 GpuRegistryResult GpuBackendProviderRelease(
@@ -898,7 +889,7 @@ Specific operation contracts:
 - Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. Unregister closes source admission and withdraws only its observations/adapter role after callbacks drain; it returns `PENDING` while callbacks remain. Source generations are never reused.
 - `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation and same semantic payload returns the same ID and one retained PhysicalDevice reference, not a duplicate observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
 - `RegisterProvider` returns one retained provider reference. It validates the descriptor and required operation-table entries, retains the module lease, then calls `retain_provider` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate provider-generation reference. The provider-context retain hook MUST be infallible and pair exactly once with the final `release_provider`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
-- `RegisterProviderBinding` assigns and returns a fresh nonzero binding generation; callers cannot choose it. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. It retains provider and PhysicalDevice references exactly once. Duplicate same-payload registration returns `ALREADY_EXISTS` without extra references; conflicting identity returns `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
+- `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a provider pointer to remain live at the call site. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. It retains provider and PhysicalDevice references exactly once. Duplicate same-payload registration returns `ALREADY_EXISTS` without extra references; conflicting identity returns `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`. No removal broadens to another source, binding, Screen, or incarnation.
 - Unavailable/recovered transitions are idempotent `SUCCESS` when the exact selected scope is already in the requested state. Recovery after binding removal, provider shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
 - `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
@@ -911,6 +902,8 @@ Specific operation contracts:
 Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuProviderResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. For asynchronous functions, the server creates and registers the operation token before entering provider code, and initializes the caller-visible token output invalid before validation. The provider receives that server-owned token; it MUST NOT assign, alter, or recycle its ID or generation. `GPU_PROVIDER_SUCCESS` means accepted and fully registered with the completion path; non-success means no callback can later occur for that attempted token. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the provider generation. Retirement succeeds only after backend access is impossible and all callback frames for that token have returned. If provider code cannot guarantee the no-callback-after-failure rule, the attempted token is quarantined and the provider generation cannot be quiesced.
 
 The completion sink copies and validates each completion into server-owned storage and enqueues it; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation, token, provider-local binding, canonical PhysicalDevice reference/generation, logical-Device generation, and relevant resource generation. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
+
+Provider lifecycle APIs identify provider records by the registry-assigned provider generation, not by a caller-held provider pointer. This allows the registration caller to release its own provider reference before final quiescence/finalization; the registry-owned provider record remains addressable by generation until finalization completes.
 
 The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid()` to DDX drivers. XID allocation and protocol resource publication belong exclusively to the XAverius/server resource layer. A provider registration may return an existing canonical record or create an unpublished candidate; it MUST NOT publish a duplicate identity.
 
