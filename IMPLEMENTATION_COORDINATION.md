@@ -355,3 +355,25 @@ A second pass found residual old-model text outside the main DDX binding contrac
 **Current implementation alignment request:** report the exact implementation repository, branch, and commit, then show the DDX enumeration loop and the call site that registers each served PhysicalDevice directly with its native handle, per-device context, and immutable operation vectors. Also show that request dispatch uses the binding directly and that module-role lookup is limited to lifetime/quiescence. No implementation source or agent response has yet been supplied for this review.
 
 The current spec branch remains `docs/restructure-2026-10-21`. Exact-tip CI for the resulting documentation/API cleanup must pass before this delta is marked verified. Historical coordination entries above describe superseded provider/candidate APIs where they conflict with this section.
+
+
+## Concrete implementation target identified — X11Libre/xserver — 2026-11-04
+
+The implementation repository and branch are now confirmed:
+
+- Repository: `X11Libre/xserver`
+- Branch: `wip/xaverius`
+- Audited tip: `db16514d83c4ef60d6001572a44aaf89d5f40916`
+- Latest relevant commits at audit time: `db16514` (WIP integration) and `5202eb8` (Physical Device Inventory).
+
+A source review of `Xext/xaverius/xaverius_priv.h`, `xaverius_intern.h`, `xaverius_inventory.c`, `xaverius_device.c`, and `xaverius_screen.c` shows that this branch is an actual implementation target, but it has not yet converged on the latest direct DDX-binding architecture:
+
+1. `XaveriusDevice` still has a `struct _XaveriusProvider *provider` member; `XaveriusInventory` still owns a provider list; and `XaveriusInventoryRegisterProvider/SetProviderStatus/UnregisterProvider` remain in the internal API. These are the old intermediate provider-object model, not the new shared `GpuModuleRole` control record plus per-device binding.
+2. `XaveriusInventoryRegisterDevice` accepts a capabilities pointer and opaque provider handle, but does not accept the exact native PhysicalDevice handle, per-device backend context, or immutable typed operation vectors as a complete binding. New device records currently initialize `dev->provider = NULL`.
+3. The exported DDX interface is still `XaveriusDDXOps` attached through `XaveriusScreenInit`. Its `EnumeratePhysicalDevices` callback is per-Screen and is called lazily from the client EnumeratePhysicalDevices request. The request handler loops over `screenInfo.screens` and concatenates Screen-local lists. That is not the required DDX-owned server-startup/device-discovery registration of every device served by the DDX, including devices with no Screen.
+4. Property and queue-family requests also scan Screen callbacks rather than resolving the requested PhysicalDevice XID to its exact registered binding and dispatching through that binding's operation vector.
+5. The new architecture's separation of ScreenAttachment lifetime from PhysicalDevice binding lifetime is therefore not yet implemented by these paths.
+
+**Required next implementation alignment:** keep `XaveriusScreenInit` only for Screen-specific setup/attachment, introduce a DDX-owned enumeration/registration path independent of Screen creation, and make each registration install one complete per-PhysicalDevice binding (identity, native handle, per-device context, immutable operation vectors, module-role generation). Make all PhysicalDevice requests resolve the XID through the server-wide inventory and dispatch through that exact binding. Replace the per-device Provider pointer/list with shared module-role lifetime references only; do not retain a Provider object as an intermediate dispatch target.
+
+This is a source-level architecture review only; no implementation files were modified. Re-audit the branch after the implementation changes land. The specification remains authoritative for semantics; the implementation branch is `X11Libre/xserver:wip/xaverius`.
