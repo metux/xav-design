@@ -202,3 +202,7 @@ Repeated successful ObserveDevice calls with identical source event sequence/pay
 
 
 After GPU_PROVIDER_FATAL quarantine, TryQuiesceProvider and FinalizeProviderShutdown must return QUARANTINED without entering provider code or dropping references. Vector 142 covers this barrier.
+
+### Registry API lifetime audit delta — 2026-11-04
+
+The registry API audit addendum in [registry-api-lifetime-addendum.md](registry-api-lifetime-addendum.md) supplements §7/§7.1 with provider-context accessor lifetime, nested operation-table storage lifetime, shared module-lease identity and final-release semantics, exact source/binding/Screen removal barriers, provider-quiescence preconditions, and token-pointer confinement. Architecture vectors 143–150 were added. This is an internal server architecture contract and changes no wire ABI. Exact-tip CI and runtime acceptance remain distinct gates.
