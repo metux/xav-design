@@ -41,6 +41,7 @@ xav_client_status xav_send_reply_request(struct xav_connection *c, uint8_t sub,
     uint8_t body[4] = { sub, 0, 0, 0 };
     struct iovec parts[4];
     unsigned int sequence;
+    xcb_generic_error_t *local_error = NULL;
     if (!c || !reply) return XAV_CLIENT_ERROR_ARGUMENT;
     *reply = NULL;
     if (error_out) *error_out = NULL;
@@ -49,8 +50,14 @@ xav_client_status xav_send_reply_request(struct xav_connection *c, uint8_t sub,
     parts[2].iov_len = sizeof(body);
     sequence = xcb_send_request(c->xcb, 0, parts + 2, &req);
     if (!sequence) return XAV_CLIENT_ERROR_CONNECTION;
-    *reply = xcb_wait_for_reply(c->xcb, sequence, error_out);
-    if (error_out && *error_out) return XAV_CLIENT_ERROR_X11;
+    *reply = xcb_wait_for_reply(c->xcb, sequence, &local_error);
+    if (local_error) {
+        if (error_out)
+            *error_out = local_error;
+        else
+            free(local_error);
+        return XAV_CLIENT_ERROR_X11;
+    }
     return *reply ? XAV_CLIENT_SUCCESS : XAV_CLIENT_ERROR_CONNECTION;
 }
 xav_client_status xav_connection_create(xcb_connection_t *xcb, xav_connection **out,
