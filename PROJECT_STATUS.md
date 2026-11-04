@@ -124,3 +124,6 @@ The API audit additionally defines retain admission during teardown, repeat beha
 
 
 Repeated successful ObserveDevice replay now explicitly returns the same observation ID plus one additional caller-owned PhysicalDevice reference per successful call; vector 141 verifies no duplicate source observation and balanced releases.
+
+
+Fatal quarantine now explicitly prevents both quiesce_provider and release_provider from being called through normal TryQuiesce/Finalize paths; those APIs return QUARANTINED while preserving all references. Vector 142 added. Exact-tip CI pending.
