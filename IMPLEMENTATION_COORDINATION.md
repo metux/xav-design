@@ -1,6 +1,6 @@
 # XAverius Implementation Coordination
 
-**Purpose:** Live hand-off for parallel implementation work. This file contains current decisions, interfaces to coordinate, open questions, and verification state. Historical discussion is preserved in [the coordination history archive](audit/implementation-coordination-history-2026-11-04.md).
+**Purpose:** Live hand-off for parallel implementation work. This file contains current decisions, interfaces to coordinate, open questions, and verification state. Historical discussion is preserved in [the coordination history archive](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md).
 
 ## Authoritative baseline
 
@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Exact branch tip: `bc8d2ef3cc2143f3306349bc531d88724fc0991a`.
-- Exact-tip CI: [workflow 41828369007](https://github.com/metux/xav-design/actions/runs/41828369007) — SUCCESS.
-- Verified: wire/layout and header/client checks, request/reply/XGE validation, 72 Timeline regressions, and full Python suite (693 tests).
-- This verification applies only to the exact commit above. Any later change requires a new exact-tip CI result.
+- Latest verified specification commit: `7f2620726f88bbd28ff6ac5c21a27d87659301e7`.
+- Exact-tip CI: [workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) — SUCCESS.
+- Verified: 4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit.
+- Subsequent edits only consolidate status/coordination documents and relocate their history archives; the current exact-tip CI run is tracking those documentation-only changes.
 
 ## Architecture contracts implementation must follow
 
