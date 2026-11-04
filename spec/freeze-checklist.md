@@ -107,3 +107,10 @@ The failing `wire-layout` step ran 4,872 checks and failed only two documentatio
 ### Multi-device provider unavailability scope — 2026-11-04
 
 The provider-result audit found that `UNAVAILABLE` did not distinguish a provider-context failure from loss of one provider-local PhysicalDevice binding. Since one provider may serve several canonical PhysicalDevices, the previous wording could be implemented as an overly broad status transition. The contract now requires explicit `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE` scope, affects only PhysicalDevices selected through that exact provider generation (and only the named binding for device-scoped failure), and excludes non-selected discovery providers. The abstract registry API and conformance vectors now cover both scopes and generation-safe recovery. No wire ABI change.
+
+
+### PresentationRoute/provider result mapping audit — 2026-11-04
+
+The seven presentation requests were rechecked across presentation.md, errors.md, device-registry-architecture.md, and the conformance suite. The GetSurfaceCapabilities normal-status precedence is now complete (DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > TEMPORARILY_NOT_PRESENTABLE > SUCCESS). Capability queries are non-committing probes; CreateSwapchain creates and pins the route generation; successful public destruction does not release provider route objects until swapchain destruction and exact operation-token retirement establish quiescence. Failed preparation unwinds provider Swapchain before its provisional route; unproven retirement requires quarantine. Dedicated vectors are in [presentation-route-conformance.md](presentation-route-conformance.md).
+
+No wire layouts, opcodes, status values, or event IDs changed. Exact-tip CI for this audit is pending; prior green CI does not cover these commits.
