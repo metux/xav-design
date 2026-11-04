@@ -100,6 +100,21 @@ Incarnation is separate from identity correlation. A confirmed remove event clos
 
 A Vulkan provider binding MUST identify the exact provider-local physical-device instance and carry the identity evidence used to correlate it. One provider may expose the same hardware through more than one Vulkan instance; those handles may map to one canonical PhysicalDevice only after the above correlation succeeds. A provider MUST NOT claim a binding merely because its candidate has matching vendor/device IDs or a matching display name.
 
+### 2.3 Canonical ordering key
+
+Every unambiguous, publishable PhysicalDevice MUST have one canonical ordering key derived from the same canonical identity record used for deduplication. The key is an internal comparison value; it is not a wire property, a persistent identifier, or a client-visible sort guarantee.
+
+The key MUST be a typed, normalized tuple and MUST NOT contain provider registration order, Vulkan enumeration index, pointer value, DRM minor, node pathname without its canonical device relationship, Screen index, or mutable descriptive metadata. The v0.1 tuple is ordered first by identity class, then by that class's canonical identity components:
+
+1. Platform-backed devices: bus-type tag, normalized bus identity (for PCI, the complete domain:bus:device.function; for other buses, the canonical bus/subsystem identity), and the normalized instance discriminator when required.
+2. Derived devices: derived-device class tag, canonical parent identity key, and authoritative child-instance discriminator.
+3. Provider-scoped software/virtual devices: software/virtual class tag, stable provider namespace key, and provider-supplied stable instance key.
+4. Devices with no platform identity but a valid, unambiguous cross-instance `deviceUUID`: UUID-only class tag and the exact 16 UUID bytes.
+
+Comparison is bytewise lexicographic over the canonical tuple encoding, with fixed-width numeric fields encoded in a documented normalized order and variable strings length-delimited. Implementations MUST use one canonical encoding and comparison function throughout the registry; locale-sensitive string collation is forbidden. A collision between two distinct live canonical records is an identity ambiguity and MUST be resolved before either record is published. An incarnation token distinguishes removal/re-addition for lifecycle and stale-event rejection, but MUST NOT make a replacement device sort as the old published incarnation or permit tombstone resurrection.
+
+This key defines the default ordering used by `CreateDefaultDevice` when no explicit default-device preference is configured. An explicit preference list MUST use stable canonical identity selectors, not XIDs, BDF enumeration positions, DRM node numbers, or Screen indices. A selector MUST resolve to at most one canonical identity; duplicate or ambiguous selectors are configuration errors. The server filters for AVAILABLE devices and queue-family suitability before applying the preference list or canonical-key ordering. If a preferred device is unsuitable, it proceeds to the next preference; if no preference matches a suitable device, it uses the lowest canonical key among all suitable devices. This selection never changes an already-created logical Device or the selected execution provider of any PhysicalDevice.
+
 ### Startup, late registration, and removal
 
 Initial publication has a server-wide discovery barrier: all configured discovery sources and providers complete their initial candidate pass, identity canonicalization, deterministic provider selection, and snapshot query before the XAverius inventory is exposed. Enumeration order and Screen initialization order MUST NOT affect the resulting inventory or selected provider.
