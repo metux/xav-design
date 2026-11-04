@@ -145,3 +145,7 @@ Added `spec/provider-operation-matrix.md` as a normative supplement. The audit f
 The registry architecture now makes the DDX the sole executable PhysicalDevice registrar in the Xlibre/Xorg profile. Each DDX must register all devices it serves, including devices not attached to a Screen. Platform/udev supplies identity and hotplug evidence only. Per-device operation vectors, backend context, and native handle are bound directly to the selected PhysicalDevice record; BackendProvider remains only as a shared module/lifetime/quiescence control concept, not an extra dispatch object. Implementation guidance: `implementation-notes/ddx-device-registration.md`. No wire ABI/opcode change. Exact-tip CI and implementation-agent conformance review remain pending.
 
 The registry API lifetime addendum now explicitly scopes `GpuBackendProviderGetContext()` to shared DDX module-role context only; per-device context and native handles remain on the direct PhysicalDevice binding. Exact-tip CI and agent source review are pending.
+
+## Provider API terminology cleanup — 2026-11-04
+
+The normative architecture and operation contract now use DDX module roles only for shared module/code lifetime and per-PhysicalDevice DDX bindings for direct dispatch. Legacy candidate-list enumeration, provider-local ID-to-handle maps, provider-object acquisition/dispatch, and the generic provider-context accessor are removed from the current API model. Each DDX must enumerate/register all devices it serves. Implementation-agent conformance and exact-tip CI remain pending.
