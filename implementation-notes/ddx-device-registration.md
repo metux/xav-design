@@ -20,9 +20,9 @@ The selected PhysicalDevice binding is the dispatch object:
 - DDX registration generation and binding generation;
 - references to code, operation-table storage, context, and callback userdata.
 
-Request handling resolves the PhysicalDevice once, validates its selected binding/generation, and calls the operation vector directly. It must not resolve a separate DdxModuleRole object as an intermediate dispatch step.
+Request handling resolves the PhysicalDevice once, validates its selected binding/generation, and calls the operation vector directly. It must not resolve a separate GpuModuleRole object as an intermediate dispatch step.
 
-The historical term `DdxModuleRole` may remain for the shared implementation/module lifetime control record: registration identity, shared loader lease, callback admission, quiescence, and shared immutable table storage. That control record is not a second per-device execution object. It may be shared by many device bindings, but per-device context/handle and dispatch selection remain on the binding.
+The historical term `GpuModuleRole` may remain for the shared implementation/module lifetime control record: registration identity, shared loader lease, callback admission, quiescence, and shared immutable table storage. That control record is not a second per-device execution object. It may be shared by many device bindings, but per-device context/handle and dispatch selection remain on the binding.
 
 Suggested conceptual layout (not a required C ABI):
 
@@ -33,7 +33,7 @@ struct GpuDeviceBackendBinding {
     const GpuBackendOps *ops;
     void *device_context;
     void *native_physical_device;
-    struct GpuDdxModuleRole *module_role; /* lifetime only, not dispatch */
+    struct GpuGpuModuleRole *module_role; /* lifetime only, not dispatch */
 };
 
 struct GpuPhysicalDevice {
@@ -72,7 +72,7 @@ If two DDX registrations claim the same canonical hardware, the registry dedupli
 - [ ] Is there exactly one process-wide XAverius registry?
 - [ ] Are PhysicalDevice identity and ScreenAttachment topology separate?
 - [ ] Are call vectors and per-device context directly reachable from the selected PhysicalDevice binding?
-- [ ] Is there no second DdxModuleRole lookup on each request?
+- [ ] Is there no second GpuModuleRole lookup on each request?
 - [ ] Are shared DDX/module lifetime references distinct from per-device native handles?
 - [ ] Are complete snapshots obtained from one binding only?
 - [ ] Are duplicate claims canonicalized without merging backend state?
