@@ -84,7 +84,7 @@ A selected provider MUST implement the following operation groups for every capa
 
 | Group | Required operations | Contract |
 |---|---|---|
-| Physical-device query | `query_physical_snapshot` | Return one complete, immutable snapshot containing all fields used by enumeration, property queries, queue-family queries, memory-property queries, and device-limit validation. |
+| Physical-device query | `enumerate_candidates`, `query_physical_snapshot` | Return one complete, immutable snapshot containing all fields used by enumeration, property queries, queue-family queries, memory-property queries, and device-limit validation. |
 | Logical-device lifecycle | `create_logical_device`, `get_queue`, `destroy_logical_device` | Create the Vulkan logical device with the exact validated queues/features/extensions; obtain queues for the requested family/index; destroy the logical device after its dependent work is quiescent. |
 | Buffer and memory | `create_buffer`, `get_buffer_memory_requirements`, `allocate_memory`, `free_memory`, `bind_buffer_memory`, `write_buffer`, `read_buffer` | Implement the Buffer/Memory semantics, alignment and range rules, upload/readback snapshot barriers, and transfer completion contracts in `memory-buffers.md`. |
 | Shader, descriptor, and pipeline objects | create/destroy ShaderModule, DescriptorSetLayout, DescriptorPool, DescriptorSet, PipelineLayout, and ComputePipeline operations; descriptor updates | Implement the exact validated object descriptions and Vulkan dependency/lifetime ordering in `shaders-pipelines.md`. |
@@ -243,6 +243,8 @@ typedef enum {
 } GpuProviderResult;
 
 typedef struct GpuProviderOps {
+    GpuProviderResult (*enumerate_candidates)(
+        GpuBackendProvider *, GpuPhysicalDeviceCandidateList *);
     GpuProviderResult (*query_physical_snapshot)(
         GpuBackendProvider *, GpuPhysicalDeviceCandidate *,
         GpuPhysicalDeviceSnapshot *);
@@ -280,6 +282,8 @@ typedef struct GpuProviderOps {
         GpuProviderOperationToken *);
     GpuProviderResult (*query_semaphore_counter)(
         GpuProviderDevice *, GpuProviderSemaphore *, uint64_t *value);
+    GpuProviderResult (*host_signal_semaphore)(
+        GpuProviderDevice *, GpuProviderSemaphore *, uint64_t value);
     GpuProviderResult (*query_fence_status)(
         GpuProviderDevice *, GpuProviderFence *, GpuProviderWaitResult *);
     GpuProviderResult (*create_surface)(
