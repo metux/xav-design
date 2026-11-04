@@ -1023,3 +1023,20 @@ Commits:
 - 5c6904a — align host-wait conformance vector.
 
 Remaining review: verify the provider synchronization operation table in any implementation-facing interface mirrors this split; do not add vkWaitSemaphores/vkWaitForFences as a required provider operation for XAverius host waits.
+
+
+### Complete request-registry ownership cross-check — 2026-11-04
+
+The provider/server ownership map is now explicit in Section 4.1.1 of spec/device-registry-architecture.md and covers every registered request from QueryVersion (0) through QueuePresent (47).
+
+- Provider-backed groups: physical-device discovery/snapshot; logical Device/Queue; Buffer/Memory; Shader/Descriptor/Pipeline; CommandPool/CommandBuffer and validated command encoding; QueueSubmit; semaphore/fence backend lifecycle and host Timeline signaling; WSI Surface/Swapchain/acquire/present.
+- Server-owned requests/state: QueryVersion, SelectEvents, published PhysicalDevice queries, GetSemaphoreCounterValue, GetFenceStatus, WaitSemaphores, WaitForFence, XID/resource publication and invalidation, request validation, observable synchronization state, wait registrations, and event routing.
+- ShaderModuleData and CommandBufferData chunk transport/framing remain server-owned; only validated final shader creation and validated command recording are passed to the provider.
+- DestroyResource uses typed provider destroy operations only after server validation and public invalidation/lifetime arbitration.
+- The full map confirms no request family is unowned; no new request opcode or wire layout was introduced.
+
+Commit: 3b83c6a.
+
+The synchronization ownership correction in 50d76ea/9498445 is normative: do not add provider-side vkWaitSemaphores/vkWaitForFences to satisfy XAverius host waits. Those waits are server registrations over published counters/Fence state.
+
+Current remaining work is a final pass over STATUS/error mapping and exact-tip automated verification; runtime Vulkan/WSI conformance remains outside what documentation-only edits can establish.
