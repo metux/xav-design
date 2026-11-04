@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip verified specification commit before the current audit: `7935e37b725e2ce36f9ee8717e5e8254a83a25c8`.
-- Exact-tip CI: [workflow 41836470747](https://github.com/metux/xav-design/actions/runs/41836470747) — SUCCESS.
-- Verified: 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
-- The 2026-11-04 PresentationRoute result/lifetime audit is newer than this verified baseline; exact-tip CI for its documentation and conformance changes is pending.
+- Latest exact-tip verified specification commit: `55c80160c72e64149164713ec4cd888991c4db21`.
+- Exact-tip CI: [workflow 41839114101](https://github.com/metux/xav-design/actions/runs/41839114101) — SUCCESS.
+- Verified: 4,962 wire-layout checks, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
+- The PresentationRoute result/lifetime audit and conformance additions are included in this verified commit. The subsequent exact-logical-Device route-binding correction is a new change and requires its own exact-tip CI run.
 
 ## Architecture contracts implementation must follow
 
@@ -78,3 +78,7 @@ Do not copy historical audit narratives into this live file. Put durable design 
 ## Latest specification update — PresentationRoute result mapping and lifetime — 2026-11-04
 
 The seven presentation requests were audited against provider-result classification and route lifecycle. GetSurfaceCapabilities now defines complete status precedence, including zero-extent combinations. Capability queries are non-committing probes; CreateSwapchain creates and pins the persistent PresentationRoute and revalidates its generation at commit. Provider Swapchain destruction precedes route destruction, and route/bridge references remain retained until operation-token retirement proves quiescence. Failed preparation unwinds in dependency order; unproven retirement requires quarantine. Dedicated conformance vectors are in `spec/presentation-route-conformance.md`. No wire ABI, opcode, or status value changed. Exact-tip CI for these changes is pending.
+
+## Latest specification update — exact logical-Device PresentationRoute binding — 2026-11-04
+
+The provider API sketch now creates a PresentationRoute from the exact provider logical-Device handle plus the provider-scoped Surface, rather than from a PhysicalDevice handle. This matches the normative route scope (logical-Device generation + Surface/Window/Screen generation) and prevents two logical Devices on the same PhysicalDevice from accidentally sharing route lifetime. Architecture vector 57 covers independent route and Swapchain teardown. Change commit: `084de5c0ccb9f7931c44b2b21fcaba9cb19b94b1`; exact-tip CI pending.
