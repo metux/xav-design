@@ -140,3 +140,6 @@ The source-level lifecycle was checked against XLibre commit `ee4bb3f96eec3b21c1
 
 
 The loader-specific refinement in §8.1 and vectors 76–77 distinguishes Xorg's duplicated `ModuleDesc` from a true provider module lease: `DuplicateModule()` shares the handle, duplicated descriptors skip `LoaderUnload()`, and the original unload path reaches `dlclose()`. `DriverPtr.refCount` counts Screen use, not asynchronous provider references. The separate provider/module pin is therefore mandatory. Commit `3a42c1a63e68016d952f91542b858fee3d35d300` awaits exact-tip CI.
+
+
+The provider-wide quiescence ABI refinement at `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` passed exact-tip workflow 41843078578: all 19 steps, 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, and all required audits. The follow-up XLibre loader-source mapping and vectors 76–77 at `3a42c1a63e68016d952f91542b858fee3d35d300` are newer and pending exact-tip CI.
