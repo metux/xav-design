@@ -278,7 +278,7 @@ Implementation agents: compare each implemented DDX backend vtable against the n
 
 ## Implementierungsbranch-Inventur gegen DDX backend-Operationsmatrix — 2026-11-04
 
-Die Spec-Seite hat die tatsächlichen Implementierungsbranches gegen `spec/DDX backend-operation-matrix.md` geprüft, konnte sie in diesem Repository aber nicht identifizieren:
+Die Spec-Seite hat die tatsächlichen Implementierungsbranches gegen `spec/provider-operation-matrix.md` geprüft, konnte sie in diesem Repository aber nicht identifizieren:
 
 - Sichtbare Branches auf GitHub: `docs/restructure-2026-10-21` (maßgeblich), `docs/split-specification`, `master`, `wip/001`. Es gibt hier aktuell keinen sichtbaren aktiven Implementierungsbranch.
 - Der frühere Branch `wip/by-local-agent` war Head von PR #3 und ist inzwischen in die Spec-Branch gemergt. PR #3 enthält Wire-Spec- und Golden-Vector-/Checker-Änderungen für Memory-Properties und Presentation, aber keine DDX backend-/Xserver-Implementierung.
