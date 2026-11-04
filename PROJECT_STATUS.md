@@ -112,3 +112,6 @@ The second-pass audit additionally put registry binding_generation into every co
 
 
 Availability/discovery ordering was tightened: provider context and binding-local state notifications now carry monotonic scope-specific sequences, binding events carry exact binding_generation, and effective availability composes provider context, binding state, and physical removal. Discovery observations/removal evidence carry source_event_sequence; caller-selectable removal authority was removed. Vectors 133–137 cover out-of-order events, stale binding events, scope composition, and delayed remove callbacks. Exact-tip CI pending.
+
+
+The token resource-set contract now requires a nonzero logical-Device identity and nonempty resource set for all six current async operation kinds, with operation-specific minimum pins (Buffer+Memory, Semaphore, Queue+full QueueSubmit graph, or Swapchain+all backend-accessible presentation objects). Duplicate resource IDs are rejected. Vector 138 added; exact-tip CI pending.
