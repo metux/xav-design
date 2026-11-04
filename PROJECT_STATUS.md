@@ -101,3 +101,8 @@ A focused API audit expanded `spec/device-registry-architecture.md` §7 with cla
 
 
 The registry API audit now also defines the operation-token admission path: prepare before provider entry, commit/reject after the synchronous provider return, buffer early callbacks until commit, and retire only after backend access and callback frames are gone. Per-token retirement has explicit PENDING/SUCCESS/FAILURE results and quarantine behavior. Architecture vectors now extend through 119. These latest additions remain pending exact-tip CI.
+
+
+## Registry API second pass — 2026-11-04 (pending exact-tip CI)
+
+A second review of Section 7 found remaining gaps between abstract provider signatures and their required ownership semantics. Candidate enumeration now has explicit temporary list/candidate records; provider-local binding IDs map to native handles retained by the provider until binding/object/token retirement. Logical-device creation and Surface support use exact provider-local binding IDs plus registry binding generations. The async token contract now covers WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent, with a complete server-retained resource set, operation-kind identity, call-scoped token pointer, typed status codes, and bounded completion payloads. BeginShutdown closes new token preparation. Vectors 120–131 and implementation guidance §8.3 were added. Exact-tip CI pending; no wire ABI/opcode changed.
