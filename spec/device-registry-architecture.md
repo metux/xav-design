@@ -208,7 +208,7 @@ Provider/module shutdown is a two-phase operation, not an ordinary Screen cleanu
 4. **Quiesce provider callbacks.** An explicit provider-wide quiescence operation (or equivalent contract) MUST confirm that no callback is executing, queued for invocation, or can begin for this provider generation, and that no new operation can be accepted. It MUST also confirm that every provider-owned worker/task capable of entering module code has stopped or no longer holds such a path. Merely observing zero outstanding tokens in the server is insufficient.
 5. **Release provider and module.** Only after all selected PhysicalDevice, logical-Device, route, provider-object, callback-execution, and operation-token references have retired MAY the final provider reference be released and the module lease dropped. Xorg may then unload the DDX module through its ordinary module-reference mechanism.
 
-The provider-wide quiescence hook MUST be idempotent and generation-scoped. It MAY report PENDING while workers or callbacks are draining. SUCCESS has the strong meaning in step 4; every other result, including timeout or backend failure, leaves the module pinned. If a callback/worker cannot be stopped or its reachability cannot be disproved, the provider context, module lease, callback code, and userdata MUST be quarantined until server shutdown or a later proven-safe retirement. The server MUST NOT block Xorg's Screen close indefinitely waiting for GPU progress: Screen topology can be detached while the independent provider/module lease remains retained.
+The provider-wide `quiesce_provider` hook is mandatory for any provider whose code or callback path can be unloaded independently of server shutdown. It MUST be idempotent and generation-scoped. The first call closes provider-internal admission and callback dispatch; subsequent calls poll the same quiescence attempt. It MAY report PENDING while workers or callbacks are draining. SUCCESS has the strong meaning in step 4; FAILURE leaves the module pinned. The server MUST stop calling ordinary provider operations before invoking this hook. `release_provider` MUST NOT be the mechanism that initiates quiescence, because it is an infallible reference-count operation and MUST NOT block or invoke backend work. If a callback/worker cannot be stopped or its reachability cannot be disproved, the provider context, module lease, callback code, and userdata MUST be quarantined until server shutdown or a later proven-safe retirement. The server MUST NOT block Xorg's Screen close indefinitely waiting for GPU progress: Screen topology can be detached while the independent provider/module lease remains retained.
 
 If one DDX module implements both the topology adapter and provider, it MUST still maintain these independent references. If the provider implementation is in a separate module/library, the DDX Screen may close and unload without affecting that provider, provided no callback path from the provider retains DDX Screen-private data. Any bridge callback crossing those module boundaries MUST retain both sides' exact-generation leases until the bridge callback has returned and its associated backend operation is retired.
 
@@ -344,7 +344,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 
 All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent, MUST return a classified result, and MUST release only the exact operation-token generation supplied to it. If retirement fails, the server MUST retain/quarantine the token and provider context rather than assuming quiescence.
 
-`retire_operation` has one normative success meaning: `SUCCESS` confirms that the exact accepted operation token has no remaining or possible backend access, that the provider will perform no further access through that token, and that the token's backend-side retirement is complete. Only this result authorizes the server to release the token's retained provider/device/resource references and retire the token record. Any non-`SUCCESS` result is not evidence of quiescence; the server MUST preserve the token record and quarantine all affected references. The server MAY retry retirement using the same exact token generation. Repeated retirement after `SUCCESS` MUST be an idempotent no-op returning `SUCCESS`; a stale token generation MUST NOT retire or release a newer token that reuses an internal slot. Retirement MUST NOT emit a second terminal outcome callback.
+`retire_operation` has one normative success meaning: `SUCCESS` confirms that the exact accepted operation token has no remaining or possible backend access, that the provider will perform no further access through that token, that the token's completion callback has returned from module code, that no further callback for that token can begin, and that the token's backend-side retirement is complete. Only this result authorizes the server to release the token's retained provider/device/resource references and retire the token record. Any non-`SUCCESS` result is not evidence of quiescence; the server MUST preserve the token record and quarantine all affected references. The server MAY retry retirement using the same exact token generation. Repeated retirement after `SUCCESS` MUST be an idempotent no-op returning `SUCCESS`; a stale token generation MUST NOT retire or release a newer token that reuses an internal slot. Retirement MUST NOT emit a second terminal outcome callback.
 
 The abstract result type below carries this scope explicitly for both synchronous operation returns and asynchronous completion records. `PHYSICAL_DEVICE` results MUST identify the exact canonical PhysicalDevice and its generation in the operation's immutable result payload; `PROVIDER_CONTEXT` results MUST identify the exact provider generation. `NONE` is required for every result code other than `UNAVAILABLE`.
 
@@ -557,6 +557,12 @@ typedef void (*GpuProviderCompletionFn)(
     void *completion_userdata,
     const GpuProviderCompletion *completion);
 
+typedef enum {
+    GPU_PROVIDER_QUIESCENCE_PENDING,
+    GPU_PROVIDER_QUIESCENCE_SUCCESS,
+    GPU_PROVIDER_QUIESCENCE_FAILURE
+} GpuProviderQuiescenceResult;
+
 typedef struct GpuProviderOps {
     GpuProviderResult (*enumerate_candidates)(
         GpuBackendProvider *, GpuPhysicalDeviceCandidateList *);
@@ -628,6 +634,11 @@ typedef struct GpuProviderOps {
     void (*retain_device)(GpuProviderDevice *);
     void (*release_device)(GpuProviderDevice *);
     GpuProviderResult (*retire_operation)(GpuProviderOperationToken *);
+    /* Idempotently stop provider-internal workers/callback dispatch for this
+       generation. PENDING keeps every module/context reference pinned;
+       SUCCESS proves no callback is executing or can begin and no worker can
+       enter provider module code again. */
+    GpuProviderQuiescenceResult (*quiesce_provider)(GpuBackendProvider *);
 } GpuProviderOps;
 
 typedef struct {
