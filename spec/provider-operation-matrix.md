@@ -103,7 +103,7 @@ DDX backend-native Surface creation and publication are serialized per logical S
 
 DestroySurface invalidates the logical Surface XID only after its ordinary type/ownership/Swapchain checks succeed. It then retires every successfully materialized DDX-native Surface wrapper for that exact Surface generation. No wrapper may be destroyed twice or used by a later Surface generation that reuses the XID. Native destruction may be deferred until in-flight capability queries and other DDX backend calls release their temporary references; DDX backend shutdown/quiescence MUST wait for these wrappers to be destroyed or safely quarantined. An unsupported-result cache entry contains no backend object and needs no native destroy call. DDX backend-generation shutdown MUST also retire every DDX-native Surface wrapper owned by that generation once its Swapchain/route/query users have drained, even if the logical Surface remains live. This removes only that DDX backend-generation cache entry; it MUST NOT invalidate the logical Surface or trigger DDX backend failover for an existing logical Device. A later Device using another eligible DDX module-role generation may materialize its own wrapper for the same logical Surface.
 
-The backend operation matrix in [DDX backend-operation-matrix.md](DDX backend-operation-matrix.md) defines the corresponding request mapping. This rule does not change the wire layout or the logical Surface ownership model.
+The backend operation matrix in [DDX backend operation matrix](provider-operation-matrix.md) defines the corresponding request mapping. This rule does not change the wire layout or the logical Surface ownership model.
 
 ## 3. Required typed operation-table declarations
 
