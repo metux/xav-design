@@ -156,6 +156,8 @@ All provider operations that can fail, including backend destroy/retire operatio
 
 `retire_operation` has one normative success meaning: `SUCCESS` confirms that the exact accepted operation token has no remaining or possible backend access, that the provider will perform no further access through that token, and that the token's backend-side retirement is complete. Only this result authorizes the server to release the token's retained provider/device/resource references and retire the token record. Any non-`SUCCESS` result is not evidence of quiescence; the server MUST preserve the token record and quarantine all affected references. The server MAY retry retirement using the same exact token generation. Repeated retirement after `SUCCESS` MUST be an idempotent no-op returning `SUCCESS`; a stale token generation MUST NOT retire or release a newer token that reuses an internal slot. Retirement MUST NOT emit a second terminal outcome callback.
 
+The abstract result type below carries this scope explicitly for both synchronous operation returns and asynchronous completion records. `PHYSICAL_DEVICE` results MUST identify the exact canonical PhysicalDevice and its generation in the operation's immutable result payload; `PROVIDER_CONTEXT` results MUST identify the exact provider generation. `NONE` is required for every result code other than `UNAVAILABLE`.
+
 The scope of `UNAVAILABLE` is mandatory provider-result metadata, not something the registry may guess from the provider pointer. `PROVIDER_CONTEXT` means that the provider context/generation cannot safely serve any of its PhysicalDevice bindings; it affects only PhysicalDevices whose selected execution provider is that exact provider generation. `PHYSICAL_DEVICE` means that the provider context remains usable but the named provider-local PhysicalDevice binding cannot be used; it affects only that canonical PhysicalDevice. An observation for a non-selected provider MUST NOT change the published PhysicalDevice status. A provider-context recovery MAY restore each affected PhysicalDevice to AVAILABLE only if that same provider generation and exact physical-device incarnation again satisfy the published immutable snapshot. A physical-device-scoped recovery restores only that binding. Recovery MUST NOT revive REMOVED identities or switch provider selection.
 
 The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
@@ -269,6 +271,18 @@ typedef enum {
     GPU_PROVIDER_EXECUTION_FAILURE,
     GPU_PROVIDER_CANCELLED,
     GPU_PROVIDER_FATAL
+} GpuProviderResultCode;
+
+typedef enum {
+    GPU_PROVIDER_UNAVAILABLE_SCOPE_NONE = 0,
+    GPU_PROVIDER_UNAVAILABLE_SCOPE_PROVIDER_CONTEXT = 1,
+    GPU_PROVIDER_UNAVAILABLE_SCOPE_PHYSICAL_DEVICE = 2
+} GpuProviderUnavailableScope;
+
+typedef struct {
+    GpuProviderResultCode code;
+    /* MUST be NONE except when code is UNAVAILABLE. */
+    GpuProviderUnavailableScope unavailable_scope;
 } GpuProviderResult;
 
 typedef struct {
@@ -276,7 +290,8 @@ typedef struct {
     uint64_t operation_generation;
     uint64_t operation_token_id;
     GpuProviderResult result;
-    /* Operation-specific immutable result payload follows. */
+    /* Required for PHYSICAL_DEVICE scope: exact device generation/reference.
+       Operation-specific immutable result payload follows. */
 } GpuProviderCompletion;
 
 typedef void (*GpuProviderCompletionFn)(
