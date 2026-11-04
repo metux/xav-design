@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `4eb0d35938def3f74de579a7bb2e7729a304325f`.
-- Exact-tip CI: [workflow 41842074182](https://github.com/metux/xav-design/actions/runs/41842074182) — SUCCESS.
-- Verified: Xlibre/Xorg adapter-role and lifecycle contract plus architecture vectors 61–66. The run completed all 19 steps, including 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
-- Subsequent implementation-mapping documentation commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and XLibre-specific conformance vectors commit `a90544633e8a9c477ea380ecbac7ee24b27f2653` are newer; their exact-tip CI is pending.
+- Latest exact-tip CI-verified specification commit: `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`.
+- Exact-tip CI: [workflow 41843046752](https://github.com/metux/xav-design/actions/runs/41843046752) — SUCCESS.
+- Verified: XLibre source-level mapping, Screen-close/module-lease rules, and architecture vectors 67–75. The second exact-tip workflow for the Screen-close contract, [41843032895](https://github.com/metux/xav-design/actions/runs/41843032895), also passed.
+- Current newer commit `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` adds the explicit provider-wide `quiesce_provider` hook and strengthens `retire_operation` callback-return semantics; its exact-tip CI is still running.
 
 ## Architecture contracts implementation must follow
 
@@ -100,3 +100,8 @@ The status, freeze checklist, and open-issues summaries have also been refreshed
 ## XLibre source mapping review — 2026-11-04
 
 The current X11Libre/xserver source was reviewed at `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. The practical mapping in `spec/device-registry-architecture.md` §8.1 records that `xf86BusProbe()` invokes `xf86platformProbe()` before extension setup; `config_udev_odev_probe()` enumerates DRM `card[0-9]*` and deduplicates by major/minor; GPU-screen add/remove is a separate DDX/Screen lifecycle; and `xf86platformPrimary()` may fall back to the first platform device. XAverius must not use those Xorg-specific conventions as canonical identity or default-device policy. The §8.1 mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and conformance vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) are awaiting exact-tip CI.
+
+
+## Latest specification update — DDX Screen close and provider module quiescence — 2026-11-04
+
+The XLibre Screen lifecycle is now explicitly topology-only: `dixScreenRaiseClose()` / `RemoveGPUScreen()` / `xf86DeleteScreen()` and DDX `FreeScreen()` do not prove provider callback or backend quiescence. A DDX/provider module must hold a provider/module lease independent of the `ScrnInfo`/driver Screen reference. Closing one Screen detaches only that exact ScreenAttachment and does not unregister a shared provider. Provider unload is two-phase: close admission, withdraw topology/observations, drain and retire exact operation tokens (including callback return), then perform provider-wide callback/worker quiescence before releasing the final provider/module lease. PENDING/FAILURE means retain or quarantine, never unload. Normative text and vectors 70–75 are in `spec/device-registry-architecture.md`. Contract/vector commit `03253eef3631ff3faf7fbaa55611d5d13388c4a5` passed workflow 41843032895; vectors 70–75 at `5e213d62a116fe2c785c9ba5513a8129f3a4eda0` passed workflow 41843046752. The explicit `quiesce_provider` ABI hook and callback-return strengthening are in `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`, pending exact-tip CI.
