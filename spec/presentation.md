@@ -419,7 +419,7 @@ The GetSurfaceCapabilities fixed reply is 64 bytes before any variable records, 
 
 The protocol kind is determined by the response behavior, not by the request's own byte length. A reply-bearing request must send exactly one normal reply on success or a documented status outcome; an X11 error replaces that reply and MUST NOT be followed by a normal reply for the same request. Void requests send no normal reply.
 
-The seven requests above are assigned append-only subopcodes 41–47 in the order listed above. The checker, request-audit matrix, error map, and conformance cases cover their layouts and assignments. These requests remain unavailable to compute-only servers; only a server advertising the presentation-capable profile may accept them.
+The seven requests above are assigned append-only subopcodes 41–47 in the order listed above. The checker, request-audit matrix, error map, and conformance cases cover their layouts and assignments. These requests remain unavailable to compute-only servers; only a server advertising the presentation-capable profile may accept them. Provider-route probing, pinning, generation revalidation, and retirement vectors are specified in [PresentationRoute probe, pin, and retirement conformance](presentation-route-conformance.md).
 
 ## 11. Remaining validation work
 
