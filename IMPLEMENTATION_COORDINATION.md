@@ -1173,3 +1173,10 @@ Inspected failing exact-tip run [41825640334](https://github.com/metux/xav-desig
 Updated the Python regression tests to parse the current status-list heading, exercise all assigned status values, validate the sixth property, and assert the actual current Multi-Screen, lifecycle-precedence, and quarantine contracts. No protocol ABI, status IDs, request assignments, or normative semantics were changed by this test repair.
 
 Latest test-repair tip: `0b74e3401c17e9c3236bcfabc13cad109915aaeb`. Exact-tip workflow [41827738924](https://github.com/metux/xav-design/actions/runs/41827738924) is running; request/reply/XGE validation and Timeline/Python tests are not yet confirmed complete. Do not treat the branch as CI-green until this exact-tip run finishes successfully.
+
+
+### Follow-up to presentation CI repair — 2026-11-04
+
+The first regression-test alignment run exposed two remaining stale assertions: the AcquireNextImage expected-status dictionary still omitted `DEVICE_UNAVAILABLE = 7`, and the CreateSwapchain error-map assertion omitted `DEVICE_UNAVAILABLE` from its normal reply statuses. Both test expectations are now corrected. The prior exact-tip run 41827738924 had all wire-layout, header/client build, request/reply/XGE, and Timeline steps green; only those two Python assertions remained red.
+
+Current test-fix tip: `b2435f42e9710a0904538d75404679abc600e939`. Exact-tip workflow 41827958000 has been queued; run 41827949698 is also validating the immediately preceding test-fix commit. Final CI state remains pending until the latest exact-tip run completes.
