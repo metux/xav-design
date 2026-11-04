@@ -808,7 +808,12 @@ GpuRegistryResult GpuRegistryConfirmDeviceRemoved(
     const GpuDeviceRemovalEvidence *removal_evidence);
 
 /* Screen relationships are non-owning and generation checked. Roles use
-   GPU_SCREEN_ROLE_*; they describe topology, not presentation capability. */
+   GPU_SCREEN_ROLE_*; they describe topology, not presentation capability.
+   screen is borrowed for this call only to validate/associate the live Screen;
+   the registry MUST NOT retain ScreenPtr or any Screen-private pointer.
+   The returned attachment retains only server-owned identity and generation
+   data. Any DDX-side Screen lookup must remain in a separate adapter map and
+   must be invalidated before FreeScreen() releases the Screen storage. */
 GpuScreenAttachment *GpuRegistryAttachScreen(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     ScreenPtr screen, uint64_t screen_generation, unsigned int roles);
