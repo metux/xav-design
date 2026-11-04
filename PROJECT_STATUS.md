@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Current verified tip:** `7f2620726f88bbd28ff6ac5c21a27d87659301e7`  
+**Latest exact-tip CI-verified tip:** `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`  
 **Status:** Normative v0.1 specification work is substantially complete; current static CI is green. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) — SUCCESS on the current verified specification commit.
-- Results: 4,873 wire-layout checks, 72 Timeline regression tests, and 693 Python tests passed. Required handler/backend checks, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit also passed.
-- The preceding architecture-specific run [41830568502](https://github.com/metux/xav-design/actions/runs/41830568502) passed on commit `783766cb28a8e9a32522013c8e6174c35c9016bf`.
+- Exact-tip CI: [workflow 41840312155](https://github.com/metux/xav-design/actions/runs/41840312155) — SUCCESS on `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`.
+- Results: 4,963 wire-layout checks, 72 Timeline regression tests, and 693 Python tests passed. Required handler/backend checks, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit also passed; all 19 workflow steps completed successfully.
+- This verifies the logical-Device PresentationRoute binding, evidence-bearing physical-removal API, registry result classifications, and coordination update present at that exact tip.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -31,7 +31,7 @@ The server-wide inventory is independent of Screen initialization:
 4. DDX/Screen drivers report generation-checked ScreenAttachments. A Screen may attach to multiple GPUs and a GPU to multiple Screens; this does not imply WSI support.
 5. Provider loss, Screen detach, DRM-node disappearance, and confirmed physical removal are distinct lifecycle inputs. v0.1 has no transparent provider failover.
 
-The detailed contracts, suggested registry API, driver-facing responsibilities, startup barrier, hotplug path, and architecture vectors are in [device-registry architecture](spec/device-registry-architecture.md). The provider operation and lifecycle contracts are in [devices](spec/devices.md) and [resource lifetime](spec/resource-lifetime.md).
+The detailed contracts, suggested registry API, driver-facing responsibilities, startup barrier, hotplug path, generation-checked provider state transitions, and architecture vectors are in [device-registry architecture](spec/device-registry-architecture.md). The provider operation and lifecycle contracts are in [devices](spec/devices.md) and [resource lifetime](spec/resource-lifetime.md).
 
 ## Open implementation acceptance gates
 
