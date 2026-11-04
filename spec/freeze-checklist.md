@@ -12,7 +12,7 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The latest exact-tip CI-verified branch tip is `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9` on `docs/restructure-2026-10-21`. Wire-layout/request-reply/XGE workflow [41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and required-check workflow [41846198977](https://github.com/metux/xav-design/actions/runs/41846198977) both passed. This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, module-lease, and finalization/quiescence vectors 89–96. These results establish static/specification consistency only; they do not establish live Xlibre/X11/Vulkan runtime conformance.
+The latest exact-tip CI-verified branch tip is `a66d977b436cb05818a07a847e7c4fc1e8065598` on `docs/restructure-2026-10-21`. Wire-layout/request-reply/XGE workflow [41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and required-check workflow [41846198977](https://github.com/metux/xav-design/actions/runs/41846198977) both passed. This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, module-lease, and finalization/quiescence vectors 89–96. These results establish static/specification consistency only; they do not establish live Xlibre/X11/Vulkan runtime conformance.
 
 ### Render-GPU / scanout-GPU routing audit — 2026-11-04
 
@@ -165,3 +165,6 @@ The internal API sketch now separates provider-generation registration from prov
 
 
 The follow-up quiescence ordering review adds two further requirements: every provider-owned object needing provider code must be destroyed or quarantined before quiescence SUCCESS, and after SUCCESS only the registry-controlled final `release_provider` call may enter module code. Module-lease creation must acquire a real loader pin through a stable server-owned module-owner record; a duplicated `ModuleDesc`, `ScrnInfo`, or `DriverPtr` is insufficient. Provider generations are reserved by the registry and consumed even when later registration fails. Vectors 94–96 cover these cases. Commit `dc6c8589f7961b587f37a97cc2f4e76c67f8d627`; exact-tip CI pending.
+
+
+The final `GpuRegistryAttachScreen()` API comment clarification (borrowed `ScreenPtr`, never retained by the registry) is included in exact-tip `a66d977b436cb05818a07a847e7c4fc1e8065598`; both required workflows 41848200892 and 41848200803 passed.
