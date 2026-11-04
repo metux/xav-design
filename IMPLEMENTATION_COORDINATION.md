@@ -262,3 +262,9 @@ A repeated ObserveDevice call with the same source generation, event sequence, a
 ### Quarantine hook barrier
 
 A fatal provider-generation quarantine now blocks even the normal quiesce/finalize hooks: TryQuiesceProvider returns QUARANTINED/FAILURE without invoking quiesce_provider, and FinalizeProviderShutdown returns QUARANTINED without release_provider. This prevents further entry into a module after its contract has been violated. Vector 142 checks that provider/context/module/object references remain pinned. Any recovery requires a separately specified server-controlled proof-of-safety path.
+
+## Registry API lifetime addendum — 2026-11-04
+
+The follow-up registry API audit found underspecified provider-context access, nested operation-table storage lifetime, shared module-lease identity, exact source/binding/Screen removal barriers, provider quiescence preconditions, and the call-scoped operation-token pointer rule. These are now specified in [registry API lifetime addendum](spec/registry-api-lifetime-addendum.md), normative alongside §7/§7.1 of `spec/device-registry-architecture.md`. Architecture vectors 143–150 cover the new cases. No wire ABI, opcode, event, or Vulkan capability changed.
+
+Implementation agents: please confirm (a) whether the provider context accessor is generation-checked and borrow-only, (b) where nested provider operation tables live and what pins their code/storage, (c) how loader module-owner aliases are canonicalized to one shared lease, (d) that source/binding/Screen removal SUCCESS is emitted only after callbacks and native-handle users drain, (e) that quiescence is not called before all bindings/tokens/objects/external calls/callback bridges retire, and (f) that providers copy only token scalar IDs and never retain the temporary token pointer. Report exact branch/commit and runtime evidence; source-level intent alone is not acceptance evidence.
