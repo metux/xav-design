@@ -617,6 +617,9 @@ The implementation test suite SHOULD include at least:
 42. Two providers have duplicate stable provider keys, or one configured preference identifier matches multiple provider instances: startup reports a configuration error; registration order and enumeration order cannot break the tie.
 43. A preferred provider has a binding with conflicting UUID/platform evidence or cannot produce a complete snapshot: it is ineligible before publication and the next eligible provider in configured order is considered.
 44. Reordering ICD enumeration, provider registration, DRM node discovery, and Screen creation while holding source evidence and server configuration constant produces the same canonical identities and selected providers.
+45. With no explicit default-device preference, permuting discovery/provider/Screen order while keeping the same set of canonical identities and queue capabilities yields the same `CreateDefaultDevice` target according to the canonical ordering key.
+46. An explicit default-device selector resolves to exactly one canonical PhysicalDevice; a selector matching zero or multiple identities is handled as a configuration error and never falls back based on XID, Screen, or enumeration order.
+47. A preferred PhysicalDevice that is UNAVAILABLE, lacks timelineSemaphore support, or cannot supply the requested compute queue count is filtered before ranking; the next suitable preference is selected, or DEVICE_UNAVAILABLE is returned if none remains.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
