@@ -16,13 +16,13 @@ The selected PhysicalDevice binding is the dispatch object:
 
 - immutable typed operation-vector pointers;
 - opaque per-device backend context (or an explicitly retained shared DDX context);
-- exact native/provider-local physical-device handle;
+- exact native/DDX-local physical-device handle;
 - DDX registration generation and binding generation;
 - references to code, operation-table storage, context, and callback userdata.
 
-Request handling resolves the PhysicalDevice once, validates its selected binding/generation, and calls the operation vector directly. It must not resolve a separate BackendProvider object as an intermediate dispatch step.
+Request handling resolves the PhysicalDevice once, validates its selected binding/generation, and calls the operation vector directly. It must not resolve a separate DdxModuleRole object as an intermediate dispatch step.
 
-The historical term `BackendProvider` may remain for the shared implementation/module lifetime control record: registration identity, shared loader lease, callback admission, quiescence, and shared immutable table storage. That control record is not a second per-device execution object. It may be shared by many device bindings, but per-device context/handle and dispatch selection remain on the binding.
+The historical term `DdxModuleRole` may remain for the shared implementation/module lifetime control record: registration identity, shared loader lease, callback admission, quiescence, and shared immutable table storage. That control record is not a second per-device execution object. It may be shared by many device bindings, but per-device context/handle and dispatch selection remain on the binding.
 
 Suggested conceptual layout (not a required C ABI):
 
@@ -30,7 +30,7 @@ Suggested conceptual layout (not a required C ABI):
 struct GpuDeviceBackendBinding {
     uint64_t ddx_generation;
     uint64_t binding_generation;
-    const GpuProviderOps *ops;
+    const GpuBackendOps *ops;
     void *device_context;
     void *native_physical_device;
     struct GpuDdxModuleRole *module_role; /* lifetime only, not dispatch */
@@ -63,7 +63,7 @@ If two DDX registrations claim the same canonical hardware, the registry dedupli
 - DDX unload closes registration admission, detaches its ScreenAttachments, withdraws its observations/device bindings, drains accepted asynchronous tokens, waits for callback quiescence, and only then releases contexts and the module lease.
 - Xorg Screen references and DriverPtr.refCount are not sufficient pins for asynchronous callbacks or operation vectors.
 - Every callback path that can enter DDX code retains the module-role lease and callback-execution reference until it has returned to the server-owned completion sink.
-- A provider/module control record may be shared across several PhysicalDevices, so module-wide shutdown drains all bindings owned by that role. A binding-local device loss affects only that PhysicalDevice.
+- A DDX backend/module control record may be shared across several PhysicalDevices, so module-wide shutdown drains all bindings owned by that role. A binding-local device loss affects only that PhysicalDevice.
 - If quiescence cannot be proven, retain/quarantine the binding context and module; never unload reachable callback or operation code.
 
 ## Implementation review checklist
@@ -72,7 +72,7 @@ If two DDX registrations claim the same canonical hardware, the registry dedupli
 - [ ] Is there exactly one process-wide XAverius registry?
 - [ ] Are PhysicalDevice identity and ScreenAttachment topology separate?
 - [ ] Are call vectors and per-device context directly reachable from the selected PhysicalDevice binding?
-- [ ] Is there no second BackendProvider lookup on each request?
+- [ ] Is there no second DdxModuleRole lookup on each request?
 - [ ] Are shared DDX/module lifetime references distinct from per-device native handles?
 - [ ] Are complete snapshots obtained from one binding only?
 - [ ] Are duplicate claims canonicalized without merging backend state?
