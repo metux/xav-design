@@ -282,7 +282,7 @@ Provider identity, provider-local device bindings, discovery observations, and m
 - Every unloadable provider generation MUST retain a module lease covering its operation table, completion callback code, callback userdata, provider context, and every trampoline reachable from accepted work. Each independently registered provider generation acquires its own reference to the shared module-owner lease. A DDX topology/discovery adapter that can receive callbacks after Screen close MUST likewise retain a role-specific module lease until its callbacks and detached contexts have retired. Xorg ModuleDesc duplication and DriverPtr.refCount are not substitutes for these leases.
 
 
-Provider registration is a distinct operation from provider-binding registration. The server assigns a fresh, nonzero provider generation before constructing the descriptor; the provider MUST NOT choose or reuse this value. The registry MUST create exactly one BackendProvider object for each registered provider generation, copy its stable provider key, retain its provider context, and retain its module lease exactly once for that provider generation. The descriptor's provider_generation is the server-assigned value returned unchanged in completion/token identity. Registering additional PhysicalDevice bindings MUST reference that existing provider object and MUST NOT repeat descriptor installation, acquire duplicate generation identity, or independently retain/release the module lease. A provider key identifies the provider implementation/configuration namespace; the provider generation distinguishes successive registrations and MUST never be reused while any stale reference or callback can exist.
+Provider registration is a distinct operation from provider-binding registration. The server obtains a fresh, nonzero provider generation from GpuRegistryAllocateProviderGeneration before constructing the descriptor; the provider MUST NOT choose or reuse this value. A reserved generation is consumed even if subsequent provider registration fails and MUST NOT be recycled. The registry MUST create exactly one BackendProvider object for each registered provider generation, copy its stable provider key, retain its provider context, and retain its module lease exactly once for that provider generation. The descriptor's provider_generation is the server-assigned value returned unchanged in completion/token identity. Registering additional PhysicalDevice bindings MUST reference that existing provider object and MUST NOT repeat descriptor installation, acquire duplicate generation identity, or independently retain/release the module lease. A provider key identifies the provider implementation/configuration namespace; the provider generation distinguishes successive registrations and MUST never be reused while any stale reference or callback can exist.
 
 A provider generation MUST be registered before any of its bindings or operations can be accepted. It MUST remain ACTIVE until BeginProviderShutdown serializes. The registry MUST reject duplicate active registration of the same provider generation and reject binding registration against an unknown, stale, QUIESCING, or QUIESCED provider generation. Binding registration is atomic: failure MUST leave no partial binding, observation ownership, or extra provider/module reference. A provider generation with zero bindings MAY remain registered during discovery or while it owns provider-scoped resources, but it MUST NOT be selected for a PhysicalDevice until an eligible binding and complete snapshot have been validated.
 
@@ -511,7 +511,7 @@ typedef struct GpuProviderModuleLease GpuProviderModuleLease;
 /* Server-owned loader pin shared by all roles in one loaded module.
    Create binds it to the Xserver loader's module-owner reference; retain and
    release never call code in the pinned module. */
-GpuProviderModuleLease *GpuProviderModuleLeaseCreate(void *module_owner);
+GpuProviderModuleLease *GpuProviderModuleLeaseCreate(void *module_owner); /* NULL if a real loader pin cannot be acquired */
 void GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
 void GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
 typedef struct GpuScreenAttachment GpuScreenAttachment;
@@ -738,6 +738,11 @@ GpuRegistryResult GpuRegistryObserveDevice(
 
 /* Provider execution binding is registered separately from observation.
    The provider-local handle remains private to this provider generation. */
+/* Reserve a non-reusable generation for the next provider descriptor.
+   Failed registration does not return the generation to the allocator. */
+GpuRegistryResult GpuRegistryAllocateProviderGeneration(
+    GpuRegistry *registry, uint64_t *out_provider_generation);
+
 GpuRegistryResult GpuRegistryRegisterProvider(
     GpuRegistry *registry, const GpuProviderDescriptor *descriptor,
     GpuBackendProvider **out_provider);
@@ -1004,6 +1009,10 @@ The implementation test suite SHOULD include at least:
 94. Begin provider shutdown while a deferred backend destroy and a live provider-owned object remain. Verify that quiescence is not invoked until the destroy has completed or the object is quarantined without further provider-code requirements. After quiescence SUCCESS, attempt a backend destroy and verify that it is rejected; only the single registry-controlled final release_provider call may enter provider module code before the module-lease reference is dropped.
 
 95. Create a provider module lease using a duplicated Xorg ModuleDesc, a ScrnInfo pointer, or a DriverPtr reference without an independent loader pin. Verify that lease creation/registration is rejected or the module is marked permanently resident; none of these Screen-scoped references may be accepted as proof against final dlclose(). Verify that a valid server-owned loader-owner record yields one shared lease for all provider and adapter roles in that loaded module instance.
+
+
+
+96. Reserve provider generations, fail registration after descriptor validation/allocation, and then register a replacement provider. Verify that the failed generation is never reused, stale completion records carrying it are rejected, and the replacement receives a distinct generation before any binding or operation is accepted.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
