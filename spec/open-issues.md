@@ -107,3 +107,6 @@ The second registry API pass closed candidate enumeration and provider-local han
 
 
 The API second pass now also requires completion binding-generation validation and separates provider-device wrapper references from native logical-device destruction. Vector 132 covers stale binding completions. Runtime evidence is still required for callback userdata carrying both binding identifiers and exact provider-device retain/release pairing.
+
+
+The API audit now also closes delayed status-event races: context and binding availability notifications use monotonic scope-specific sequences; binding events include exact binding_generation; source observations/removal evidence include source_event_sequence. Effective availability is composed across provider context, binding, and physical state. Runtime evidence remains required that adapters capture source event sequence before dispatch and provider callbacks carry the exact binding generation. Vectors 133–137 added.
