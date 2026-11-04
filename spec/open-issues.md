@@ -104,3 +104,6 @@ The registry API audit also closed the server/provider operation-token handoff. 
 
 
 The second registry API pass closed candidate enumeration and provider-local handle lifetime, explicit asynchronous operation-kind coverage, complete resource pin sets, token pointer lifetime, status-code payloads, and bounded completion payloads. Vectors 120–131 and §8.3 implementation guidance were added. Remaining acceptance is implementation evidence: stable binding-ID mapping, correct token use by all six async operations, full QueueSubmit dependency pinning, callback pointer discipline, and exact status mapping. Exact-tip CI pending.
+
+
+The API second pass now also requires completion binding-generation validation and separates provider-device wrapper references from native logical-device destruction. Vector 132 covers stale binding completions. Runtime evidence is still required for callback userdata carrying both binding identifiers and exact provider-device retain/release pairing.
