@@ -4,7 +4,7 @@
 **Target:** `X11Libre/xserver:wip/xaverius`  
 **Specification branch:** `metux/xav-design:docs/restructure-2026-10-21`  
 **Current implementation baseline inspected:** `89df8ba0bc41dbb4b291b2242b9945661bb47fad`  
-**Normative authority:** `spec/device-registry-architecture.md` §§2.1–2.4, 7, 8.1–8.2; `spec/devices.md` (DDX registration and enumeration); `implementation-notes/ddx-device-registration.md`.
+**Normative authority:** `spec/devices.md` (Physical-Device identity, DDX registration, enumeration and XID lifetime); `spec/device-registry-architecture.md` §§1–3.1, 5–7, 8.1–8.3 and 9 (especially §2.4 startup barrier); `spec/registry-api-lifetime-addendum.md`; `implementation-notes/ddx-device-registration.md`. If this task conflicts with those normative documents, the normative documents win.
 
 This file is the complete active Phase A task. It supersedes older Phase A wording in the migration plan and coordination history. Read it in full before editing. Do not infer permission to implement later phases.
 
@@ -38,12 +38,12 @@ Do not implement Phase B's full operation-table redesign, Phase C's complete dup
 
 Provide one explicit DDX-wide entry point with these semantic properties:
 
-- It is invoked once for each DDX backend/device-enumerator generation, not once per Screen.
+- It is invoked for each DDX device-enumerator/module-role instance independently of Screens. Do not conflate the adapter/pass lifetime with the registry's non-reusable module-role generation or each per-device binding generation: every successful per-device registration is still one exact binding with its own registry-assigned generation.
 - It receives or resolves a DDX-owned context whose lifetime is independent of `ScrnInfo` and Screen private storage.
 - It enumerates the complete device set owned/served by that DDX context.
 - It submits each exact device registration directly to the XAverius registry.
-- It reports a classified pass result: complete, unavailable/failed, or pending if the existing startup lifecycle genuinely supports asynchronous completion. Do not turn an enumeration failure into physical removal.
-- It is safe to invoke again for the same generation. Repeated invocation must not duplicate publication or silently replace an existing binding.
+- It reports a classified terminal pass result: COMPLETE (the scan reached its end and every discovered candidate has a final disposition), or UNAVAILABLE/FAILED (the DDX could not establish a complete initial inventory). PENDING is permitted only while asynchronous work is genuinely outstanding; PENDING MUST keep the initial discovery barrier closed. A terminal FAILED/UNAVAILABLE pass allows the server-wide barrier to account for that failed adapter without waiting forever, but is not evidence of physical removal and MUST NOT fabricate a device or status transition. A later successful registration follows the normative late-registration path.
+- Repeating the same pass or registration for the same exact generations is idempotent and MUST NOT duplicate publication or silently replace a binding. A failed registration consumes its reserved binding generation as required by the registry API; any retry that needs a new binding MUST use a fresh non-reusable binding generation, not recycle the failed one.
 - It has an explicit owner and teardown point. Do not retain borrowed Xorg pointers beyond their documented lifetime.
 
 Names are implementation-defined, but the separation MUST be visible in the type system and call graph. A function that takes `ScrnInfoPtr` or `ScreenPtr` and loops over records is not DDX-wide. A static helper called only from `ScreenInit()` is not DDX-wide.
@@ -60,7 +60,7 @@ For every enumerated device, pass the complete registration for that exact devic
 
 Use the semantic contract in `spec/device-registry-architecture.md` §7. The names there are semantic guidance, not mandatory exported C symbols. Do not invent an intermediate per-device Provider object. Do not place the native handle or device context in a process-global singleton or in a Screen private.
 
-If the current Xserver prototype cannot yet express this descriptor, stop at the adapter seam and report the exact type/function gap. Do not pass `XaveriusProviderCapabilities *` as if it were an operation table; it is metadata, not executable dispatch. Do not fabricate UUIDs, queue data, capabilities, or successful registrations.
+If the current Xserver prototype cannot yet express this descriptor, stop at the adapter seam and report the exact type/function gap. Do not create a competing registry or temporary registration API with weaker publication/lifetime semantics. Do not pass `XaveriusProviderCapabilities *` as if it were an operation table; it is metadata, not executable dispatch. Do not fabricate UUIDs, queue data, capabilities, or successful registrations. A candidate MUST NOT become client-visible until the registry has validated the exact binding and obtained its complete immutable snapshot through that binding.
 
 ### 2.3 Screen API
 
@@ -82,7 +82,7 @@ Keep `XaveriusScreenInit()`, `ScreenInit`, and `ScreenFini` for Screen-local ini
 - open DRM nodes or initialize a Vulkan instance;
 - allocate/register PhysicalDevices as a side effect.
 
-Property and queue-family requests are not discovery paths either. Do not use them to lazily initialize the registry.
+Property and queue-family requests are not discovery paths either. They MUST serialize the already-published immutable snapshot and MUST NOT re-query another DDX, refresh snapshot fields, or lazily initialize the registry.
 
 ## 3. Xlibre/modesetting integration — mandatory investigation, no guessed hook
 
@@ -103,20 +103,20 @@ The last three are not DDX-wide discovery hooks. In particular:
 
 Trace the real target call graph and select the narrowest DDX-owned lifecycle point where the backend can enumerate all devices it serves and has the exact backend handle/context needed for registration. If the modesetting driver's current ownership model cannot create a backend context for a render-only/no-Screen device, do not pretend that a Screen probe solves it. Either add a genuinely DDX-wide device-enumeration path with correct ownership, or report why modesetting is not yet an XAverius-capable DDX and identify the correct DDX adapter boundary. A blocker report is preferable to fake support.
 
-The DDX registration pass must complete (or report unavailable/failed) before the initial XAverius inventory is exposed to clients. Respect the startup discovery barrier in §2.4: it does not wait for Screen creation, RandR, or a window. Do not implement the full platform hotplug/event-reconciliation subsystem in Phase A unless it is already required to make the initial pass correct; record any remaining barrier integration dependency explicitly.
+The normative §2.4 startup barrier is part of Phase A's required integration contract, not an optional later-phase dependency: the platform hotplug/identity observation path MUST be active before the corresponding initial DDX scan begins, and events racing with the scan MUST be reconciled by source generation and observation ordering before initial publication. The initial barrier closes only after every configured DDX pass and the platform identity/hotplug initial pass has reached a terminal COMPLETE or UNAVAILABLE/FAILED result, identity canonicalization and deterministic binding selection have been resolved for publishable candidates, and each published candidate has a complete snapshot. PENDING keeps the barrier closed. A terminal failure is accounted for; it does not imply physical removal and does not block already completed independent devices indefinitely. The barrier MUST NOT wait for Screen creation, RandR, a ScreenAttachment, or a window. Phase A need not implement the entire ongoing hotplug/reconciliation subsystem, but it MUST wire or preserve the startup observation-before-scan and initial-event-reconciliation path. If that minimum path does not exist, mark Phase A BLOCKED/NOT ACCEPTED and identify the exact missing adapter/API; merely listing it as a future dependency is insufficient.
 
 ## 4. Identity and multiplicity rules
 
 - Enumerate all devices served by one DDX instance, not just the device attached to one configured Screen.
 - Correlate DRM primary/render nodes by the underlying DRM device identity and canonical sysfs/device relationship. A pathname, minor number, fd identity, or node basename is not sufficient.
-- DDX-local aliases for one physical incarnation must be deduplicated before multiple registrations can publish duplicates.
+- The DDX MUST deduplicate aliases it discovers for one physical incarnation (including handles obtained through multiple Vulkan instances) before submitting per-device registrations. Cross-DDX identity canonicalization and deterministic binding selection remain registry responsibilities; Phase A MUST use that normative registry contract and MUST NOT implement a competing DDX-side global arbitration policy.
 - Multiple Screens referring to one GPU do not cause repeated device registration.
 - One Screen may later attach to multiple PhysicalDevices; Screen topology does not define inventory membership.
 - Two distinct PhysicalDevices in one DDX context must retain distinct native handles and contexts even if they share module code.
 - Repeated pass invocation for the same DDX generation must be idempotent. It must not overwrite a previously published binding ("last writer wins" is forbidden).
 - An ambiguous or conflicting identity is left unpublished and reported. Do not guess by vendor/device ID, name, enumeration order, or first-Screen selection.
 
-Do not expand this phase into the full identity-evidence/duplicate-arbitration implementation if the registry contract is not yet present. Instead, keep the adapter boundary typed and report the precise missing registry operation. The above behaviors remain acceptance requirements for the completed integration.
+Do not expand this phase into a second implementation of registry identity matching or cross-DDX duplicate arbitration. The registry owns those decisions. Phase A must nevertheless use the existing normative canonicalization/selection/publication contract; if that contract is absent or cannot be called, keep candidates unpublished and report the precise missing registry operation. DDX-local alias deduplication remains the DDX's responsibility.
 
 ## 5. Required tests (must be reproducible)
 
@@ -128,12 +128,14 @@ Add a focused test harness using a fake DDX enumerator/backend registration fixt
 | A2 one device / zero Screens | One complete fake device binding; create zero Screens | Exactly one PhysicalDevice is published and enumerable |
 | A3 multiple devices / zero Screens | At least two distinct identities, handles, and contexts; create zero Screens | Both devices are published exactly once; no first-device truncation |
 | A4 repeat pass | Invoke the same DDX generation/pass twice | No duplicate XID/publication and no binding overwrite |
-| A5 multiple Screens / one device | One device registration, then create two Screen fixtures/attachments | Still exactly one PhysicalDevice; closing one Screen does not unregister it |
+| A5 multiple Screens / one device | One device registration, then exercise two lightweight Screen-lifecycle fixtures (do not implement the later ScreenAttachment subsystem in this phase) | Still exactly one PhysicalDevice; closing one Screen invokes no device-unregister path and does not unregister the shared binding |
 | A6 headless device | Device has no connector and no Screen fixture | Device remains registered/enumerable |
 | A7 request purity | Invoke EnumeratePhysicalDevices after registration | No DDX enumerate callback, DRM open, Vulkan init, or registry mutation occurs |
-| A8 error path | One candidate has incomplete/failed registration, or the DDX scan itself fails | The failed candidate gets no partial record/XID; other fully validated candidates follow the registry's per-device transaction rules; the pass reports the exact partial/unavailable outcome and retry semantics |
+| A8 error path | One candidate has incomplete/failed registration, or the DDX scan itself fails | The failed candidate gets no partial record/XID and its failed binding generation is not reused; independent fully validated candidates follow the registry's per-device transaction rules; the pass reports COMPLETE only if the scan reached its end and every candidate has a final disposition, otherwise terminal UNAVAILABLE/FAILED (or PENDING while work remains) |
 
-If current registry transactionality cannot yet guarantee A4 or the per-candidate rollback portion of A8, write the test at the DDX-pass boundary and mark the registry-level assertion blocked by the exact missing API. Do not impose all-or-nothing rollback across unrelated devices unless the normative registry contract requires it; do not weaken the per-candidate no-partial-publication rule or claim it passed.
+If current registry transactionality cannot yet guarantee A4 or the per-candidate rollback portion of A8, write the test at the DDX-pass boundary and mark the registry-level assertion BLOCKED by the exact missing API. Do not impose all-or-nothing rollback across unrelated devices unless the normative registry contract requires it; do not weaken the per-candidate no-partial-publication rule or claim it passed. A failed candidate does not roll back unrelated complete candidates, but a pass that did not enumerate/reach a final disposition for every candidate is not COMPLETE.
+
+| A9 startup barrier and event race | Start platform identity/hotplug observation before the initial DDX scan; inject add/remove observations during the scan and hold one adapter PENDING | Initial inventory remains hidden while any configured initial pass is PENDING; ordered events are reconciled against exact source/device generations; terminal failure does not fabricate REMOVED or block independent completed devices forever; closing the barrier does not wait for Screens; a late registration does not reopen it or mutate an already published binding/snapshot. |
 
 Build/test report must include exact commands, exit status, and relevant output. "Build clean" without commands is not evidence. Runtime hardware testing is additional evidence, not a substitute for the deterministic harness.
 
@@ -177,7 +179,7 @@ The reviewer will independently inspect the branch tip and diffs, not accept the
 - the DDX-wide entry point is reachable in the actual server startup/device lifecycle;
 - the call graph has no Screen dependency;
 - the DDX loop covers every served device and retains exact per-device handles/contexts;
-- zero-Screen, multi-device, repeat-pass, headless, and request-purity tests pass or any unavoidable later-phase boundary is explicitly isolated;
+- zero-Screen, multi-device, repeat-pass, headless, request-purity, and startup-barrier tests pass; any later-phase ScreenAttachment behavior is isolated to a fixture and is not claimed as implemented;
 - Screen callbacks and teardown are Screen-local;
 - no forbidden shortcut above exists;
 - exact Xserver build/test evidence is supplied.
