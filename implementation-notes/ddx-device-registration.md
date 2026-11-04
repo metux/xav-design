@@ -80,28 +80,11 @@ If two DDX registrations claim the same canonical hardware, the registry dedupli
 - [ ] Can Screen close complete without waiting indefinitely for GPU progress while module code remains pinned safely?
 
 
-## Xserver implementation audit — `wip/xaverius`, 2026-11-04
+## Current Xserver migration task
 
-Audited the push at `X11Libre/xserver` commit `ba88b49433de7c202d6a977887729b4aebb4163c` (parent `62febeaa71b68f9973127cad263c48ec92cb344f`). The commit replaces the allocated `XaveriusInventory` object with a process-global device list and moves the implementation file to `xaverius_registry.c`. This is a useful ownership simplification, but it is not yet the specified DDX registration/binding architecture.
-
-Observed gaps in this exact source revision:
-
-- `XaveriusProviderCallbacks` is only a typedef alias of `XaveriusProviderCapabilities`; it is a metadata snapshot, not a typed operation table. `XaveriusDevice` stores only that pointer, with no native physical-device handle, per-device backend context, binding generation, or module-role lifetime reference.
-- `XaveriusRegisterDevice()` is declared in the extension-internal header, not as a complete DDX-facing registration contract in `xaverius_priv.h`. The current DDX-facing `XaveriusDDXOps` remains Screen-scoped and still exposes `EnumeratePhysicalDevices`, property, and queue-family callbacks.
-- The request handlers now iterate the global list, but the global list is not populated by a demonstrated DDX-wide discovery/registration pass in this commit. The Screen callback path remains present; there is no proof here of registration for headless/render-only devices independently of ScreenInit.
-- Duplicate canonical identity currently causes `XaveriusRegisterDevice()` to overwrite `dev->callbacks` whenever a non-NULL callback pointer is supplied. This is an implicit rebinding/last-writer-wins policy, not deterministic pre-publication selection; it can also replace the metadata source of an already published XID.
-- `identity_equal()` compares PCI tuple, optional device UUID, and driver UUID only. It does not implement the spec's provenance/evidence hierarchy, DRM primary/render equivalence, derived-device instance identity, source generations, or ambiguity/conflict outcomes.
-- `XaveriusRegistryFini()` exists but `XaveriusExtensionFini()` is empty, so the registry teardown is not connected to extension/server shutdown in this revision.
-- `XaveriusRegisterDevice()` allocates a server XID, but this change does not show registration of a DIX resource wrapper/lifecycle callback for the PhysicalDevice XID as required by the resource model.
-
-Required next implementation alignment (spec-side guidance only): retain the global registry; replace the capability-pointer pseudo-callback with a complete immutable per-device binding; expose a DDX registration call that takes identity evidence, exact native handle, per-device context, typed operations, and module-role generation; make duplicate claims go through explicit pre-publication selection and never overwrite a published binding; populate the registry from a DDX-wide pass independent of Screens; create ScreenAttachments separately; and wire finalization/resource ownership into server lifecycle. Do not reintroduce a per-Screen inventory or a separate dispatch-provider object.
-
-
-### Additional request-handler conformance findings from the same revision
-
-- `ProcXaveriusEnumeratePhysicalDevices()` filters out every entry whose status is not AVAILABLE. The normative reply includes all retained identities, including UNAVAILABLE devices and REMOVED tombstones; status is queried separately through `XAverius.deviceStatus`.
-- `ProcXaveriusGetPhysicalDeviceQueueFamilyProperties()` rejects non-AVAILABLE devices with `BadMatch`, although the normative query returns the immutable stored queue-family snapshot without a backend call or availability gate.
-- `ProcXaveriusGetPhysicalDeviceProperty()` similarly rejects all non-AVAILABLE devices before property-specific status mapping. It must distinguish a live PhysicalDevice from its availability and return the defined NOT_AVAILABLE/NOT_SUPPORTED property status where applicable; it must not collapse these cases into `BadMatch`.
-- These handlers resolve XIDs by scanning the private list rather than validating a typed DIX PhysicalDevice resource. The implementation needs a server-owned resource wrapper and the normative unknown-XID / wrong-live-resource error precedence.
-
-These are protocol-visible correctness gaps independent of the backend-binding refactor and should be fixed before request-handler conformance is considered complete.
+The active Phase A implementation instructions and acceptance tests are maintained in
+[`phase-a-ddx-discovery.md`](phase-a-ddx-discovery.md). This architecture note
+remains the durable design summary; old source-specific audit snapshots are
+preserved in `IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md` and must not be
+treated as the current branch state. Re-audit `X11Libre/xserver:wip/xaverius`
+at its live tip before making implementation claims.
