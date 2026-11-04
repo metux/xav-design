@@ -269,6 +269,34 @@ A selected provider becoming temporarily unavailable makes the PhysicalDevice UN
 
 Logical-device creation pins the exact selected provider and its PhysicalDevice incarnation. Every logical Device and asynchronous backend operation MUST retain a reference to the provider context and relevant internal generations until all backend accesses and callbacks have quiesced. Unloading a provider module or destroying its context while any such reference exists is forbidden. If quiescence cannot be proven, the backend objects and provider references MUST be retained or quarantined.
 
+
+### 3.1 Provider, binding, and module multiplicity
+
+Provider identity, provider-local device bindings, discovery observations, and module ownership are separate lifetimes. The following cardinalities and rules are normative:
+
+- One BackendProvider generation MAY register bindings for many canonical PhysicalDevices. Each binding identifies exactly one PhysicalDevice incarnation and one provider-local physical-device instance.
+- One PhysicalDevice MAY have bindings from multiple BackendProvider generations, including providers implemented by different DDX modules or ICDs. All such bindings MUST resolve to the same canonical PhysicalDevice identity before they can be associated with that record.
+- For a given pair of (BackendProvider generation, PhysicalDevice incarnation), there MUST be at most one active executable binding. If one provider enumerates multiple Vulkan handles for the same canonical device through different Vulkan instances, it MUST correlate and deduplicate those aliases inside its provider context and choose one provider-local binding before registration. If it cannot prove that the handles are aliases of the same incarnation, it MUST keep the candidates unresolved rather than register competing bindings.
+- A provider generation MAY be the selected execution provider for multiple PhysicalDevices. Its context-wide failure therefore affects every PhysicalDevice selected through that exact provider generation; a binding-scoped failure affects only the named binding. A failure of a non-selected provider or binding MUST NOT change the public status of the PhysicalDevice.
+- A provider module MAY own multiple independent BackendProvider generations and may also implement discovery or DDX topology adapters. Each registration role MUST have its own generation, admission state, retained references, and teardown result. A shared module-owner lease MAY aggregate the loader pin for those roles, but it MUST NOT collapse their provider contexts, bindings, or lifecycle state into one provider.
+- Every unloadable provider generation MUST retain a module lease covering its operation table, completion callback code, callback userdata, provider context, and every trampoline reachable from accepted work. Each independently registered provider generation acquires its own reference to the shared module-owner lease. A DDX topology/discovery adapter that can receive callbacks after Screen close MUST likewise retain a role-specific module lease until its callbacks and detached contexts have retired. Xorg ModuleDesc duplication and DriverPtr.refCount are not substitutes for these leases.
+
+Discovery observations remain source-owned. Multiple DDX, platform, and provider sources MAY contribute independent observations for one canonical PhysicalDevice. The registry MUST retain each observation's exact source key, source generation, and observation ID. Withdrawing or replacing one source's observation MUST affect only that observation; it MUST NOT withdraw another source's evidence, another provider's binding, a ScreenAttachment owned by another DDX, or the PhysicalDevice identity while other valid evidence remains. A provider binding is not itself ownership of the canonical identity. Removing a provider binding MUST NOT implicitly remove the provider's discovery observation unless the same registration explicitly owns that exact observation and withdraws it through the source-observation operation.
+
+Provider selection remains exactly one execution provider per published PhysicalDevice in v0.1. The selected provider supplies the complete immutable snapshot. Other providers MAY remain registered as discovery/correlation providers, but their metadata, queue capabilities, features, and properties MUST NOT be unioned with the selected snapshot. A provider registered after publication remains non-selected for that PhysicalDevice's lifetime. It MUST NOT become an implicit replacement when the selected provider is removed, unavailable, or quiescing. In particular, removing the selected binding makes that PhysicalDevice UNAVAILABLE under the existing status contract; the presence of another registered binding does not authorize failover, snapshot replacement, or XID replacement. Removing a non-selected binding has no public status effect.
+
+Provider-generation shutdown and binding removal are distinct operations:
+
+1. **Begin shutdown.** Atomically change the exact provider generation from ACTIVE to QUIESCING. Close admission for new operations and new bindings across that provider generation. This transition is idempotent for the same generation; a stale generation is rejected. A concurrent operation or registration is accepted only if its admission point serialized before this transition.
+2. **Remove bindings.** Remove each binding owned by that provider generation using its exact PhysicalDevice, provider, and binding generations. Removing one binding MUST NOT remove any other binding or discovery observation. If the removed binding was selected, the PhysicalDevice becomes UNAVAILABLE and stays bound to that selected-provider identity; another provider is not promoted.
+3. **Withdraw owned observations and topology.** Withdraw only discovery observations and ScreenAttachments owned by the unloading adapter/module and exact generations. Do not withdraw observations or attachments owned by another source/module merely because they refer to the same PhysicalDevice.
+4. **Drain and quiesce.** Drain accepted operations, obtain exactly one terminal outcome for each token, retire each exact token, and invoke provider-wide quiescence for that provider generation as specified in Sections 2.4 and 4. A provider generation with several PhysicalDevice bindings is quiesced as one provider context; a binding-local loss is not a provider-wide shutdown.
+5. **Release the provider lease.** Release that provider generation's module-lease reference only after its bindings, logical-device/provider-object references, callback executions, operation tokens, and provider context have retired. The shared module owner remains pinned while any other provider generation, adapter role, or callback bridge from that module retains a lease.
+
+The lifecycle serializer MUST arbitrate competing Screen close, source withdrawal, provider-binding removal, provider-generation shutdown, provider quiescence, and physical-removal transitions by exact generations. Each operation is idempotent for its own generation and MUST NOT broaden its scope when another teardown has already started. A Screen close detaches only the exact ScreenAttachment. A source withdrawal removes only the exact observation. Provider shutdown closes only the exact provider generation. Physical removal terminalizes only the exact PhysicalDevice incarnation and does not itself unload providers. If physical removal wins before provider shutdown, the tombstone remains while provider references retire; if provider shutdown wins first, the PhysicalDevice follows the ordinary selected-provider UNAVAILABLE rule unless and until authoritative physical-removal evidence commits REMOVED. Neither ordering permits resurrection, provider promotion, or mutation of a replacement generation.
+
+Quiescence is scoped. quiesce_provider SUCCESS proves that no callback, worker, or operation belonging to that exact provider generation can enter its module code again; it does not prove that another provider generation from the same module is quiescent. The module may be unloaded only after every provider and adapter role backed by that module has independently stopped admission, drained its accepted work/callbacks, and released its lease. A module-global callback or worker that can enter more than one provider generation MUST be accounted for by every affected role and MUST keep the common module lease pinned until it is no longer reachable. Quiescing one provider MUST NOT release the module pin while another provider generation or adapter role remains live.
+
 ## 4. Provider operation interface
 
 The provider interface is a server-internal contract. It is not a Vulkan ABI, a client ABI, or a requirement to expose raw Vulkan entry points to XAverius request handlers. The server owns protocol validation, resource/XID ownership, request ordering, error precedence, and public state transitions. The provider owns the actual backend calls and every provider-local handle. Request handlers MUST call the selected provider only through the operation interface bound to the exact PhysicalDevice and logical-Device generations.
@@ -469,6 +497,7 @@ The following is an abstract C interface sketch, not a public ABI and not a wire
 typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
 typedef struct GpuBackendProvider GpuBackendProvider;
+typedef struct GpuProviderModuleLease GpuProviderModuleLease;
 typedef struct GpuScreenAttachment GpuScreenAttachment;
 typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 
@@ -651,6 +680,7 @@ typedef struct {
        provider-local physical-device handle, and operation table. */
     const char *canonical_provider_key;
     void *provider_context;
+    GpuProviderModuleLease *module_lease; /* required for unloadable provider code */
     const GpuProviderOps *ops;
     GpuProviderCompletionFn completion_sink;
     void *completion_userdata;
@@ -660,6 +690,10 @@ typedef struct {
 /* Descriptor and callback lifetime contract:
    - canonical_provider_key is borrowed for registration only; the registry
      copies its canonical bytes before returning.
+   - module_lease is retained once for this provider generation and remains
+     effective until that generation's final provider reference is released
+     after successful quiescence; it may be shared by other provider/adapter
+     registrations from the same loaded module.
    - ops, completion_sink, and completion_userdata remain valid and immutable
      for this provider generation until release_provider has been called for
      the final retained reference and all operation tokens are retired.
@@ -689,6 +723,12 @@ GpuRegistryResult GpuRegistryRegisterProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     uint64_t device_generation, const GpuProviderDescriptor *provider,
     uint64_t provider_local_binding_id, uint64_t binding_generation);
+
+/* Close admission for this exact provider generation. This does not
+   remove bindings, retire accepted operations, or prove quiescence. */
+GpuRegistryResult GpuRegistryBeginProviderShutdown(
+    GpuRegistry *registry, GpuBackendProvider *provider,
+    uint64_t provider_generation);
 
 GpuRegistryResult GpuRegistryRemoveProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
@@ -887,6 +927,28 @@ The implementation test suite SHOULD include at least:
 
 
 78. Close and delete a GPU Screen while a provider callback still holds attachment-scoped state. Verify that the callback has no raw `ScreenPtr`/`ScrnInfoPtr` or `FreeScreen()`-owned pointer to dereference; it uses only a detached, generation-checked retained context, performs no Screen/RandR callback after close, and releases that context only after callback return and operation retirement.
+
+
+
+79. Register two providers from different modules against the same canonical PhysicalDevice. Verify that both bindings remain independently owned, exactly one is selected before publication, and the published snapshot comes wholly from that provider. Removing or quiescing the non-selected provider MUST NOT change PhysicalDevice status, XID, snapshot, or selected-provider identity.
+
+80. Register one provider generation against several PhysicalDevices, then report a binding-scoped unavailable/removal transition for one device. Verify that only that exact binding/device is affected. A provider-context-wide failure affects every PhysicalDevice selected through that exact provider generation, but does not affect devices for which it is only a non-selected discovery provider.
+
+81. Have two DDX/platform sources independently observe the same canonical PhysicalDevice. Withdraw or unload one source while the other remains authoritative. Verify that only the first source's observation and its owned ScreenAttachments disappear; the PhysicalDevice identity, other source observation, and unrelated provider binding remain.
+
+82. Have one DDX module register two independent BackendProvider generations with distinct contexts and provider keys. Quiesce and unregister one generation while the other still serves a PhysicalDevice. Verify that the first generation rejects new operations and eventually releases only its own references, while the common module lease remains pinned and the second provider continues operating unchanged.
+
+83. Race Screen close, source withdrawal, selected/non-selected binding removal, provider-generation shutdown, and authoritative physical removal in both serialization orders. Verify that each transition affects only its exact generation and ownership scope; REMOVED is terminal, stale callbacks are rejected, and no operation implicitly performs another transition's broader cleanup.
+
+84. Remove or quiesce the selected provider while another provider binding for the same PhysicalDevice remains available. Verify that the PhysicalDevice becomes UNAVAILABLE and is not transparently rebound, that the published snapshot is unchanged, and that no existing logical Device silently migrates to the other provider.
+
+85. Register multiple provider-local Vulkan aliases for one canonical PhysicalDevice through one provider generation. Verify that the provider deduplicates them and registers exactly one executable binding; if alias identity is ambiguous, no competing binding or PhysicalDevice publication is permitted.
+
+86. Attach two Screens through different DDX modules to one PhysicalDevice and one shared provider. Close/unload one DDX module. Verify that only its ScreenAttachment and adapter role retire; the other ScreenAttachment, selected provider, PhysicalDevice, and provider module lease remain live.
+
+87. Quiesce one of several provider generations backed by the same module while another generation still has a pending callback. Verify that SUCCESS for the first provider does not release the common module pin or make the second provider's callback unreachable; final module unload occurs only after all role-specific leases and callback bridges have retired.
+
+88. Race BeginProviderShutdown against a new operation and a new provider-binding registration for the same generation. If shutdown serializes first, both are rejected without partial state; if either admission serializes first, it is retained and drained before quiescence. Repeated shutdown calls are idempotent, while a stale provider generation is rejected without affecting its replacement.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
