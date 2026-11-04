@@ -63,10 +63,10 @@ The registry owns all resource validation, generation checks, dependency pinning
 | 38 | DestroyFence | `synchronization.destroy_fence` | Synchronous backend destroy after server proves no pending references |
 | 39 | DestroyResource | One typed destroy operation selected by validated resource type: buffer, shader module, descriptor-set layout, pipeline layout, compute pipeline | Server owns type/ownership/dependency validation and XID invalidation; provider performs only the typed backend destroy |
 | 40 | SelectEvents | None | Entirely server-side |
-| 41 | CreateSurface | `create_surface` for the selected provider/Device path when provider surface creation is needed | Server owns Window identity and Surface XID |
-| 42 | DestroySurface | `destroy_surface` | Synchronous backend destroy after Swapchain/route references drain |
-| 43 | GetSurfaceCapabilities | `query_surface_support` | Synchronous query for exact binding, queue family, Surface and selected logical Device; returns formats, present modes, limits and support |
-| 44 | CreateSwapchain | `create_presentation_route`, `create_swapchain` | Synchronous create; route is exact logical-Device/Surface/Screen generation |
+| 41 | CreateSurface | None | Creates only the connection-owned logical Surface and retains the exact Window/Screen identity; no Device/provider is selected by this request |
+| 42 | DestroySurface | `destroy_surface` once for each successfully materialized provider-native Surface associated with this exact logical Surface generation | Server invalidates the logical XID atomically; native cleanup follows after all Swapchain/route/query references drain |
+| 43 | GetSurfaceCapabilities | Ensure/create the provider-native Surface for the exact provider generation if not already materialized, then `query_surface_support` | Synchronous query for exact binding, queue family, logical Surface and selected logical Device; returns formats, present modes, limits and support |
+| 44 | CreateSwapchain | Ensure/create the provider-native Surface for the exact provider generation if not already materialized, then `create_presentation_route`, `create_swapchain` | Synchronous create; route is exact logical-Device/Surface/Screen generation |
 | 45 | DestroySwapchain | `destroy_swapchain` | Synchronous backend retirement after server proves all blockers drained |
 | 46 | AcquireNextImage | `acquire_next_image`; `cancel_acquire` and `release_late_acquired_image` only for the specified timeout/cancellation race | Async token; server arbitrates timeout and late acquisition |
 | 47 | QueuePresent | `queue_present` | Async token; server arbitrates accepted completion and presentation events |
@@ -84,6 +84,20 @@ Command-buffer entries are not X11 requests and MUST NOT become independent prov
 - `CMD_COPY_BUFFER_TO_SWAPCHAIN_IMAGE` (presentation profile only)
 
 The provider MUST receive no unvalidated wire bytes, client pointers, XIDs, or unpinned resource references. The server has already resolved every referenced object to a retained provider object and generation. Recording order MUST match the validated command stream exactly.
+
+### 2.2 Logical Surface and provider-native Surface lifetime
+
+The XAverius Surface created by request 41 is a server-owned, connection-owned logical resource. It captures the exact Window and Screen generations but has no Device, PhysicalDevice, provider, or Vulkan-instance association. Request 41 MUST NOT call any provider operation. A valid drawable Window therefore remains a valid XAverius Surface even when no currently registered provider can present to it.
+
+A provider-native Surface is a separate provider-owned object. It is materialized lazily when a Device-specific operation first needs it: GetSurfaceCapabilities, or CreateSwapchain when the client did not query capabilities first. The server resolves the exact logical Device to its already selected provider generation and asks that provider to create the native Surface from the captured Window/Screen identity. It MUST NOT select a provider from the Screen, from registration order, or from another Device.
+
+The server maintains at most one live provider-native Surface wrapper for each pair (provider generation, logical Surface resource generation). The wrapper is provider-context scoped, not PhysicalDevice-binding or logical-Device scoped, and may be reused by different Devices/bindings served by that same provider generation. It MUST NOT be shared across provider generations. A provider that internally requires more than one native object may keep those objects behind the one opaque wrapper. The wrapper retains the exact logical Window/Screen identity and provider/module references for its lifetime.
+
+Provider-native Surface creation and publication are serialized per logical Surface/provider-generation pair. Concurrent first-use queries MUST NOT create duplicate wrappers. A failed create publishes no wrapper. If create_surface returns UNSUPPORTED, the server may cache an explicit unsupported result for that pair; it MUST NOT create a fake native handle or repeatedly call the provider for the same unchanged generations. For GetSurfaceCapabilities, this condition produces SUCCESS with present_supported = 0, empty format and present-mode lists, zero non-queue-family capability fields, and one queue-family record per Device queue family with present_supported = 0. This is a valid Device/Surface pair, not DEVICE_UNAVAILABLE or SURFACE_LOST. A later new provider generation or new Surface generation is evaluated independently.
+
+DestroySurface invalidates the logical Surface XID only after its ordinary type/ownership/Swapchain checks succeed. It then retires every successfully materialized provider-native Surface wrapper for that exact Surface generation. No wrapper may be destroyed twice or used by a later Surface generation that reuses the XID. Native destruction may be deferred until in-flight capability queries and other provider calls release their temporary references; provider shutdown/quiescence MUST wait for these wrappers to be destroyed or safely quarantined. An unsupported-result cache entry contains no provider object and needs no native destroy call.
+
+The provider operation matrix in [provider-operation-matrix.md](provider-operation-matrix.md) defines the corresponding request mapping. This rule does not change the wire layout or the logical Surface ownership model.
 
 ## 3. Required typed operation-table declarations
 
