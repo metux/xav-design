@@ -1236,7 +1236,7 @@ The implementation test suite SHOULD include at least:
 
 112. Force provider retain/context initialization and module-pin acquisition failures at each registration stage. Verify registration is atomic, the caller's original lease remains owned by the caller, registry-acquired references are unwound exactly once, and provider code is never called after its lease is released.
 
-113. Register a DDX module role, attach a discovery source and multiple ScreenAttachments to it, then request role unregister. Verify admission closes immediately, unregister remains PENDING until the source, attachments, callback bridges, and caller references retire, and the shared module lease is released exactly once afterward. A second DDX role sharing the same lease remains active.
+113. Register a DDX module role, attach a discovery source and multiple ScreenAttachments to it, then request role unregister. Verify admission closes immediately, unregister remains PENDING until the source, attachments, and callback bridges retire, and the shared module lease is released exactly once afterward. A caller-held role reference may keep only the inert server-owned role record alive and does not delay module unpin. A second DDX role sharing the same lease remains active.
 114. Attempt to retain or register new callbacks against a module role after unregister begins. Verify SHUTTING_DOWN and no new reference/callback admission; releasing already-held references remains permitted until the role retires.
 
 115. Prepare an operation token against an unknown/stale provider generation, removed binding, unavailable PhysicalDevice, or stale logical-Device/resource generation. Verify a classified rejection, zeroed outputs, and no provider entry or retained reference.
