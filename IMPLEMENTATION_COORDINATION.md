@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `53883de2201029de82b63a03f6acc2ba77280e6a`.
-- Exact-tip CI: [workflow 41840947750](https://github.com/metux/xav-design/actions/runs/41840947750) — SUCCESS.
-- Verified: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
-- This verified commit includes exact logical-Device PresentationRoute binding, source-authority-validated physical removal, generation-checked provider status transitions, classified registry results, and architecture vectors through 60, including provider descriptor and callback pointer lifetimes. Only subsequent status-document refresh commits are not yet covered by this run.
+- Latest exact-tip CI-verified specification commit: `b260b88fff58b1d6824f62b8d4af7761a94da033`.
+- Exact-tip CI: [workflow 41841990539](https://github.com/metux/xav-design/actions/runs/41841990539) — SUCCESS.
+- Verified by that run: the Xlibre/Xorg discovery and DDX integration contract, including registry/adapter role separation, startup barrier independence from Screen creation, hotplug reconciliation, and Screen/DDX teardown rules. The run is for `b260b88`; later architecture-vector commit `4eb0d35938def3f74de579a7bb2e7729a304325f` is pending its own exact-tip CI.
+- Earlier verified baseline `53883de2201029de82b63a03f6acc2ba77280e6a` passed 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and all 19 workflow steps. The new integration-contract CI also passed.
 
 ## Architecture contracts implementation must follow
 
@@ -47,6 +47,7 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 3. **Request ownership:** maintain exactly one handler owner per request. Shared helpers have a separately named owner; request ownership does not imply shared-file ownership.
 4. **Lifecycle integration:** report any implementation assumption that conflicts with provider pinning, generation checks, accepted-operation terminalization, or quarantine rules.
 5. **Verification:** every implementation/spec change report must include branch, commit SHA, exact test commands or CI run, result, and remaining unverified runtime behavior.
+6. **Xlibre startup/hotplug integration:** the normative adapter and barrier contract is now in `spec/device-registry-architecture.md` §2.4. Runtime feedback is still needed on the actual Xlibre platform-bus/udev hook points and how each driver supplies authoritative device identity; do not substitute Screen indices or DDX initialization order.
 
 ## Latest specification update — Physical-device registration
 
@@ -89,3 +90,8 @@ The provider API sketch now creates a PresentationRoute from the exact provider 
 The provider availability/recovery API now returns `GpuRegistryResult` for context-wide and device-scoped transitions. Stale provider/device generations, unknown providers, and absent selected bindings are observable rejections and MUST leave state unchanged; valid transitions return `GPU_REGISTRY_SUCCESS` and affect only the exact selected scope. `GpuDeviceRemovalEvidence.source_key` is explicitly borrowed for the call only and resolved before return. Architecture vector 59 covers stale/unknown mutation attempts. Change commit: `bbda0c5036306b0497cda41b825a074b6608460f`; exact-tip CI pending.
 
 The status, freeze checklist, and open-issues summaries have also been refreshed to identify exact-tip workflow 41840312155 as the latest verified baseline and to distinguish subsequent unverified documentation/API deltas.
+
+
+## Latest specification update — Xlibre/Xorg discovery integration — 2026-11-04
+
+`spec/device-registry-architecture.md` §2.4 now defines the Xlibre/Xorg adapter roles (platform discovery, DDX topology, Vulkan provider), the startup barrier and hotplug scan/event reconciliation, late-source behavior, DRM identity hand-off, Screen-generation teardown, and module/provider unload pinning. It deliberately specifies lifecycle semantics rather than version-specific Xserver hook names. Architecture vectors 61–66 cover barrier independence, discovery failure/late registration, unresolved DDX identity, and unload with outstanding callbacks. The integration-contract change `b260b88fff58b1d6824f62b8d4af7761a94da033` passed workflow 41841990539; vector-only follow-up `4eb0d35938def3f74de579a7bb2e7729a304325f` is pending exact-tip CI. Runtime Xlibre hook mapping remains an implementation acceptance task.
