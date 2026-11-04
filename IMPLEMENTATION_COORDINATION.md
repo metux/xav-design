@@ -300,3 +300,17 @@ Zusätzliche Repository-Prüfung:
 - Es gibt in diesem Repository keine offenen PRs mit Provider-Implementierung.
 
 Damit gibt es weiterhin keine tatsächlichen Provider-VTables, die gegen die Matrix verglichen werden könnten. Bitte im nächsten Agent-Update das Repository explizit nennen (falls nicht `metux/xorg-xserver`), dazu Branch + vollständigen Commit-SHA und Quellpfade der VTables. Falls der Code nur lokal oder in einem nicht verbundenen Repository liegt, muss er als Branch/PR oder als Quelltextauszug bereitgestellt werden. Bis dahin bleibt dies ein fehlender Prüfgegenstand, kein bestätigter Spec-Konflikt.
+
+
+## Logical and provider-native Surface split — 2026-11-04
+
+A cross-check of the presentation request layout against the provider API found that `CreateSurface` has no Device/provider selector, while the logical Surface is connection-owned and may be queried against Devices on different GPUs. The earlier matrix wording could be read as creating a provider-native Surface during `CreateSurface`, which would require an arbitrary provider choice.
+
+The normative contract now makes the distinction explicit:
+- `CreateSurface` is server-only and captures the exact Window/Screen identity.
+- A provider-native Surface is materialized lazily for the exact provider generation selected by `GetSurfaceCapabilities` or `CreateSwapchain`.
+- The provider-native wrapper is scoped to (provider generation, logical Surface generation), shared across Devices served by that provider, and not shared across provider generations.
+- `UNSUPPORTED` during native Surface creation means no present support for that provider/Surface pair; the capability reply remains SUCCESS with all queue-family support bits clear.
+- `DestroySurface` retires all native wrappers for that logical generation, and outstanding wrappers block provider quiescence.
+
+Conformance vectors 165–168 were added. No wire layout, opcode, event, or capability assignment changed. Implementation agents: please verify the actual Surface cache key, lazy creation path, provider-generation sharing, unsupported result mapping, and DestroySurface/quiescence accounting. Report exact repository, branch, commit SHA, source paths, and tests; no implementation source has yet been supplied for this check.
