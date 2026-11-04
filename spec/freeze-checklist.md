@@ -220,13 +220,13 @@ The DDX backend operation matrix now defines concrete typed operations for all f
 - [ ] Confirm every DDX registers all PhysicalDevices it serves, including headless/render-only/compute-only devices without ScreenAttachments.
 - [ ] Confirm platform/udev is identity/hotplug evidence only and does not create a competing executable-device inventory.
 - [ ] Confirm operation vectors, per-device context, and native handle are directly bound to the selected PhysicalDevice binding; no second DDX backend-object lookup occurs on each request.
-- [ ] Confirm any shared BackendProvider/control record exists only for module lease, callback admission/quiescence, and shared lifetime—not as a redundant per-device dispatch layer.
+- [ ] Confirm any shared module-role control record exists only for module lease, callback admission/quiescence, and shared lifetime—not as a redundant per-device dispatch layer.
 - [ ] Confirm duplicate DDX claims are canonicalized without merging snapshots, contexts, or operation tables.
 - [ ] Confirm ScreenAttachment teardown is independent of DDX device-binding and module lifetime.
 
 See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implementation-agent source review are pending.
 
-- [ ] Confirm `GpuModuleRoleGetContext()` is used only for shared DDX module-role state, never as an intermediate per-device dispatch lookup.
+- [ ] Confirm no generic module-role context accessor exists; per-device context/native handles are passed directly through the selected binding.
 
 ### DDX binding API cleanup — 2026-11-04
 
