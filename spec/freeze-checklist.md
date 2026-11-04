@@ -12,7 +12,14 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The current verified branch tip is `7f2620726f88bbd28ff6ac5c21a27d87659301e7` on `docs/restructure-2026-10-21`. Exact-tip workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed 4,873 wire-layout checks, 72 Timeline regressions, and all 693 Python tests; shared-header compilation, XCB client prototype build, request/reply/XGE validation, and the required-check audit also passed. This tip includes the provider operation/lifetime corrections, multi-device UNAVAILABLE scoping, the discovery/provider/Screen registration contract, and the registry architecture conformance additions. Earlier candidates and their CI runs remain historical evidence only. Normative design gates are checked; Phase 1 ship confirmations and a named shared integration-interface owner remain project-coordination sign-offs, not unresolved wire-protocol rules.
+The last fully verified baseline before the current presentation-routing audit was `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2`, passed by exact-tip workflow [41832770751](https://github.com/metux/xav-design/actions/runs/41832770751). The current candidate `013be364ea8cc7126b092f46d7c266b43dcda02f` adds normative render-GPU/scanout-GPU routing, explicit PRIME/DRI3 bridge requirements, route-generation lifetime, and route-failure status mappings. It is not yet CI-verified; exact-tip CI is required before this audit can be marked verified.
+
+### Render-GPU / scanout-GPU routing audit — 2026-11-04
+
+The presentation audit separates the logical Device's render PhysicalDevice from the Screen's scanout/display PhysicalDevice. A ScreenAttachment is topology evidence only. The selected execution provider remains responsible for its logical Device and coordinates the exact Device/Surface presentation route, which may be direct WSI or an explicit provider-managed PRIME/DRI3 import/copy/composition bridge. The route must prove format/modifier, usage, synchronization, ownership-transfer, and completion/release compatibility. No implicit migration to another PhysicalDevice, provider, Screen, or RandR output is allowed. A successful Swapchain pins one route generation; route topology changes invalidate it as OUT_OF_DATE. Static unsupported, temporary unavailable, and accepted-operation route-failure outcomes are explicitly mapped. Architecture vectors 48–54 cover these cases. No wire ABI or opcode assignments changed.
+
+Candidate branch tip `013be364ea8cc7126b092f46d7c266b43dcda02f` is pending exact-tip CI; the prior green run does not cover this change.
+
 
 ### Physical-device identity evidence audit — 2026-11-04
 
@@ -62,7 +69,7 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The previously verified normative baseline is `7f2620726f88bbd28ff6ac5c21a27d87659301e7`; workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed all required static checks. The identity-evidence and canonical-ordering candidate `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2` passed exact-tip workflow [41832770751](https://github.com/metux/xav-design/actions/runs/41832770751): 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
+The last fully verified baseline is `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2`, passed by [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751): 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits. The current render/scanout routing candidate `013be364ea8cc7126b092f46d7c266b43dcda02f` requires exact-tip CI before freeze verification.
 
 The normative design gates are assessed as complete. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
 - [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
