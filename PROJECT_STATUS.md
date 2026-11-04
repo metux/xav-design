@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `4eb0d35938def3f74de579a7bb2e7729a304325f`  
+**Latest exact-tip CI-verified tip:** `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`  
 **Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later status-document refreshes are pending exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41842074182](https://github.com/metux/xav-design/actions/runs/41842074182) — SUCCESS on `4eb0d35938def3f74de579a7bb2e7729a304325f`.
-- Results: 4,963 wire-layout checks, 72 Timeline regression tests, and 693 Python tests passed. Required handler/backend checks, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit also passed; all 19 workflow steps completed successfully.
-- This verifies the Xlibre/Xorg adapter-role and lifecycle contract, including architecture vectors 61–66, in addition to the previously verified logical-Device PresentationRoute binding, evidence-bearing physical-removal API, generation-checked provider status transitions, and registry result classifications. All 19 workflow steps passed: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, header/client builds, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. Later source-mapping documentation (`d070c735`) and vectors 67–69 (`a9054463`) are newer and pending exact-tip CI.
+- Exact-tip CI: [workflow 41843046752](https://github.com/metux/xav-design/actions/runs/41843046752) — SUCCESS on `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`.
+- The exact-tip run passed all required checks, including 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and the required-check audit. The Screen-close contract also passed workflow 41843032895.
+- This verifies the XLibre source mapping, DDX Screen-close/provider-module lease rules, and architecture vectors 67–75, in addition to the earlier provider/registry and presentation contracts. Newer commit `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` adds an explicit provider-wide quiescence hook and stronger callback-return retirement semantics; its exact-tip CI is pending.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -64,3 +64,6 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 
 
 The Xlibre/Xorg integration profile now specifies platform-discovery, DDX-topology, and Vulkan-provider adapters; a Screen-independent startup barrier; hotplug reconciliation; late discovery; and safe Screen/module teardown. The non-normative mapping to current XLibre source hooks is now documented in §8.1; runtime validation against a built Xlibre server and real driver-supplied identity evidence remains unverified.
+
+
+The registry architecture now makes provider unload a two-phase quiescence operation: per-Screen close detaches only topology, accepted operation retirement includes callback return, and provider-wide quiescence must prove no callback/worker can enter module code before the final provider/module lease is released. An unquiesceable provider is quarantined. The normative hook `quiesce_provider` and its result type are in the provider operation-table sketch; exact-tip CI is pending at `5d3c0f69`.
