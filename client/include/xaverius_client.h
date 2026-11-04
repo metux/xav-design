@@ -86,7 +86,7 @@ typedef enum xav_event_decode_result {
     XAV_EVENT_DECODE_ERROR = -1, XAV_EVENT_DECODE_NOT_XAVERIUS = 0,
     XAV_EVENT_DECODE_OK = 1, XAV_EVENT_DECODE_UNKNOWN = 2
 } xav_event_decode_result;
-xav_client_status xav_connection_create(xcb_connection_t *, xav_connection *,
+xav_client_status xav_connection_create(xcb_connection_t *, xav_connection **,
                                         xav_version *, xcb_generic_error_t **);
 xav_client_status xav_connection_negotiate_xge(xav_connection *, xav_version *,
                                                xcb_generic_error_t **);
