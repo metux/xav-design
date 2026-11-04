@@ -241,7 +241,7 @@ The canonical identity denotes the underlying physical-device incarnation expose
 A valid device UUID is the exact 16-byte Vulkan `VkPhysicalDeviceIDProperties::deviceUUID` value. An all-zero value is invalid and MUST be reported as `NOT_AVAILABLE`, not used as a deduplication key, and not replaced with a fabricated value. A UUID is an identity/correlation property, not a promise of persistence across server restarts, physical removal/reinsertion, or hardware relocation. XAverius MUST NOT persist or recycle Physical-Device XIDs by UUID across X-server restarts.
 
 
-Implementation architecture: the server-wide registry, object ownership boundaries, provider API, Screen attachments, callback generations, and Xlibre integration guidance are specified in [Server-Side Physical-Device Registry Architecture](device-registry-architecture.md). The architecture document does not change the wire ABI.
+Implementation architecture: the server-wide registry, object ownership boundaries, concrete provider operation groups, provider-result/error mapping, synchronous/asynchronous completion rules, provider/device/resource pinning, Screen attachments, callback generations, and Xlibre integration guidance are specified in [Server-Side Physical-Device Registry Architecture](device-registry-architecture.md). In particular, provider loss during logical-device creation is not a Device-Loss event for a nonexistent logical Device: it makes the Physical Device UNAVAILABLE and fails creation with DEVICE_UNAVAILABLE. Once a logical Device exists, only a positive loss result for that exact logical Device triggers its DEVICE_LOST state machine. The architecture document does not change the wire ABI.
 
 ### Backend providers and platform identity
 
