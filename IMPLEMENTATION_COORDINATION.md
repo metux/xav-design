@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`.
-- Exact-tip CI: [workflow 41840312155](https://github.com/metux/xav-design/actions/runs/41840312155) — SUCCESS.
+- Latest exact-tip CI-verified specification commit: `3172dd2ef7579f621f3f468a6ede2028ffdf312b`.
+- Exact-tip CI: [workflow 41840825348](https://github.com/metux/xav-design/actions/runs/41840825348) — SUCCESS.
 - Verified: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
-- This verified commit includes the exact logical-Device PresentationRoute binding, evidence-bearing physical-removal API, and classified registry result enum. Later provider-state-transition return-value and status-document refresh commits are not yet covered by this run.
+- This verified commit includes exact logical-Device PresentationRoute binding, source-authority-validated physical removal, generation-checked provider status transitions, classified registry results, and architecture vectors through 59. Later pointer-lifetime and status-document refresh commits are not yet covered by this run.
 
 ## Architecture contracts implementation must follow
 
