@@ -190,3 +190,6 @@ Provider availability notifications are now sequence-checked per context/binding
 
 
 All current asynchronous operation kinds require an exact logical-Device generation and a complete nonempty resource pin set. QueueSubmit pins its entire validated dependency graph; presentation pins the exact Swapchain and all backend-accessible route/image/synchronization objects. Vector 138 checks incomplete pin sets and atomic rejection.
+
+
+GPU_PROVIDER_FATAL and server-detected provider-contract violations quarantine the provider generation and prohibit normal finalization; DEVICE_LOST is logical-Device scoped; CANCELLED is only an accepted operation's terminal result. Vector 139 checks the distinctions.
