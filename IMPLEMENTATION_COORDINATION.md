@@ -960,3 +960,5 @@ The operation inventory is an internal semantic contract, not a stable C ABI. Th
 - The exact same XAverius Surface can be used with Devices from multiple providers, but each provider owns a separate VkSurface/WSI object tied to the Window/Screen generation. This follows the presentation chapter's cross-Device Surface semantics.
 - Latest architecture/API consistency commits: 8b8ae12 and 3d508e6.
 - GitHub status and workflow-run queries for the coordination commit returned empty lists. CI is unverified; no claim of passing tests is made.
+
+- Final consistency correction: provider STATUS examples no longer imply that provider waits own X11 timeout deadlines; WaitSemaphores/WaitForFence timeout arbitration remains server-owned. Commit: 2dca851.
