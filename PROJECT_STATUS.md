@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `ceac0d09dc7e9456e372ae52cea97d46007697fc`  
-**Status:** Normative v0.1 specification work is substantially complete; exact-tip static CI is green through `ceac0d09`. The multi-provider ownership refinement at `c88668e` is newer and its exact-tip CI is pending. Runtime implementation acceptance remains open.
+**Latest exact-tip CI-verified tip:** `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`  
+**Status:** Normative v0.1 specification work is substantially complete; exact-tip static CI is green through `72f3f17`. Provider registration/module-lease lifecycle refinements at `1029787` and `63c5339` are newer and pending exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41843634177](https://github.com/metux/xav-design/actions/runs/41843634177) — SUCCESS on `ceac0d09dc7e9456e372ae52cea97d46007697fc`.
-- All required workflow steps passed, including the wire-layout checks, Timeline regressions, Python suite, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
-- This verifies architecture vectors 76–78, the XLibre loader-source mapping, provider-wide `quiesce_provider` semantics, callback-return retirement, and the prohibition on raw Screen pointers in asynchronous callbacks. The newer multi-provider ownership/binding/module-lease refinement at `c88668e023ba31fa38293dba4aef5a827adedb64` adds vectors 79–88 and is pending exact-tip CI.
+- Exact-tip CI: [workflow 41844649170](https://github.com/metux/xav-design/actions/runs/41844649170) — SUCCESS on `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`.
+- Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
+- This includes vectors 76–78 and the multi-provider ownership refinement vectors 79–88 from `c88668e023ba31fa38293dba4aef5a827adedb64`, which also passed exact-tip workflow [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352). The newer explicit provider-registration, module-lease retain/release, finalization-order, and quiescence-result API refinement at `63c5339ca702a913f7da55747e877177782492a5` adds vectors 89–93 and is pending exact-tip CI.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -80,3 +80,8 @@ The Screen-close contract was tightened further: asynchronous callbacks cannot r
 The registry architecture now makes multiplicity explicit: one provider generation may bind many PhysicalDevices; one PhysicalDevice may have bindings from multiple providers; one module may own multiple independent provider generations and adapter roles. Each (provider generation, PhysicalDevice incarnation) has at most one executable binding. Discovery observations remain source-owned, and withdrawing one source cannot remove another source's evidence or binding. The v0.1 selected-provider rule remains unchanged: exactly one immutable snapshot, no capability union, and no transparent failover when the selected provider is removed or unavailable.
 
 Provider shutdown now has an explicit generation-scoped admission-close step, followed by exact binding/observation/ScreenAttachment withdrawal, accepted-operation drain, per-provider quiescence, and per-generation module-lease release. Quiescence of one provider does not authorize unloading a shared module while another provider or adapter role remains live. Architecture vectors 79–88 cover these cases. Spec commit `c88668e023ba31fa38293dba4aef5a827adedb64`; exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) is pending.
+
+
+## Provider registration and final module-lease release — 2026-11-04
+
+The provider API now separates registering a provider generation from registering its PhysicalDevice bindings. One descriptor/context/module lease is installed once per provider generation; additional bindings refer to that registered provider. The server assigns the non-reusable provider generation. Module leases are server-owned loader pins shared by all provider and adapter roles from the same loaded module. Quiescence and finalization are separate: provider-internal workers are stopped by `quiesce_provider`; PENDING/FAILURE retain the lease; SUCCESS does not release it until provider objects and references are gone. Finalization calls the last provider release while the module remains pinned, then drops the generation's lease reference exactly once. Architecture vectors 89–93 cover these transitions. Commits `1029787` and `63c5339`; exact-tip CI pending.
