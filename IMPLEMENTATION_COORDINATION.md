@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `b260b88fff58b1d6824f62b8d4af7761a94da033`.
-- Exact-tip CI: [workflow 41841990539](https://github.com/metux/xav-design/actions/runs/41841990539) — SUCCESS.
-- Verified by that run: the Xlibre/Xorg discovery and DDX integration contract, including registry/adapter role separation, startup barrier independence from Screen creation, hotplug reconciliation, and Screen/DDX teardown rules. The run is for `b260b88`; later architecture-vector commit `4eb0d35938def3f74de579a7bb2e7729a304325f` is pending its own exact-tip CI.
-- Earlier verified baseline `53883de2201029de82b63a03f6acc2ba77280e6a` passed 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and all 19 workflow steps. The new integration-contract CI also passed.
+- Latest exact-tip CI-verified specification commit: `4eb0d35938def3f74de579a7bb2e7729a304325f`.
+- Exact-tip CI: [workflow 41842074182](https://github.com/metux/xav-design/actions/runs/41842074182) — SUCCESS.
+- Verified: Xlibre/Xorg adapter-role and lifecycle contract plus architecture vectors 61–66. The run completed all 19 steps, including 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
+- Subsequent implementation-mapping documentation commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and XLibre-specific conformance vectors commit `a90544633e8a9c477ea380ecbac7ee24b27f2653` are newer; their exact-tip CI is pending.
 
 ## Architecture contracts implementation must follow
 
@@ -94,4 +94,9 @@ The status, freeze checklist, and open-issues summaries have also been refreshed
 
 ## Latest specification update — Xlibre/Xorg discovery integration — 2026-11-04
 
-`spec/device-registry-architecture.md` §2.4 now defines the Xlibre/Xorg adapter roles (platform discovery, DDX topology, Vulkan provider), the startup barrier and hotplug scan/event reconciliation, late-source behavior, DRM identity hand-off, Screen-generation teardown, and module/provider unload pinning. It deliberately specifies lifecycle semantics rather than version-specific Xserver hook names. Architecture vectors 61–66 cover barrier independence, discovery failure/late registration, unresolved DDX identity, and unload with outstanding callbacks. The integration-contract change `b260b88fff58b1d6824f62b8d4af7761a94da033` passed workflow 41841990539; vector-only follow-up `4eb0d35938def3f74de579a7bb2e7729a304325f` is pending exact-tip CI. Runtime Xlibre hook mapping remains an implementation acceptance task.
+`spec/device-registry-architecture.md` §2.4 now defines the Xlibre/Xorg adapter roles (platform discovery, DDX topology, Vulkan provider), the startup barrier and hotplug scan/event reconciliation, late-source behavior, DRM identity hand-off, Screen-generation teardown, and module/provider unload pinning. It deliberately specifies lifecycle semantics rather than version-specific Xserver hook names. Architecture vectors 61–66 cover barrier independence, discovery failure/late registration, unresolved DDX identity, and unload with outstanding callbacks; the combined contract and vectors passed exact-tip workflow 41842074182 at `4eb0d35938def3f74de579a7bb2e7729a304325f`. A subsequent non-normative source mapping to XLibre master commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00` is in `d070c735c3057940c00ac42c1dd0d443363e1fef`; vectors 67–69 in `a90544633e8a9c477ea380ecbac7ee24b27f2653` cover the card/render-node split, GPU-screen removal, and primary-device fallback. Both newer commits are pending exact-tip CI. Runtime Xlibre hook mapping remains an implementation acceptance task.
+
+
+## XLibre source mapping review — 2026-11-04
+
+The current X11Libre/xserver source was reviewed at `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. The practical mapping in `spec/device-registry-architecture.md` §8.1 records that `xf86BusProbe()` invokes `xf86platformProbe()` before extension setup; `config_udev_odev_probe()` enumerates DRM `card[0-9]*` and deduplicates by major/minor; GPU-screen add/remove is a separate DDX/Screen lifecycle; and `xf86platformPrimary()` may fall back to the first platform device. XAverius must not use those Xorg-specific conventions as canonical identity or default-device policy. The §8.1 mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` and conformance vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) are awaiting exact-tip CI.
