@@ -802,4 +802,12 @@ The implementation test suite SHOULD include at least:
 
 
 
+61. The platform hotplug subscription is active before initial enumeration; inject add/remove events during the scan and verify reconciliation produces exactly the current incarnation, with no lost event, duplicate publication, or stale removal.
+62. Delay Screen creation and RandR initialization after all configured discovery adapters complete: the startup barrier closes and the same initial PhysicalDevice inventory is published without waiting for a ScreenAttachment.
+63. Make one configured discovery adapter fail or report unavailable during startup: the barrier completes with that source unavailable, no candidate from it is falsely marked REMOVED, no incomplete snapshot is published, and unrelated fully discovered devices remain publishable.
+64. Register a discovery adapter after the startup barrier closes: it cannot reopen the barrier or reorder/mutate existing PhysicalDevices; a newly discovered candidate follows the independent per-device publication path.
+65. Have a DDX report a Screen mapping using only a Screen index, Entity index, private pointer, or unverified DRM pathname: the mapping remains unresolved and cannot create, merge, or attach a PhysicalDevice.
+66. Unload a DDX/provider module while an old Screen-generation callback or provider operation remains outstanding: new callbacks are stopped, old references remain pinned or quarantined, and neither module code nor callback userdata is released until exact-generation retirement proves quiescence.
+
+
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
