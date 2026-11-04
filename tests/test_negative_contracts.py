@@ -219,7 +219,7 @@ class NegativeContractRegressionTests(unittest.TestCase):
 
     def test_queue_present_precedence_and_atomicity_matrix_is_complete(self) -> None:
         required = (
-            "Device loss beats Surface loss and accepted-token reuse",
+            "Device loss beats Device Unavailable, which beats Surface loss and accepted-token reuse",
             "Surface loss and OUT_OF_DATE beat accepted-token reuse",
             "unsupported queue presentation capability is `BadMatch` before token reuse",
             "accepted-token reuse returns `BadValue` before image-state",
