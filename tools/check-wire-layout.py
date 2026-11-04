@@ -747,6 +747,35 @@ def check_other_numeric_registries(c: Check) -> None:
         and "MUST NOT reuse a Physical-Device XID" in devices,
         "Physical-Device identity: canonical server-wide deduplication, UUID limits, terminal removal, and stable XIDs must be explicit",
     )
+    provider_contracts = (
+        "A backend provider is one concrete driver/ICD/backend context",
+        "MUST attach it to the existing canonical identity",
+        "exactly one selected execution provider",
+        "MUST NOT combine properties or capabilities from different providers",
+        "MUST be deterministic for a given server configuration",
+        "fixed for the lifetime of that Physical-Device XID",
+        "MUST NOT be used as transparent failover in v0.1",
+        "cardN",
+        "renderD*",
+        "drmGetDevice2",
+        "complete PCI domain:bus:device.function",
+        "MUST NOT be used alone as the physical-device identity",
+        "new incarnation and MUST receive a new Physical-Device XID",
+        "MUST NOT resurrect a `REMOVED` tombstone",
+        "A Vulkan physical-device group or linked-adapter relationship is not itself a Physical-Device identity",
+        "v0.1 does not expose Vulkan physical-device groups",
+    )
+    for contract in provider_contracts:
+        c.require(contract in devices,
+                  f"Physical-Device provider/platform identity contract missing: {contract}")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "DRM primary node" in conformance
+        and "different capabilities or queue-family snapshots" in conformance
+        and "same BDF/sysfs path" in conformance
+        and "two Physical-Device records and two XIDs" in conformance,
+        "Physical-Device conformance must cover DRM aliases, provider snapshot selection, hotplug incarnation, and multi-GPU groups",
+    )
     c.require(
         "For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero" in devices
         and "`reply.length = 0`" in devices
