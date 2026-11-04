@@ -127,3 +127,7 @@ Repeated successful ObserveDevice replay now explicitly returns the same observa
 
 
 Fatal quarantine now explicitly prevents both quiesce_provider and release_provider from being called through normal TryQuiesce/Finalize paths; those APIs return QUARANTINED while preserving all references. Vector 142 added. Exact-tip CI pending.
+
+## Registry API lifetime audit follow-up — 2026-11-04
+
+The branch now includes `spec/registry-api-lifetime-addendum.md`, a normative supplement to device-registry architecture §7/§7.1. It closes the pointer-returning provider-context accessor ambiguity, nested operation-table storage lifetime, shared module-lease identity/reference semantics, terminal source/binding/Screen removal barriers, complete provider-quiescence preconditions, and call-scoped operation-token pointer confinement. New architecture vectors: 143–150. No wire ABI or opcode changes. Exact-tip CI for this documentation/API delta is required before marking it verified; runtime Xlibre/provider-loader acceptance remains separate.
