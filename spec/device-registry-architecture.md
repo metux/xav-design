@@ -606,10 +606,13 @@ typedef struct {
     uint64_t provider_generation;
     uint64_t operation_generation;
     uint64_t operation_token_id;
+    uint64_t provider_local_binding_id;
+    GpuPhysicalDevice *physical_device; /* retained canonical reference */
+    uint64_t physical_device_generation;
+    uint64_t logical_device_generation; /* zero for non-Device operations */
+    uint64_t resource_generation;       /* zero when no resource is targeted */
     GpuProviderResult result;
-    /* Required for PHYSICAL_DEVICE scope: exact canonical PhysicalDevice
-       reference and generation corresponding to result's binding identity.
-       Operation-specific immutable result payload follows. */
+    /* Operation-specific immutable result payload follows. */
 } GpuProviderCompletion;
 
 typedef void (*GpuProviderCompletionFn)(
@@ -753,8 +756,10 @@ GpuRegistryResult GpuRegistryObserveDevice(
     uint64_t source_generation, const GpuDeviceIdentity *identity,
     GpuPhysicalDevice **out_device, uint64_t *out_device_generation,
     uint64_t *out_observation_id);
-void GpuPhysicalDeviceRetain(GpuPhysicalDevice *device);
-void GpuPhysicalDeviceRelease(GpuPhysicalDevice *device);
+GpuRegistryResult GpuPhysicalDeviceRetain(
+    GpuPhysicalDevice *device, uint64_t device_generation);
+GpuRegistryResult GpuPhysicalDeviceRelease(
+    GpuPhysicalDevice *device, uint64_t device_generation);
 
 /* Provider execution binding is registered separately from observation.
    The provider-local handle remains private to this provider generation. */
@@ -843,8 +848,10 @@ GpuRegistryResult GpuRegistryAttachScreen(
 GpuRegistryResult GpuRegistryDetachScreen(
     GpuRegistry *registry, GpuScreenAttachment *attachment,
     uint64_t attachment_generation);
-void GpuScreenAttachmentRetain(GpuScreenAttachment *attachment);
-void GpuScreenAttachmentRelease(GpuScreenAttachment *attachment);
+GpuRegistryResult GpuScreenAttachmentRetain(
+    GpuScreenAttachment *attachment, uint64_t attachment_generation);
+GpuRegistryResult GpuScreenAttachmentRelease(
+    GpuScreenAttachment *attachment, uint64_t attachment_generation);
 
 /* Publication atomically inserts the server resource and returns its stable XID. */
 GpuRegistryResult XaPhysicalDevicePublish(
@@ -861,6 +868,8 @@ GpuRegistryResult GpuPhysicalDeviceAcquireExecutionProvider(
     GpuPhysicalDevice *device, uint64_t device_generation,
     GpuBackendProvider **out_provider, uint64_t *out_provider_generation);
 void GpuBackendProviderRetain(GpuBackendProvider *provider);
+GpuRegistryResult GpuBackendProviderRetain(
+    GpuBackendProvider *provider, uint64_t provider_generation);
 GpuRegistryResult GpuBackendProviderRelease(
     GpuBackendProvider *provider, uint64_t provider_generation);
 ```
@@ -875,7 +884,7 @@ The declarations above define ownership and failure semantics, not merely illust
 - `SUCCESS` means the state transition committed in the registry serialization domain; it does not mean asynchronous GPU work completed. `PENDING` means a valid request/observation was retained but its condition is unresolved. `AMBIGUOUS` means identity evidence was retained without canonical merge or publication. Other errors leave requested state unchanged, except non-reusable generation reservations and explicitly retained pending/ambiguous observations.
 - `INVALID_ARGUMENT` covers null required pointers, zero/invalid generations, malformed keys, unknown role bits, and inconsistent input/output combinations. `NOT_FOUND` means a well-formed object/key does not exist; `NOT_REGISTERED` means a required source/provider registration is absent; `ALREADY_EXISTS` means a conflicting live registration owns a unique key; `STALE_GENERATION` means only a different generation exists; `BUSY` means a live dependency prevents the requested transition; `SHUTTING_DOWN` means admission is closed; `UNSUPPORTED` means the requested role is not implemented; `OUT_OF_MEMORY` means allocation failed. Implementations MUST preserve these distinctions rather than silently ignore errors.
 - All mutations are linearized in the server serialization domain. Calls from other threads MUST NOT mutate registry state directly. A synchronous caller may wait for serialization only where that cannot deadlock; otherwise the API MUST use an explicitly asynchronous completion form and MUST NOT report `SUCCESS` before commit. No structural registry lock may be held while invoking provider code, Xorg hooks, loader operations, or completion callbacks.
-- Every object pointer returned by an API is a retained caller-owned reference unless explicitly documented otherwise. The caller MUST release it exactly once through its matching release function; registry-owned references are separate. Every delayed use MUST carry the associated generation. A pointer alone is never a stable identity. Release consumes only a reference acquired by the matching API; stale/double release MUST be diagnosed and MUST NOT decrement another generation's count.
+- Every object pointer returned by an API is a retained caller-owned reference unless explicitly documented otherwise. The caller MUST release it exactly once through its matching release function, passing the same generation returned with the reference; registry-owned references are separate. Retain/release functions validate that generation. Every delayed use MUST carry the associated generation. A pointer alone is never a stable identity. Stale/double release MUST be diagnosed and MUST NOT decrement another generation's count.
 - Input pointers and strings are borrowed only for the call unless explicitly transferred. Every retained key, identity field, role descriptor, and variable-length input MUST be copied or separately retained before return. Provider operation tables, callbacks, callback userdata, and provider context remain immutable and pinned until final provider release.
 - Mutations are atomic. Validation/allocation failure MUST roll back all partial entries, reference increments, module-lease retains, observations, bindings, XID/resource allocation, and callback registration. Only reserved non-reusable generations and explicitly retained `PENDING`/`AMBIGUOUS` observations survive a non-success return.
 - Repeated calls are idempotent only where specified. Same-generation/same-payload repetition MUST NOT duplicate objects or references; conflicting payload returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. A stale generation is never idempotent success for a replacement.
@@ -885,7 +894,7 @@ Specific operation contracts:
 
 - `GpuRegistryCreate` returns one owner reference or NULL plus a classified result; only one process-wide registry may be active.
 - Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. Unregister closes source admission and withdraws only its observations/adapter role after callbacks drain; it returns `PENDING` while callbacks remain. Source generations are never reused.
-- `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation and same semantic payload returns the same ID and one retained PhysicalDevice reference, not a duplicate observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation but return no device reference. Invalid source/generation creates no observation.
+- `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation and same semantic payload returns the same ID and one retained PhysicalDevice reference, not a duplicate observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
 - `RegisterProvider` returns one retained provider reference. It validates the descriptor and required operation-table entries, retains the module lease, then calls `retain_provider` outside the registry lock. Failure unwinds all prior retains and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
 - `RegisterProviderBinding` assigns and returns a fresh nonzero binding generation; callers cannot choose it. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. It retains provider and PhysicalDevice references exactly once. Duplicate same-payload registration returns `ALREADY_EXISTS` without extra references; conflicting identity returns `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`. No removal broadens to another source, binding, Screen, or incarnation.
@@ -897,7 +906,7 @@ Specific operation contracts:
 
 Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuProviderResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. For asynchronous functions, the token output is initialized invalid before work. `GPU_PROVIDER_SUCCESS` means accepted and fully registered with the completion path; non-success means no callback can later occur for that attempted token. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the provider generation. A provider MUST NOT invent/recycle IDs. Retirement succeeds only after backend access is impossible and all callback frames for that token have returned.
 
-The completion sink copies and validates each completion into server-owned storage and enqueues it; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation, binding, PhysicalDevice, logical-Device, and relevant resource generations. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
+The completion sink copies and validates each completion into server-owned storage and enqueues it; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation, token, provider-local binding, canonical PhysicalDevice reference/generation, logical-Device generation, and relevant resource generation. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
 
 The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid()` to DDX drivers. XID allocation and protocol resource publication belong exclusively to the XAverius/server resource layer. A provider registration may return an existing canonical record or create an unpublished candidate; it MUST NOT publish a duplicate identity.
 
