@@ -184,3 +184,6 @@ Section 7 now also specifies provider candidate-list ownership, provider-local b
 
 
 Completion records now carry both provider-local binding ID and registry binding generation; vector 132 checks stale binding rejection. Provider-device wrapper retain/release is explicitly distinct from native logical-device destruction, and typed operation tables must follow the common result/output/token contract.
+
+
+Provider availability notifications are now sequence-checked per context/binding scope and binding-scoped notifications include exact binding_generation. Discovery source events and removal evidence carry source_event_sequence. Effective availability composes independent context/binding/physical state; caller-provided removal authority is forbidden. Architecture vectors 133–137 cover these ordering rules. Exact-tip CI pending.
