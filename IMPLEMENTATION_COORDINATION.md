@@ -1113,3 +1113,8 @@ Corrected in commit `b3ac2f2b7eeb51d8d7a785225edbe3567774ed31`:
 - Removed the nonexistent provider-wait and provider-wait-deadline wording.
 
 The conformance vector already reflected the correct server-owned wait-cancellation model; no conformance change was needed. The previous latest CI job was reported green, but this correction is a new commit and therefore still requires exact-tip CI. No backend implementation was changed.
+
+
+### Host-wait/provider-unavailability boundary — 2026-11-04
+
+Commits `cf20155`, `55f5f88`, and `916c140` correct the final cross-file inconsistency: WaitSemaphores/WaitForFence are reply-pending server registrations, not provider operations, and have no provider tokens. Provider UNAVAILABLE alone does not terminalize these waits or produce DEVICE_UNAVAILABLE. They observe published server state and terminate through predicate, timeout, exact Device Loss, DestroyDevice, or disconnect. An underlying provider failure matters only through a synchronization-state transition actually published by that operation. Provider-token acceptance vectors now cover only WriteBuffer, ReadBuffer, and AcquireNextImage. No wire ABI changed; exact-tip CI is still required.
