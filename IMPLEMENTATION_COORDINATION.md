@@ -399,3 +399,21 @@ A concrete, ordered migration plan has been added at `implementation-notes/xserv
 The plan explicitly records the current blockers: callback/snapshot alias, missing native handle/context/typed operations/generations, Screen-scoped discovery, last-writer-wins duplicate registration, simplistic identity matching, list-based XID lookup, incomplete status semantics, and missing shutdown integration. It also defines acceptance gates and forbids adding a second provider/candidate inventory.
 
 **Write-access limitation:** an attempt to create `Xext/xaverius/MIGRATION.md` directly in `X11Libre/xserver:wip/xaverius` was rejected by GitHub with HTTP 403 (integration lacks write access to that repository). No Xserver source or branch was changed. The complete migration plan is therefore committed in the authoritative spec repository for the Xserver agents to apply. This is not a claim that the source migration itself has been implemented.
+
+
+## Active implementation assignment — Phase A DDX-wide discovery — 2026-11-04
+
+**Assigned to the Xserver implementation agents:** implement Phase A from `implementation-notes/xserver-wip-xaverius-migration.md` in `X11Libre/xserver:wip/xaverius`. The detailed task, source mapping, deliverables, and acceptance criteria are in that file; this entry is the coordination-board hand-off.
+
+Scope is intentionally limited to separating DDX-wide PhysicalDevice discovery/registration from ScreenInit:
+- remove PhysicalDevice enumeration/property/queue-family callbacks from `XaveriusDDXOps`;
+- add and invoke a DDX-owned registration path independent of `ScreenPtr`/Screen creation;
+- ensure devices without display connectors or Screens are not lost;
+- remove lazy discovery from client requests;
+- keep ScreenInit/ScreenFini and Screen close strictly Screen-local.
+
+Do not implement Phase B or later in this task, and do not introduce a Provider object, candidate list, provider ranking, per-Screen inventory, or first-Screen selection. The DDX must register every device it serves directly with the registry contract; coordinate the exact call signature with the direct-binding API rather than adding an intermediate abstraction.
+
+**Source-level caution:** modesetting `Probe()`, platform/PCI probe callbacks, `PreInit()`, and `ScreenInit()` have different roles. The agent must identify the earliest point where the exact DDX device handle/context is valid without making registration conditional on Screen allocation or connector presence. If no suitable generic Xserver hook exists, use a narrow DDX-owned server-wide hook and document its lifetime.
+
+**Required agent response:** commit SHA, changed files, concrete DDX registration call site, evidence that zero-Screen and multi-device discovery work, exact build/test commands and results, and remaining lifecycle assumptions. The spec-side task was committed as `dde5c8a39dec507d6cdbf00ba210168313774158`. Re-audit the implementation against the Phase A acceptance list before assigning Phase B.
