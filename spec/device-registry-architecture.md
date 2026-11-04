@@ -230,11 +230,6 @@ typedef struct {
        virtual-instance discriminator, and incarnation evidence. */
 } GpuDeviceIdentity;
 
-typedef struct {
-    /* Provider type/configuration identity, opaque context, ops,
-       provider-local device handle, and lifetime hooks. */
-} GpuProviderDescriptor;
-
 /* Classified provider result. Native VkResult may be retained for diagnostics. */
 typedef enum {
     GPU_PROVIDER_SUCCESS,
@@ -322,6 +317,17 @@ typedef struct GpuProviderOps {
     void (*release_device)(GpuProviderDevice *);
     GpuProviderResult (*retire_operation)(GpuProviderOperationToken *);
 } GpuProviderOps;
+
+typedef struct {
+    /* Stable provider identity/configuration, opaque provider context,
+       provider-local physical-device handle, and operation table. */
+    const char *canonical_provider_key;
+    void *provider_context;
+    const GpuProviderOps *ops;
+    GpuProviderCompletionFn completion_sink;
+    void *completion_userdata;
+    uint64_t provider_generation;
+} GpuProviderDescriptor;
 
 /* Server startup/shutdown; one registry per X server process. */
 GpuRegistry *GpuRegistryCreate(void);
