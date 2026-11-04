@@ -738,6 +738,16 @@ def check_other_numeric_registries(c: Check) -> None:
         "physical-device property registry must contain exactly six v0.1 properties",
     )
     c.require(
+        "one server-wide registry shared by all X11 Screens" in devices
+        and "same canonical identity and XID" in devices
+        and "`deviceUUID` is the preferred Vulkan cross-instance correlation value" in devices
+        and "`driverUUID`" in devices and "`pipelineCacheUUID`" in devices
+        and "`REMOVED` is terminal" in devices
+        and "MUST retain its Physical-Device object as a tombstone until server shutdown" in devices
+        and "MUST NOT reuse a Physical-Device XID" in devices,
+        "Physical-Device identity: canonical server-wide deduplication, UUID limits, terminal removal, and stable XIDs must be explicit",
+    )
+    c.require(
         "For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero" in devices
         and "`reply.length = 0`" in devices
         and "Reserved; MUST be zero" in devices,
