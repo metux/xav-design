@@ -818,3 +818,17 @@ The Vulkan UUID guidance was checked against the current Vulkan specification: d
 
 
 Follow-up to the identity audit: the `deviceStatus` conformance cases were placed in the baseline device-discovery section (not presentation-profile-only), because status and canonical identity exist independently of presentation support. The top-level property conformance summary now names all six registered properties. `tools/check-wire-layout.py` was updated from five to six property rows and now guards the canonical registry, UUID limitations, tombstone lifecycle, and XID non-reuse requirements. `CreateDefaultDevice` is explicitly restricted to AVAILABLE devices; the conformance matrix checks the no-AVAILABLE-device outcome. The old Phase 1 notes above remain historical records of the then-five-property registry and are not current requirements.
+
+
+## Physical-Device registry and provider architecture — 2026-11-04
+
+The Physical-Device identity audit now separates canonical hardware identity from backend providers and Screen attachments.
+
+- The server MUST maintain one registry shared by all Screens and discovery paths. A DDX/driver/ICD registers a discovery/provider observation; it does not allocate a Physical-Device XID or create a Screen-local Physical Device.
+- One published Physical Device uses one selected execution provider and one coherent metadata/capability snapshot. Provider selection is deterministic and fixed for that Physical-Device XID. v0.1 does not permit transparent failover to a different ICD/provider because queue families, limits, features, and object compatibility may differ.
+- Linux identity guidance: resolve DRM primary/render nodes to the same DRM device; prefer canonical sysfs identity plus complete PCI BDF (or bus-specific identity), using libdrm device comparison where available. Do not key by `/dev/dri/cardN`, `renderD*`, minor number, `dev_t`, Screen index, or Vulkan handle.
+- A provider becoming unavailable is not proof of hardware removal: mark the Physical Device `UNAVAILABLE`. A confirmed hardware remove is terminal `REMOVED`; re-add at the same BDF/path is a new incarnation and receives a new XID.
+- Vulkan physical-device groups are not v0.1 Physical Devices. Each member remains a separate identity; v0.1 creates a logical Device from exactly one member.
+- Implementation architecture recommendation: keep the registry independent of `ScreenRec`; provide a narrow server-owned registration API with opaque provider handles and immutable identity evidence. DDX drivers report observations and lifecycle changes; the registry performs deduplication and status serialization; XAverius owns protocol XID publication and query handling. Provider callbacks should be marshalled to the server's serialized event/request context, and provider/module references must outlive all dependent Vulkan objects and callbacks.
+
+No backend implementation work is part of this specification change. The conformance vectors and static checker now require the provider, Linux hotplug, and group distinctions. Runtime behavior still requires implementation testing.
