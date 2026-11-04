@@ -35,6 +35,17 @@ XAverius errors use the standard 32-byte X11 error packet and add no XAverius-sp
 | Invalid dependency prevents acceptance | `DEPENDENCY_FAILED` |
 | Unexpected server error | `INTERNAL_SERVER_ERROR` |
 
+## Backend-provider error classification
+
+Backend providers return internal classified results; they do not return X11 errors and MUST NOT perform protocol validation. The provider-result classes and their v0.1 mapping are defined by [Server-Side Physical-Device Registry Architecture](device-registry-architecture.md). The mapping is subordinate to request-specific rules in this chapter and in each request chapter.
+
+In particular:
+
+- A provider/PhysicalDevice becoming temporarily unavailable maps to `DEVICE_UNAVAILABLE` for a request creating a new logical Device. It does not by itself transition an already-created logical Device to DEVICE_LOST.
+- A positive backend loss result for an existing logical Device maps to `DEVICE_LOST` where the request contract reports a synchronous X11 error. Accepted asynchronous work uses its specified terminal status/event instead of a delayed X11 error.
+- Provider-reported host/device allocation failure maps to `ALLOCATION_FAILED` for synchronous creation/allocation operations that expose that error. Transfer and accepted execution failures use `TRANSFER_FAILED` and the request-specific asynchronous terminal path respectively.
+- A provider reporting an operation as unsupported after the corresponding capability was published is a provider contract violation and maps to `INTERNAL_SERVER_ERROR`; it MUST NOT be misreported as client `BadMatch` or used to mutate the published capability snapshot.
+
 ## Normative XID Error Rule
 
 The following baseline mapping applies to all XAverius requests unless a request defines an explicitly narrower rule:
