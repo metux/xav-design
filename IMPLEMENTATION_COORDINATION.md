@@ -1118,3 +1118,8 @@ The conformance vector already reflected the correct server-owned wait-cancellat
 ### Host-wait/provider-unavailability boundary — 2026-11-04
 
 Commits `cf20155`, `55f5f88`, and `916c140` correct the final cross-file inconsistency: WaitSemaphores/WaitForFence are reply-pending server registrations, not provider operations, and have no provider tokens. Provider UNAVAILABLE alone does not terminalize these waits or produce DEVICE_UNAVAILABLE. They observe published server state and terminate through predicate, timeout, exact Device Loss, DestroyDevice, or disconnect. An underlying provider failure matters only through a synchronization-state transition actually published by that operation. Provider-token acceptance vectors now cover only WriteBuffer, ReadBuffer, and AcquireNextImage. No wire ABI changed; exact-tip CI is still required.
+
+
+### Host-wait ownership checker coverage — 2026-11-04
+
+Commit `9e140a7` extends `tools/check-wire-layout.py` with explicit cross-document assertions that (1) WaitSemaphores/WaitForFence remain server-owned and token-free, (2) provider UNAVAILABLE alone does not terminalize them, and (3) provider-token acceptance vectors exclude them. This makes the ownership correction fail the static consistency check if stale wording is reintroduced. The checker has not been executed locally; rely on exact-tip CI for execution evidence.
