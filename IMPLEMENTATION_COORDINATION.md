@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip verified specification commit: `55c80160c72e64149164713ec4cd888991c4db21`.
-- Exact-tip CI: [workflow 41839114101](https://github.com/metux/xav-design/actions/runs/41839114101) — SUCCESS.
-- Verified: 4,962 wire-layout checks, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
-- The PresentationRoute result/lifetime audit and conformance additions are included in this verified commit. The subsequent exact-logical-Device route-binding correction is a new change and requires its own exact-tip CI run.
+- Latest exact-tip CI-verified specification commit: `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`.
+- Exact-tip CI: [workflow 41840312155](https://github.com/metux/xav-design/actions/runs/41840312155) — SUCCESS.
+- Verified: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
+- This verified commit includes the exact logical-Device PresentationRoute binding, evidence-bearing physical-removal API, and classified registry result enum. Later provider-state-transition return-value and status-document refresh commits are not yet covered by this run.
 
 ## Architecture contracts implementation must follow
 
@@ -82,3 +82,10 @@ The seven presentation requests were audited against provider-result classificat
 ## Latest specification update — exact logical-Device PresentationRoute binding — 2026-11-04
 
 The provider API sketch now creates a PresentationRoute from the exact provider logical-Device handle plus the provider-scoped Surface, rather than from a PhysicalDevice handle. This matches the normative route scope (logical-Device generation + Surface/Window/Screen generation) and prevents two logical Devices on the same PhysicalDevice from accidentally sharing route lifetime. Architecture vector 57 covers independent route and Swapchain teardown. The removal API now also requires provenance-bearing authoritative evidence for the exact current PhysicalDevice incarnation and returns a classified registry result; vector 58 covers stale or insufficient removal evidence. Spec commits: `084de5c0ccb9f7931c44b2b21fcaba9cb19b94b1`, `d44efd16010b94177199a1b97a9855f64555fbe6`, and `ad6d993cd9fd00eedb68bf42e23f7dd7236d8361`. The registry API result enum now distinguishes success, pending, ambiguity, stale generations, invalid evidence, identity conflicts, allocation failure, and internal failure. Exact-tip CI pending.
+
+
+## Latest specification update — generation-checked registry mutations — 2026-11-04
+
+The provider availability/recovery API now returns `GpuRegistryResult` for context-wide and device-scoped transitions. Stale provider/device generations, unknown providers, and absent selected bindings are observable rejections and MUST leave state unchanged; valid transitions return `GPU_REGISTRY_SUCCESS` and affect only the exact selected scope. `GpuDeviceRemovalEvidence.source_key` is explicitly borrowed for the call only and resolved before return. Architecture vector 59 covers stale/unknown mutation attempts. Change commit: `bbda0c5036306b0497cda41b825a074b6608460f`; exact-tip CI pending.
+
+The status, freeze checklist, and open-issues summaries have also been refreshed to identify exact-tip workflow 41840312155 as the latest verified baseline and to distinguish subsequent unverified documentation/API deltas.
