@@ -1185,3 +1185,100 @@ Current test-fix tip: `b2435f42e9710a0904538d75404679abc600e939`. Exact-tip work
 ### Exact-tip CI result — 2026-11-04
 
 The corrected status/property regression suite is now green. Workflow [41828185963](https://github.com/metux/xav-design/actions/runs/41828185963) completed SUCCESS on exact commit `792174e717a88bdd394c2311ebb17d1668ceb392`. All required steps passed: shell/backend/handler checks, Python syntax, shared protocol-header compile, XCB client prototype build, request/reply/XGE wire validation, Timeline semaphore regressions, complete Python suite (**693 tests, OK**), and required-check presence audit. This run validates the exact test-fix commit; any subsequent change to this branch requires its own exact-tip CI confirmation.
+
+
+### Phase A implementation commit audit — Xserver `4cd8fc3` — 2026-11-04
+
+Audited `X11Libre/xserver:wip/xaverius` commit
+`4cd8fc319b9873911e3f68279918d519e26d3d0c` (parent
+`89df8ba0bc41dbb4b291b2242b9945661bb47fad`). **Disposition:
+NOT ACCEPTED; Phase A remains ACTIVE.** The commit is a useful indication
+that an agent started the migration, but it does not meet the Phase A task
+and must not be used as the implementation baseline without correction.
+
+Concrete findings:
+
+1. **Wrong lifecycle call site.** The only modesetting registration call is
+   in `hw/xfree86/drivers/video/modesetting/driver.c:PreInit()`, passing
+   `ScrnInfoPtr`-owned state after opening `ms->fd`. This is per-ScrnInfo,
+   not DDX-wide. It cannot enumerate DDX-served devices that have no
+   configured/probed ScrnInfo. It also runs after `xf86BusConfig()` and
+   after Screen configuration has begun. No `DriverRec` callback or
+   equivalent core-to-DDX entry at the beginning of `xf86BusConfig()` was
+   added. This directly violates Phase A §§2.1 and 3 and the updated
+   lifecycle task.
+2. **Incomplete/fabricated registration descriptor.**
+   `XaveriusRegisterDeviceDirect(identity, caps)` accepts only identity
+   metadata and a `XaveriusProviderCapabilities` snapshot. It accepts no
+   exact native PhysicalDevice handle, per-device/shared retained context,
+   immutable typed operation vectors, ModuleRole generation/reference, or
+   binding generation. The modesetting caller initializes an otherwise-zero
+   snapshot, hardcodes the name to `"modesetting"`, sets only PCI IDs when
+   the entity is PCI, and leaves queue/memory/features/API data empty. It
+   therefore publishes placeholder metadata, not a validated executable
+   binding or complete snapshot.
+3. **Identity is not canonical or safe.** The registry comparator checks
+   only PCI domain/bus/device/function and an optional UUID. The modesetting
+   caller leaves the PCI tuple zero for non-PCI devices and supplies no
+   authoritative sysfs/DRM identity or UUID. Consequently unrelated
+   platform devices with zero tuples can collapse into one entry. DRM fd,
+   node type and minor fields are not identity evidence in the comparator;
+   primary/render equivalence and device incarnation are not handled.
+4. **No publication/XID contract.** `XaveriusRegisterDeviceDirect()`
+   appends a record with `xid = 0` and `generation = 0`, marks it
+   AVAILABLE unconditionally, and does not create a server-owned DIX
+   PhysicalDevice resource. Enumeration would therefore return a zero XID.
+   The registry has no locking/serialized transaction, no per-candidate
+   publication validation, and no startup barrier. Duplicate identity simply
+   returns success without validating that the repeated claim is the same
+   binding generation or compatible exact backend.
+5. **Request serialization remains incompatible with current normative
+   device requests.** The new Enumerate handler emits an `nDevices` count
+   and filters to AVAILABLE, while current `spec/devices.md` requires
+   variable `PHYSICALDEVICEINFO` records with no separate count and
+   includes retained UNAVAILABLE/REMOVED identities. Property handling
+   uses a numeric `property_id` and filters unavailable entries rather than
+   the current Atom/snapshot semantics. These changes exceed the Phase A
+   request-purity scope and must not replace normative wire behavior.
+6. **No startup event reconciliation.** No code was added to drain/reconcile
+   events queued between early `udev_monitor_enable_receiving()` and the
+   later `SetNotifyFd()` installation in `InitInput()`. No generation-
+   ordered initial platform observation or A9 barrier exists.
+7. **Phase scope and diff discipline violated.** The commit changes 20 files,
+   adding/replacing large amounts of request handling unrelated to Phase A:
+   `dispatch_memory.c` (+485 lines), `xaverius_sync.c` (+340),
+   `xaverius.h` (+329), `xaverius_cmd.c` (+132), and other request/proto
+   rewrites. These are Phase B-or-later work and broad refactoring, explicitly
+   outside the assigned scope. No A1–A9 test harness or structured report
+   was added to the coordination board.
+8. **CI failed.** Xserver workflow
+   [41907723311](https://github.com/X11Libre/xserver/actions/runs/41907723311)
+   failed. Ubuntu build job `126846749199` stops compiling
+   `xaverius_device.c` because `ProcXAveriusGetPhysicalDeviceProperty`
+   and `ProcXAveriusGetPhysicalDeviceQueueFamilyProperties` are redundantly
+   declared in `xaverius_device.h` and `xaverius.h` under `-Werror`.
+   The SDK image job `126847001542` also fails at link time with undefined
+   references to `XaveriusExtensionInit` and `noXaveriusExtension`.
+   The overall run conclusion is FAILURE; no successful build evidence exists.
+
+Required corrective action for the next implementation commit:
+
+- Do not extend this commit with more unrelated request implementations.
+  Keep the next diff strictly Phase A and preserve existing names, layout,
+  formatting and coding style. Revert or isolate the Phase B+ request/proto
+  churn from the Phase A submission.
+- Replace the `PreInit()` registration with the DDX-wide callback seam
+  required by the active task: once per DDX/module generation at the
+  beginning of `xf86BusConfig()`, before Screen probes, using DDX-owned
+  context independent of `ScrnInfoPtr`/Screen.
+- Until the complete-binding registry API exists, do not publish a device
+  from identity+snapshot alone. Report the exact missing descriptor/API and
+  keep the candidate unpublished. Do not invent native handles, capabilities,
+  UUIDs, XIDs, generations or AVAILABLE state.
+- Implement or report the precise missing early udev snapshot/event-drain
+  adapter and generation-ordered A9 startup reconciliation. Do not treat
+  later `InitInput()` dispatch as satisfying the barrier.
+- Add the fake DDX harness and report A1–A9 individually with exact commands
+  and exit statuses. Fix the build/link failures and rerun the exact target
+  branch workflow before requesting review.
+
