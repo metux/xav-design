@@ -122,3 +122,6 @@ Runtime acceptance must verify state-checked Retain admission and the exact idem
 
 
 Runtime acceptance should verify repeated successful ObserveDevice replay increments only the caller-owned PhysicalDevice reference count and does not duplicate source observation state. Vector 141 added.
+
+
+Runtime acceptance must verify fatal quarantine blocks subsequent provider quiesce/final release hooks and preserves all module/context/object references. Vector 142 added.
