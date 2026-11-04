@@ -216,6 +216,9 @@ If one DDX module implements both the topology adapter and provider, it MUST sti
 
 At XLibre source commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`, `xf86platformRemoveDevice()` calls `dixScreenRaiseClose()`, then `RemoveGPUScreen()`, then `xf86DeleteScreen()`. `xf86DeleteScreen()` calls the DDX `FreeScreen()` hook before `UnloadModule(pScrn->module)` and decrementing `pScrn->drv->refCount`. This sequence is the Screen/DDX cleanup boundary; XAverius MUST complete ScreenAttachment detachment before Screen-private release, but provider/module quiescence is governed by the independent lease protocol above. Implementations MUST NOT assume that the Xorg module reference held by a particular `ScrnInfo` is sufficient for provider callbacks that outlive that Screen.
 
+
+The loader implementation reinforces this separation. In the same source revision, `DuplicateModule()` copies the module handle into a per-`ScrnInfo` descriptor and marks that descriptor as duplicated; `UnloadModule()` skips `LoaderUnload()` for such duplicates. The original module descriptor eventually reaches `LoaderUnload()`, which calls `dlclose()`. The `DriverPtr.refCount` is a count of Xorg Screen/driver use, not a count of provider operations or callbacks. Therefore neither a duplicated `ModuleDesc` nor a positive/zero driver Screen reference count is a provider-lifetime pin. A DDX that exports provider callbacks MUST use a distinct loader/module pin whose acquisition and final release are tied to the provider reference/quiescence contract. The pin MUST remain effective even after the last `ScrnInfo` and GPU Screen have been deleted.
+
 #### Xlibre-specific conformance requirements
 
 An Xlibre/Xorg integration MUST demonstrate at least the following:
@@ -875,6 +878,10 @@ The implementation test suite SHOULD include at least:
 73. Begin provider-wide quiescence while callbacks, worker tasks, and operation tokens are outstanding. PENDING MUST retain the module/context and reject new operations; SUCCESS is permitted only after all callbacks/workers are unreachable and all operation tokens are retired. Inject an unquiesceable worker and verify quarantine rather than module unload.
 74. Unload a DDX module that implements topology and provider roles while a second Screen still uses the same PhysicalDevice through a different DDX. Verify that topology-role withdrawal detaches only the unloading DDX's ScreenAttachments, while the shared PhysicalDevice and separately owned provider remain available.
 75. Use a provider callback bridge that enters DDX code and then queues a server-owned completion. Verify that both provider and DDX module leases remain held until the bridge returns; retirement of the backend token alone cannot release the DDX module while bridge callback code is still executing.
+
+
+76. Duplicate a DDX `ModuleDesc` for a GPU Screen, then remove that Screen and drop its `DriverPtr.refCount` while a provider token remains live. Verify that the provider's independent loader/module pin prevents `dlclose()` and keeps operation/callback code executable until exact provider quiescence.
+77. Delete the final Xorg Screen using a DDX that also implements a provider. Verify that Xorg's normal driver/module cleanup cannot unload the provider while a PhysicalDevice, logical Device, accepted operation, callback, or deferred backend destroy still retains the provider generation; after successful provider-wide quiescence and final release, the loader pin is dropped exactly once.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
