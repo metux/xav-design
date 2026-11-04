@@ -3745,6 +3745,12 @@ def check_provider_host_wait_ownership(c: Check) -> None:
         and "WaitSemaphores and WaitForFence remain reply-pending but are server-owned registrations with no provider token" in conformance,
         "Provider-token acceptance inventory must exclude server-owned WaitSemaphores/WaitForFence",
     )
+    c.require(
+        "exactly one terminal outcome notification to the server" in architecture
+        and "does not by itself prove backend quiescence" in architecture
+        and "Terminal provider failure without quiescence vector" in conformance,
+        "Provider terminal outcome callbacks must remain distinct from backend quiescence and retirement",
+    )
 
 
 def check_read_buffer_ordering_and_lifecycle(c: Check) -> None:
