@@ -96,6 +96,7 @@ xav_client_status xav_enumerate_physical_devices(xav_connection *,
                                                   xav_physical_device **, size_t *,
                                                   xcb_generic_error_t **);
 void xav_free_physical_devices(xav_physical_device *, size_t);
+/* Requires successful XGE 1.0 negotiation; returns checked X11 errors. */
 xav_client_status xav_connection_select_events(
     xav_connection *, xav_event_scope, uint32_t device_xid,
     uint32_t queue_family_index, uint32_t queue_index, uint32_t event_mask,

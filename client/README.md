@@ -36,7 +36,7 @@ XCB's in-memory GE event representation includes an extra full_sequence CARD32 a
 
 ## Next slices
 
-- Complete bootstrap: XGE event dispatcher, Atom interning, device-property and queue-family/memory queries.
+- Complete bootstrap: Atom interning, device-property and queue-family/memory queries.
 - Device/resource wrappers, XID allocation, Buffer/Memory requests and checked variable-size encoders.
 - Shader uploads, command recording, submission and asynchronous error correlation.
 - Semaphore/fence APIs and event-driven completion.
