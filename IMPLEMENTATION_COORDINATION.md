@@ -47,11 +47,11 @@ The task requires:
 
 ## Current implementation review
 
-- Last inspected Xserver tip: `89df8ba0bc41dbb4b291b2242b9945661bb47fad`.
-- `89df8ba` only removes a redundant include-wrapper header; it does not implement Phase A.
-- At that tip, `XaveriusDDXOps` still contains the three device callbacks; no DDX-wide registration caller exists; modesetting has no XAverius registration call; `XaveriusRegisterDevice(identity, callbacks)` still overwrites callbacks for duplicate identity.
-- Phase A audit: NOT ACCEPTED. Detailed source findings and the acceptance matrix are in the history archive; the active acceptance criteria are in the dedicated task file.
-- No agent response with a new implementation SHA, registration call site, tests or build evidence has yet been accepted.
+- Latest inspected Xserver tip: `4cd8fc319b9873911e3f68279918d519e26d3d0c` (parent `89df8ba0bc41dbb4b291b2242b9945661bb47fad`).
+- **Phase A audit: NOT ACCEPTED.** The commit removes the three device callbacks from `XaveriusDDXOps` and adds a process-wide list, but registers from modesetting `PreInit()` (per-`ScrnInfoPtr`), not from a DDX-wide callback before Screen probes. Its `XaveriusRegisterDeviceDirect(identity, caps)` accepts only metadata: no exact native handle, retained context, typed ops, ModuleRole/binding generation or complete snapshot validation. The caller publishes mostly zero/hardcoded metadata; the registry assigns neither a PhysicalDevice XID nor a DIX resource and marks entries AVAILABLE unconditionally. The PCI-only identity comparison collapses non-PCI devices with zero BDF fields. No early udev event reconciliation or A1–A9 harness was added.
+- The commit also adds/reworks roughly 1,500+ lines of Phase B+ request/protocol code across 20 files, contrary to the Phase A-only and minimal-diff requirements. No structured agent report was appended.
+- Xserver CI [41907723311](https://github.com/X11Libre/xserver/actions/runs/41907723311) **FAILED**: Ubuntu build has redundant declaration errors in `xaverius_device.c`; SDK image link fails on undefined `XaveriusExtensionInit` and `noXaveriusExtension`. Exact findings and corrective instructions are in [the audit history](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md#phase-a-implementation-commit-audit--xserver-4cd8fc3--2026-11-04).
+- The new commit is not an accepted Phase A implementation. Keep the gate closed; require a narrowly scoped correction, the DDX-wide `xf86BusConfig()` seam, complete-binding contract, early event reconciliation, A1–A9 evidence and a successful exact-tip build before review.
 
 ## Other open implementation evidence requests
 
