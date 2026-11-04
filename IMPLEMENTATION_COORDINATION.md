@@ -1095,3 +1095,21 @@ A further line-by-line sweep removed stale presentation/conformance wording that
 - Commits: c293c65, fdb8bb8, 88fa798.
 
 Final verification remains pending: GitHub status/workflow queries returned empty lists, and no local checker/test suite was executed. Runtime backend/WSI behavior, especially safe late-acquire retirement and provider quiescence, remains untested.
+
+
+
+### Provider host-wait cancellation wording correction — 2026-11-04
+
+The final provider-operation audit found stale normative wording in `spec/device-registry-architecture.md` that survived the earlier synchronization ownership correction:
+
+- Section 4.5 still named `cancel_host_wait` as a provider operation, despite the authoritative ownership map assigning WaitSemaphores/WaitForFence registrations, cancellation, deadlines, and first-terminal arbitration entirely to the server.
+- The generic provider-token paragraph could be read as requiring provider tokens for server-owned wait registrations.
+- The acquire paragraph referred to a “provider wait/acquire” and to provider-owned wait deadlines, although no provider wait operation exists.
+
+Corrected in commit `b3ac2f2b7eeb51d8d7a785225edbe3567774ed31`:
+- Provider tokens/completion callbacks now explicitly apply only to provider-backed deferred operations.
+- WaitSemaphores/WaitForFence registration cancellation is explicitly server-side and does not cancel or retire the underlying QueueSubmit/host SignalSemaphore operation.
+- `cancel_acquire` remains the provider cancellation operation; cancellation is not quiescence and late acquired images still require safe release or quarantine.
+- Removed the nonexistent provider-wait and provider-wait-deadline wording.
+
+The conformance vector already reflected the correct server-owned wait-cancellation model; no conformance change was needed. The previous latest CI job was reported green, but this correction is a new commit and therefore still requires exact-tip CI. No backend implementation was changed.
