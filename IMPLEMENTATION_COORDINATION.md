@@ -729,3 +729,17 @@ The public C wire declarations have been consolidated into the single header `pr
 A full comparison against the current normative chapters and registries found no differing request/reply/event field offsets, fixed prefixes, wire sizes, or assigned numeric values. The header now statically verifies the IEEE-754 binary32 assumptions for `FLOAT32`, every fixed request size, every variable request prefix, key nested/reply payload offsets, all fixed reply sizes, and all nine XGE event sizes. The unchecked `XAV_PAD4` arithmetic macro was removed so callers must apply the specification's checked-size arithmetic rather than risk overflow.
 
 The normative source remains `spec/` and `registries/`; this header is only their C projection. Exact-tip CI for the latest header commit is running; do not treat the prior successful header compile as verification of the later padding-helper removal. Runtime X11/XGE and Vulkan interoperability remain implementation acceptance work.
+
+
+## Client-side prototype — 2026-11-04
+
+The client prototype is being placed under `client/` on the authoritative specification branch, as requested. The intended layering is a small XCB-based protocol runtime (public XCB APIs only), with a Vulkan ICD kept as a later consumer rather than mixed into the transport.
+
+Initial checked-in scaffolding:
+- `client/include/xaverius_client.h`: public opaque-connection and Physical-Device enumeration API.
+- `client/src/internal.h`: internal connection and wire-decoding interfaces.
+- `client/README.md`: architecture, ownership, build and staged implementation plan.
+
+Transport rule: XCB's extension descriptor minor opcode is zero, leaving the X11 `data` byte zero; XAverius subopcode is encoded as the first body byte at absolute offset 4. All reply fields and variable record lengths are decoded using the connection byte order and checked before exposure.
+
+The initial source/build-file additions were blocked by the repository-write safety check during this turn. Therefore this is currently scaffolding, **not yet a buildable or tested prototype**. Do not treat Phase 1 as implemented until the transport, QueryVersion and EnumeratePhysicalDevices source files are present and compiled against the shared protocol header.
