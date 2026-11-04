@@ -962,3 +962,44 @@ The operation inventory is an internal semantic contract, not a stable C ABI. Th
 - GitHub status and workflow-run queries for the coordination commit returned empty lists. CI is unverified; no claim of passing tests is made.
 
 - Final consistency correction: provider STATUS examples no longer imply that provider waits own X11 timeout deadlines; WaitSemaphores/WaitForFence timeout arbitration remains server-owned. Commit: 2dca851.
+
+
+## Provider contract audit follow-up — 2026-11-04
+
+A complete cross-check against request subopcodes 0–47 and the authoritative chapters for devices, memory/buffers, shaders/pipelines, command recording, queue submission, synchronization, events, and presentation found and corrected several interface-level ambiguities. No request opcode or wire layout changed.
+
+### Corrections
+
+- Backend destroy operations now return classified provider results. Their failures cannot undo public XID invalidation or create delayed protocol errors; the affected backend objects/provider context remain quarantined until safe retirement.
+- The completion sink is now an explicit field of GpuProviderDescriptor. Completion records carry non-reusable provider/operation/token generations; the server-side token record retains the complete Device/resource-generation set. Completion payloads must be copied by the enqueue-only sink before the callback returns.
+- Provider-operation token acceptance is explicitly distinguished from XAverius protocol acceptance. QueueSubmit is protocol-accepted after its void request is accepted; QueuePresent is protocol-accepted after its SUCCESS reply. WriteBuffer, ReadBuffer, WaitSemaphores, WaitForFence, and AcquireNextImage remain reply-pending and retain their request-specific final reply/status/error channel despite internal provider-token acceptance. This resolves the generic delayed-X11-error wording against the request-specific contracts.
+- query_surface_support now receives the provider's physical-device handle and queue-family index, matching the Vulkan physical-device surface-support query model; it does not incorrectly attempt to query support through a logical VkDevice.
+- Host-wait and acquire cancellation are explicit provider operations. Cancellation is not quiescence and cannot release references by itself. A late successful acquire after the server timeout must be safely returned to the swapchain or quarantined; a provider unable to guarantee this cannot advertise presentation support.
+- Provider token retirement itself returns a classified result; failed retirement preserves/quarantines the token and provider context.
+
+### Conformance additions
+
+spec/conformance.md now includes provider-injection integration vectors for:
+- CreateDevice loss/allocation failure and atomic non-publication;
+- provider unavailable versus exact logical-Device loss and recovery;
+- published capability returning UNSUPPORTED;
+- QueueSubmit/QueuePresent protocol acceptance versus reply-pending provider operations;
+- duplicate/late callbacks, destroy failures, wait cancellation, and late image acquisition after timeout.
+
+### Commits
+
+- cfb5d46 — provider callback, destroy, and acquire-cancellation contract.
+- 6fb40fe — provider-result and callback-lifetime conformance vectors.
+- 30a215d — pointer-safe completion identity.
+- d125c6f — provider-token versus protocol-acceptance semantics.
+- e98b69f — central error-chapter acceptance clarification.
+- 384c66e — conformance vectors aligned with protocol acceptance.
+- 901c63b — generation-safe completion token and classified retirement.
+- 28d85c8 — typed completion sink in provider descriptor.
+
+### Remaining review points
+
+- Re-run the entire provider-operation inventory against the final request registry after these corrections, including SelectEvents and generic DestroyResource ownership boundaries.
+- Review the provider result taxonomy against every request-specific error/status mapping; especially ensure provider STATUS is never used to override server-owned timeout decisions.
+- Run the repository wire checker, wire vectors, Python suite, and exact-tip CI. The documentation changes above have not yet been verified by CI.
+- Runtime backend conformance, including safe WSI late-acquire retirement and provider unload/quiescence, remains untested.
