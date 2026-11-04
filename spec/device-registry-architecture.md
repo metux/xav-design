@@ -349,20 +349,21 @@ A route may be direct even when the ScreenAttachment topology names a different 
 
 All registry mutations that can affect PhysicalDevice status, publication, provider selection, ScreenAttachment membership, or XAverius events MUST be serialized through the X server's main/event thread or an equivalent server-owned serialization domain. Backend worker threads MAY detect conditions, but MUST enqueue immutable observations to that domain; they MUST NOT mutate registry objects or send X11 events directly.
 
-The registry distinguishes at least these operations:
+The registry/presentation subsystem distinguishes at least these operations:
 
 - register a provider observation for a candidate;
 - mark a provider unavailable or recovered;
 - confirm physical-device removal;
 - attach or detach a Screen generation;
+- create, pin, invalidate, or retire a PresentationRoute generation;
 - publish a canonical PhysicalDevice to XAverius;
-- retire provider references after backend quiescence.
+- retire provider and route references after backend quiescence.
 
 Provider loss and physical-device removal are different events. A lost ICD context, failed Vulkan instance, or provider unload MUST NOT by itself mark hardware REMOVED. Conversely, a confirmed kernel/device removal MUST NOT be suppressed merely because an alternate provider still has a stale Vulkan handle.
 
 The existing PhysicalDevice status state machine remains authoritative: AVAILABLE and UNAVAILABLE may recover between each other; either may transition to terminal REMOVED. REMOVED records remain tombstones until server shutdown. Registry state transitions and the corresponding `XAverius.deviceStatus` value/event MUST have one serialization point.
 
-The registry MUST use generation-checked internal references for PhysicalDevice, BackendProvider, and ScreenAttachment lifetimes. Numeric XIDs, DRM node numbers, array indices, and raw pointers without a lifetime generation MUST NOT be used to resolve delayed callbacks. A callback captured for an old provider/device/screen generation MUST NOT mutate a replacement object that reuses an address, index, node number, or public XID.
+The registry/presentation subsystem MUST use generation-checked internal references for PhysicalDevice, BackendProvider, ScreenAttachment, PresentationRoute, Surface, and Swapchain lifetimes. Numeric XIDs, DRM node numbers, array indices, and raw pointers without a lifetime generation MUST NOT be used to resolve delayed callbacks. A callback captured for an old provider/device/screen generation MUST NOT mutate a replacement object that reuses an address, index, node number, or public XID.
 
 ## 7. Suggested internal API boundary
 
