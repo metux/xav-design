@@ -54,7 +54,7 @@ xav_connection_negotiate_xge(xav_connection *c, xav_version *version,
     }
     if (!reply)
         return XAV_CLIENT_ERROR_CONNECTION;
-    if (reply->response_type != 1 || reply->data != 0 || reply->length != 0) {
+    if (reply->response_type != 1 || ((const uint8_t *)reply)[1] != 0 || reply->length != 0) {
         free(reply);
         return XAV_CLIENT_ERROR_PROTOCOL;
     }
