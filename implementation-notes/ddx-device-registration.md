@@ -17,7 +17,7 @@ The selected PhysicalDevice binding is the dispatch object:
 - immutable typed operation-vector pointers;
 - opaque per-device backend context (or an explicitly retained shared DDX context);
 - exact native/DDX-local physical-device handle;
-- DDX registration generation and binding generation;
+- module-role generation and binding generation;
 - references to code, operation-table storage, context, and callback userdata.
 
 Request handling resolves the PhysicalDevice once, validates its selected binding/generation, and calls the operation vector directly. It must not resolve a separate GpuModuleRole object as an intermediate dispatch step.
@@ -33,7 +33,7 @@ struct GpuDeviceBackendBinding {
     const GpuBackendOps *ops;
     void *device_context;
     void *native_physical_device;
-    struct GpuGpuModuleRole *module_role; /* lifetime only, not dispatch */
+    struct GpuModuleRole *module_role; /* lifetime only, not dispatch */
 };
 
 struct GpuPhysicalDevice {
