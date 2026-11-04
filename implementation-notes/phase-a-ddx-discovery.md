@@ -131,9 +131,9 @@ Add a focused test harness using a fake DDX enumerator/backend registration fixt
 | A5 multiple Screens / one device | One device registration, then create two Screen fixtures/attachments | Still exactly one PhysicalDevice; closing one Screen does not unregister it |
 | A6 headless device | Device has no connector and no Screen fixture | Device remains registered/enumerable |
 | A7 request purity | Invoke EnumeratePhysicalDevices after registration | No DDX enumerate callback, DRM open, Vulkan init, or registry mutation occurs |
-| A8 error path | DDX enumeration fails partway through | No partial/fabricated publication; pass reports failure/unavailable and retry semantics are documented |
+| A8 error path | One candidate has incomplete/failed registration, or the DDX scan itself fails | The failed candidate gets no partial record/XID; other fully validated candidates follow the registry's per-device transaction rules; the pass reports the exact partial/unavailable outcome and retry semantics |
 
-If current registry transactionality cannot yet guarantee A4/A8, write the test at the DDX-pass boundary and mark the registry-level assertion blocked by the exact missing later-phase API. Do not weaken the test or claim it passed.
+If current registry transactionality cannot yet guarantee A4 or the per-candidate rollback portion of A8, write the test at the DDX-pass boundary and mark the registry-level assertion blocked by the exact missing API. Do not impose all-or-nothing rollback across unrelated devices unless the normative registry contract requires it; do not weaken the per-candidate no-partial-publication rule or claim it passed.
 
 Build/test report must include exact commands, exit status, and relevant output. "Build clean" without commands is not evidence. Runtime hardware testing is additional evidence, not a substitute for the deterministic harness.
 
