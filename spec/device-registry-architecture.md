@@ -1111,24 +1111,6 @@ A practical initial sequence is therefore: bootstrap the XAverius registry and h
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
 
 
-### 8.3 Registry API implementation notes (non-normative)
-
-The expanded API sketch in Section 7 implies several concrete data structures and sequencing rules. These are recommended to prevent the implementation from collapsing distinct lifetimes into one refcount or pointer map.
-
-**Provider candidate inventory.** Keep a provider-generation-local map from non-reusable `provider_local_binding_id` to the native Vulkan physical-device handle and its canonical identity. `enumerate_candidates` returns a temporary list of IDs and copied identity descriptions; query snapshots and registry correlation happen while that list is valid. `release_candidate_list` frees only the temporary list, not the provider's binding map. The binding map entry is removed only after binding withdrawal and all operations/provider objects using it have retired. Never store a pointer into the candidate list in the registry.
-
-**Operation-token record.** Allocate one server-owned token record before each asynchronous provider call. It should contain provider generation, operation generation, token ID, operation kind, exact provider-local binding and registry binding generation, PhysicalDevice incarnation, optional logical-Device generation, and a deduplicated retained resource set with access roles. The provider receives the token pointer only for the duration of the entry-point call; it copies the token ID/generation into its backend callback userdata. Do not let backend callbacks retain a pointer to registry token storage.
-
-**Submission state machine.** Model at least PREPARED, ENTRYPOINT_RUNNING, ACCEPTED, REJECTED, TERMINAL_QUEUED, RETIRING, RETIRED, and QUARANTINED. A callback racing the entry point return is copied/enqueued but held pending until the serialized domain commits ACCEPTED. Synchronous provider failure commits REJECTED only if the provider guarantees no callback/backend access; otherwise quarantine. Duplicate terminal callbacks, callbacks after rejection, or mismatched generations are diagnosed and cannot mutate state.
-
-**Resource pin set.** QueueSubmit is not a single-resource operation. Build the token's resource set from the fully validated dependency graph, including command buffers, buffers/memory, semaphores, fences, and any other backend-visible object. WriteBuffer/ReadBuffer pin their buffer and memory; host SignalSemaphore pins the semaphore; AcquireNextImage/QueuePresent pin the exact swapchain/route and associated synchronization/image state. The server, not the provider callback payload, owns this set and releases it only after successful per-token retirement.
-
-**Status/result normalization.** Convert Vulkan/provider-native results at the adapter boundary into the classified result plus operation-specific status code. Do not let a raw VkResult change X11 error precedence or request acceptance. In particular, AcquireNextImage NOT_READY and cancellation ALREADY_COMPLETED are not terminal timeout decisions; the server owns deadline and first-terminal arbitration.
-
-**Module and callback lifetime.** A provider callback's in-flight count is separate from operation count: a token may already have a terminal result queued while its callback frame is still returning. `retire_operation` must remain PENDING until both backend access and callback execution have ceased. Provider-wide quiescence then closes the remaining worker/dispatch admission for that provider generation. The module lease is released only after final provider context release and all independent adapter roles have retired.
-
-**Diagnostics.** Log provider key/generation, binding generation, token ID/generation, operation kind, outstanding resource count, callback count, retirement result, and quarantine reason. Never log raw pointers as identities. A PENDING result should make the blocking category observable without exposing mutable registry internals to clients.
-
 ### 8.2 Suggested implementation decomposition (non-normative)
 
 The following decomposition is intended to make the ownership rules practical in an Xlibre server. It is guidance, not a requirement to use these exact files or data structures.
@@ -1162,6 +1144,26 @@ These may initially live in fewer source files. The important boundary is owners
 **Verify the loader pin independently of Screen references.** Before relying on unloadable DDX providers, prototype the loader-owner abstraction against the actual Xlibre loader. Demonstrate that it prevents the final `dlclose()` after the last Screen's `FreeScreen()`, including duplicated `ModuleDesc` cases. If no supported independent pin exists, make the provider module permanently resident for that server lifetime rather than pretending a Screen or `DriverPtr` reference is sufficient. The lease object itself must be server-owned and shared by every provider generation and callback role from that loaded module instance.
 
 **Integrate in small, testable stages.** First land the registry and identity tests without Vulkan execution; then connect platform/udev observations; then provider registration and deterministic snapshots; then ScreenAttachments; then provider operation tokens and module quiescence; finally presentation routes and cross-GPU bridges. At each stage, test reordered initialization, hotplug during scan, duplicate primary/render observations, two Screens on one GPU, one Screen on multiple GPUs, provider failure, and teardown with delayed callbacks. Keep Xorg-specific adapter tests separate from registry model tests so the latter can run under a headless test harness.
+
+
+
+### 8.3 Registry API implementation notes (non-normative)
+
+The expanded API sketch in Section 7 implies several concrete data structures and sequencing rules. These are recommended to prevent the implementation from collapsing distinct lifetimes into one refcount or pointer map.
+
+**Provider candidate inventory.** Keep a provider-generation-local map from non-reusable `provider_local_binding_id` to the native Vulkan physical-device handle and its canonical identity. `enumerate_candidates` returns a temporary list of IDs and copied identity descriptions; query snapshots and registry correlation happen while that list is valid. `release_candidate_list` frees only the temporary list, not the provider's binding map. The binding map entry is removed only after binding withdrawal and all operations/provider objects using it have retired. Never store a pointer into the candidate list in the registry.
+
+**Operation-token record.** Allocate one server-owned token record before each asynchronous provider call. It should contain provider generation, operation generation, token ID, operation kind, exact provider-local binding and registry binding generation, PhysicalDevice incarnation, optional logical-Device generation, and a deduplicated retained resource set with access roles. The provider receives the token pointer only for the duration of the entry-point call; it copies the token ID/generation into its backend callback userdata. Do not let backend callbacks retain a pointer to registry token storage.
+
+**Submission state machine.** Model at least PREPARED, ENTRYPOINT_RUNNING, ACCEPTED, REJECTED, TERMINAL_QUEUED, RETIRING, RETIRED, and QUARANTINED. A callback racing the entry point return is copied/enqueued but held pending until the serialized domain commits ACCEPTED. Synchronous provider failure commits REJECTED only if the provider guarantees no callback/backend access; otherwise quarantine. Duplicate terminal callbacks, callbacks after rejection, or mismatched generations are diagnosed and cannot mutate state.
+
+**Resource pin set.** QueueSubmit is not a single-resource operation. Build the token's resource set from the fully validated dependency graph, including command buffers, buffers/memory, semaphores, fences, and any other backend-visible object. WriteBuffer/ReadBuffer pin their buffer and memory; host SignalSemaphore pins the semaphore; AcquireNextImage/QueuePresent pin the exact swapchain/route and associated synchronization/image state. The server, not the provider callback payload, owns this set and releases it only after successful per-token retirement.
+
+**Status/result normalization.** Convert Vulkan/provider-native results at the adapter boundary into the classified result plus operation-specific status code. Do not let a raw VkResult change X11 error precedence or request acceptance. In particular, AcquireNextImage NOT_READY and cancellation ALREADY_COMPLETED are not terminal timeout decisions; the server owns deadline and first-terminal arbitration.
+
+**Module and callback lifetime.** A provider callback's in-flight count is separate from operation count: a token may already have a terminal result queued while its callback frame is still returning. `retire_operation` must remain PENDING until both backend access and callback execution have ceased. Provider-wide quiescence then closes the remaining worker/dispatch admission for that provider generation. The module lease is released only after final provider context release and all independent adapter roles have retired.
+
+**Diagnostics.** Log provider key/generation, binding generation, token ID/generation, operation kind, outstanding resource count, callback count, retirement result, and quarantine reason. Never log raw pointers as identities. A PENDING result should make the blocking category observable without exposing mutable registry internals to clients.
 
 ## 9. Required architecture tests
 
