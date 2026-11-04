@@ -9,7 +9,7 @@ The previous chronological work log is preserved in [project-status-history-2026
 
 ## Current verified baseline
 
-- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41848200892](https://github.com/metux/xav-design/actions/runs/41846198875) and [required-check workflow 41848200803](https://github.com/metux/xav-design/actions/runs/41846198977) — SUCCESS on `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`.
+- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [required-check workflow 41848200803](https://github.com/metux/xav-design/actions/runs/41848200803) — SUCCESS on `a66d977b436cb05818a07a847e7c4fc1e8065598`.
 - Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
 - This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, shared module leases, finalization ordering, and quiescence vectors 89–96. All required static/specification gates passed.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
@@ -93,3 +93,8 @@ The architecture chapter now includes a practical non-normative decomposition an
 
 
 The borrowed `ScreenPtr` lifetime clarification in the `GpuRegistryAttachScreen()` API sketch was added in `a66d977b436cb05818a07a847e7c4fc1e8065598` and passed both exact-tip workflows 41848200892 and 41848200803. The API now explicitly forbids retaining the supplied Screen pointer; the registry retains only server-owned identity/generation data.
+
+
+## Registry API audit — 2026-11-04 (pending exact-tip CI)
+
+A focused API audit expanded `spec/device-registry-architecture.md` §7 with classified error outcomes, initialized output sentinels, atomic rollback, retained-reference ownership, server-assigned binding/source/module-role generations, source and module-role registration, retryable unregister/detach/quiescence, transactional XID publication, provider output ownership, asynchronous token acceptance and completion identity. Architecture vectors 97–114 cover invalid inputs, references, source/module-role teardown, publication failures, quiescence quarantine, and late/duplicate completions. Changes are newer than the verified baseline above; do not treat them as CI-verified until the exact branch tip passes.
