@@ -110,3 +110,6 @@ The API second pass now also requires completion binding-generation validation a
 
 
 The API audit now also closes delayed status-event races: context and binding availability notifications use monotonic scope-specific sequences; binding events include exact binding_generation; source observations/removal evidence include source_event_sequence. Effective availability is composed across provider context, binding, and physical state. Runtime evidence remains required that adapters capture source event sequence before dispatch and provider callbacks carry the exact binding generation. Vectors 133–137 added.
+
+
+Runtime acceptance now also requires evidence that all six asynchronous operation paths build the complete per-token resource pin set, especially QueueSubmit's full dependency graph and presentation's Swapchain/route/image/synchronization dependencies. Vector 138 added.
