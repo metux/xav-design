@@ -853,7 +853,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
         for phrase in (
             "After wire-length and scalar-field validation, XID validation follows request field order: resolve `device_xid`, validate the target `swapchain_xid` as a create-XID, then resolve `surface_xid`.",
             "A syntactically valid but unsupported configuration returns `UNSUPPORTED_CONFIGURATION`",
-            "`SURFACE_LOST`, `DEVICE_LOST`, and `ALLOCATION_FAILED` are normal reply statuses",
+            "`SURFACE_LOST`, `DEVICE_LOST`, `DEVICE_UNAVAILABLE`, and `ALLOCATION_FAILED` are normal reply statuses",
         ):
             with self.subTest(error_mapping=phrase):
                 self.assertIn(phrase, errors)
