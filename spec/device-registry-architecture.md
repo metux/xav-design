@@ -281,6 +281,16 @@ Provider identity, provider-local device bindings, discovery observations, and m
 - A provider module MAY own multiple independent BackendProvider generations and may also implement discovery or DDX topology adapters. Each registration role MUST have its own generation, admission state, retained references, and teardown result. A shared module-owner lease MAY aggregate the loader pin for those roles, but it MUST NOT collapse their provider contexts, bindings, or lifecycle state into one provider.
 - Every unloadable provider generation MUST retain a module lease covering its operation table, completion callback code, callback userdata, provider context, and every trampoline reachable from accepted work. Each independently registered provider generation acquires its own reference to the shared module-owner lease. A DDX topology/discovery adapter that can receive callbacks after Screen close MUST likewise retain a role-specific module lease until its callbacks and detached contexts have retired. Xorg ModuleDesc duplication and DriverPtr.refCount are not substitutes for these leases.
 
+
+Provider registration is a distinct operation from provider-binding registration. The registry MUST create exactly one BackendProvider object for each registered provider generation, copy its stable provider key, retain its provider context, and retain its module lease exactly once for that provider generation. Registering additional PhysicalDevice bindings MUST reference that existing provider object and MUST NOT repeat descriptor installation, acquire duplicate generation identity, or independently retain/release the module lease. A provider key identifies the provider implementation/configuration namespace; the provider generation distinguishes successive registrations and MUST never be reused while any stale reference or callback can exist.
+
+A provider generation MUST be registered before any of its bindings or operations can be accepted. It MUST remain ACTIVE until BeginProviderShutdown serializes. The registry MUST reject duplicate active registration of the same provider generation and reject binding registration against an unknown, stale, QUIESCING, or QUIESCED provider generation. Binding registration is atomic: failure MUST leave no partial binding, observation ownership, or extra provider/module reference. A provider generation with zero bindings MAY remain registered during discovery or while it owns provider-scoped resources, but it MUST NOT be selected for a PhysicalDevice until an eligible binding and complete snapshot have been validated.
+
+The module lease is a server-owned loader pin, not a provider callback and not a substitute for provider reference counting. The Xlibre/Xorg loader adapter creates one lease object for a loaded module-owner identity. The same lease object MAY be shared by several provider generations and adapter roles from that module. Each registered provider generation retains one lease reference; each independently registered adapter/callback role that can enter module code retains its own reference. The server-owned lease retain/release operations MUST be safe while the module is pinned and MUST NOT call into the module being pinned. A lease release MUST NOT unload the module while any lease reference remains. For a provider generation, the registry first performs its final provider-context release while the lease is still held, then releases that generation's lease reference as its final action; no provider function pointer or provider-owned userdata may be touched afterward.
+
+TryQuiesceProvider is permitted only after shutdown admission is closed, all bindings owned by the provider generation have been removed from selection/publication, all accepted operation tokens have terminalized and retired, and all provider calls/callback bridges that can enter the generation have returned. It invokes the provider's quiesce_provider hook for that exact generation. PENDING leaves the generation and module lease pinned and may be retried; FAILURE places the generation in quarantine and MUST NOT release its module lease; SUCCESS records provider-generation quiescence but does not by itself release the provider object or module lease while logical-device/provider-object references or adapter roles remain. Finalization is a separate step and is allowed only when the registry's provider reference count has reached its final registry-owned reference and all provider-owned objects have been destroyed or quarantined without requiring provider code. The finalization operation calls release_provider while the module lease remains held, then releases the module lease exactly once.
+
+
 Discovery observations remain source-owned. Multiple DDX, platform, and provider sources MAY contribute independent observations for one canonical PhysicalDevice. The registry MUST retain each observation's exact source key, source generation, and observation ID. Withdrawing or replacing one source's observation MUST affect only that observation; it MUST NOT withdraw another source's evidence, another provider's binding, a ScreenAttachment owned by another DDX, or the PhysicalDevice identity while other valid evidence remains. A provider binding is not itself ownership of the canonical identity. Removing a provider binding MUST NOT implicitly remove the provider's discovery observation unless the same registration explicitly owns that exact observation and withdraws it through the source-observation operation.
 
 Provider selection remains exactly one execution provider per published PhysicalDevice in v0.1. The selected provider supplies the complete immutable snapshot. Other providers MAY remain registered as discovery/correlation providers, but their metadata, queue capabilities, features, and properties MUST NOT be unioned with the selected snapshot. A provider registered after publication remains non-selected for that PhysicalDevice's lifetime. It MUST NOT become an implicit replacement when the selected provider is removed, unavailable, or quiescing. In particular, removing the selected binding makes that PhysicalDevice UNAVAILABLE under the existing status contract; the presence of another registered binding does not authorize failover, snapshot replacement, or XID replacement. Removing a non-selected binding has no public status effect.
@@ -498,6 +508,12 @@ typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
 typedef struct GpuBackendProvider GpuBackendProvider;
 typedef struct GpuProviderModuleLease GpuProviderModuleLease;
+/* Server-owned loader pin shared by all roles in one loaded module.
+   Create binds it to the Xserver loader's module-owner reference; retain and
+   release never call code in the pinned module. */
+GpuProviderModuleLease *GpuProviderModuleLeaseCreate(void *module_owner);
+void GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
+void GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
 typedef struct GpuScreenAttachment GpuScreenAttachment;
 typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 
@@ -688,6 +704,9 @@ typedef struct {
 } GpuProviderDescriptor;
 
 /* Descriptor and callback lifetime contract:
+   - RegisterProvider installs this descriptor exactly once for the exact
+     provider generation. RegisterProviderBinding refers to the resulting
+     GpuBackendProvider and MUST NOT reinstall or recopy this descriptor.
    - canonical_provider_key is borrowed for registration only; the registry
      copies its canonical bytes before returning.
    - module_lease is retained once for this provider generation and remains
@@ -719,14 +738,31 @@ GpuRegistryResult GpuRegistryObserveDevice(
 
 /* Provider execution binding is registered separately from observation.
    The provider-local handle remains private to this provider generation. */
+GpuRegistryResult GpuRegistryRegisterProvider(
+    GpuRegistry *registry, const GpuProviderDescriptor *descriptor,
+    GpuBackendProvider **out_provider, uint64_t *out_provider_generation);
+
 GpuRegistryResult GpuRegistryRegisterProviderBinding(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, const GpuProviderDescriptor *provider,
-    uint64_t provider_local_binding_id, uint64_t binding_generation);
+    uint64_t device_generation, GpuBackendProvider *provider,
+    uint64_t provider_generation, uint64_t provider_local_binding_id,
+    uint64_t binding_generation);
 
 /* Close admission for this exact provider generation. This does not
    remove bindings, retire accepted operations, or prove quiescence. */
 GpuRegistryResult GpuRegistryBeginProviderShutdown(
+    GpuRegistry *registry, GpuBackendProvider *provider,
+    uint64_t provider_generation);
+
+/* Drives provider-wide quiescence after the registry has verified the
+   shutdown/drain preconditions. PENDING/FAILURE retain the module lease. */
+GpuProviderQuiescenceResult GpuRegistryTryQuiesceProvider(
+    GpuRegistry *registry, GpuBackendProvider *provider,
+    uint64_t provider_generation);
+
+/* Final provider-context release followed by exactly one module-lease
+   release. Returns PENDING until all non-registry provider references retire. */
+GpuRegistryResult GpuRegistryFinalizeProviderShutdown(
     GpuRegistry *registry, GpuBackendProvider *provider,
     uint64_t provider_generation);
 
@@ -949,6 +985,18 @@ The implementation test suite SHOULD include at least:
 87. Quiesce one of several provider generations backed by the same module while another generation still has a pending callback. Verify that SUCCESS for the first provider does not release the common module pin or make the second provider's callback unreachable; final module unload occurs only after all role-specific leases and callback bridges have retired.
 
 88. Race BeginProviderShutdown against a new operation and a new provider-binding registration for the same generation. If shutdown serializes first, both are rejected without partial state; if either admission serializes first, it is retained and drained before quiescence. Repeated shutdown calls are idempotent, while a stale provider generation is rejected without affecting its replacement.
+
+
+
+89. Register one provider descriptor and then register bindings for several PhysicalDevices. Verify that descriptor installation, provider-context retention, and module-lease retention occur exactly once for the provider generation; removing one binding does not release the provider or module lease while another binding or reference remains.
+
+90. Attempt to register a binding before provider registration, against a stale generation, and after BeginProviderShutdown. Verify each attempt is rejected atomically and creates no binding, callback path, or extra provider/module reference. Registering the same provider generation twice is rejected; a new generation may register only after the old generation is no longer addressable by stale callbacks.
+
+91. Register two provider generations and one DDX adapter role sharing a single module lease. Quiesce/finalize one provider while the other provider has an outstanding operation and the adapter role remains active. Verify the first provider context is released while the shared module remains pinned; only after all provider and adapter role references are released may the loader perform final module unload.
+
+92. Make quiesce_provider return PENDING, then FAILURE, then SUCCESS in separate runs. Verify PENDING retains the provider/module lease and permits retry; FAILURE quarantines without finalization; SUCCESS records quiescence but still does not release the module lease while logical-device/provider-object references remain. Verify finalization calls release_provider before the final lease release, exactly once.
+
+93. Attempt provider finalization while a logical Device, deferred backend destroy, callback bridge, or provider-owned object still retains the provider generation. Verify the operation remains pending and no provider context, operation table, callback userdata, or module lease is released.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
