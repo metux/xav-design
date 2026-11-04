@@ -927,3 +927,26 @@ The internal result classes are SUCCESS, UNSUPPORTED, UNAVAILABLE, DEVICE_LOST, 
 - Validate that WSI provider operations cover all presentation-profile requests, including surface lifetime and swapchain teardown.
 - Add/align conformance vectors for provider-result mapping and callback/lifecycle races; architecture tests 13–22 are required implementation tests, not yet executable conformance vectors.
 - No runtime backend behavior or provider-quiescence mechanism has been tested. CI for the commits above has not yet been verified.
+
+
+### Provider contract review follow-up — 2026-11-04
+
+The request registry and the actual command-recording, synchronization, memory/buffer, and presentation chapters were cross-checked against the provider operation inventory. The architecture contract was tightened accordingly:
+
+- Added provider candidate enumeration, physical snapshot query, exact logical-device creation, queue acquisition, and logical-device teardown.
+- Added explicit operation coverage for every backend-facing request family: Buffer/Memory; Shader/Descriptor/Pipeline; CommandPool/CommandBuffer and command entries; Semaphore/Fence; QueueSubmit; and presentation.
+- Corrected the command chapter reference to spec/command-recording.md.
+- Deferred reply operations are asynchronous too, not only accepted QueueSubmit-style work. This explicitly includes WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence, and AcquireNextImage. Provider wait registrations use operation tokens; the server owns timeout arbitration and never blocks the X11 dispatcher.
+- Added a distinct provider STATUS result for request-defined non-error outcomes such as TIMEOUT, OUT_OF_DATE, SURFACE_LOST, SUBOPTIMAL, and UNSUPPORTED_CONFIGURATION. The request chapter remains authoritative for exact status values.
+- Provider unavailability for an existing logical Device maps requests that need the unavailable provider to DEVICE_UNAVAILABLE, without changing the logical Device identity or synthesizing DEVICE_LOST. Already accepted operations use their own terminal failure channel unless exact logical-Device loss is positively established.
+- WSI surface objects are provider/instance-scoped, not logical-Device-scoped. The same XAverius Surface queried through different providers gets separate provider-local surface objects, each pinned to its provider and exact Window/Screen generation. No WSI handle crosses provider instances.
+- Added architecture tests 23–24 for multi-provider Surface isolation and server-owned wait timeout arbitration.
+
+Additional commits:
+- d3f5c59 — complete command and WSI operation inventory; correct command-recording chapter path.
+- cc8dc15 — deferred operations, provider STATUS results, and provider-unavailability semantics.
+- 9546459 — provider-scoped WSI surface lifetimes.
+- f97c0be — provider candidate enumeration and host semaphore signal operations.
+- 73e163d — WSI isolation and deferred-wait architecture tests.
+
+The operation inventory is an internal semantic contract, not a stable C ABI. The abstract C sketch is illustrative; implementations must use typed wrappers and preserve the stated ownership/result/callback semantics.
