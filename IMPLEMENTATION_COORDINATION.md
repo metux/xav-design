@@ -1133,3 +1133,10 @@ The lifecycle audit found ambiguous wording that could be read as allowing an ac
 - Duplicate callbacks and attempted unload cannot release references or unload code while backend access remains possible.
 - Added architecture and integration conformance vectors plus static-checker assertions.
 No wire ABI changed. Exact-tip CI remains the required execution evidence.
+
+
+### Provider token retirement success/failure contract — 2026-11-04
+
+The final provider-lifecycle audit found that `retire_operation` was required to return a classified result and to preserve/quarantine on failure, but its `SUCCESS` release condition was not explicit enough. The spec now defines `SUCCESS` as affirmative proof that the exact token can no longer access backend objects; only then may the server release token-held references. Non-success retains/quarantines token, resources, and provider context. Retry is idempotent and generation-exact; retirement cannot emit a second terminal callback. A dedicated conformance vector and static-checker assertions were added. No request opcode or wire ABI changed.
+
+Verification: branch tip before this update was `0eb4e8ce2d6448b58e926bb432aba58866a58ddf`. The project owner reports the latest CI job red. The available commit status/workflow query returned no run records for that tip, so the failing job/log still needs an exact run reference; do not mark this update verified. Local checker/tests were not run.
