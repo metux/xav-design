@@ -196,3 +196,6 @@ GPU_PROVIDER_FATAL and server-detected provider-contract violations quarantine t
 
 
 Retain admission closes at provider shutdown/quarantine, ModuleRole unregister, and ScreenAttachment detach; existing references remain releasable. Operation-token and provider finalization calls have explicit repeat/idempotence behavior. Vector 140 covers these transitions.
+
+
+Repeated successful ObserveDevice calls with identical source event sequence/payload return the same observation ID and one additional caller-owned PhysicalDevice reference per call, without duplicating the observation. Vector 141 checks balanced releases.
