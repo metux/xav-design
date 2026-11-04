@@ -119,3 +119,6 @@ Runtime acceptance requires a distinct provider-generation quarantine state for 
 
 
 Runtime acceptance must verify state-checked Retain admission and the exact idempotence behavior for operation-token and provider lifecycle transitions. Vector 140 added.
+
+
+Runtime acceptance should verify repeated successful ObserveDevice replay increments only the caller-owned PhysicalDevice reference count and does not duplicate source observation state. Vector 141 added.
