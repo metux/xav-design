@@ -359,4 +359,15 @@ The implementation test suite SHOULD include at least:
 11. CreateDefaultDevice selection does not depend on the first Screen with XAverius support and never combines GPUs.
 12. Provider module/context teardown is delayed until every logical Device, submission, callback, and backend operation referencing it has quiesced.
 
+13. A provider reports `DEVICE_LOST` while `create_logical_device` is running: no logical Device/XID is published, the PhysicalDevice becomes UNAVAILABLE, and the request returns DEVICE_UNAVAILABLE.
+14. A provider returns host/device allocation failure during logical-device creation: all partial objects are rolled back or quarantined, the target XID remains free, and ALLOCATION_FAILED is returned.
+15. A provider context becomes UNAVAILABLE while a logical Device exists: the PhysicalDevice status changes, but the logical Device is not declared DEVICE_LOST without a positive loss result for that exact VkDevice.
+16. A provider operation on an existing logical Device reports DEVICE_LOST concurrently with submission completion, wait satisfaction, timeout, or DestroyDevice: the first serialized terminal outcome wins exactly once.
+17. A provider reports UNSUPPORTED for a capability already included in the published snapshot: the request fails as a provider contract violation, the capability snapshot is not mutated, and no client BadMatch is fabricated.
+18. An asynchronous provider operation reports completion and then attempts a duplicate/late callback: only one terminal transition is committed and all retained references are released at most once.
+19. DestroyDevice or disconnect races with an in-flight provider call or accepted asynchronous operation: public invalidation occurs at its defined linearization point, but provider code/context and backend objects remain pinned until the provider proves no further access.
+20. A provider callback arrives after provider generation replacement or module-unload request: it is ignored for public state, cannot resolve a reused XID, and cannot execute unloaded provider code.
+21. A provider reports TRANSFER_FAILURE or EXECUTION_FAILURE after asynchronous acceptance: the operation uses its defined terminal status/event and never generates a delayed X11 request error.
+22. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the provider's exact Device/Surface result controls the outcome; attachment membership does not imply support.
+
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
