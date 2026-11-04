@@ -183,7 +183,7 @@ Surface presentation support MUST continue to be evaluated for the exact logical
 
 A ScreenAttachment MUST be detached when its exact Screen generation is destroyed or replaced. A late detach event from an old Screen generation MUST NOT detach a newer Screen that reuses the same numeric server-side index or pointer slot.
 
-## 5. Lifecycle and event serialization
+## 6. Lifecycle and event serialization
 
 All registry mutations that can affect PhysicalDevice status, publication, provider selection, ScreenAttachment membership, or XAverius events MUST be serialized through the X server's main/event thread or an equivalent server-owned serialization domain. Backend worker threads MAY detect conditions, but MUST enqueue immutable observations to that domain; they MUST NOT mutate registry objects or send X11 events directly.
 
@@ -202,7 +202,7 @@ The existing PhysicalDevice status state machine remains authoritative: AVAILABL
 
 The registry MUST use generation-checked internal references for PhysicalDevice, BackendProvider, and ScreenAttachment lifetimes. Numeric XIDs, DRM node numbers, array indices, and raw pointers without a lifetime generation MUST NOT be used to resolve delayed callbacks. A callback captured for an old provider/device/screen generation MUST NOT mutate a replacement object that reuses an address, index, node number, or public XID.
 
-## 6. Suggested internal API boundary
+## 7. Suggested internal API boundary
 
 The following is an abstract C interface sketch, not a public ABI and not a wire definition. Names and exact types MAY be adapted to Xserver conventions, but the ownership and semantic boundaries MUST be preserved.
 
@@ -221,6 +221,64 @@ typedef struct {
     /* Provider type/configuration identity, opaque context, ops,
        provider-local device handle, and lifetime hooks. */
 } GpuProviderDescriptor;
+
+/* Classified provider result. Native VkResult may be retained for diagnostics. */
+typedef enum {
+    GPU_PROVIDER_SUCCESS,
+    GPU_PROVIDER_UNSUPPORTED,
+    GPU_PROVIDER_UNAVAILABLE,
+    GPU_PROVIDER_DEVICE_LOST,
+    GPU_PROVIDER_OUT_OF_HOST_MEMORY,
+    GPU_PROVIDER_OUT_OF_DEVICE_MEMORY,
+    GPU_PROVIDER_TRANSFER_FAILURE,
+    GPU_PROVIDER_EXECUTION_FAILURE,
+    GPU_PROVIDER_CANCELLED,
+    GPU_PROVIDER_FATAL
+} GpuProviderResult;
+
+typedef struct GpuProviderOps {
+    GpuProviderResult (*query_physical_snapshot)(
+        GpuBackendProvider *, GpuPhysicalDeviceCandidate *,
+        GpuPhysicalDeviceSnapshot *);
+
+    GpuProviderResult (*create_logical_device)(
+        GpuBackendProvider *, const GpuDeviceCreateInfo *,
+        GpuProviderDevice **);
+    GpuProviderResult (*get_queue)(
+        GpuProviderDevice *, uint32_t family, uint32_t index,
+        GpuProviderQueue **);
+    void (*destroy_logical_device)(GpuProviderDevice *);
+
+    /* Resource operations are grouped by XAverius object family:
+       Buffer/Memory; Shader/Descriptor/Pipeline; CommandPool/CommandBuffer;
+       Semaphore/Fence; Surface/Swapchain. Each family has typed create,
+       query/update, and destroy operations. */
+    GpuProviderResult (*resource_operation)(
+        GpuProviderDevice *, GpuProviderObjectKind,
+        GpuProviderOperation, const void *input, void *output);
+
+    GpuProviderResult (*queue_submit)(
+        GpuProviderQueue *, const GpuProviderSubmitInfo *,
+        GpuProviderOperationToken *);
+    GpuProviderResult (*read_buffer)(
+        GpuProviderDevice *, const GpuProviderReadInfo *,
+        GpuProviderOperationToken *);
+    GpuProviderResult (*write_buffer)(
+        GpuProviderDevice *, const GpuProviderWriteInfo *,
+        GpuProviderOperationToken *);
+    GpuProviderResult (*query_surface_support)(
+        GpuProviderDevice *, GpuProviderSurface *,
+        GpuProviderSurfaceSupport *);
+    GpuProviderResult (*queue_present)(
+        GpuProviderQueue *, const GpuProviderPresentInfo *,
+        GpuProviderOperationToken *);
+
+    void (*retain_provider)(GpuBackendProvider *);
+    void (*release_provider)(GpuBackendProvider *);
+    void (*retain_device)(GpuProviderDevice *);
+    void (*release_device)(GpuProviderDevice *);
+    void (*retire_operation)(GpuProviderOperationToken *);
+} GpuProviderOps;
 
 /* Server startup/shutdown; one registry per X server process. */
 GpuRegistry *GpuRegistryCreate(void);
@@ -266,7 +324,7 @@ The API MUST NOT expose a public function such as `RegisterPhysicalDeviceWithXid
 
 The registration API SHOULD be split into candidate discovery and provider attachment internally if that is needed to finish startup-wide provider selection before publication. The simplified sketch above does not permit immediate publication during arbitrary driver probe order.
 
-## 7. Xlibre/Xorg integration guidance
+## 8. Xlibre/Xorg integration guidance
 
 For the current XAverius scope, the recommended ownership location is the XAverius server subsystem itself (for example, `Xext/xaverius/registry.c`), with a private server-internal interface declared in an exported header such as `include/xaverius_registry.h`. This keeps Vulkan-specific identity, provider selection, metadata snapshots, and XAverius XID publication together without making generic DIX depend on Vulkan or DRM. The interface is an internal server/module interface, not a stable client ABI or a promise of compatibility for independently built third-party modules.
 
@@ -284,7 +342,7 @@ Recommended layering:
 
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
 
-## 8. Required architecture tests
+## 9. Required architecture tests
 
 The implementation test suite SHOULD include at least:
 
