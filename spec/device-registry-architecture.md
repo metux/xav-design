@@ -120,6 +120,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | Provider result | Meaning | Required server treatment |
 |---|---|---|
 | `SUCCESS` | Operation completed successfully | Commit the request's specified success transition. |
+| `STATUS` | A defined non-error operation outcome (for example timeout, out-of-date, surface-lost, suboptimal, or unsupported swapchain configuration) | Return the operation-specific status exactly as defined by its request chapter; do not convert it to a generic provider failure. |
 | `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject provider selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
 | `UNAVAILABLE` | Provider context or physical-device access is temporarily unavailable; no logical-Device-loss result has been established | Mark the selected PhysicalDevice UNAVAILABLE through the registry serialization domain. A request creating a new logical Device fails with `DEVICE_UNAVAILABLE`. Existing logical Devices are not automatically declared lost solely by this result. |
 | `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Synchronous requests use `DEVICE_LOST` where their request contract specifies an X11 error; accepted asynchronous work uses its defined terminal status/events. |
@@ -133,15 +134,15 @@ The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or
 
 For `create_logical_device`, `DEVICE_LOST` occurs before a logical Device exists and therefore MUST NOT create a phantom logical Device or emit a Device-Loss event for the requested XID. The server MUST mark the selected PhysicalDevice UNAVAILABLE, fail creation with `DEVICE_UNAVAILABLE`, and leave the target XID unallocated. Allocation failures map to `ALLOCATION_FAILED`; other unclassified creation failures map to `INTERNAL_SERVER_ERROR`. A native unsupported-feature result after the server has validated the published snapshot is a provider contract violation, not a client `BadMatch`.
 
-For operations on an already-created logical Device, a positive backend Device-Loss result applies to that exact logical Device. It MUST NOT automatically mark the PhysicalDevice REMOVED. Provider-context loss without proof that the logical Vulkan Device is lost instead makes the PhysicalDevice/provider unavailable; existing logical Devices remain pinned and their operations fail according to their own subsequent backend results or safe-abort rules.
+For operations on an already-created logical Device, a positive backend Device-Loss result applies to that exact logical Device. It MUST NOT automatically mark the PhysicalDevice REMOVED. Provider-context loss without proof that the logical Vulkan Device is lost instead makes the PhysicalDevice/provider unavailable; existing logical Devices remain pinned and their operations fail according to their own subsequent backend results or safe-abort rules. Provider unavailability alone does not automatically declare an existing logical Device lost. A request that needs the unavailable provider returns `DEVICE_UNAVAILABLE` while the provider remains unavailable; the logical Device retains its identity and may become usable again if the same provider recovers. An accepted asynchronous operation that can no longer make progress because of provider unavailability MUST terminalize through that operation's existing failure channel (for example, `EXECUTION_FAILED` for QueueSubmit or `TRANSFER_FAILED` for a buffer transfer), unless a positive loss result for that exact logical Device establishes `DEVICE_LOST`.
 
 The server MUST preserve the first terminal outcome committed for each request, wait, submission, transfer, or resource operation. Later provider callbacks MUST NOT replace success, timeout, Device Loss, destruction, disconnect, or an earlier failure. A provider MUST NOT report success after it has reported a terminal failure for the same operation.
 
 ### 4.5 Synchronous and asynchronous operations
 
-An operation is synchronous when its XAverius request does not complete until the provider has returned a final result. Its provider call MUST either complete or return a classified failure; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
+An operation is synchronous when the XAverius request can be completed from the provider's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
 
-An operation is asynchronous when the protocol chapter defines acceptance separately from completion (including QueueSubmit and any transfer/presentation path explicitly defined as asynchronous). The provider MUST return either an immediate classified rejection, or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
+An operation is deferred/asynchronous when its request remains open pending backend work or a protocol chapter defines acceptance separately from completion. This includes QueueSubmit, WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence registrations, AcquireNextImage, and any other transfer/presentation path explicitly defined as deferred. The provider MUST return either an immediate classified rejection/status or an accepted operation token. The provider MUST return either an immediate classified rejection, or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
 
 Provider callbacks MAY run on arbitrary backend threads, but MUST only enqueue immutable completion records. They MUST NOT mutate XAverius state, release server resources directly, or write X11 events. The server's serialized event domain arbitrates the callback against Device Loss, DestroyDevice, disconnect, timeout, and other terminal events. Internal cleanup and public event delivery are separate: after public invalidation, callbacks may retire old internal state but MUST NOT emit events for the destroyed Device.
 
@@ -226,6 +227,7 @@ typedef struct {
 typedef enum {
     GPU_PROVIDER_SUCCESS,
     GPU_PROVIDER_UNSUPPORTED,
+    GPU_PROVIDER_STATUS,
     GPU_PROVIDER_UNAVAILABLE,
     GPU_PROVIDER_DEVICE_LOST,
     GPU_PROVIDER_OUT_OF_HOST_MEMORY,
@@ -268,10 +270,14 @@ typedef struct GpuProviderOps {
         GpuProviderOperationToken *);
     GpuProviderResult (*wait_semaphores)(
         GpuProviderDevice *, const GpuProviderWaitInfo *,
-        GpuProviderWaitResult *);
+        GpuProviderOperationToken *);
     GpuProviderResult (*wait_for_fence)(
         GpuProviderDevice *, GpuProviderFence *, uint64_t timeout_ns,
-        GpuProviderWaitResult *);
+        GpuProviderOperationToken *);
+    GpuProviderResult (*query_semaphore_counter)(
+        GpuProviderDevice *, GpuProviderSemaphore *, uint64_t *value);
+    GpuProviderResult (*query_fence_status)(
+        GpuProviderDevice *, GpuProviderFence *, GpuProviderWaitResult *);
     GpuProviderResult (*create_surface)(
         GpuProviderDevice *, const GpuProviderSurfaceInfo *,
         GpuProviderSurface **);
@@ -285,7 +291,7 @@ typedef struct GpuProviderOps {
     void (*destroy_swapchain)(GpuProviderSwapchain *);
     GpuProviderResult (*acquire_next_image)(
         GpuProviderDevice *, GpuProviderSwapchain *,
-        const GpuProviderAcquireInfo *, GpuProviderAcquireResult *);
+        const GpuProviderAcquireInfo *, GpuProviderOperationToken *);
     GpuProviderResult (*queue_present)(
         GpuProviderQueue *, const GpuProviderPresentInfo *,
         GpuProviderOperationToken *);
