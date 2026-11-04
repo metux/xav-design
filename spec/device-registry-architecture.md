@@ -6,22 +6,25 @@
 
 The server MUST maintain one process-wide Physical-Device registry. It MUST NOT be owned by an X11 Screen, Xorg Entity, DDX instance, DRM node, Vulkan instance, or XAverius client connection.
 
-The model has three distinct object classes:
+The model has four distinct object classes:
 
 1. **PhysicalDevice** — one canonical physical-device incarnation exposed by the server. It owns the server-lifetime identity, immutable published metadata snapshot, current discovery status, and references to registered providers. It is the sole source for XAverius Physical-Device enumeration and properties.
 2. **BackendProvider** — one concrete backend execution/discovery context capable of querying and operating on a PhysicalDevice. It owns provider-specific handles, dispatch tables, backend objects, and module/library references. A provider is attached to one or more PhysicalDevices only through explicit canonical matching; it is never itself a PhysicalDevice identity.
 3. **ScreenAttachment** — a relationship between one live X11 Screen generation and one PhysicalDevice. It records that a Screen/DDX path uses or can access a device for a particular role. It does not own either endpoint and does not establish Vulkan presentation support.
+4. **PresentationRoute** — an internal, generation-checked route for one exact logical-Device/Surface pair. It identifies the selected execution provider, the retained Window/Screen generation, and any explicit scanout/bridge path needed to present images produced by that logical Device. It is not a PhysicalDevice, Screen, Vulkan Device, or client-visible XAverius resource; it owns no endpoint and allocates no XID.
 
 The relationships are:
 
 - One PhysicalDevice MAY have zero or more BackendProviders.
 - One PhysicalDevice MAY have zero or more ScreenAttachments.
 - One Screen MAY have zero or more ScreenAttachments; a Screen is not required to map to exactly one GPU.
+- One Surface MAY have distinct PresentationRoutes for different logical Devices; a route is scoped to one exact logical-Device generation and Surface/Window/Screen generation.
+- A PresentationRoute MAY reference a scanout PhysicalDevice/ScreenAttachment and a private bridge adapter, but it MUST NOT change the logical Device's render PhysicalDevice or selected execution provider.
 - A BackendProvider MUST NOT be implicitly created or destroyed with a ScreenAttachment.
 - Destroying a Screen or detaching a provider MUST NOT destroy the PhysicalDevice identity.
 - A PhysicalDevice MUST NOT be destroyed while its tombstone or any logical-device/backend reference remains live.
 
-The registry owns PhysicalDevice records and their canonical identity. The backend/provider manager owns BackendProvider lifetimes. The Screen/DDX layer owns ScreenAttachment lifetimes. XAverius owns the protocol resource/XID wrapper for each published PhysicalDevice. These ownership boundaries MUST remain explicit.
+The registry owns PhysicalDevice records and their canonical identity. The backend/provider manager owns BackendProvider lifetimes. The Screen/DDX layer owns ScreenAttachment lifetimes. The XAverius presentation subsystem owns PresentationRoute records and their generation/lifetime arbitration; the selected provider owns each route's private backend objects. XAverius owns the protocol resource/XID wrapper for each published PhysicalDevice. These ownership boundaries MUST remain explicit.
 
 ## 2. PhysicalDevice identity and publication
 
@@ -187,7 +190,7 @@ A selected provider MUST implement the following operation groups for every capa
 | Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-recording.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
 | Synchronization | create/destroy semaphores and fences; host timeline signal; queue signal/wait integration; fence reset and completion publication | Implement binary/timeline semaphore and fence behavior in `synchronization.md`, including the specified WAIT_ANY/WAIT_ALL and timeout semantics. |
 | Queue execution | `queue_submit` and any backend completion/retirement operation | Submit the already validated dependency graph to the exact queue. Accepted submissions complete asynchronously and report one terminal outcome through the server's serialized completion path. |
-| Presentation | provider-scoped surface create/destroy (from the XAverius Surface's retained Window identity); exact Device/Surface route and queue-family support query; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. The selected execution provider owns the route for its logical Device; it may implement a direct or explicitly bridged scanout path, but MUST NOT migrate execution to another PhysicalDevice/provider. ScreenAttachment MUST NOT substitute for the exact route query. |
+| Presentation | provider-scoped surface create/destroy; exact Device/Surface route and queue-family support query; route create/retire; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. The selected execution provider owns the route for its logical Device; it may implement a direct or explicitly bridged scanout path, but MUST NOT migrate execution to another PhysicalDevice/provider. ScreenAttachment MUST NOT substitute for the exact route query. |
 
 Synchronization ownership is split deliberately: the provider implements Semaphore/Fence backend creation/destruction, host `SignalSemaphore` backend signaling, queue-side signal/wait dependencies, fence reset, and completion reporting. The server owns the observable Timeline counter and Fence state. `GetSemaphoreCounterValue`, `GetFenceStatus`, `WaitSemaphores`, and `WaitForFence` read/register against that server state; they MUST NOT issue a second provider counter query or blocking host wait. Successful queue/host signal and fence-completion results are published into server state through the serialized completion path before affected host-wait registrations are reevaluated.
 
@@ -370,11 +373,26 @@ typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
 typedef struct GpuBackendProvider GpuBackendProvider;
 typedef struct GpuScreenAttachment GpuScreenAttachment;
+typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
+
+enum {
+    GPU_SCREEN_ROLE_RENDER_ACCESS = 1u << 0,
+    GPU_SCREEN_ROLE_SCANOUT = 1u << 1,
+    GPU_SCREEN_ROLE_DISPLAY_CONTROL = 1u << 2,
+    GPU_SCREEN_ROLE_DISCOVERY_ONLY = 1u << 3
+};
 
 typedef struct {
     /* Structured bus/sysfs/DRM identity, optional valid deviceUUID,
        virtual-instance discriminator, and incarnation evidence. */
 } GpuDeviceIdentity;
+
+typedef struct {
+    uint64_t route_generation;
+    uint64_t screen_generation;
+    uint64_t scanout_device_generation; /* zero when no separate scanout device is used */
+    uint32_t route_kind; /* direct WSI or provider-managed bridge; private enum */
+} GpuProviderPresentationRouteInfo;
 
 /* Classified provider result. Native VkResult may be retained for diagnostics. */
 typedef enum {
@@ -459,8 +477,17 @@ typedef struct GpuProviderOps {
         GpuBackendProvider *, GpuProviderPhysicalDevice *,
         uint32_t queue_family, GpuProviderSurface *,
         GpuProviderSurfaceSupport *);
+    /* Create/release an exact, generation-tagged route after capability
+       probing. create_swapchain pins this route until swapchain retirement. */
+    GpuProviderResult (*create_presentation_route)(
+        GpuBackendProvider *, GpuProviderPhysicalDevice *,
+        GpuProviderSurface *, GpuProviderPresentationRoute **,
+        GpuProviderPresentationRouteInfo *);
+    GpuProviderResult (*destroy_presentation_route)(
+        GpuBackendProvider *, GpuProviderPresentationRoute *);
     GpuProviderResult (*create_swapchain)(
         GpuProviderDevice *, GpuProviderSurface *,
+        GpuProviderPresentationRoute *,
         const GpuProviderSwapchainInfo *, GpuProviderSwapchain **);
     GpuProviderResult (*destroy_swapchain)(GpuProviderSwapchain *);
     GpuProviderResult (*acquire_next_image)(
@@ -545,7 +572,8 @@ void GpuRegistryConfirmDeviceRemoved(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     uint64_t device_generation);
 
-/* Screen relationships are non-owning and generation checked. */
+/* Screen relationships are non-owning and generation checked. Roles use
+   GPU_SCREEN_ROLE_*; they describe topology, not presentation capability. */
 GpuScreenAttachment *GpuRegistryAttachScreen(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     ScreenPtr screen, uint64_t screen_generation, unsigned int roles);
@@ -556,6 +584,10 @@ void GpuRegistryDetachScreen(
 /* XAverius publishes and maps canonical records to server-owned XIDs. */
 void XaPhysicalDevicePublish(GpuPhysicalDevice *device);
 XID XaPhysicalDeviceXid(const GpuPhysicalDevice *device);
+
+/* A route is scoped to the exact Device/Surface/Window/Screen generations.
+   A successful Swapchain pins it until all presentation and image-release
+   milestones have retired; stale route callbacks are generation-rejected. */
 
 /* Logical-device creation pins the selected provider and generations. */
 GpuBackendProvider *GpuPhysicalDeviceAcquireExecutionProvider(
