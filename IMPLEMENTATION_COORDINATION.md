@@ -1180,3 +1180,8 @@ Latest test-repair tip: `0b74e3401c17e9c3236bcfabc13cad109915aaeb`. Exact-tip wo
 The first regression-test alignment run exposed two remaining stale assertions: the AcquireNextImage expected-status dictionary still omitted `DEVICE_UNAVAILABLE = 7`, and the CreateSwapchain error-map assertion omitted `DEVICE_UNAVAILABLE` from its normal reply statuses. Both test expectations are now corrected. The prior exact-tip run 41827738924 had all wire-layout, header/client build, request/reply/XGE, and Timeline steps green; only those two Python assertions remained red.
 
 Current test-fix tip: `b2435f42e9710a0904538d75404679abc600e939`. Exact-tip workflow 41827958000 has been queued; run 41827949698 is also validating the immediately preceding test-fix commit. Final CI state remains pending until the latest exact-tip run completes.
+
+
+### Exact-tip CI result — 2026-11-04
+
+The corrected status/property regression suite is now green. Workflow [41828185963](https://github.com/metux/xav-design/actions/runs/41828185963) completed SUCCESS on exact commit `792174e717a88bdd394c2311ebb17d1668ceb392`. All required steps passed: shell/backend/handler checks, Python syntax, shared protocol-header compile, XCB client prototype build, request/reply/XGE wire validation, Timeline semaphore regressions, complete Python suite (**693 tests, OK**), and required-check presence audit. This run validates the exact test-fix commit; any subsequent change to this branch requires its own exact-tip CI confirmation.
