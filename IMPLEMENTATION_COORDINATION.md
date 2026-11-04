@@ -15,7 +15,7 @@
 - Latest exact-tip CI-verified specification commit: `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`.
 - Exact-tip CI: [workflow 41844649170](https://github.com/metux/xav-design/actions/runs/41844649170) — SUCCESS. Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
 - This verifies vectors 76–78 and multi-provider ownership/vectors 79–88; the multi-provider architecture commit `c88668e023ba31fa38293dba4aef5a827adedb64` independently passed [workflow 41844488352](https://github.com/metux/xav-design/actions/runs/41844488352).
-- Newer provider registration/module-lease lifecycle commits `1029787cbf4b7d3f0b8675264e39e9c4527da754` and `63c5339ca702a913f7da55747e877177782492a5` add vectors 89–93. Exact-tip CI is pending; do not treat this refinement as verified until it completes.
+- Newer provider registration/module-lease lifecycle commits `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da55747e877177782492a5`, `7545bda9018b2cc3cb6ef3d666cd3619a14efb36`, and `dc6c8589f7961b587f37a97cc2f4e76c67f8d627` add vectors 89–96. Exact-tip CI is pending; do not treat this refinement as verified until it completes.
 
 ## Architecture contracts implementation must follow
 
@@ -134,3 +134,6 @@ The API now separates registry errors from quiescence status: stale generations 
 Implementation feedback requested: confirm that the planned provider registry can install a descriptor once and associate multiple PhysicalDevice bindings with the same provider object. Also identify the Xlibre loader-owned object that can back one shared lease across several provider generations and DDX callback roles. No implementation work is requested in this spec repository.
 
 Spec commits: `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da55747e877177782492a5`. Exact-tip CI pending.
+
+
+Provider lifecycle follow-up: reserve provider generations through the registry before constructing descriptors; a failed registration consumes its generation. The module lease must be backed by a stable server-owned Xorg loader-owner record and a real independent loader pin. Quiescence waits until provider-owned objects requiring provider code have been destroyed or safely quarantined; after SUCCESS only the registry-controlled final `release_provider` call may enter provider code. Vectors 94–96 cover this ordering and loader-pin validation. No wire ABI changed.
