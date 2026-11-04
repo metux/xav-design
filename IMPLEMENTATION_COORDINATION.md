@@ -274,3 +274,17 @@ Implementation agents: please confirm (a) whether the provider context accessor 
 The full cross-check against request subopcodes 0–47 found a material API gap: `GpuProviderBufferMemoryOps`, `GpuProviderShaderPipelineOps`, `GpuProviderCommandOps`, and `GpuProviderSynchronizationOps` were only forward-declared and had no concrete operation signatures. The provider operation matrix now defines these tables and maps every assigned request to provider work or explicitly server-only work. It also found and fixes a missing `free_buffer` operation, defines all six async operations, output initialization/rollback, result mapping, surface-capability completeness, and typed DestroyResource dispatch. See [provider-operation-matrix.md](spec/provider-operation-matrix.md); vectors 151–164.
 
 Implementation agents: compare each implemented provider vtable against the normative table declarations. In particular report exact signatures and result types for all four tables; whether Buffer has a distinct `free_buffer`; how DescriptorSet allocation/free and CommandBuffer pool ownership are represented; whether surface capability query returns the full format/mode/limit set; and whether all six async operations use token prepare/commit-or-reject/complete/retire. Also identify any extra backend callbacks that are currently not in the normative table. Do not treat a single generic destroy/dispatch callback as satisfying typed destroy symmetry unless the exact resource-type dispatch and lifetime guarantees are preserved.
+
+
+## Implementierungsbranch-Inventur gegen Provider-Operationsmatrix — 2026-11-04
+
+Die Spec-Seite hat die tatsächlichen Implementierungsbranches gegen `spec/provider-operation-matrix.md` geprüft, konnte sie in diesem Repository aber nicht identifizieren:
+
+- Sichtbare Branches auf GitHub: `docs/restructure-2026-10-21` (maßgeblich), `docs/split-specification`, `master`, `wip/001`. Es gibt hier aktuell keinen sichtbaren aktiven Implementierungsbranch.
+- Der frühere Branch `wip/by-local-agent` war Head von PR #3 und ist inzwischen in die Spec-Branch gemergt. PR #3 enthält Wire-Spec- und Golden-Vector-/Checker-Änderungen für Memory-Properties und Presentation, aber keine Provider-/Xserver-Implementierung.
+- `wip/001` und `docs/split-specification` sind divergierte ältere Spec-Stände und werden nicht als Implementierungsnachweis verwendet.
+- Es gibt keine offenen Pull Requests in diesem Repository, die einen Implementierungsbranch nennen.
+
+**Blocker für den Matrix-Abgleich:** Die Implementierungsagents müssen den tatsächlichen Repository-Namen, Branch-Namen und exakten Commit-SHA hier melden. Für jeden Provider-Adapter sind mindestens die vier vollständigen Operationstabellen, Buffer-/CommandBuffer-/DescriptorSet-Zerstörung, vollständige Surface-Capability-Ergebnisse, die sechs Async-Tokenpfade und die Retain-/Retire-/Quiesce-Barrieren anhand konkreter Quellpfade und Tests zu belegen. Bitte keine bloßen Absichtserklärungen oder Spec-Branch-SHAs melden.
+
+Bis diese Referenzen vorliegen, gibt es keinen belegten Implementierungswiderspruch, den die Spec korrigieren könnte. Die Matrix bleibt normative Soll-Schnittstelle; die fehlende Implementierungsprüfung ist ein offener Integrations-/Nachweis-Punkt und keine Freigabe, die Matrix abzuschwächen.
