@@ -93,3 +93,8 @@ The architecture now provides non-normative Xlibre implementation decomposition 
 
 
 The `GpuRegistryAttachScreen()` API sketch now explicitly treats its `ScreenPtr` argument as borrowed for the call only and prohibits registry retention. This clarification is CI-verified at `a66d977b436cb05818a07a847e7c4fc1e8065598` by workflows 41848200892 and 41848200803. Remaining items below are runtime/implementation evidence and coordination sign-offs, not unresolved protocol rules.
+
+
+### Registry API audit follow-up — 2026-11-04
+
+The registry API sketch has been strengthened in `device-registry-architecture.md` §7. It now defines failure/result semantics, output sentinels, reference ownership, source and module-role registration, server-assigned binding generations, callback/role lifetime, transactional publication, provider output ownership, and async token/completion contracts. Vectors 97–114 were added. Exact-tip CI is pending; this is not a wire-design blocker and changes no protocol assignments. Runtime acceptance still needs evidence that the implementation's concrete registry/loader structures satisfy these contracts.
