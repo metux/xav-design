@@ -139,7 +139,21 @@ If current registry transactionality cannot yet guarantee A4 or the per-candidat
 
 Build/test report must include exact commands, exit status, and relevant output. "Build clean" without commands is not evidence. Runtime hardware testing is additional evidence, not a substitute for the deterministic harness.
 
-## 6. Forbidden shortcuts / automatic rejection
+## 6. Change discipline — minimal diffs only
+
+The implementation task is not permission to rename or reformat unrelated code.
+
+- Preserve existing public/internal symbol names, type names, file names, directory layout, comment style, formatting, and local coding conventions unless a specific item conflicts with a normative requirement or prevents the required lifecycle separation.
+- Do not perform cosmetic renames, broad formatting, whitespace-only cleanup, include sorting, file splitting/merging, generalized refactoring, or unrelated cleanup as part of Phase A.
+- Do not rename existing APIs merely to make them resemble names used in the specification. Specification names such as `GpuRegistryRegisterDdxDevice` describe semantic contracts unless the normative spec explicitly declares an ABI symbol name.
+- Prefer the smallest additive or targeted change that establishes the required DDX-wide lifecycle and removes the explicitly forbidden Screen-level device callbacks.
+- If a rename, file move, formatting change, or broader refactor is genuinely required, explain the concrete technical/normative reason in the commit report and keep it limited to the affected code.
+- Keep unrelated hunks out of the commit. Review the final diff for accidental formatting churn and report its scope.
+- Do not rewrite existing comments or documentation just for stylistic consistency. Update only statements made incorrect by the implementation.
+
+A Phase A submission with broad unexplained renames, formatting churn, or unrelated refactoring is NOT ACCEPTED even if it builds.
+
+## 7. Forbidden shortcuts / automatic rejection
 
 Any of the following means Phase A is NOT ACCEPTED:
 
@@ -156,7 +170,7 @@ Any of the following means Phase A is NOT ACCEPTED:
 - fake success, zero-filled UUIDs, guessed identity, fabricated capabilities, or silently skipped devices;
 - tests that create a Screen before asserting discovery, or that test only one device.
 
-## 7. Required implementation-agent response
+## 8. Required implementation-agent response
 
 Commit the implementation to `X11Libre/xserver:wip/xaverius`. Then append one concise report under the Phase A heading in the spec coordination board. Use this exact structure:
 
@@ -172,7 +186,7 @@ Commit the implementation to `X11Libre/xserver:wip/xaverius`. Then append one co
 
 No Phase B work is authorized until the Phase A implementation is reviewed and accepted. If a required later-phase registry API blocks a test, report the dependency; do not implement an ad-hoc replacement.
 
-## 8. Reviewer checklist
+## 9. Reviewer checklist
 
 The reviewer will independently inspect the branch tip and diffs, not accept the report at face value. Phase A is accepted only when:
 
