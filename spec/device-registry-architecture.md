@@ -590,6 +590,10 @@ typedef struct {
 } GpuProviderPresentationRouteInfo;
 
 /* Classified provider result. Native VkResult may be retained for diagnostics. */
+/* STATUS is a non-error, operation-specific status only where the
+   corresponding operation contract defines its meaning; it never means an
+   asynchronous operation was accepted. CANCELLED is terminal. FATAL denotes
+   a provider-contract violation or unrecoverable provider failure. */
 typedef enum {
     GPU_PROVIDER_SUCCESS,
     GPU_PROVIDER_UNSUPPORTED,
