@@ -867,6 +867,41 @@ A practical initial sequence is therefore: bootstrap the XAverius registry and h
 
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
 
+
+### 8.2 Suggested implementation decomposition (non-normative)
+
+The following decomposition is intended to make the ownership rules practical in an Xlibre server. It is guidance, not a requirement to use these exact files or data structures.
+
+**Keep the registry as the authority, not as a hardware driver.** A reasonable initial split is:
+
+- `registry.c`: canonical PhysicalDevice records, identity-key construction, publication state, and generation allocation.
+- `discovery.c`: source registration, observation storage, scan/event reconciliation, and startup barrier.
+- `provider.c`: provider descriptors, provider-local bindings, deterministic provider selection, and provider operation admission.
+- `provider-lifetime.c`: operation-token accounting, provider references, quiescence, quarantine, and module leases.
+- `screen-attachments.c`: Screen-generation attachment records and topology-only notifications.
+- `presentation-route.c`: exact Device/Surface route generations and bridge lifetime.
+- `xorg-adapter.c`: translation from Xorg platform/udev/DDX lifecycle into registry observations. This adapter should be replaceable without changing the canonical registry model.
+
+These may initially live in fewer source files. The important boundary is ownership: Xorg discovery structures and DDX private objects are inputs, never the registry's canonical storage.
+
+**Use server-owned IDs for retained relationships.** Internally, keep explicit records for discovery sources, observations, provider generations, provider bindings, PhysicalDevice incarnations, ScreenAttachments, operation tokens, and module leases. Index them by typed canonical keys and non-reusable generations. A binding should refer to a registered provider-generation record; it should not embed a copied provider descriptor. A ScreenAttachment should refer to a PhysicalDevice generation and a Screen generation, not own either object. Avoid using raw pointers as map keys or as asynchronous identity.
+
+**Separate lookup from mutation.** Registry APIs called from DDX probe, hotplug, or worker contexts should validate/copy their input and enqueue an immutable command. One server serialization domain should commit identity joins, status transitions, provider selection, publication, and teardown. A worker callback must not directly mutate registry lists, X resources, RandR state, or client-visible status. Do not call provider code, Xorg callbacks, or module-loader operations while holding the registry's structural lock; take a retained reference, drop the lock, call out, then revalidate the exact generation before committing the result.
+
+**Make initial discovery race-free.** Subscribe to hotplug notifications before starting the initial enumeration. Record a source generation and monotonically ordered observation/event sequence for each source. Reconcile events received during the scan against the scan result before closing the startup barrier. The barrier waits for configured discovery adapters and provider-selection inputs, not for Screen creation, RandR initialization, or a particular DDX's PreInit order. A failed adapter completes as unavailable/failed; it must not fabricate physical removal. After the barrier closes, late discovery uses the per-device publication path and cannot reopen or reorder the initial inventory.
+
+**Treat provider selection as a commit, not a side effect of probing.** Collect eligible bindings first. Validate their identity correlation, operation-table completeness, stable provider key, and required capability snapshot before ranking. Apply explicit configuration preference and a deterministic stable tie-breaker; never use registration order, pointer values, ICD enumeration index, or first Screen. Publish the selected provider and immutable snapshot together. If no eligible provider exists, keep the candidate unpublished or expose only the explicitly specified unavailable state; do not publish a half-filled snapshot. A later provider must not silently replace the published selection.
+
+**Keep OS discovery handles separate from provider handles.** A DRM node path, `dev_t`, or file descriptor is an access locator, not a PhysicalDevice identity. Resolve primary/render nodes through the underlying DRM device relationship and canonical platform identity. Define who opens, duplicates, and closes every DRM file descriptor; do not let the registry close a descriptor still owned by Xorg or a provider. Provider-local Vulkan handles remain private to the provider generation. If two ICDs expose aliases, deduplicate them inside the provider before registering one executable binding.
+
+**Do not make Screen lifetime a shortcut for device lifetime.** Attach a Screen only after its generation exists and the DDX can provide a resolved canonical PhysicalDevice reference. If identity is not yet resolvable, retain a pending topology observation and retry when stronger evidence arrives; do not guess from Screen number, Entity index, or the first GPU. On close, invalidate the attachment generation before freeing Screen-private storage. Any asynchronous work must use a detached copied context and must not call back into Screen or RandR after close.
+
+**Make provider teardown observable and retryable.** Track separate counters/references for bindings, logical Devices, provider-owned objects, accepted operations, callback bridges, adapter roles, and module leases. A single generic refcount is insufficient for diagnosing why unload is blocked. Expose diagnostic state (provider key/generation, shutdown phase, outstanding token/object/bridge counts, quiescence result, and quarantine reason) through server logging or a debug dump; do not expose private pointers or mutable internals to clients. PENDING must identify what remains outstanding. FAILURE must preserve the module and context in quarantine. Do not wait synchronously for GPU progress in Screen close or hotplug handlers.
+
+**Verify the loader pin independently of Screen references.** Before relying on unloadable DDX providers, prototype the loader-owner abstraction against the actual Xlibre loader. Demonstrate that it prevents the final `dlclose()` after the last Screen's `FreeScreen()`, including duplicated `ModuleDesc` cases. If no supported independent pin exists, make the provider module permanently resident for that server lifetime rather than pretending a Screen or `DriverPtr` reference is sufficient. The lease object itself must be server-owned and shared by every provider generation and callback role from that loaded module instance.
+
+**Integrate in small, testable stages.** First land the registry and identity tests without Vulkan execution; then connect platform/udev observations; then provider registration and deterministic snapshots; then ScreenAttachments; then provider operation tokens and module quiescence; finally presentation routes and cross-GPU bridges. At each stage, test reordered initialization, hotplug during scan, duplicate primary/render observations, two Screens on one GPU, one Screen on multiple GPUs, provider failure, and teardown with delayed callbacks. Keep Xorg-specific adapter tests separate from registry model tests so the latter can run under a headless test harness.
+
 ## 9. Required architecture tests
 
 The implementation test suite SHOULD include at least:
