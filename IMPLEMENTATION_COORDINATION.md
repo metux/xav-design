@@ -765,3 +765,8 @@ The client event-dispatcher work is paused until this spec clarification is revi
 ### Client-only source exclusion in the native handler CI gate — 2026-11-04
 
 The first CI run after adding the XCB client prototype exposed a gate-scope bug: the native server-handler audit treated tracked `client/*.c` files as server request handlers and failed because the standalone client intentionally has no `compile_commands.json`. The gate now excludes only the root `client/` prototype tree while continuing to require compile-database coverage for tracked native server C/C++ sources. A regression test covers a client-only checkout; native-source-without-database and native async-callback cases remain mandatory failures.
+
+
+### Shared-header CI include-path correction — 2026-11-04
+
+After the client-only handler-gate exclusion passed, CI reached the shared-header compile and exposed a stale workflow include of the removed `xaverius_proto.h`. The canonical header is `protocol/include/xaverius.h`; the wire-layout workflow now compiles against that path. The previous CI run did not reach wire vectors or the Python suite because this compile step failed.
