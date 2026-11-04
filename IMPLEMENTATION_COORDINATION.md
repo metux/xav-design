@@ -24,7 +24,7 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 
 ## Active assignment — Phase A DDX-wide discovery
 
-<badge>ACTIVE — NOT ACCEPTED</badge>
+**ACTIVE — NOT ACCEPTED**
 
 **Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
