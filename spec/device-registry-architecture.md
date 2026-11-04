@@ -74,6 +74,32 @@ These names are semantic API guidance, not required exported symbols. Registrati
 
 An ambiguous identity match is not a license to merge or publish. The registry MUST keep the candidate unpublished and report the ambiguity to the registering source/server log until stronger evidence resolves it. If evidence proves that two published identities were duplicates, the implementation MUST NOT silently reassign or reuse a client-visible XID; this is a server consistency fault requiring controlled recovery, not an ordinary hotplug merge.
 
+### 2.2 Identity-evidence hierarchy and provider correlation
+
+Identity matching MUST be based on the underlying device incarnation, not on whichever identifier is easiest for a discovery adapter to obtain. The registry MUST retain the provenance and generation of each evidence item so that a stale observation cannot strengthen or override current evidence.
+
+The following evidence classes define the v0.1 matching policy:
+
+1. **Authoritative platform identity.** A resolved kernel device object and its bus identity are the primary platform correlation evidence. For PCI, use the complete domain:bus:device.function address together with the resolved canonical sysfs device path and the current device incarnation. For other buses, use the equivalent bus/subsystem identity and canonical parent/device relationship. A pathname alone is not authoritative if it can be replaced or reused.
+2. **DRM-device equivalence.** Primary and render nodes MUST be correlated through the kernel's underlying DRM device identity (for example, `drmGetDevice2`/`drmDevicesEqual`, or equivalent bus information and canonical sysfs ancestry). Both nodes are access interfaces for one device, not separate devices. A node's basename, major/minor, `dev_t`, or DRM minor is only an observation locator and MUST NOT be the canonical key. Different DRM nodes MUST NOT be merged merely because they have the same vendor/device IDs.
+3. **Vulkan cross-instance correlation.** A valid nonzero `deviceUUID` is strong corroborating evidence for joining provider-local `VkPhysicalDevice` observations to a platform identity and to one another. It MUST be checked against authoritative platform evidence when both are available. Equal UUIDs with incompatible authoritative platform identities are a conflict, not permission to merge; differing UUIDs for observations with the same authoritative platform identity are also a conflict that MUST be resolved before provider binding or publication.
+4. **Derived-device identity.** A mediated, SR-IOV virtual function, partition, MIG instance, or other derived device MUST be distinguished from its parent and from sibling instances by an authoritative instance-specific identity. Parent identity alone MUST NOT merge children. A parent/child relation MAY be retained as descriptive topology, but it is not identity equality.
+5. **Provider-scoped fallback identity.** A software, virtual, or non-enumerable device without a usable platform identity MAY be represented only when its discovery provider supplies a stable namespace and instance identity that distinguishes it from every other concurrently exposed instance. That key is provider-scoped and MUST NOT be treated as proof that another provider's candidate is the same device. Cross-provider merging requires independent corroboration.
+6. **Descriptive metadata.** Vendor/device/subsystem IDs, names, driver strings, API versions, and marketing descriptions MAY reject an obviously inconsistent candidate but MUST NOT establish identity or incarnation equality by themselves.
+
+The registry MUST apply these outcomes:
+
+- Matching authoritative platform identity and compatible incarnation evidence joins observations into one canonical identity, even if provider handles or Vulkan UUIDs differ; a conflicting UUID is recorded and must be resolved before that provider binding is eligible.
+- Matching valid `deviceUUID` without conflicting platform evidence MAY join provider observations. If either observation later gains contradictory authoritative platform evidence, the registry MUST quarantine the conflicting observation/binding and MUST NOT merge the platform devices.
+- Equal UUIDs without enough evidence to distinguish two simultaneously present devices are ambiguous. The candidates remain unpublished until resolved; the registry MUST NOT collapse them solely to avoid duplicate enumeration.
+- Different UUIDs with no authoritative platform correlation do not establish either sameness or difference. The candidates remain distinct pending stronger evidence; the registry MUST NOT infer sameness from names or model IDs.
+- A provider candidate that cannot be correlated to a canonical platform identity MAY use the provider-scoped fallback only for a device class whose identity contract guarantees stable per-instance uniqueness. Otherwise it remains unpublished and cannot be selected for execution.
+- Any conflict involving two already published identities MUST NOT be repaired by merging, changing an XID's referent, or silently rewriting the immutable snapshot. It is a registry consistency fault requiring controlled server recovery.
+
+Incarnation is separate from identity correlation. A confirmed remove event closes the current incarnation. An add event after that boundary creates a new incarnation even when the BDF, sysfs path, DRM identity fields, provider-scoped key, and `deviceUUID` are unchanged. If removal is uncertain, the registry MUST prefer an UNAVAILABLE or unresolved state over either falsely declaring REMOVED or resurrecting a tombstone. Source generations and event ordering MUST be used to reject delayed remove events from an earlier incarnation.
+
+A Vulkan provider binding MUST identify the exact provider-local physical-device instance and carry the identity evidence used to correlate it. One provider may expose the same hardware through more than one Vulkan instance; those handles may map to one canonical PhysicalDevice only after the above correlation succeeds. A provider MUST NOT claim a binding merely because its candidate has matching vendor/device IDs or a matching display name.
+
 ### Startup, late registration, and removal
 
 Initial publication has a server-wide discovery barrier: all configured discovery sources and providers complete their initial candidate pass, identity canonicalization, deterministic provider selection, and snapshot query before the XAverius inventory is exposed. Enumeration order and Screen initialization order MUST NOT affect the resulting inventory or selected provider.
@@ -101,11 +127,13 @@ On Xlibre/Xorg, the recommended arrangement is one XAverius-owned registry servi
 Provider selection MUST use the following v0.1 policy:
 
 1. The server MAY configure an ordered provider-preference list using stable provider identifiers. A configured provider that is not discovered or cannot successfully query the candidate is skipped during initial selection.
-2. If no explicit preference selects a usable provider, the server MUST select the usable provider with the lexicographically lowest canonical provider key. The key MUST be derived from stable provider identity/configuration (for example, ICD manifest identity plus configured instance slot), never from pointer values, load order, discovery order, or transient handles.
+2. If no explicit preference selects a usable provider, the server MUST select the usable provider with the lexicographically lowest canonical provider key. The key MUST be derived from stable provider identity/configuration (for example, canonical ICD manifest identity plus configured instance slot), never from pointer values, load order, discovery order, or transient handles. Provider keys MUST be unique within the server configuration; duplicate keys are a configuration error and MUST NOT be broken by registration order. A provider key MUST identify a provider implementation/configuration, not a PhysicalDevice or DRM access node.
 3. The chosen provider is fixed before PhysicalDevice publication. The server MUST NOT publish a record and later change its selected provider because a higher-priority provider appeared.
 4. The selected provider supplies the complete published metadata snapshot. A provider that cannot supply a complete, internally consistent snapshot is not eligible for selection.
 
 The configuration syntax is implementation-specific; it MUST express an ordered list of stable provider identifiers and MUST NOT depend on DRM node numbers or Screen indices. An implementation MAY initially expose this as an Xorg `Option` or server command-line setting. With no explicit setting, the canonical-key ordering above is mandatory and reproducible.
+
+An explicit preference list is evaluated by stable provider identifier, in configured order, after identity correlation has established the candidate bindings. A preference entry that matches multiple distinct provider instances is ambiguous and MUST be rejected as a configuration error rather than resolved by load order. Eligibility is evaluated before ranking: a provider MUST have an unambiguous binding to the candidate incarnation and MUST successfully return a complete, internally consistent snapshot. A preferred but ineligible provider is skipped only during initial selection; it does not cause a later provider to inherit or modify an already published PhysicalDevice.
 
 
 A BackendProvider registration MUST include:
@@ -565,5 +593,15 @@ The implementation test suite SHOULD include at least:
 33. Two candidates cannot be unambiguously correlated: neither is silently merged nor published as a duplicate; both remain pending until stronger identity evidence resolves the match.
 34. A selected provider binding is deregistered while the physical device remains: the PhysicalDevice becomes UNAVAILABLE, no new provider generation takes over, and outstanding logical-device/operation references keep the old provider code/context pinned until safe retirement.
 35. A stale source removal, provider deregistration, or Screen detach from an earlier generation arrives after replacement: it cannot mutate the new observation, provider binding, attachment, or PhysicalDevice incarnation.
+36. The DRM primary and render nodes are observed in either order and through different discovery sources: both resolve to one canonical identity using the underlying DRM device relationship; withdrawing either node alone does not remove the identity.
+37. Two Vulkan instances/ICDs report different handles for the same platform device and compatible valid `deviceUUID`: the observations join one PhysicalDevice, while provider bindings remain distinct and provider selection follows the configured stable policy.
+38. Two simultaneously present devices report the same `deviceUUID` but have incompatible authoritative platform identities: they are not merged; the conflict is surfaced and each candidate remains independently represented only when its platform identity is unambiguous.
+39. Two observations have the same BDF but belong to different confirmed hotplug incarnations: the later incarnation receives a new PhysicalDevice/XID and a delayed removal from the earlier source generation cannot remove it.
+40. A mediated, SR-IOV, partitioned, or MIG-like child reports its parent identity but lacks a unique instance discriminator: it is not merged with the parent or a sibling and remains unpublished until its instance identity is resolved.
+41. A software/virtual provider supplies a stable provider-scoped instance key: it may publish as a distinct device, but a second provider's matching display name or vendor/device IDs do not merge with it.
+42. Two providers have duplicate stable provider keys, or one configured preference identifier matches multiple provider instances: startup reports a configuration error; registration order and enumeration order cannot break the tie.
+43. A preferred provider has a binding with conflicting UUID/platform evidence or cannot produce a complete snapshot: it is ineligible before publication and the next eligible provider in configured order is considered.
+44. Reordering ICD enumeration, provider registration, DRM node discovery, and Screen creation while holding source evidence and server configuration constant produces the same canonical identities and selected providers.
+
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
