@@ -52,7 +52,7 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 
 The registry architecture now separates discovery-source observations, provider-local execution bindings, ScreenAttachments, and XAverius publication. DDX/Screen drivers report topology; only components implementing the complete backend contract register as BackendProviders. Provider registration order and Screen initialization order do not select the execution provider. The startup discovery barrier and the equivalent per-device hotplug publication path are specified in `spec/device-registry-architecture.md`.
 
-The registry architecture changes were validated by [wire-layout workflow 41830568502](https://github.com/metux/xav-design/actions/runs/41830568502), SUCCESS on specification commit `783766cb28a8e9a32522013c8e6174c35c9016bf`: 4,873 wire-layout checks, 72 Timeline tests, and 693 Python tests passed; header/client builds and required CI gates also passed. The subsequent board-only coordination note does not alter specification or test inputs. Runtime Xorg/Vulkan integration remains untested.
+The current specification baseline `7f2620726f88bbd28ff6ac5c21a27d87659301e7` passed [exact-tip wire-layout workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364): 4,873 wire-layout checks, 72 Timeline tests, 693 Python tests, header/client builds, and required CI gates all passed. Subsequent status/checklist/open-issues edits are documentation-only; a fresh CI run is tracking those documentation changes. Runtime Xorg/Vulkan integration remains untested.
 
 ## Agent update format
 
