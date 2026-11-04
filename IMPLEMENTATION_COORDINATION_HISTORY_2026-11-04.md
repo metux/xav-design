@@ -1325,3 +1325,15 @@ Required next actions (keep the diff narrowly scoped and preserve names/style):
 - Attach the immutable typed operation vectors and exact ModuleRole/binding generation to the PhysicalDevice binding. Until that exists, do not publish an executable/AVAILABLE PhysicalDevice from metadata plus an fd.
 - Define explicit fd/context ownership on success, duplicate, and failure; compare duplicate binding identity/generation rather than silently returning success.
 - Add the fake DDX A1–A9 harness and report every result with exact commands and exit statuses. Request review only after the exact branch tip builds successfully.
+
+
+### Xserver workflow result update — run 41921533156
+
+The workflow for `189eac7532db7530f70a68f2e659216aa19df626` has now produced multiple failed build jobs (the workflow had not yet reached a final conclusion at the time of this update):
+
+- Ubuntu job `126895401047` fails compiling `xaverius_registry.c` under `-Werror`: redundant declarations of `strlcpy`, `strlcat`, and `strndup` from `include/os.h`.
+- DragonFlyBSD job `126895400393` and RHEL 10 job `126895401198` fail in the same registry compilation, including redundant declarations of `timingsafe_memcmp` and a `CSRG_BASED` macro redefinition.
+- SDK image job `126895619198` fails linking Xorg because `miinitext.c` references the missing external symbol `XaveriusExtensionInit`. This confirms the static declaration noted above.
+- macOS job `126895400874` fails because Xaverius source includes `include/xf86.h`, which unconditionally pulls in `pciaccess.h` that is unavailable in that build configuration. This is another unnecessary dependency introduced by the extension source include path and must be corrected without broad include/format churn.
+
+These are implementation build failures, not spec-wire-layout failures. The overall Xserver workflow was still running while these jobs had failed; do not report the run as green or final until GitHub reports its terminal conclusion.
