@@ -70,3 +70,6 @@ The registry architecture now makes provider unload a two-phase quiescence opera
 
 
 The source-level loader review adds one important implementation constraint: Xorg's duplicated `ModuleDesc` for a `ScrnInfo` shares the module handle and is not an independent provider pin; final `LoaderUnload()` calls `dlclose()`. Provider code therefore needs a separate loader/module lease beyond Screen references. Vectors 76–77 cover module unload while provider objects and callbacks remain live. Commit `3a42c1a` adds this refinement and awaits exact-tip CI.
+
+
+The Screen-close contract was tightened further: asynchronous callbacks cannot retain raw Xserver Screen/ScrnInfo pointers or FreeScreen-owned storage. They use copied immutable values or a detached, generation-checked ScreenAttachment context with no borrowed Screen pointers. Architecture vector 78 tests callback completion after Screen deletion. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` is pending exact-tip CI.
