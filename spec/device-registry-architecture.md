@@ -60,7 +60,7 @@ The registration paths are:
 4. **Attach Screen topology.** A DDX/Screen path separately attaches the live Screen generation to one or more registered PhysicalDevices with explicit roles. This does not create a second PhysicalDevice or change its selected call vectors.
 5. **Report lifecycle observations.** The DDX and platform sources report binding/device loss, recovery, Screen detach, and confirmed physical removal as distinct generation-checked events.
 
-The DDX is the owner of the executable registration for each device it serves. The registration binds that device directly to its operations and backend context; there is no separately discoverable Vulkan-ICD provider whose candidates compete to populate the Xaverius inventory. A DDX that cannot implement the required XAverius operation contract MUST NOT register that device as executable for the corresponding capability. Screen attachment remains a separate topology operation.
+The DDX is the owner of the executable registration for each device it serves. The registration binds that device directly to its operations and backend context; there is no separately discoverable Vulkan-ICD provider whose candidates compete to populate the XAverius inventory. A DDX that cannot implement the required XAverius operation contract MUST NOT register that device as executable for the corresponding capability. Screen attachment remains a separate topology operation.
 
 ### Registration semantics
 
@@ -236,48 +236,40 @@ An Xlibre/Xorg integration MUST demonstrate at least the following:
 
 These requirements are server-integration conformance tests. They do not add wire requests, XIDs, properties, or status values.
 
-## 3. BackendProvider contract
+## 3. DDX device backend binding contract
 
-Provider selection MUST use the following v0.1 policy:
+In the Xlibre/Xorg integration profile, the DDX is the sole component that registers executable PhysicalDevices for the hardware it serves. A DDX MUST enumerate and register every such device, not merely the device associated with the first Screen. This includes headless, render-only, compute-only, and otherwise Screen-unattached devices that the DDX can serve.
 
-1. The server MAY configure an ordered provider-preference list using stable provider identifiers. A configured provider that is not discovered or cannot successfully query the candidate is skipped during initial selection.
-2. If no explicit preference selects a usable provider, the server MUST select the usable provider with the lexicographically lowest canonical provider key. The key MUST be derived from stable provider identity/configuration (for example, canonical ICD manifest identity plus configured instance slot), never from pointer values, load order, discovery order, or transient handles. Provider keys MUST be unique within the server configuration; duplicate keys are a configuration error and MUST NOT be broken by registration order. A provider key MUST identify a provider implementation/configuration, not a PhysicalDevice or DRM access node.
-3. The chosen provider is fixed before PhysicalDevice publication. The server MUST NOT publish a record and later change its selected provider because a higher-priority provider appeared.
-4. The selected provider supplies the complete published metadata snapshot. A provider that cannot supply a complete, internally consistent snapshot is not eligible for selection.
+The executable backend is bound directly to each canonical PhysicalDevice registration. The binding contains (or references) the typed operation vectors, opaque backend context, and provider-local/native physical-device handle required to execute that device. Request dispatch resolves the PhysicalDevice's selected binding and calls its operation vector directly. It MUST NOT perform a second lookup through a separately selected BackendProvider object on every operation.
 
-The configuration syntax is implementation-specific; it MUST express an ordered list of stable provider identifiers and MUST NOT depend on DRM node numbers or Screen indices. An implementation MAY initially expose this as an Xorg `Option` or server command-line setting. With no explicit setting, the canonical-key ordering above is mandatory and reproducible.
+The term **BackendProvider** remains useful only as a registration/lifetime identity for the implementation code and shared module resources. It is not an additional per-device execution object and MUST NOT obscure the direct binding. A provider registration/control block MAY own shared module lease, callback sink, admission/quiescence state, and references to immutable operation-table storage. The per-device binding owns the device-specific context/handle and points directly to the applicable operation tables. If the DDX uses one shared backend context for several devices, the binding MAY reference that shared context with explicit references; it MUST NOT create a duplicate provider wrapper solely to dispatch calls.
 
-An explicit preference list is evaluated by stable provider identifier, in configured order, after identity correlation has established the candidate bindings. A preference entry that matches multiple distinct provider instances is ambiguous and MUST be rejected as a configuration error rather than resolved by load order. Eligibility is evaluated before ranking: a provider MUST have an unambiguous binding to the candidate incarnation and MUST successfully return a complete, internally consistent snapshot. A preferred but ineligible provider is skipped only during initial selection; it does not cause a later provider to inherit or modify an already published PhysicalDevice.
+A DDX registration MUST include:
+- stable DDX/module-role identity and non-reusable DDX registration generation;
+- canonical PhysicalDevice identity evidence and exact device-incarnation reference;
+- immutable typed operation-vector pointers covering the capabilities advertised for this device;
+- opaque per-device backend context and provider-local physical-device handle;
+- binding generation and availability/lifecycle state;
+- references that keep all reachable code, operation-table storage, context, and callback userdata alive through operation retirement and quiescence.
 
+The registry validates the complete operation tables before publication. Missing operations for an advertised capability make the registration ineligible; the registry MUST NOT discover this only when a client first invokes the operation. Operation vectors and nested tables are immutable for the lifetime of the binding. Backend/native handles remain opaque; request handlers and other DDX modules MUST NOT dereference them.
 
-A BackendProvider registration MUST include:
+For v0.1, each published PhysicalDevice has exactly one selected executable DDX binding. If multiple DDX registrations resolve to the same canonical hardware incarnation, the registry MUST deduplicate the identity and apply a deterministic server policy to select one complete executable binding before publication. It MUST NOT merge operation tables, contexts, or snapshots from different DDX registrations. Registration order, Screen order, pointer values, DRM node numbers, and module load order MUST NOT determine the selection. A later DDX registration MUST NOT silently replace the selected binding or mutate the published snapshot.
 
-- provider type and stable configuration identity (for example, ICD/library identity plus server configuration slot);
-- opaque provider context and operations for querying properties and creating/destroying logical Vulkan devices;
-- the candidate PhysicalDevice identity evidence;
-- provider-specific PhysicalDevice handle, valid only within that provider context;
-- provider availability and a lifecycle generation;
-- ownership hooks or references that keep provider code, loader dispatch, and context alive while dependent objects exist.
+The selected binding supplies one coherent immutable published metadata snapshot: device properties, queue-family properties, memory properties, limits, and advertised XAverius properties. The registry MUST NOT synthesize a snapshot by mixing fields from different registrations. After publication, property requests are answered from that snapshot; they MUST NOT re-query a different DDX or silently refresh fields in place.
 
-Provider handles and Vulkan dispatchable handles MUST remain private to the provider. Other providers, the registry, XAverius request handlers, and Screen attachments MUST NOT dereference them directly.
+A selected binding becoming temporarily unavailable makes the PhysicalDevice UNAVAILABLE; it does not establish physical removal. Recovery of the same DDX registration generation and same hardware incarnation MAY restore AVAILABLE if it can still honor the published snapshot. A different DDX binding MUST NOT transparently take over an existing published identity in v0.1. Confirmed physical removal transitions the PhysicalDevice to REMOVED.
 
-Each published PhysicalDevice has exactly one selected execution provider in v0.1. Selection MUST use an explicit server policy (configuration and stable provider identity/rank), not registration order, ICD enumeration order, Screen order, or pointer values. If several providers are discovered for one physical device, selection MUST occur after the discovery set for that startup pass is known. A server MAY retain non-selected providers as discovery/correlation providers, but MUST NOT use them as transparent execution failover in v0.1.
-
-The selected provider supplies one coherent immutable published metadata snapshot: device properties, queue-family properties, memory properties, limits, and advertised XAverius properties. The registry MUST NOT synthesize a snapshot by mixing fields from different providers. A provider discovered after publication can be recorded as an alternate/correlation provider, but cannot alter that snapshot.
-
-A selected provider becoming temporarily unavailable makes the PhysicalDevice UNAVAILABLE. It does not establish that the underlying hardware was removed. Recovery of the same provider for the same hardware incarnation MAY restore AVAILABLE if it can still honor the published snapshot. A confirmed physical-device removal transitions the PhysicalDevice to REMOVED, regardless of whether other providers still hold stale handles. A different provider MUST NOT transparently take over an existing published identity in v0.1.
-
-Logical-device creation pins the exact selected provider and its PhysicalDevice incarnation. Every logical Device and asynchronous backend operation MUST retain a reference to the provider context and relevant internal generations until all backend accesses and callbacks have quiesced. Unloading a provider module or destroying its context while any such reference exists is forbidden. If quiescence cannot be proven, the backend objects and provider references MUST be retained or quarantined.
-
+Logical-device creation pins the exact selected binding, DDX registration generation, and PhysicalDevice incarnation. Every logical Device and asynchronous backend operation MUST retain the relevant binding, context, code/module, and resource references until all backend accesses and callbacks have quiesced. Unloading the DDX module or destroying its context while any such reference exists is forbidden. If quiescence cannot be proven, the backend objects and module references MUST be retained or quarantined.
 
 ### 3.1 Provider, binding, and module multiplicity
 
-Provider identity, provider-local device bindings, discovery observations, and module ownership are separate lifetimes. The following cardinalities and rules are normative:
+DDX/module-role identity, per-device backend bindings, discovery observations, and module ownership are separate lifetimes. The following cardinalities and rules are normative:
 
-- One BackendProvider generation MAY register bindings for many canonical PhysicalDevices. Each binding identifies exactly one PhysicalDevice incarnation and one provider-local physical-device instance.
-- One PhysicalDevice MAY have bindings from multiple BackendProvider generations, including providers implemented by different DDX modules or ICDs. All such bindings MUST resolve to the same canonical PhysicalDevice identity before they can be associated with that record.
-- For a given pair of (BackendProvider generation, PhysicalDevice incarnation), there MUST be at most one active executable binding. If one provider enumerates multiple Vulkan handles for the same canonical device through different Vulkan instances, it MUST correlate and deduplicate those aliases inside its provider context and choose one provider-local binding before registration. If it cannot prove that the handles are aliases of the same incarnation, it MUST keep the candidates unresolved rather than register competing bindings.
-- A provider generation MAY be the selected execution provider for multiple PhysicalDevices. Its context-wide failure therefore affects every PhysicalDevice selected through that exact provider generation; a binding-scoped failure affects only the named binding. A failure of a non-selected provider or binding MUST NOT change the public status of the PhysicalDevice.
+- One DDX registration generation MAY register bindings for many canonical PhysicalDevices. Each binding identifies exactly one PhysicalDevice incarnation and one provider-local physical-device instance.
+- A PhysicalDevice MAY receive identity observations from multiple sources and duplicate registration claims from multiple DDX instances. All claims MUST resolve to the same canonical PhysicalDevice identity. Only one executable binding is selected in v0.1; the others MUST NOT be merged into it or used for failover.
+- For a given pair of (DDX registration generation, PhysicalDevice incarnation), there MUST be at most one active executable binding. If one provider enumerates multiple Vulkan handles for the same canonical device through different Vulkan instances, it MUST correlate and deduplicate those aliases inside its provider context and choose one provider-local binding before registration. If it cannot prove that the handles are aliases of the same incarnation, it MUST keep the candidates unresolved rather than register competing bindings.
+- A DDX registration generation MAY own bindings for multiple PhysicalDevices. A module-wide failure affects every selected binding backed by that exact registration/module role; a device-binding failure affects only the named PhysicalDevice. A failure of a non-selected duplicate registration MUST NOT change the public status of the PhysicalDevice.
 - A provider module MAY own multiple independent BackendProvider generations and may also implement discovery or DDX topology adapters. Each registration role MUST have its own generation, admission state, retained references, and teardown result. A shared module-owner lease MAY aggregate the loader pin for those roles, but it MUST NOT collapse their provider contexts, bindings, or lifecycle state into one provider.
 - Every unloadable provider generation MUST retain a module lease covering its operation table, completion callback code, callback userdata, provider context, and every trampoline reachable from accepted work. Each independently registered provider generation acquires its own reference to the shared module-owner lease. A DDX topology/discovery adapter that can receive callbacks after Screen close MUST likewise retain a role-specific module lease until its callbacks and detached contexts have retired. Xorg ModuleDesc duplication and DriverPtr.refCount are not substitutes for these leases.
 
