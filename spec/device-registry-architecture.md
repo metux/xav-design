@@ -1300,7 +1300,7 @@ The implementation test suite SHOULD include at least:
 
 118. Make retire_operation return PENDING, FAILURE, and SUCCESS. Verify PENDING is retryable, FAILURE quarantines all dependent objects and prevents DDX backend quiescence, and SUCCESS releases token-held references exactly once only after callback return and backend-access cessation.
 
-119. Race token preparation/commit/rejection/retirement against BeginProviderShutdown, DestroyDevice, resource destroy, and disconnect. Verify the registry serialization point determines admission; accepted tokens drain, rejected tokens cannot callback, and stale terminal records cannot affect replacement generations.
+119. Race token preparation/commit/rejection/retirement against `GpuRegistryBeginModuleRoleShutdown`, DestroyDevice, resource destroy, and disconnect. Verify the registry serialization point determines admission; accepted tokens drain, rejected tokens cannot callback, and stale terminal records cannot affect replacement generations.
 
 120. Verify every asynchronous DDX backend entry point in the typed tables receives exactly one prepared token and the matching operation kind: WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent. Reject missing, mismatched, or reused tokens before DDX backend entry.
 
