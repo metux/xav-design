@@ -45,6 +45,16 @@ Provider discovery MUST have a defined completion point before first publication
 
 ## 3. BackendProvider contract
 
+Provider selection MUST use the following v0.1 policy:
+
+1. The server MAY configure an ordered provider-preference list using stable provider identifiers. A configured provider that is not discovered or cannot successfully query the candidate is skipped during initial selection.
+2. If no explicit preference selects a usable provider, the server MUST select the usable provider with the lexicographically lowest canonical provider key. The key MUST be derived from stable provider identity/configuration (for example, ICD manifest identity plus configured instance slot), never from pointer values, load order, discovery order, or transient handles.
+3. The chosen provider is fixed before PhysicalDevice publication. The server MUST NOT publish a record and later change its selected provider because a higher-priority provider appeared.
+4. The selected provider supplies the complete published metadata snapshot. A provider that cannot supply a complete, internally consistent snapshot is not eligible for selection.
+
+The configuration syntax is implementation-specific; it MUST express an ordered list of stable provider identifiers and MUST NOT depend on DRM node numbers or Screen indices. An implementation MAY initially expose this as an Xorg `Option` or server command-line setting. With no explicit setting, the canonical-key ordering above is mandatory and reproducible.
+
+
 A BackendProvider registration MUST include:
 
 - provider type and stable configuration identity (for example, ICD/library identity plus server configuration slot);
