@@ -67,3 +67,6 @@ The normative lifecycle contract is closed in `device-registry-architecture.md` 
 
 
 The XLibre loader implementation was also checked: `DuplicateModule()` does not acquire an independent module handle, and `LoaderUnload()` calls `dlclose()` on the original handle. Vectors 76–77 now require a separate provider module pin to survive final Screen deletion. The remaining question is runtime acceptance on a built XLibre server: demonstrate that the chosen pin mechanism actually prevents the final `dlclose()` until provider-wide quiescence succeeds.
+
+
+The Screen-close contract also forbids asynchronous callbacks from retaining raw `ScreenPtr`/`ScrnInfoPtr` or pointers into `FreeScreen()`-owned storage. Runtime acceptance must verify that the DDX uses a detached generation-checked ScreenAttachment context (or copied immutable values) and that callbacks after close never enter Screen/RandR hooks. Vector 78 covers this case.
