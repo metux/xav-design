@@ -28,7 +28,7 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 
 **Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
-Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `2ccac0fb655a1345af79a6111fcd0657cd673ddc`. It supersedes all older Phase A task wording.
+Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `28acd0ab4165f9ca8757daf2a268e888ab4bc9b8`. It supersedes all older Phase A task wording.
 
 The task requires:
 - a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
@@ -37,6 +37,7 @@ The task requires:
 - no lazy discovery from client requests;
 - initial hotplug/identity observation before the DDX scan, ordered event reconciliation, and a barrier that remains closed while any configured initial pass is PENDING; terminal adapter failure is accounted for without fabricating removal or blocking independent completed devices indefinitely;
 - concrete modesetting integration or a precise evidence-based blocker (no guessed `PreInit`/`ScreenInit` hook);
+- minimal diffs only: preserve existing names, file layout, formatting and coding style; no cosmetic renames, broad reformatting or unrelated refactoring; justify every necessary rename or structural change;
 - reproducible A1–A9 tests, including the normative subscribe-before-scan/startup discovery barrier and event-race behavior, exact build/test commands and a structured agent report.
 
 **Forbidden:** first-Screen/first-GPU selection, output/connector-gated registration, per-Screen inventory, a Provider dispatch object, capability snapshots masquerading as operation vectors, last-writer-wins rebinding, fake identities/capabilities, or claiming tests without evidence.
