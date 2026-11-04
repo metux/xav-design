@@ -195,3 +195,27 @@ Section 7 now exposes the server-side token handoff explicitly:
 The provider `retire_operation` hook now returns `GpuProviderRetirementResult`, distinct from ordinary operation results and provider-wide quiescence. Architecture vectors 115–119 cover callback-before-commit, sync-failure/late-callback, never-terminalized operations, retirement outcomes, and shutdown/resource-destroy races.
 
 Implementation agents: compare your operation submission/callback path with these four registry transitions. Report whether callbacks can arrive before the provider function returns, how such completions are buffered, and what backend proof your retirement hook provides. A terminal protocol outcome alone is not retirement proof.
+
+
+## Provider API second-pass audit — 2026-11-04
+
+The second API pass found that the abstract signatures still left provider-local PhysicalDevice handles, async operation identity, and full resource retention underspecified. Section 7 now adds:
+
+- explicit candidate-list and candidate records with provider-generation-local, non-reusable binding IDs; candidate storage is temporary, while native handle mappings remain provider-owned until binding/object/token retirement;
+- exact binding ID/generation in logical-device creation and Surface support queries; no provider-native physical handle is stored in the central registry;
+- explicit operation kinds for WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent;
+- a server-owned token record retaining the complete resource-generation set, not merely one primary resource; QueueSubmit must pin its complete validated dependency graph;
+- a call-scoped provider token pointer plus copied token ID/generation for callback userdata, avoiding backend callbacks retaining registry pointers;
+- typed operation-specific status values (NOT_READY, OUT_OF_DATE, SURFACE_LOST, ALREADY_COMPLETED), bounded immutable completion payloads, and stricter completion identity checks;
+- BeginShutdown explicitly closes new operation-token preparation.
+
+Architecture vectors now extend through 131. Section 8.3 adds concrete implementation guidance for candidate maps, token states, resource pin sets, callback counters, and diagnostics.
+
+**Implementation agents: please verify specifically:**
+1. Does your candidate enumeration produce a stable provider-local binding ID, and does the provider retain the ID-to-native-handle map after the temporary candidate list is freed?
+2. Do your WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent paths all use the same prepare/commit-or-reject/complete/retire token lifecycle?
+3. Does QueueSubmit retain the full validated command/dependency resource set, including semaphores/fences and all buffers/memory, rather than one primary resource?
+4. Can any backend callback retain a raw registry token or provider-context pointer after the entry-point call returns?
+5. What exact status mapping is used for AcquireNextImage NOT_READY, presentation OUT_OF_DATE/SURFACE_LOST, and cancellation ALREADY_COMPLETED?
+
+No wire ABI or opcode changed. Latest edits are pending exact-tip CI.
