@@ -3,7 +3,7 @@
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
 **Latest exact-tip CI-verified tip:** `a66d977b436cb05818a07a847e7c4fc1e8065598`  
-**Status:** Normative v0.1 specification work is substantially complete. Exact-tip CI is green, including provider registration/module-lease lifecycle refinements and architecture vectors 89–96. Runtime implementation acceptance remains open.
+**Status:** Normative v0.1 specification work is substantially complete. The last verified baseline remains `a66d977b436cb05818a07a847e7c4fc1e8065598`; newer provider-operation and logical/provider-native Surface clarifications are awaiting exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
@@ -13,6 +13,10 @@ The previous chronological work log is preserved in [project-status-history-2026
 - Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
 - This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, shared module leases, finalization ordering, and quiescence vectors 89–96. All required static/specification gates passed.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
+
+### Newer unverified clarification — logical versus provider-native Surface
+
+The presentation/provider cross-check now states that CreateSurface is server-only and that native provider Surfaces are materialized lazily per (provider generation, logical Surface generation) when a Device-specific capability query or swapchain creation needs them. This avoids choosing a provider before the client supplies a logical Device and permits one Surface to be queried against Devices on different GPUs. Conformance vectors 165–168 were added. No wire ABI changed; exact-tip CI is pending.
 
 ## Protocol and profile status
 
