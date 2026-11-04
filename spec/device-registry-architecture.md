@@ -389,6 +389,17 @@ typedef struct {
 } GpuDeviceIdentity;
 
 typedef struct {
+    /* Provenance of the authoritative removal observation. The registry
+       validates the source generation, observation identity, and exact
+       PhysicalDevice incarnation before committing terminal REMOVED. */
+    const char *source_key;
+    uint64_t source_generation;
+    uint64_t observation_id;
+    uint64_t physical_device_generation;
+    uint32_t authority; /* private registry-defined evidence class */
+} GpuDeviceRemovalEvidence;
+
+typedef struct {
     uint64_t route_generation;
     uint64_t screen_generation;
     uint64_t scanout_device_generation; /* zero when no separate scanout device is used */
@@ -572,9 +583,10 @@ void GpuRegistryProviderDeviceRecovered(
     GpuRegistry *registry, GpuBackendProvider *provider,
     uint64_t provider_generation, GpuPhysicalDevice *device,
     uint64_t device_generation);
-void GpuRegistryConfirmDeviceRemoved(
+GpuRegistryResult GpuRegistryConfirmDeviceRemoved(
     GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation);
+    uint64_t device_generation,
+    const GpuDeviceRemovalEvidence *removal_evidence);
 
 /* Screen relationships are non-owning and generation checked. Roles use
    GPU_SCREEN_ROLE_*; they describe topology, not presentation capability. */
@@ -689,6 +701,8 @@ The implementation test suite SHOULD include at least:
 56. Route invalidation races with acquire timeout, accepted presentation terminalization, and image release in both serialization orders: OUT_OF_DATE is committed only when route invalidation wins the relevant gate; an earlier terminal result or image-release milestone is never rewritten or retracted.
 
 57. Two logical Devices created from the same PhysicalDevice query and create swapchains for the same Surface: each PresentationRoute is scoped to its exact logical-Device generation, even if both use the same provider, PhysicalDevice, Window, and Screen. Destroying or invalidating one Device/route MUST NOT retire, invalidate, or redirect the other Device's route or Swapchain; stale callbacks from the first route generation MUST NOT affect the second.
+
+58. A discovery source attempts to confirm physical removal without authoritative evidence for the exact current incarnation, or submits evidence from a stale source/device generation: the registry rejects the transition and MUST NOT mark the PhysicalDevice REMOVED. A later valid removal observation for the current incarnation commits REMOVED exactly once.
 
 
 
