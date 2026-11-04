@@ -168,3 +168,8 @@ The follow-up quiescence ordering review adds two further requirements: every pr
 
 
 The final `GpuRegistryAttachScreen()` API comment clarification (borrowed `ScreenPtr`, never retained by the registry) is included in exact-tip `a66d977b436cb05818a07a847e7c4fc1e8065598`; both required workflows 41848200892 and 41848200803 passed.
+
+
+### Registry API ownership/error audit — 2026-11-04
+
+A focused review found missing result contracts and ownership rules in the internal registry API sketch. Section 7 now specifies output initialization, classified errors, retained references, atomic rollback, server-assigned generations, discovery-source and module-role registration, provider binding identity, retryable detach/unregister/quiescence, XID publication transactionality, provider object/output ownership, and accepted asynchronous token/completion semantics. New architecture vectors 97–114 exercise these cases. These edits are pending exact-tip CI; the last fully verified baseline remains `a66d977b436cb05818a07a847e7c4fc1e8065598` with workflows [41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [41848200803](https://github.com/metux/xav-design/actions/runs/41848200803). This is an internal implementation-contract audit; no wire ABI or opcode assignment changed.
