@@ -23,9 +23,13 @@ int xav_reply_envelope_valid(const struct xav_connection *c,
                              const xcb_generic_reply_t *reply, size_t *total)
 {
     (void)c;
-    if (!reply || !total || (size_t)reply->length > (SIZE_MAX - 32) / 4)
+    uint64_t bytes;
+    if (!reply || !total)
         return 0;
-    *total = 32 + (size_t)reply->length * 4;
+    bytes = UINT64_C(32) + (uint64_t)reply->length * UINT64_C(4);
+    if (bytes > (uint64_t)SIZE_MAX)
+        return 0;
+    *total = (size_t)bytes;
     return 1;
 }
 xav_client_status xav_send_reply_request(struct xav_connection *c, uint8_t sub,
@@ -77,8 +81,17 @@ xav_client_status xav_connection_create(xcb_connection_t *xcb, xav_connection **
         free(reply); free(c); return XAV_CLIENT_ERROR_PROTOCOL;
     }
     {
-        uint16_t major = xav_get_u16(c, (uint8_t *)reply + 8);
-        uint16_t minor = xav_get_u16(c, (uint8_t *)reply + 10);
+        const uint8_t *bytes = (const uint8_t *)reply;
+        uint16_t major = xav_get_u16(c, bytes + 8);
+        uint16_t minor = xav_get_u16(c, bytes + 10);
+        size_t i;
+        for (i = 12; i < 32; ++i) {
+            if (bytes[i] != 0) {
+                free(reply);
+                free(c);
+                return XAV_CLIENT_ERROR_PROTOCOL;
+            }
+        }
         if (version) { version->major = major; version->minor = minor; }
         free(reply);
         if (major != XAVERIUS_MAJOR_VERSION || minor < XAVERIUS_MINOR_VERSION) {
