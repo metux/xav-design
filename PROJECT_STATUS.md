@@ -16,7 +16,7 @@ The previous chronological work log is preserved in [project-status-history-2026
 
 ### Newer unverified clarification — logical versus provider-native Surface
 
-The presentation/provider cross-check now states that CreateSurface is server-only and that native provider Surfaces are materialized lazily per (provider generation, logical Surface generation) when a Device-specific capability query or swapchain creation needs them. This avoids choosing a provider before the client supplies a logical Device and permits one Surface to be queried against Devices on different GPUs. Conformance vectors 165–168 were added. No wire ABI changed; exact-tip CI is pending.
+The presentation/provider cross-check now states that CreateSurface is server-only and that native provider Surfaces are materialized lazily per (provider generation, logical Surface generation) when a Device-specific capability query or swapchain creation needs them. This avoids choosing a provider before the client supplies a logical Device and permits one Surface to be queried against Devices on different GPUs. Conformance vectors 165–169 were added. The capability contract also excludes transform/composite-alpha values from the v0.1 wire-facing result; providers choose any required native values internally. No wire ABI changed; exact-tip CI is pending.
 
 ## Protocol and profile status
 
