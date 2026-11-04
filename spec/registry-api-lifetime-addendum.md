@@ -1,12 +1,12 @@
 # Registry API lifetime addendum
 
-This addendum is superseded where it refers to the former `GpuBackendProvider`, provider-generation, provider-local binding-ID, or provider-context accessor API. The current normative model is in [device-registry-architecture.md](device-registry-architecture.md) §§2.4, 3, 3.1, and 7.
+This addendum is superseded where it refers to the former `GpuBackendProvider`, DDX backend-generation, DDX backend-local binding-ID, or DDX backend-context accessor API. The current normative model is in [device-registry-architecture.md](device-registry-architecture.md) §§2.4, 3, 3.1, and 7.
 
 ## Direct DDX binding
 
 The DDX enumerates every PhysicalDevice it serves and calls `GpuRegistryRegisterDdxDevice` once per device. The registration supplies structured identity evidence, the exact native PhysicalDevice handle, per-device backend context, immutable typed operation vectors, and the owning DDX module-role generation. The registry canonicalizes the identity, validates the complete operation table, queries one immutable snapshot through that binding, and publishes the PhysicalDevice only after successful validation.
 
-There is no independent Vulkan-ICD candidate inventory, no candidate-list callback API, no provider-local numeric binding ID, and no per-request lookup of a provider object. A selected PhysicalDevice binding is the direct dispatch target.
+There is no independent Vulkan-ICD candidate inventory, no candidate-list callback API, no DDX backend-local numeric binding ID, and no per-request lookup of a DDX backend object. A selected PhysicalDevice binding is the direct dispatch target.
 
 ## Module-role control record
 
