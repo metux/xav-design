@@ -121,3 +121,6 @@ Fatal provider results now have explicit quarantine semantics: admission closes,
 
 
 The API audit additionally defines retain admission during teardown, repeat behavior for Commit/Reject/Retire/Quiesce/Finalize, and single-process registry creation failure. Vector 140 covers retain races and idempotence. Exact-tip CI pending.
+
+
+Repeated successful ObserveDevice replay now explicitly returns the same observation ID plus one additional caller-owned PhysicalDevice reference per successful call; vector 141 verifies no duplicate source observation and balanced releases.
