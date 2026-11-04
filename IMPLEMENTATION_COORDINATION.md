@@ -28,7 +28,7 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 
 **Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
-Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `28acd0ab4165f9ca8757daf2a268e888ab4bc9b8`. It supersedes all older Phase A task wording.
+Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `cab616b1f67d5abeb4e030889404adeb50c507d5`. It supersedes all older Phase A task wording.
 
 The task requires:
 - a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
@@ -36,7 +36,8 @@ The task requires:
 - removal of the three PhysicalDevice callbacks from `XaveriusDDXOps`;
 - no lazy discovery from client requests;
 - initial hotplug/identity observation before the DDX scan, ordered event reconciliation, and a barrier that remains closed while any configured initial pass is PENDING; terminal adapter failure is accounted for without fabricating removal or blocking independent completed devices indefinitely;
-- concrete modesetting integration or a precise evidence-based blocker (no guessed `PreInit`/`ScreenInit` hook);
+- concrete modesetting integration or a precise evidence-based blocker (no guessed `PreInit`/`ScreenInit` hook); the verified target-tree window is the beginning of `xf86BusConfig()`, after DDX modules/`DriverRec` registration and before Screen-oriented probes; the task now requires a once-per-module-generation DDX callback or equivalent minimal seam;
+- startup-event detail verified against the target tree: `config_udev_pre_init()` enables monitor reception before `xf86BusProbe()`, but normal `SetNotifyFd()` delivery is installed only later in `config_udev_init()` during `InitInput()`; queued events therefore need explicit early reconciliation before initial publication. The existing platform DRM scan matches `card[0-9]*`, not render nodes, and is not the executable inventory;
 - minimal diffs only: preserve existing names, file layout, formatting and coding style; no cosmetic renames, broad reformatting or unrelated refactoring; justify every necessary rename or structural change;
 - reproducible A1–A9 tests, including the normative subscribe-before-scan/startup discovery barrier and event-race behavior, exact build/test commands and a structured agent report.
 
