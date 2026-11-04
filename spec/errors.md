@@ -41,7 +41,7 @@ Backend providers return internal classified results; they do not return X11 err
 
 In particular:
 
-- A provider/PhysicalDevice becoming temporarily unavailable maps to `DEVICE_UNAVAILABLE` for a request creating a new logical Device. It does not by itself transition an already-created logical Device to DEVICE_LOST.
+- A selected provider/PhysicalDevice becoming temporarily unavailable maps to `DEVICE_UNAVAILABLE` for any request that requires that provider, including creation and operations on an existing logical Device; it does not by itself transition an existing logical Device to DEVICE_LOST. Reply-bearing presentation requests use their explicitly defined `DEVICE_UNAVAILABLE` status value, while requests whose contract uses X11 errors use the `DEVICE_UNAVAILABLE` X11 error. For an already protocol-accepted QueuePresent, provider unavailability is reported through the presentation failure event/status contract, never a delayed X11 error.
 - A positive backend loss result for an existing logical Device maps to `DEVICE_LOST` where the request contract reports a synchronous X11 error. Accepted asynchronous work uses its specified terminal status/event instead of a delayed X11 error.
 - Provider-reported host/device allocation failure maps to `ALLOCATION_FAILED` for synchronous creation/allocation operations that expose that error. Transfer and accepted execution failures use `TRANSFER_FAILED` and the request-specific asynchronous terminal path respectively.
 - A provider reporting an operation as unsupported after the corresponding capability was published is a provider contract violation and maps to `INTERNAL_SERVER_ERROR`; it MUST NOT be misreported as client `BadMatch` or used to mutate the published capability snapshot.
