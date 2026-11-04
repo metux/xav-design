@@ -780,3 +780,26 @@ The client prototype now has:
 - Exact fixed payload-length and reserved-byte checks, host-order decoded scalar fields, and tests for every event layout.
 
 Important XCB ABI detail: xcb_ge_generic_event_t contains full_sequence at byte 32, so XCB's in-memory event-specific payload starts at byte 36 even though the XGE wire payload starts at byte 32. The decoder accounts for that insertion. No live XAverius server has yet exercised selection or delivery; the client-side synthetic event tests are the current validation.
+
+
+## Design-Agent review — multi-Screen Physical-Device / Surface contract — 2026-11-04
+
+Reviewed the current normative text in `spec/devices.md` (Physical-Device inventory, CreateDefaultDevice, lifecycle), `spec/presentation.md` (Window identity, Screen binding, GetSurfaceCapabilities and swapchain negotiation), `spec/resource-lifetime.md`, the Physical-Device property registry, and the corresponding conformance vectors.
+
+The existing correction is internally consistent; no additional wire request or normative change is required in this pass. The required client/server selection sequence is:
+
+1. Enumerate the server-wide Physical-Device inventory. Do not associate an entry with a Screen based on enumeration position, initialization order, or a presumed default Screen.
+2. Create the target X11 Window through core X11.
+3. Create one Surface for that exact Window. The server resolves and retains both the Window resource identity and its owning X11 Screen; the client does not supply or guess a Screen number.
+4. For each candidate logical Device, query `GetSurfaceCapabilities(device_xid, surface_xid)`. The result is specific to that Device's Physical Device, the retained Window/Screen, and every queue family. A successful query with no present-capable family is a valid negative result, not permission to retry against a different Screen or silently substitute another Physical Device.
+5. Create the Swapchain only on a Device/Surface pair whose returned configuration and queue-family support satisfy the request. No implicit Device migration or cross-Screen presentation is permitted.
+
+Additional cross-checks:
+- `CreateDefaultDevice` is compute-baseline selection only and carries no presentation guarantee.
+- A Physical Device may present on multiple Screens, a subset of Screens, or none; different Physical Devices may serve different Screens. A Screen may therefore have more than one candidate Physical Device.
+- RandR outputs/monitors are not X11 Screens. Moving/resizing a Window within its Screen does not change the retained Screen association; resize affects Swapchain state as specified.
+- The conformance matrix already covers two Screens/two GPUs with disjoint presentation support, one Physical Device serving both Screens, a compute-only/non-presenting Physical Device, initialization/enumeration-order independence, and the absence of a CreateDefaultDevice presentation guarantee.
+
+Implementation follow-up (not a specification gap): the server's Physical-Device registry must be server-wide even if screen-specific backends initialize independently. The implementation must preserve one canonical server-owned Physical-Device identity for the same underlying device and must keep per-Surface presentation support separate from that inventory. Client code must not infer presentation support from enumeration or device properties; it must use the exact Surface-scoped capability query. The paused client event-dispatcher work should remain paused until its device-selection path follows this sequence.
+
+No protocol IDs, layouts, error precedence, or normative rules were changed by this review.
