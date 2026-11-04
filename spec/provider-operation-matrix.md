@@ -61,7 +61,7 @@ The registry owns all resource validation, generation checks, dependency pinning
 | 36 | WaitForFence | None | Server-owned wait registration/timeout arbitration |
 | 37 | ResetFence | `synchronization.reset_fence` | Synchronous reset after server validates state |
 | 38 | DestroyFence | `synchronization.destroy_fence` | Synchronous backend destroy after server proves no pending references |
-| 39 | DestroyResource | One typed destroy operation selected by validated resource type: buffer, memory where applicable, shader module, descriptor-set layout, pipeline layout, compute pipeline | Server owns type/ownership/dependency validation and XID invalidation; provider performs only the typed backend destroy |
+| 39 | DestroyResource | One typed destroy operation selected by validated resource type: buffer, shader module, descriptor-set layout, pipeline layout, compute pipeline | Server owns type/ownership/dependency validation and XID invalidation; provider performs only the typed backend destroy |
 | 40 | SelectEvents | None | Entirely server-side |
 | 41 | CreateSurface | `create_surface` for the selected provider/Device path when provider surface creation is needed | Server owns Window identity and Surface XID |
 | 42 | DestroySurface | `destroy_surface` | Synchronous backend destroy after Swapchain/route references drain |
@@ -156,6 +156,13 @@ struct GpuProviderCommandOps {
         GpuProviderCommandPool **out_pool);
     GpuProviderResult (*destroy_command_pool)(
         GpuProviderDevice *, GpuProviderCommandPool *);
+    GpuProviderResult (*allocate_command_buffer)(
+        GpuProviderDevice *, GpuProviderCommandPool *,
+        const GpuCommandBufferAllocateInfo *,
+        GpuProviderCommandBuffer **out_command_buffer);
+    GpuProviderResult (*free_command_buffer)(
+        GpuProviderDevice *, GpuProviderCommandPool *,
+        GpuProviderCommandBuffer *);
     GpuProviderResult (*reset_command_buffer)(
         GpuProviderDevice *, GpuProviderCommandBuffer *);
     GpuProviderResult (*begin_command_buffer)(
@@ -247,14 +254,14 @@ Every provider-created persistent object has exactly one typed destruction opera
 | Descriptor Set | `shader_pipeline.free_descriptor_sets` (pool-owned; no independent native destroy) |
 | Pipeline Layout | `shader_pipeline.destroy_pipeline_layout` |
 | Compute Pipeline | `shader_pipeline.destroy_compute_pipeline` |
-| Command Pool / Command Buffers | `commands.destroy_command_pool`; command buffers are pool-owned and invalidated/reset, not individually destroyed |
+| Command Pool | `commands.destroy_command_pool` |\n| Command Buffer | `commands.free_command_buffer`; allocated by `commands.allocate_command_buffer` and owned by its pool |
 | Semaphore | `synchronization.destroy_semaphore` |
 | Fence | `synchronization.destroy_fence` |
 | Provider Surface | `destroy_surface` |
 | Presentation Route | `destroy_presentation_route` |
 | Swapchain | `destroy_swapchain` |
 
-**Correction required for the API sketch:** add `free_buffer` to `GpuProviderBufferMemoryOps`. The earlier sketch listed `create_buffer` but omitted the matching buffer destruction operation. `DestroyResource` for a Buffer MUST dispatch to `free_buffer`; it MUST NOT call memory-free or infer destruction from unbinding.
+**Corrections required for the API sketch:** add `free_buffer` to `GpuProviderBufferMemoryOps`; the earlier sketch listed `create_buffer` but omitted matching destruction. Also add `allocate_command_buffer` and `free_command_buffer` to `GpuProviderCommandOps`: the first `CommandBufferData` chunk creates a command-buffer object in the server model, but the previous provider table had no operation to allocate its native counterpart. `DestroyResource` for a Buffer MUST dispatch to `free_buffer`; it MUST NOT call memory-free or infer destruction from unbinding. Command-buffer native allocation MUST occur exactly once when the server allocates the logical command-buffer object, and native free MUST occur only after it is no longer pending and all backend references have retired.
 
 Provider object destruction is synchronous only with respect to the provider's native destroy call. If native destruction cannot yet occur because accepted work or callbacks retain the object, the server MUST defer the call until those references retire. A destroy hook MUST NOT silently queue untracked destruction and return SUCCESS unless the provider object wrapper itself remains retained and the hook's contract explicitly reports the deferred state. For this v0.1 interface, typed destroy hooks return SUCCESS only after the native object is no longer usable; otherwise return BUSY/PENDING only where the request path supports retry/deferred retirement, and keep the wrapper/module references pinned.
 
@@ -281,7 +288,7 @@ The architecture conformance suite MUST cover:
 
 - **151 — Table completeness:** all four typed tables have every operation required by the enabled v0.1 profile; missing advertised entries reject provider registration.
 - **152 — Request mapping completeness:** every assigned request 0–47 maps to provider work or explicitly server-only work; no request handler invents an unlisted provider entry.
-- **153 — Create/destroy symmetry:** every persistent provider object has exactly one matching typed destruction path; Buffer creation cannot register without `free_buffer`.
+- **153 — Create/destroy symmetry:** every persistent provider object has exactly one matching typed destruction path; Buffer creation cannot register without `free_buffer`; command-buffer creation cannot register without `allocate_command_buffer` and `free_command_buffer`.
 - **154 — Async classification:** exactly six operations use tokens; all other operations reject/forbid completion callbacks.
 - **155 — Output initialization and rollback:** every synchronous failure leaves outputs initialized and no partially published provider object.
 - **156 — Descriptor and batch atomicity:** descriptor allocation/update either commits the whole validated batch or exposes no partial result.
