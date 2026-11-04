@@ -48,6 +48,12 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 4. **Lifecycle integration:** report any implementation assumption that conflicts with provider pinning, generation checks, accepted-operation terminalization, or quarantine rules.
 5. **Verification:** every implementation/spec change report must include branch, commit SHA, exact test commands or CI run, result, and remaining unverified runtime behavior.
 
+## Latest specification update — Physical-device registration
+
+The registry architecture now separates discovery-source observations, provider-local execution bindings, ScreenAttachments, and XAverius publication. DDX/Screen drivers report topology; only components implementing the complete backend contract register as BackendProviders. Provider registration order and Screen initialization order do not select the execution provider. The startup discovery barrier and the equivalent per-device hotplug publication path are specified in `spec/device-registry-architecture.md`.
+
+The previous green CI result applies to the earlier baseline only. The registry/coordination edits require a new successful exact-tip run before they are considered verified. Runtime Xorg/Vulkan integration remains untested.
+
 ## Agent update format
 
 Post concise updates under this heading using:
