@@ -193,3 +193,6 @@ All current asynchronous operation kinds require an exact logical-Device generat
 
 
 GPU_PROVIDER_FATAL and server-detected provider-contract violations quarantine the provider generation and prohibit normal finalization; DEVICE_LOST is logical-Device scoped; CANCELLED is only an accepted operation's terminal result. Vector 139 checks the distinctions.
+
+
+Retain admission closes at provider shutdown/quarantine, ModuleRole unregister, and ScreenAttachment detach; existing references remain releasable. Operation-token and provider finalization calls have explicit repeat/idempotence behavior. Vector 140 covers these transitions.
