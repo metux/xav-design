@@ -60,4 +60,4 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 - [Open issues and deferred work](spec/open-issues.md)
 - [Physical-device registry architecture](spec/device-registry-architecture.md)
 - [Live implementation coordination](IMPLEMENTATION_COORDINATION.md)
-- [Historical status log](audit/project-status-history-2026-11-04.md)
+- [Historical status log](PROJECT_STATUS_HISTORY_2026-11-04.md)
