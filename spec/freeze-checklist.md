@@ -181,3 +181,6 @@ The API audit was extended to close the asynchronous token lifecycle: `PrepareOp
 ### Provider API second-pass audit — 2026-11-04
 
 Section 7 now also specifies provider candidate-list ownership, provider-local binding-ID/native-handle mapping, exact binding identity in Device/Surface operations, all six asynchronous provider operation kinds, complete per-token resource pin sets, call-scoped token pointer semantics, operation-specific status codes, completion payload bounds, and shutdown admission closure. Section 8.3 contains implementation guidance. Architecture vectors 120–131 cover candidate-list release, native handle retention, context access, async operation coverage, multi-resource submissions, status validation, and completion payload validation. Exact-tip CI pending; no wire ABI/opcode changed.
+
+
+Completion records now carry both provider-local binding ID and registry binding generation; vector 132 checks stale binding rejection. Provider-device wrapper retain/release is explicitly distinct from native logical-device destruction, and typed operation tables must follow the common result/output/token contract.
