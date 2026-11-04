@@ -109,3 +109,6 @@ A second review of Section 7 found remaining gaps between abstract provider sign
 
 
 The second-pass audit additionally put registry binding_generation into every completion identity (vector 132) and clarified provider-device wrapper references versus native logical-device destruction. Typed operation-table declarations remain chapter-specific but are required to use classified GpuProviderResult values, initialized outputs, and the common async token contract.
+
+
+Availability/discovery ordering was tightened: provider context and binding-local state notifications now carry monotonic scope-specific sequences, binding events carry exact binding_generation, and effective availability composes provider context, binding state, and physical removal. Discovery observations/removal evidence carry source_event_sequence; caller-selectable removal authority was removed. Vectors 133–137 cover out-of-order events, stale binding events, scope composition, and delayed remove callbacks. Exact-tip CI pending.
