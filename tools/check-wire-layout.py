@@ -3272,7 +3272,7 @@ def check_presentation_profile(c: Check) -> None:
     conformance_precedence_contracts = (
         "Presentation error precedence is tested with mixed-failure requests",
         "returns `DEVICE_LOST` rather than `SURFACE_LOST`",
-        "returns `DEVICE_LOST` before `SURFACE_LOST`, `SURFACE_LOST` before `OUT_OF_DATE`",
+        "returns `DEVICE_LOST` before `DEVICE_UNAVAILABLE`, `DEVICE_UNAVAILABLE` before `SURFACE_LOST`, `SURFACE_LOST` before `OUT_OF_DATE`",
         "lifecycle outcomes precede timeout polling",
         "Zero token, duplicate wait XIDs, and accepted-token reuse are `BadValue`",
         "Device loss beats Surface loss and accepted-token reuse",
