@@ -508,6 +508,7 @@ typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
 typedef struct GpuBackendProvider GpuBackendProvider;
 typedef struct GpuProviderModuleLease GpuProviderModuleLease;
+typedef struct GpuModuleRole GpuModuleRole;
 typedef struct GpuScreenAttachment GpuScreenAttachment;
 typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 
@@ -540,6 +541,12 @@ GpuProviderModuleLease *GpuProviderModuleLeaseCreate(
     void *module_owner, GpuRegistryResult *out_result);
 GpuRegistryResult GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
 GpuRegistryResult GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
+
+typedef enum {
+    GPU_MODULE_ROLE_DISCOVERY_SOURCE,
+    GPU_MODULE_ROLE_DDX_TOPOLOGY,
+    GPU_MODULE_ROLE_CALLBACK_BRIDGE
+} GpuModuleRoleKind;
 
 enum {
     GPU_DISCOVERY_SOURCE_PLATFORM_IDENTITY = 1u << 0,
@@ -754,10 +761,27 @@ GpuRegistry *GpuRegistryCreate(GpuRegistryResult *out_result);
 GpuRegistryResult GpuRegistryBeginShutdown(GpuRegistry *registry);
 GpuRegistryResult GpuRegistryDestroy(GpuRegistry *registry);
 
-/* Discovery sources are explicit registrations; generations are server-assigned. */
+/* A module role pins callback-capable adapter code independently of Screen
+   and DriverPtr references. owner_key is copied; role_generation is assigned
+   by the registry. The lease is retained once for this role. */
+GpuRegistryResult GpuRegistryRegisterModuleRole(
+    GpuRegistry *registry, GpuProviderModuleLease *module_lease,
+    GpuModuleRoleKind role_kind, const char *owner_key,
+    GpuModuleRole **out_role, uint64_t *out_role_generation);
+GpuRegistryResult GpuRegistryUnregisterModuleRole(
+    GpuRegistry *registry, GpuModuleRole *role,
+    uint64_t role_generation);
+GpuRegistryResult GpuModuleRoleRetain(
+    GpuModuleRole *role, uint64_t role_generation);
+GpuRegistryResult GpuModuleRoleRelease(
+    GpuModuleRole *role, uint64_t role_generation);
+
+/* Discovery sources are explicit registrations; generations are server-assigned.
+   An unloadable source MUST be associated with its owning module role. */
 GpuRegistryResult GpuRegistryRegisterDiscoverySource(
     GpuRegistry *registry, const char *source_key,
-    uint32_t source_capabilities, uint64_t *out_source_generation);
+    uint32_t source_capabilities, GpuModuleRole *owner_role,
+    uint64_t owner_role_generation, uint64_t *out_source_generation);
 GpuRegistryResult GpuRegistryUnregisterDiscoverySource(
     GpuRegistry *registry, const char *source_key,
     uint64_t source_generation);
@@ -849,6 +873,7 @@ GpuRegistryResult GpuRegistryAttachScreen(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     uint64_t device_generation, ScreenPtr screen,
     uint64_t screen_generation, unsigned int roles,
+    GpuModuleRole *owner_role, uint64_t owner_role_generation,
     GpuScreenAttachment **out_attachment,
     uint64_t *out_attachment_generation);
 GpuRegistryResult GpuRegistryDetachScreen(
@@ -893,18 +918,19 @@ The declarations above define ownership and failure semantics, not merely illust
 - Input pointers and strings are borrowed only for the call unless explicitly transferred. Every retained key, identity field, role descriptor, and variable-length input MUST be copied or separately retained before return. Provider operation tables, callbacks, callback userdata, and provider context remain immutable and pinned until final provider release.
 - Mutations are atomic. Validation/allocation failure MUST roll back all partial entries, reference increments, module-lease retains, observations, bindings, XID/resource allocation, and callback registration. Only reserved non-reusable generations and explicitly retained `PENDING`/`AMBIGUOUS` observations survive a non-success return.
 - Repeated calls are idempotent only where specified. Same-generation/same-payload repetition MUST NOT duplicate objects or references; conflicting payload returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. A stale generation is never idempotent success for a replacement.
-- `GpuRegistryBeginShutdown` closes admission for new sources, observations, providers, bindings, attachments, and acquisitions. It does not implicitly remove existing objects or skip provider quiescence. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded provider code.
+- `GpuRegistryBeginShutdown` closes admission for new module roles, sources, observations, providers, bindings, attachments, and acquisitions. It does not implicitly remove existing objects or skip provider quiescence. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded provider code.
 
 Specific operation contracts:
 
 - `GpuRegistryCreate` returns one owner reference or NULL plus a classified result; only one process-wide registry may be active.
-- Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. Unregister closes source admission and withdraws only its observations/adapter role after callbacks drain; it returns `PENDING` while callbacks remain, and the caller retries with the same key/generation until terminal success. Source generations are never reused.
+- Module-role registration assigns a fresh nonzero role generation and retains exactly one reference to the shared module lease. Discovery-source and DDX-topology roles MUST be associated with the module role that owns their callback code; server-resident code MAY use a null role. Unregister closes callback admission, waits for all source/Screen/callback references to drain, and drops the role's lease reference exactly once. It returns PENDING while any dependent reference remains; retry uses the same role generation. A role cannot be unregistered while its discovery source or ScreenAttachments remain active.
+- Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. An unloadable source MUST supply a live owner role and generation. Unregister closes source admission and withdraws only its observations after callbacks drain; it returns `PENDING` while callbacks remain, and the caller retries with the same key/generation until terminal success. Source generations are never reused.
 - `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation and same semantic payload returns the same ID and one retained PhysicalDevice reference, not a duplicate observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
 - `RegisterProvider` returns one retained provider reference. It validates the descriptor and required operation-table entries, retains the module lease, then calls `retain_provider` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate provider-generation reference. The provider-context retain hook MUST be infallible and pair exactly once with the final `release_provider`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
 - `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a provider pointer to remain live at the call site. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. It retains provider and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`, and the caller retries the same exact operation until terminal success. No removal broadens to another source, binding, Screen, or incarnation.
 - Unavailable/recovered transitions are idempotent `SUCCESS` when the exact selected scope is already in the requested state. Recovery after binding removal, provider shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
-- `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. At least one role MUST be set; DISCOVERY_ONLY is mutually exclusive with RENDER_ACCESS, SCANOUT, and DISPLAY_CONTROL, while RENDER_ACCESS and SCANOUT MAY coexist. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
+- `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. If the DDX callback code is unloadable, the attachment MUST retain the supplied live owner role and generation; the role remains pinned until detach and all attachment callbacks have retired. At least one role MUST be set; DISCOVERY_ONLY is mutually exclusive with RENDER_ACCESS, SCANOUT, and DISPLAY_CONTROL, while RENDER_ACCESS and SCANOUT MAY coexist. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
 - `XaPhysicalDevicePublish` requires resolved identity, selected provider binding, complete immutable snapshot, and an open publication gate. XID allocation and DIX resource insertion are one transaction. On insertion failure the provisional XID is freed and no published state is visible. Repeated publication returns the same XID. Stale or removed incarnations cannot be newly published. `GetXid` returns `NOT_FOUND` before publication and `STALE_GENERATION` for an old incarnation.
 - Execution-provider acquisition returns a retained reference only while the PhysicalDevice is `AVAILABLE` and its selected binding is active. It returns `NOT_FOUND` if no provider is selected and `BUSY` if unavailable or shutting down. The returned generation MUST equal the pinned selection and is released exactly once.
 - Registry shutdown is idempotent and does not silently destroy live objects. `BUSY` reports outstanding ownership; callers retry after teardown. A failed `Destroy` does not invalidate existing references.
@@ -1138,7 +1164,7 @@ The implementation test suite SHOULD include at least:
 
 97. Call registry APIs with required pointers omitted, zero generations, unknown role bits, malformed keys, and inconsistent input/output pairs. Verify `INVALID_ARGUMENT`, initialized output sentinels, no mutation, and no leaked references.
 
-98. Obtain PhysicalDevice, BackendProvider, and ScreenAttachment references from successful APIs, then race release against detach, binding removal, provider shutdown, and registry shutdown. Verify each acquired reference is consumed exactly once and storage is not reclaimed while any reference or callback remains.
+98. Obtain PhysicalDevice, BackendProvider, ModuleRole, and ScreenAttachment references from successful APIs, then race release against detach, binding removal, provider shutdown, and registry shutdown. Verify each acquired reference is consumed exactly once and storage is not reclaimed while any reference or callback remains.
 
 99. Register and unregister a discovery source while observations and delayed callbacks exist. Verify source generations are server-assigned/non-reusable, unregister returns PENDING while callbacks remain, and late observations from the closed generation are rejected without affecting a replacement source.
 
