@@ -257,3 +257,8 @@ The registry contract now explicitly closes new Retain admission at teardown bou
 ### Observation replay reference accounting
 
 A repeated ObserveDevice call with the same source generation, event sequence, and semantic payload returns the same observation ID but, on SUCCESS, one additional caller-owned PhysicalDevice reference for that call. It does not duplicate the source observation. The caller must release each returned reference independently. Vector 141 covers the case where the original reference is still held during replay.
+
+
+### Quarantine hook barrier
+
+A fatal provider-generation quarantine now blocks even the normal quiesce/finalize hooks: TryQuiesceProvider returns QUARANTINED/FAILURE without invoking quiesce_provider, and FinalizeProviderShutdown returns QUARANTINED without release_provider. This prevents further entry into a module after its contract has been violated. Vector 142 checks that provider/context/module/object references remain pinned. Any recovery requires a separately specified server-controlled proof-of-safety path.
