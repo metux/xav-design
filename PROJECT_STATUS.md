@@ -2,48 +2,40 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `a66d977b436cb05818a07a847e7c4fc1e8065598`  
-**Status:** Normative v0.1 specification work is substantially complete. The last verified baseline remains `a66d977b436cb05818a07a847e7c4fc1e8065598`; newer provider-operation and logical/provider-native Surface clarifications are awaiting exact-tip CI. Runtime implementation acceptance remains open.
+**Current status:** Normative v0.1 protocol work is substantially complete. The DDX-owned PhysicalDevice registration and direct-binding API cleanup is the latest unverified specification delta. Exact-tip CI and implementation-agent conformance review are pending. Runtime implementation acceptance remains open.
 
-The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
+The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). Older provider terminology and provider-object APIs in historical entries describe superseded designs; the current normative model is the DDX binding architecture below and in the specification.
 
-## Current verified baseline
+## Current architecture
 
-- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [required-check workflow 41848200803](https://github.com/metux/xav-design/actions/runs/41848200803) — SUCCESS on `a66d977b436cb05818a07a847e7c4fc1e8065598`.
-- Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
-- This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, shared module leases, finalization ordering, and quiescence vectors 89–96. All required static/specification gates passed.
-- These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
+- One XAverius-owned registry exists per X server process and is independent of Screen initialization.
+- Each DDX enumerates and registers every PhysicalDevice it serves, including headless, render-only, compute-only, and Screen-unattached devices.
+- Each registration binds the exact native PhysicalDevice handle, per-device backend context, and immutable typed operation vectors directly to the canonical PhysicalDevice binding.
+- Request dispatch calls the selected binding's operation vectors directly. There is no independent Vulkan-ICD candidate inventory, candidate-list API, provider-local numeric handle map, generic provider-context accessor, or intermediate provider-object dispatch lookup.
+- A shared `GpuModuleRole` exists only when needed for module pinning, shared callback resources, admission, and quiescence. It is not a per-device execution object.
+- Platform/udev contributes identity and hotplug evidence only. ScreenAttachments describe topology and do not create devices or prove presentation support.
+- The registry canonicalizes identity, validates the complete binding, obtains one coherent immutable snapshot through that binding, and publishes the PhysicalDevice/XID only after successful validation.
+- v0.1 does not merge operation tables, contexts, or snapshots from duplicate DDX claims and does not transparently fail over an already published binding.
 
-### Newer unverified clarification — logical versus provider-native Surface
-
-The presentation/provider cross-check now states that CreateSurface is server-only and that native provider Surfaces are materialized lazily per (provider generation, logical Surface generation) when a Device-specific capability query or swapchain creation needs them. This avoids choosing a provider before the client supplies a logical Device and permits one Surface to be queried against Devices on different GPUs. Conformance vectors 165–170 were added. Provider shutdown now explicitly retires that generation's cached native Surface wrappers without invalidating the logical Surface or failing over existing Devices. The capability contract also excludes transform/composite-alpha values from the v0.1 wire-facing result; providers choose any required native values internally. No wire ABI changed; exact-tip CI is pending.
+See [device registry architecture](spec/device-registry-architecture.md), [DDX backend operation matrix](spec/provider-operation-matrix.md), and [DDX device registration implementation notes](implementation-notes/ddx-device-registration.md).
 
 ## Protocol and profile status
 
 - The central request registry contains 48 assignments: bootstrap `QueryVersion` at subopcode 0, compute-baseline requests 1–40, and presentation-capable-profile requests 41–47.
 - The initial implementation target remains compute-only. Presentation requests/events are separately profile-gated; their assignments do not imply server support.
-- The normative request/reply/event layouts, resource lifecycle, asynchronous outcomes, error precedence, numeric registries, provider operations, and cross-document conformance contracts have been systematically audited.
-- See [the freeze checklist](spec/freeze-checklist.md) for the exact freeze gates and [open issues](spec/open-issues.md) for implementation acceptance work.
-
-## Physical-device inventory and provider architecture
-
-The server-wide inventory is independent of Screen initialization:
-
-1. Discovery sources submit identity observations; the registry canonicalizes hardware identity and rejects ambiguous matches rather than silently merging them.
-2. BackendProviders separately register provider-local execution bindings. Registration order does not select the provider.
-3. The server selects one eligible provider, obtains its complete immutable snapshot, and only then publishes a PhysicalDevice XID.
-4. DDX/Screen drivers report generation-checked ScreenAttachments. A Screen may attach to multiple GPUs and a GPU to multiple Screens; this does not imply WSI support.
-5. Provider loss, Screen detach, DRM-node disappearance, and confirmed physical removal are distinct lifecycle inputs. v0.1 has no transparent provider failover.
-
-The detailed contracts, suggested registry API, driver-facing responsibilities, Xlibre/Xorg adapter roles, startup barrier independent of Screen initialization, hotplug scan/event reconciliation, generation-checked provider state transitions, and architecture vectors are in [device-registry architecture](spec/device-registry-architecture.md). The provider operation and lifecycle contracts are in [devices](spec/devices.md) and [resource lifetime](spec/resource-lifetime.md).
+- The normative request/reply/event layouts, resource lifecycle, asynchronous outcomes, error precedence, numeric registries, DDX backend operations, and cross-document conformance contracts have been systematically audited.
+- Static CI establishes specification consistency only; it does not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Open implementation acceptance gates
 
+- [ ] Exact-tip CI for the latest DDX binding/API cleanup.
+- [ ] Implementation-agent review against `GpuRegistryRegisterDdxDevice` and direct PhysicalDevice-binding dispatch.
+- [ ] Confirm every DDX registers all devices it serves, not merely the GPU attached to the first Screen.
 - [ ] Live X11/XGE interoperability: extension discovery, dynamic major opcode, XAverius QueryVersion, GEQueryVersion, SelectEvents, event framing/masks, byte order, and connection isolation. Follow [the XGE test plan](spec/xge-interoperability-test-plan.md).
 - [ ] End-to-end compute execution against a real Vulkan backend: upload visibility, dispatch, synchronization, readback, and resource teardown.
-- [ ] Runtime lifecycle/failure behavior: Device loss, provider unavailability, late callbacks, disconnect, delayed release/quarantine, semaphore/fence races, and exactly-once terminal outcomes.
+- [ ] Runtime lifecycle/failure behavior: Device loss, DDX binding unavailability, late callbacks, disconnect, delayed release/quarantine, semaphore/fence races, and exactly-once terminal outcomes.
 - [ ] If presentation is implemented: Window/Surface lifetime, swapchain creation, acquire/present/release, resize/out-of-date, terminal events, and teardown.
-- [ ] Implementation-agent Phase 1 ship confirmations and a named shared integration-interface owner are still coordination sign-offs; see [IMPLEMENTATION_COORDINATION.md](IMPLEMENTATION_COORDINATION.md).
+- [ ] Implementation-agent Phase 1 ship confirmations and a named shared integration-interface owner; see [IMPLEMENTATION_COORDINATION.md](IMPLEMENTATION_COORDINATION.md).
 
 These are implementation/conformance gates, not unresolved wire-design decisions. No implementation work is authorized by this specification repository unless explicitly requested.
 
