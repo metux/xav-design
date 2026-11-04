@@ -14,6 +14,13 @@ The normative request inventory, request/reply/event layouts, resource lifecycle
 
 The current verified branch tip is `7f2620726f88bbd28ff6ac5c21a27d87659301e7` on `docs/restructure-2026-10-21`. Exact-tip workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed 4,873 wire-layout checks, 72 Timeline regressions, and all 693 Python tests; shared-header compilation, XCB client prototype build, request/reply/XGE validation, and the required-check audit also passed. This tip includes the provider operation/lifetime corrections, multi-device UNAVAILABLE scoping, the discovery/provider/Screen registration contract, and the registry architecture conformance additions. Earlier candidates and their CI runs remain historical evidence only. Normative design gates are checked; Phase 1 ship confirmations and a named shared integration-interface owner remain project-coordination sign-offs, not unresolved wire-protocol rules.
 
+### Physical-device identity evidence audit — 2026-11-04
+
+The identity audit now defines precedence and conflict handling for authoritative platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived-device instance discriminators, and provider-scoped fallback identities for software/virtual devices. It also defines ambiguous-match quarantine, immutable published identity behavior, incarnation boundaries, and stable provider-key uniqueness. Architecture vectors 36–44 cover same-device multi-ICD correlation, conflicting/duplicated UUIDs, reused BDF/incarnation, derived-device identity, provider-key ambiguity, ineligible preferred providers, and discovery-order independence. No wire ABI or request assignment changed.
+
+Candidate branch tip `44c0a9c88919c6b72555d83e0cb330ceb58ed704` contains these normative changes and is not yet CI-verified. Do not treat the earlier green workflow as evidence for this candidate; exact-tip CI is required.
+
+
 ### Provider operation contract audit — 2026-11-04
 
 The final provider-operation inventory was checked against all registered request subopcodes 0–47 and the authoritative device, memory/buffer, shader/pipeline, command, queue, synchronization, event, and presentation chapters. The ownership map assigns every request family to either server-owned state/validation or a concrete provider-backed operation. Provider result classes, request-specific DEVICE_UNAVAILABLE mappings, protocol-acceptance boundaries, generation-safe completion tokens, destroy/retirement failures, provider quiescence, and late AcquireNextImage retirement are covered by normative rules and conformance vectors.
@@ -55,7 +62,7 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The v0.1 normative contract is **CI-verified at the current specification tip** `7f2620726f88bbd28ff6ac5c21a27d87659301e7`. Exact-tip workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed all required static checks: 4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit.
+The previously verified normative baseline is `7f2620726f88bbd28ff6ac5c21a27d87659301e7`; workflow [41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) passed all required static checks. The current identity-evidence candidate `44c0a9c88919c6b72555d83e0cb330ceb58ed704` is not yet CI-verified, so the freeze decision must remain conditional until exact-tip CI passes.
 
 The normative design gates are assessed as complete. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
 - [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
