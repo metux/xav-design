@@ -146,3 +146,14 @@ The provider-wide quiescence ABI refinement at `5d3c0f69e715a8a0e89b1217e6101c2b
 
 
 The final Screen-pointer safety clarification adds architecture vector 78: asynchronous provider callbacks may use only copied immutable data or a detached generation-checked ScreenAttachment context, never raw `ScreenPtr`/`ScrnInfoPtr` or `FreeScreen()`-owned storage after Screen close. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` and subsequent summary updates are pending exact-tip CI.
+
+
+### Multi-provider ownership and module-lease audit — 2026-11-04
+
+The registry architecture now explicitly defines provider/binding/module cardinality and ownership. A provider generation may bind multiple PhysicalDevices; one PhysicalDevice may have multiple provider bindings; and one loaded module may own multiple independently quiesced provider generations and adapter roles. Each provider-generation/PhysicalDevice-incarnation pair has at most one executable binding. Discovery observations remain source-owned and cannot be withdrawn by another source's teardown.
+
+The v0.1 execution rule is unchanged: one selected provider and one immutable snapshot per published PhysicalDevice. Non-selected providers do not contribute capabilities or metadata and cannot take over after selected-provider loss or unregister. Selected binding removal makes the PhysicalDevice UNAVAILABLE; physical removal remains a separate evidence-bearing terminal transition.
+
+Provider shutdown now explicitly closes admission for one exact provider generation before removing its bindings, withdrawing only its own observations/ScreenAttachments, draining accepted operations, and quiescing that provider. A shared module remains pinned until every provider generation and adapter role backed by it has independently retired. Architecture vectors 79–88 cover multi-provider ownership, same-module multiple providers, source-local withdrawal, no-failover behavior, provider-local alias deduplication, and competing teardown orders.
+
+The latest verified exact-tip baseline before this refinement is `ceac0d09dc7e9456e372ae52cea97d46007697fc`, passed by [workflow 41843634177](https://github.com/metux/xav-design/actions/runs/41843634177). The multi-provider refinement is commit `c88668e023ba31fa38293dba4aef5a827adedb64`; exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) is pending. No wire assignments or client-visible ABI changed.
