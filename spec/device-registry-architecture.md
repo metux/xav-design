@@ -190,7 +190,7 @@ Recommended layering:
 - Screen initialization creates/destroys ScreenAttachments only.
 - Surface/WSI code performs the actual Device/Surface presentation-support query; it must not infer support from a ScreenAttachment.
 
-For an Xorg-only prototype, the registry implementation MAY initially live beside the Xorg platform bus code, but its API MUST remain Screen-independent. If the service is intended for multiple DDX families or non-Xorg server configurations, its ownership should move to a DIX/server-core layer, with Xorg platform discovery as one provider of observations.
+The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
 
 ## 8. Required architecture tests
 
