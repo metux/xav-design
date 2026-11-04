@@ -862,3 +862,14 @@ Added `spec/device-registry-architecture.md` and linked it from `spec/devices.md
 Xorg integration findings: `xf86_platform_devices` and `config/udev.c` remain discovery inputs, not the canonical registry. The existing platform list and major/minor lookup are tied to device-node/Xorg ownership; udev currently filters DRM `card*` nodes. The new architecture explicitly prevents treating these as cross-ICD, primary/render-node, or hotplug-incarnation identity.
 
 Remaining design point before coding: settle the concrete provider-selection configuration syntax and the exact Xserver module/ABI location for the registry service. The object model and ownership semantics are now fixed.
+
+
+### Provider-selection and source-location decision — 2026-11-04
+
+Closed the two pre-implementation architecture choices:
+
+- **Owner/location:** the XAverius-specific registry should live with the XAverius server subsystem (initially `Xext/xaverius/registry.c`), with a private server-internal interface in an exported header such as `include/xaverius_registry.h`. Do not put Vulkan-specific policy into generic DIX, and do not make `xf86_platform_devices` the registry. Xorg common code supplies discovery/Screen-attachment adapters; a Vulkan-loader discovery provider serves configurations such as Xvfb. The header is an internal server/module interface, not a client ABI or a third-party stable ABI promise.
+- **Provider preference:** allow an optional ordered list of stable provider identifiers in server configuration. During initial discovery, skip providers that cannot successfully produce a complete consistent snapshot. If no explicit preference chooses one, select the usable provider with the lexicographically lowest canonical provider key (e.g. ICD manifest identity plus configured instance slot). Never use provider registration/load order, pointer values, DRM node numbers, or Screen indices. Selection is finalized before publication and immutable for the PhysicalDevice XID lifetime.
+- The exact Xorg config spelling is deliberately left to the implementation patch; the semantic contract is fixed in `spec/device-registry-architecture.md`.
+
+No implementation source has been changed.
