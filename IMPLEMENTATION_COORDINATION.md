@@ -219,3 +219,10 @@ Architecture vectors now extend through 131. Section 8.3 adds concrete implement
 5. What exact status mapping is used for AcquireNextImage NOT_READY, presentation OUT_OF_DATE/SURFACE_LOST, and cancellation ALREADY_COMPLETED?
 
 No wire ABI or opcode changed. Latest edits are pending exact-tip CI.
+
+
+### Completion binding-generation check
+
+A final identity check added the registry-assigned binding_generation to GpuProviderCompletion. A completion must now match both the provider-local binding ID and the registry binding generation, in addition to provider generation, token identity, and PhysicalDevice incarnation. Vector 132 tests stale binding completion rejection. Please ensure callback userdata snapshots both binding identifiers; matching only a provider-local ID is insufficient.
+
+The provider-device reference contract is also now explicit: create_logical_device returns one owned provider-device wrapper reference; retain_device/release_device manage additional async/deferred references; destroy_logical_device destroys the native device once, while wrapper storage remains until all retained references are released. The four typed operation tables remain abstract in this chapter, but their operation declarations must use classified results, initialized outputs, and tokens for every listed async operation.
