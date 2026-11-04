@@ -16,7 +16,7 @@ For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemapho
 
 `GPU_BACKEND_UNSUPPORTED` is legal only for an operation/capability not advertised by the selected DDX binding. If a previously advertised operation returns UNSUPPORTED, this is a DDX backend-contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch.
 
-The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. DDX backend-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate exact DDX-local binding ID plus registry binding generation whenever an operation resolves a PhysicalDevice binding.
+The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. DDX backend-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate exact exact binding generation whenever an operation resolves a PhysicalDevice binding.
 
 ## 1.1 DDX binding is the direct dispatch target
 
@@ -218,7 +218,7 @@ The types shown above are opaque server/DDX backend boundary types. Their payloa
 
 ### 3.1 Top-level operation table completion
 
-The top-level `GpuBackendOps` retains the following operations in addition to the four typed tables:
+The top-level `GpuDeviceBackendOps` retains the following operations in addition to the four typed tables:
 
 - `query_physical_snapshot`;
 - `create_logical_device`, `get_queue`, `destroy_logical_device`;
