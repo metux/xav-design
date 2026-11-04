@@ -350,7 +350,7 @@ Command entries (`CMD_*`) are not request subopcodes. The server validates their
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
-The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Each completion MUST carry the exact provider generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
+The provider descriptor MUST install a completion sink equivalent to `GpuProviderCompletionFn` plus an opaque server-owned userdata pointer before any asynchronous operation can be accepted. Operation-table entry points receive the server-owned provider wrapper; provider code obtains its opaque context only through `GpuBackendProviderGetContext()`, which returns a borrowed pointer valid while the provider generation is retained. Provider code MUST NOT cache or release that pointer independently. Each completion MUST carry the exact provider generation, operation generation, and non-reusable operation-token identity captured at submission. The server-side token record MUST retain the exact logical-Device generation (if any) and the complete resource-generation set. The provider MUST invoke the sink exactly once for each accepted operation token; it MUST NOT invoke it for an operation rejected synchronously. The completion payload MUST be self-contained and immutable; any variable payload storage MUST remain valid until the sink has copied it, and the sink MUST copy it before returning. The sink is enqueue-only and MUST NOT call back into provider operations synchronously. The callback identifies the token by its non-reusable `operation_token_id` plus `operation_generation`, never by a raw provider pointer or public XID. The provider interface MUST also expose lifecycle hooks equivalent to `retain_provider`, `release_provider`, `retain_device`, `release_device`, and a quiescence/retirement notification. Exact names are implementation-defined. A raw backend handle MUST never escape the provider boundary; the server stores opaque, generation-tagged provider object references.
 
 ### 4.2 Physical snapshot operation
 
@@ -516,7 +516,6 @@ typedef struct GpuPhysicalDeviceCandidate GpuPhysicalDeviceCandidate;
 typedef struct GpuPhysicalDeviceSnapshot GpuPhysicalDeviceSnapshot;
 typedef struct GpuProviderDevice GpuProviderDevice;
 typedef struct GpuProviderQueue GpuProviderQueue;
-typedef struct GpuProviderPhysicalDevice GpuProviderPhysicalDevice;
 typedef struct GpuProviderSurface GpuProviderSurface;
 typedef struct GpuProviderSwapchain GpuProviderSwapchain;
 typedef struct GpuProviderBufferMemoryOps GpuProviderBufferMemoryOps;
@@ -590,6 +589,22 @@ typedef struct {
     /* Structured bus/sysfs/DRM identity, optional valid deviceUUID,
        virtual-instance discriminator, and incarnation evidence. */
 } GpuDeviceIdentity;
+
+/* Candidate data is borrowed from the candidate list until its release hook.
+   provider_local_binding_id is unique and non-reusable within one provider
+   generation. Native handles remain private in the provider's ID-to-handle map. */
+typedef struct {
+    uint64_t provider_local_binding_id;
+    GpuDeviceIdentity identity;
+} GpuPhysicalDeviceCandidate;
+
+/* Provider-owned list storage, released exactly once with release_candidate_list
+   after all candidate identities/snapshots have been copied or processed. */
+typedef struct {
+    const GpuPhysicalDeviceCandidate *items;
+    size_t count;
+    void *provider_private;
+} GpuPhysicalDeviceCandidateList;
 
 typedef struct {
     /* Provenance of the authoritative removal observation. source_key is
@@ -735,9 +750,9 @@ typedef struct GpuProviderOps {
         GpuProviderSurface **);
     GpuProviderResult (*destroy_surface)(GpuBackendProvider *, GpuProviderSurface *);
     GpuProviderResult (*query_surface_support)(
-        GpuBackendProvider *, GpuProviderPhysicalDevice *,
-        uint32_t queue_family, GpuProviderSurface *,
-        GpuProviderSurfaceSupport *);
+        GpuBackendProvider *, uint64_t provider_local_binding_id,
+        uint64_t binding_generation, uint32_t queue_family,
+        GpuProviderSurface *, GpuProviderSurfaceSupport *);
     /* Create/release an exact route for this logical Device generation and
        Surface/Window/Screen generation after physical-device capability
        probing. The route MUST be distinct per logical Device, even when two
@@ -783,7 +798,8 @@ typedef struct GpuProviderOps {
 
 typedef struct {
     /* Stable provider identity/configuration, opaque provider context,
-       provider-local physical-device handle, and operation table. */
+       and operation table. PhysicalDevice handles remain private to the
+       provider and are indexed by provider-local binding IDs. */
     const char *canonical_provider_key;
     void *provider_context;
     GpuProviderModuleLease *module_lease; /* required for unloadable provider code */
@@ -814,6 +830,7 @@ typedef struct {
      reference-counted before the call returns. */
 
 /* Server startup/shutdown; one registry per X server process. */
+void *GpuBackendProviderGetContext(GpuBackendProvider *provider);
 GpuRegistry *GpuRegistryCreate(GpuRegistryResult *out_result);
 GpuRegistryResult GpuRegistryBeginShutdown(GpuRegistry *registry);
 GpuRegistryResult GpuRegistryDestroy(GpuRegistry *registry);
@@ -856,7 +873,8 @@ GpuRegistryResult GpuPhysicalDeviceRelease(
     GpuPhysicalDevice *device, uint64_t device_generation);
 
 /* Provider execution binding is registered separately from observation.
-   The provider-local handle remains private to this provider generation. */
+   The provider's native PhysicalDevice handle remains private to its context
+   and is resolved by the exact provider-local binding ID. */
 /* Reserve a non-reusable generation for the next provider descriptor.
    Failed registration does not return the generation to the allocator. */
 GpuRegistryResult GpuRegistryAllocateProviderGeneration(
@@ -904,7 +922,7 @@ GpuRegistryResult GpuRegistryPrepareOperation(
     uint64_t binding_generation,
     uint64_t logical_device_id, uint64_t logical_device_generation,
     const GpuProviderOperationResourceRef *resources,
-    size_t resource_count, uint32_t operation_kind,
+    size_t resource_count, GpuProviderOperationKind operation_kind,
     GpuProviderOperationToken **out_token,
     uint64_t *out_operation_token_id,
     uint64_t *out_operation_generation);
@@ -1038,7 +1056,8 @@ Specific operation contracts:
 - Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. An unloadable source MUST supply a live owner role and generation; server-resident source code MAY pass NULL/zero. A non-NULL owner role is retained exactly once by the source registration. Unregister closes source admission and withdraws only its observations after callbacks drain; it returns `PENDING` while callbacks remain, and the caller retries with the same key/generation until terminal success. Source generations are never reused.
 - `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation and same semantic payload returns the same ID and one retained PhysicalDevice reference, not a duplicate observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
 - `RegisterProvider` returns one retained provider reference. It validates the descriptor and required operation-table entries, retains a non-NULL module lease for unloadable code (NULL is permitted only for permanently resident code), then calls `retain_provider` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate provider-generation reference. The provider-context retain hook MUST be infallible and pair exactly once with the final `release_provider`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains, including a compensating `release_provider` if `retain_provider` already ran, and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
-- `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a provider pointer to remain live at the call site. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. It retains provider and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
+- `enumerate_candidates` returns a complete provider-owned candidate list. Every candidate has a nonzero provider-local binding ID unique for that provider generation and a structured identity; native handles remain private in the provider's own ID-to-handle map. The registry copies candidate identity and snapshot data before calling `release_candidate_list` exactly once. A successful list has a non-NULL items pointer iff count is nonzero; failure leaves an empty list. The provider MUST keep each candidate's native mapping alive until its binding is removed and all operations using it have retired.
+- `RegisterProviderBinding` resolves the provider by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a provider pointer to remain live at the call site. It validates exact device/provider generations, admission state, identity correlation, and the one-binding-per-provider-generation/device-incarnation rule. The provider-local binding ID MUST have appeared in a successful candidate list for that provider generation and MUST resolve to the same canonical identity. The provider keeps the native handle mapping alive until binding removal and operation retirement. It retains provider and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`, and the caller retries the same exact operation until terminal success. Screen detach is addressed by attachment generation so the caller may release its attachment handle while callback retirement is pending. No removal broadens to another source, binding, Screen, or incarnation.
 - Unavailable/recovered transitions are idempotent `SUCCESS` when the exact selected scope is already in the requested state. Recovery after binding removal, provider shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
 - `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. An unloadable DDX MUST pass its live owner role/generation; server-resident DDX code MAY pass NULL/zero. The attachment retains a non-NULL owner role once. If the DDX callback code is unloadable, the attachment MUST retain the supplied live owner role and generation; the role remains pinned until detach and all attachment callbacks have retired. At least one role MUST be set; DISCOVERY_ONLY is mutually exclusive with RENDER_ACCESS, SCANOUT, and DISPLAY_CONTROL, while RENDER_ACCESS and SCANOUT MAY coexist. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
