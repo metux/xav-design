@@ -130,7 +130,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `CANCELLED` | Operation was prevented from starting because its captured Device/resource generation was destroyed or terminalized | Complete it with the lifecycle result already committed by the server (for example `DEVICE_DESTROYED`); never invoke backend work after cancellation wins. |
 | `FATAL` | Unclassified backend/provider failure or violated provider contract | Fail with `INTERNAL_SERVER_ERROR` if a synchronous request is still awaiting a result; mark the provider unavailable if its continued correctness cannot be trusted. Preserve all references until safe retirement. |
 
-All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent and MUST release only the exact operation-token generation supplied to it.
+All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent, MUST return a classified result, and MUST release only the exact operation-token generation supplied to it. If retirement fails, the server MUST retain/quarantine the token and provider context rather than assuming quiescence.
 
 The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
 
@@ -253,8 +253,6 @@ typedef enum {
 typedef struct {
     uint64_t provider_generation;
     uint64_t operation_generation;
-    uint64_t device_generation;
-    uint64_t resource_generation;
     uint64_t operation_token_id;
     GpuProviderResult result;
     /* Operation-specific immutable result payload follows. */
@@ -322,7 +320,7 @@ typedef struct GpuProviderOps {
     void (*release_provider)(GpuBackendProvider *);
     void (*retain_device)(GpuProviderDevice *);
     void (*release_device)(GpuProviderDevice *);
-    void (*retire_operation)(GpuProviderOperationToken *);
+    GpuProviderResult (*retire_operation)(GpuProviderOperationToken *);
 } GpuProviderOps;
 
 /* Server startup/shutdown; one registry per X server process. */
