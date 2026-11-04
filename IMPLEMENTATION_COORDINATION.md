@@ -1040,3 +1040,5 @@ Commit: 3b83c6a.
 The synchronization ownership correction in 50d76ea/9498445 is normative: do not add provider-side vkWaitSemaphores/vkWaitForFences to satisfy XAverius host waits. Those waits are server registrations over published counters/Fence state.
 
 Current remaining work is a final pass over STATUS/error mapping and exact-tip automated verification; runtime Vulkan/WSI conformance remains outside what documentation-only edits can establish.
+
+Final verification note (2026-11-04): request inventory and ownership map re-read from the branch tip; provider callback/cancellation, status/timeout, and protocol-acceptance wording checked for consistency. Latest board commit: 770b72308ee99d7e5416057b1779037cbce98500. GitHub combined status and commit workflow-run queries returned empty lists for this tip; CI remains unverified. No repository tests were executed in this environment.
