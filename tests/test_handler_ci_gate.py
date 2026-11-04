@@ -46,11 +46,11 @@ def main():
         setup_repo(client_root)
         client_source = client_root / "client" / "src" / "connection.c"
         client_source.parent.mkdir(parents=True)
-        client_source.write_text("int xav_client_stub(void) { return 0; }\\n", encoding="utf-8")
+        client_source.write_text("int xav_client_stub(void) { return 0; }\n", encoding="utf-8")
         git(client_root, "add", "client/src/connection.c")
         result = run_gate(client_root)
         if result.returncode != 0 or "SKIP" not in result.stdout:
-            raise SystemExit("client-only sources must not trigger the native handler audit:\\n" + result.stdout + result.stderr)
+            raise SystemExit("client-only sources must not trigger the native handler audit:\n" + result.stdout + result.stderr)
 
         source_root = Path(temp) / "source-without-db"
         source_root.mkdir()
@@ -109,8 +109,8 @@ def main():
         source = async_root / "src" / "xav_handler.c"
         source.parent.mkdir()
         source.write_text(
-            "void on_done(void *ctx) { finish_submit(ctx); }\\n"
-            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\\n",
+            "void on_done(void *ctx) { finish_submit(ctx); }\n"
+            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\n",
             encoding="utf-8",
         )
         git(async_root, "add", "src/xav_handler.c")
@@ -120,7 +120,7 @@ def main():
         }]), encoding="utf-8")
         result = run_gate(async_root)
         if result.returncode != 1 or "no XAV_ASYNC_CALLBACK_REGISTER/VALIDATE" not in result.stdout:
-            raise SystemExit("native async callback without generation annotations must fail the integrated gate:\\n" + result.stdout + result.stderr)
+            raise SystemExit("native async callback without generation annotations must fail the integrated gate:\n" + result.stdout + result.stderr)
 
         async_root_ok = Path(temp) / "source-with-annotated-async-callback"
         async_root_ok.mkdir()
@@ -128,10 +128,10 @@ def main():
         source = async_root_ok / "src" / "xav_handler.c"
         source.parent.mkdir()
         source.write_text(
-            "/* XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation */\\n"
-            "/* XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation */\\n"
-            "void on_done(void *ctx) { if (device_generation != current_device_generation) return; }\\n"
-            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\\n",
+            "/* XAV_ASYNC_CALLBACK_REGISTER: on_done; device_generation */\n"
+            "/* XAV_ASYNC_CALLBACK_VALIDATE: on_done; device_generation */\n"
+            "void on_done(void *ctx) { if (device_generation != current_device_generation) return; }\n"
+            "void submit(void) { vkQueueSubmit(queue, 1, submits, fence); register_callback(on_done); }\n",
             encoding="utf-8",
         )
         git(async_root_ok, "add", "src/xav_handler.c")
@@ -141,7 +141,7 @@ def main():
         }]), encoding="utf-8")
         result = run_gate(async_root_ok)
         if result.returncode != 0 or "callback generation audit passed" not in result.stdout:
-            raise SystemExit("annotated async callback with generation validation should pass the integrated gate:\\n" + result.stdout + result.stderr)
+            raise SystemExit("annotated async callback with generation validation should pass the integrated gate:\n" + result.stdout + result.stderr)
 
     print("handler CI gate regression tests: PASS")
 

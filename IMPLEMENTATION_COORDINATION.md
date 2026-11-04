@@ -760,3 +760,8 @@ A spec gap was identified during client/server implementation review: choosing t
 - Conformance cases cover two Screens/two GPUs, one GPU spanning Screens, a compute-only non-presenting GPU, enumeration-order independence, and the lack of a presentation guarantee from CreateDefaultDevice.
 
 The client event-dispatcher work is paused until this spec clarification is reviewed and the client/server selection code follows the Surface-scoped model.
+
+
+### Client-only source exclusion in the native handler CI gate — 2026-11-04
+
+The first CI run after adding the XCB client prototype exposed a gate-scope bug: the native server-handler audit treated tracked `client/*.c` files as server request handlers and failed because the standalone client intentionally has no `compile_commands.json`. The gate now excludes only the root `client/` prototype tree while continuing to require compile-database coverage for tracked native server C/C++ sources. A regression test covers a client-only checkout; native-source-without-database and native async-callback cases remain mandatory failures.
