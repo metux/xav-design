@@ -860,7 +860,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         # The mixed-failure oracle must preserve status precedence and failed-create atomicity.
         for phrase in (
-            "Device loss beats Surface loss and accepted-token reuse",
+            "Device loss beats Device Unavailable, which beats Surface loss and accepted-token reuse",
             "Failed creates leave target XIDs unallocated and retain no references",
             "A rejected request causes no partial state mutation attributable to that request",
         ):
@@ -878,7 +878,7 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         acquire = errors[errors.index("For a new `AcquireNextImage` evaluation"):errors.index("For `QueuePresent`, status replies") ]
         for phrase in (
-            "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
+            "`DEVICE_LOST` takes precedence over `DEVICE_UNAVAILABLE`, which takes precedence over `SURFACE_LOST`, which takes precedence over `OUT_OF_DATE`",
             "which takes precedence over `OUT_OF_DATE`",
             "these outcomes precede mutable synchronization-state checks and timeout polling",
             "even if no image is available or the timeout is zero",
@@ -888,8 +888,9 @@ class RequestErrorPathCoverageTests(unittest.TestCase):
 
         queue_present = errors[errors.index("### Normative validation precedence for the seven presentation requests"):errors.index("## Synchronous versus Asynchronous Errors") ]
         queue_stages = (
-            "Device loss takes precedence over Surface loss",
-            "`QueuePresent` returns `SURFACE_LOST` before `OUT_OF_DATE`",
+            "Device loss takes precedence over provider unavailability, Surface loss",
+            "`QueuePresent` returns `DEVICE_UNAVAILABLE` before queue/index checks",
+            "then `SURFACE_LOST` before `OUT_OF_DATE`",
             "reject reuse of a token from an earlier accepted presentation with `BadValue`",
             "then check image state",
             "validate wait semaphores in array order",
