@@ -116,3 +116,6 @@ Runtime acceptance now also requires evidence that all six asynchronous operatio
 
 
 Runtime acceptance requires a distinct provider-generation quarantine state for GPU_PROVIDER_FATAL, separate from logical-device DEVICE_LOST and ordinary shutdown/quiescence. Verify fatal paths close admission and retain the module/context rather than entering normal unload. Vector 139 added.
+
+
+Runtime acceptance must verify state-checked Retain admission and the exact idempotence behavior for operation-token and provider lifecycle transitions. Vector 140 added.
