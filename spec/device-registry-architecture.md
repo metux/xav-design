@@ -478,11 +478,14 @@ typedef struct GpuProviderOps {
         GpuBackendProvider *, GpuProviderPhysicalDevice *,
         uint32_t queue_family, GpuProviderSurface *,
         GpuProviderSurfaceSupport *);
-    /* Create/release an exact, generation-tagged route after capability
-       probing. create_swapchain pins this route until swapchain retirement. */
+    /* Create/release an exact route for this logical Device generation and
+       Surface/Window/Screen generation after physical-device capability
+       probing. The route MUST be distinct per logical Device, even when two
+       Devices share one PhysicalDevice and Surface. create_swapchain pins
+       this route until swapchain retirement. */
     GpuProviderResult (*create_presentation_route)(
-        GpuBackendProvider *, GpuProviderPhysicalDevice *,
-        GpuProviderSurface *, GpuProviderPresentationRoute **,
+        GpuProviderDevice *, GpuProviderSurface *,
+        GpuProviderPresentationRoute **,
         GpuProviderPresentationRouteInfo *);
     GpuProviderResult (*destroy_presentation_route)(
         GpuBackendProvider *, GpuProviderPresentationRoute *);
@@ -684,6 +687,8 @@ The implementation test suite SHOULD include at least:
 54. Two Screens attach the same render GPU but have different scanout GPUs: each (Device, Surface) query independently reports its actual route and capability set; no global per-PhysicalDevice present-support bit is inferred.
 55. A temporary bridge-route outage occurs without a route-generation change: GetSurfaceCapabilities and new/pre-acceptance operations report DEVICE_UNAVAILABLE, but the render PhysicalDevice and logical Device remain AVAILABLE; a pending acquire and accepted QueuePresent use their respective first-terminal mappings.
 56. Route invalidation races with acquire timeout, accepted presentation terminalization, and image release in both serialization orders: OUT_OF_DATE is committed only when route invalidation wins the relevant gate; an earlier terminal result or image-release milestone is never rewritten or retracted.
+
+57. Two logical Devices created from the same PhysicalDevice query and create swapchains for the same Surface: each PresentationRoute is scoped to its exact logical-Device generation, even if both use the same provider, PhysicalDevice, Window, and Screen. Destroying or invalidating one Device/route MUST NOT retire, invalidate, or redirect the other Device's route or Swapchain; stale callbacks from the first route generation MUST NOT affect the second.
 
 
 
