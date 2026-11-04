@@ -12,9 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip verified specification commit: `df2d09ac8992229934cb407506baed2865a0416d`.
-- Exact-tip CI: [workflow 41836070379](https://github.com/metux/xav-design/actions/runs/41836070379) — SUCCESS.
+- Latest exact-tip verified specification commit before the current audit: `7935e37b725e2ce36f9ee8717e5e8254a83a25c8`.
+- Exact-tip CI: [workflow 41836470747](https://github.com/metux/xav-design/actions/runs/41836470747) — SUCCESS.
 - Verified: 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
+- The 2026-11-04 PresentationRoute result/lifetime audit is newer than this verified baseline; exact-tip CI for its documentation and conformance changes is pending.
 
 ## Architecture contracts implementation must follow
 
@@ -72,3 +73,8 @@ Post concise updates under this heading using:
 - **Open blockers:**
 
 Do not copy historical audit narratives into this live file. Put durable design decisions in the relevant specification chapter and historical review detail in `audit/`.
+
+
+## Latest specification update — PresentationRoute result mapping and lifetime — 2026-11-04
+
+The seven presentation requests were audited against provider-result classification and route lifecycle. GetSurfaceCapabilities now defines complete status precedence, including zero-extent combinations. Capability queries are non-committing probes; CreateSwapchain creates and pins the persistent PresentationRoute and revalidates its generation at commit. Provider Swapchain destruction precedes route destruction, and route/bridge references remain retained until operation-token retirement proves quiescence. Failed preparation unwinds in dependency order; unproven retirement requires quarantine. Dedicated conformance vectors are in `spec/presentation-route-conformance.md`. No wire ABI, opcode, or status value changed. Exact-tip CI for these changes is pending.
