@@ -486,11 +486,9 @@ The following is an abstract C interface sketch, not a public ABI and not a wire
 
 typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
-typedef struct GpuDdxModuleRole GpuDdxModuleRole;
+typedef struct GpuDeviceBackendBinding GpuDeviceBackendBinding;
 typedef struct GpuModuleLease GpuModuleLease;
 typedef struct GpuBackendOperationToken GpuBackendOperationToken;
-typedef struct GpuPhysicalDeviceCandidateList GpuPhysicalDeviceCandidateList;
-typedef struct GpuPhysicalDeviceCandidate GpuPhysicalDeviceCandidate;
 typedef struct GpuPhysicalDeviceSnapshot GpuPhysicalDeviceSnapshot;
 typedef struct GpuBackendDevice GpuBackendDevice;
 typedef struct GpuBackendQueue GpuBackendQueue;
@@ -547,7 +545,8 @@ GpuRegistryResult GpuModuleLeaseRelease(GpuModuleLease *lease);
 typedef enum {
     GPU_MODULE_ROLE_DISCOVERY_SOURCE,
     GPU_MODULE_ROLE_DDX_TOPOLOGY,
-    GPU_MODULE_ROLE_CALLBACK_BRIDGE
+    GPU_MODULE_ROLE_CALLBACK_BRIDGE,
+    GPU_MODULE_ROLE_DDX_BACKEND
 } GpuModuleRoleKind;
 
 enum {
@@ -569,21 +568,6 @@ typedef struct {
        virtual-instance discriminator, and incarnation evidence. */
 } GpuDeviceIdentity;
 
-/* Candidate data is borrowed from the candidate list until its release hook.
-   backend_binding_id is unique and non-reusable within one DDX backend
-   generation. Native handles remain private in the DDX binding's ID-to-handle map. */
-struct GpuPhysicalDeviceCandidate {
-    uint64_t backend_binding_id;
-    GpuDeviceIdentity identity;
-};
-
-/* Provider-owned list storage, released exactly once with release_candidate_list
-   after all candidate identities/snapshots have been copied or processed. */
-struct GpuPhysicalDeviceCandidateList {
-    const GpuPhysicalDeviceCandidate *items;
-    size_t count;
-    void *DDX backend_private;
-};
 
 typedef struct {
     /* Provenance of the authoritative removal observation. source_key is
@@ -783,7 +767,6 @@ typedef struct {
 } GpuModuleRoleDescriptor;
 
 typedef struct {
-    const GpuDeviceIdentity *identity;
     const GpuDeviceBackendOps *ops;
     void *device_context;
     void *native_physical_device;
@@ -841,22 +824,18 @@ GpuRegistryResult GpuPhysicalDeviceRetain(
 GpuRegistryResult GpuPhysicalDeviceRelease(
     GpuPhysicalDevice *device, uint64_t device_generation);
 
-/* Provider execution binding is registered separately from observation.
-   The DDX binding's native PhysicalDevice handle remains private to its context
-   and is resolved by the exact DDX-local binding ID. */
-/* Reserve a non-reusable generation for the next DDX binding descriptor.
-   Failed registration does not return the generation to the allocator. */
+/* Module-role generations pin unloadable DDX code. The DDX separately calls
+   RegisterDdxDevice for every PhysicalDevice it serves; native handles are
+   stored directly in the resulting binding, never in an ID-to-handle map. */
 GpuRegistryResult GpuRegistryAllocateModuleRoleGeneration(
     GpuRegistry *registry, uint64_t *out_module_role_generation);
 
-GpuRegistryResult GpuRegistryRegisterDeviceBackend(
-    GpuRegistry *registry, const GpuBackendDescriptor *descriptor,
-    GpuDdxModuleRole **out_DDX backend);
+GpuRegistryResult GpuRegistryRegisterDdxDevice(
+    GpuRegistry *registry, const GpuDeviceBackendRegistration *registration,
+    GpuPhysicalDevice **out_device, uint64_t *out_device_generation,
+    uint64_t *out_binding_generation);
 
-GpuRegistryResult GpuRegistryRegisterDeviceBackendBinding(
-    GpuRegistry *registry, GpuPhysicalDevice *device,
-    uint64_t device_generation, uint64_t module_role_generation,
-    uint64_t backend_binding_id, uint64_t *out_binding_generation);
+
 
 enum {
     GPU_BACKEND_RESOURCE_ACCESS_READ = 1u << 0,
@@ -947,7 +926,7 @@ GpuRegistryResult GpuRegistryRemoveObservation(
     GpuRegistry *registry, const char *source_key,
     uint64_t source_generation, uint64_t observation_id);
 
-/* Provider availability is distinct from physical removal. All state-
+/* DDX module-role availability is distinct from physical removal. All state-
    changing calls return a classified result; stale generations and unknown
    bindings are observable rejections, never silent no-ops.
    Context-wide failure/recovery affects all PhysicalDevices for which this
@@ -1005,12 +984,12 @@ GpuRegistryResult XaPhysicalDeviceGetXid(
    milestones have retired; stale route callbacks are generation-rejected. */
 
 /* Logical-device creation pins the selected DDX binding and generations. */
-GpuRegistryResult GpuPhysicalDeviceAcquireExecutionProvider(
+GpuRegistryResult GpuPhysicalDeviceAcquireBackendBinding(
     GpuPhysicalDevice *device, uint64_t device_generation,
-    GpuDdxModuleRole **out_DDX backend, uint64_t *out_module_role_generation);
-GpuRegistryResult GpuDdxModuleRoleRetain(
+    GpuDeviceBackendBinding **out_binding, uint64_t *out_binding_generation);
+GpuRegistryResult GpuModuleRoleRetain(
     GpuModuleRole *role, uint64_t module_role_generation);
-GpuRegistryResult GpuDdxModuleRoleRelease(
+GpuRegistryResult GpuModuleRoleRelease(
     GpuModuleRole *role, uint64_t module_role_generation);
 ```
 
@@ -1037,9 +1016,9 @@ Specific operation contracts:
 - Source registration assigns a fresh nonzero generation and copies the key. Duplicate active keys return `ALREADY_EXISTS`. An unloadable source MUST supply a live owner role and generation; server-resident source code MAY pass NULL/zero. A non-NULL owner role is retained exactly once by the source registration. Unregister closes source admission and withdraws only its observations after callbacks drain; it returns `PENDING` while callbacks remain, and the caller retries with the same key/generation until terminal success. Source generations are never reused.
 - Each source generation has its own monotonically increasing event sequence. `ObserveDevice` requires a nonzero source_event_sequence captured when the source event was observed, not when its callback is eventually dispatched. A lower sequence returns `STALE_EVENT`; replaying the same sequence with the same semantic payload is idempotent and returns the existing observation ID, while a different payload for the same sequence returns `IDENTITY_CONFLICT`. Sequences start at one and MUST NOT wrap or be reused within a source generation; on exhaustion, the source generation is retired and replaced. Removal evidence MUST carry the sequence of its exact observation; a delayed removal from an older source event is rejected even if its callback arrives after a newer add/update event.
 - `ObserveDevice` assigns a unique nonzero observation ID per new observation. Repeating the same source/generation, source-event sequence, and same semantic payload returns the same observation ID and, when the result is SUCCESS, one additional caller-owned PhysicalDevice reference for that successful call; it does not create a duplicate source observation. Changed evidence is a new observation/replacement, never an in-place mutation of the prior observation. `PENDING`/`AMBIGUOUS` retain the observation, return no device reference, but DO return the nonzero observation ID so the source can later withdraw or reconcile it. Invalid source/generation creates no observation and leaves all outputs at their failure sentinels.
-- `RegisterDeviceBackend` returns one retained DDX backend reference. It validates the descriptor and required operation-table entries, retains a non-NULL module lease for unloadable code (NULL is permitted only for permanently resident code), then calls `retain_module_role` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate DDX backend-generation reference. The DDX backend-context retain hook MUST be infallible and pair exactly once with the final `release_module_role`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains, including a compensating `release_module_role` if `retain_module_role` already ran, and installs nothing. Missing hooks required by advertised capabilities reject registration. Provider keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
-- `enumerate_candidates` returns a complete DDX-owned candidate list. Every candidate has a nonzero DDX-local binding ID unique for that DDX module-role generation and a structured identity; native handles remain private in the DDX binding's own ID-to-handle map. A successful list has a non-NULL items pointer iff count is nonzero; failure leaves an empty list. The registry MUST copy candidate identity and query the complete snapshot while the list is valid, then call `release_candidate_list` exactly once. The DDX binding MUST keep each candidate's native mapping alive until its binding is removed and all operations using it have retired. Candidate list storage itself MUST NOT be retained by the registry or by a binding.
-- `RegisterDeviceBackendBinding` resolves the DDX backend by its registry-assigned generation, assigns and returns a fresh nonzero binding generation, and does not require a module-role pointer to remain live at the call site. It validates exact device/DDX module-role generations, admission state, identity correlation, and the one-binding-per-DDX backend-generation/device-incarnation rule. The DDX-local binding ID MUST have appeared in a successful candidate list for that DDX module-role generation and MUST resolve to the same canonical identity. The DDX backend keeps the native handle mapping alive until binding removal and operation retirement. It retains DDX backend and PhysicalDevice references exactly once. Repeating the exact same registration returns `SUCCESS` and the existing binding generation without adding references; a conflicting binding returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. Removal releases binding references only after in-flight calls through that binding drain.
+- `GpuRegistryRegisterDdxDevice` atomically canonicalizes the supplied identity, installs one direct DeviceBackendBinding, validates its operation table, and obtains its immutable snapshot before publication. It validates the descriptor and required operation-table entries, retains a non-NULL module lease for unloadable code (NULL is permitted only for permanently resident code), then calls `retain_module_role` outside the registry lock. The caller retains ownership of its original module-lease reference; successful registration acquires a separate DDX backend-generation reference. The DDX backend-context retain hook MUST be infallible and pair exactly once with the final `release_module_role`; if context retention cannot be guaranteed, registration is rejected before publication. Failure unwinds all registry-acquired retains, including a compensating `release_module_role` if `retain_module_role` already ran, and installs nothing. Missing hooks required by advertised capabilities reject registration. DDX module-role owner keys are unique while any old generation can still be addressed. A reserved generation remains consumed on failure.
+- The DDX enumerates its own hardware before calling the registry; the registry receives one complete device registration per served PhysicalDevice. Every candidate has a nonzero DDX-local binding ID unique for that DDX module-role generation and a structured identity; native handles remain private in the DDX binding's own ID-to-handle map. A successful list has a non-NULL items pointer iff count is nonzero; failure leaves an empty list. The registry MUST copy candidate identity and query the complete snapshot while the list is valid, then call `release_candidate_list` exactly once. The DDX binding MUST keep each candidate's native mapping alive until its binding is removed and all operations using it have retired. Candidate list storage itself MUST NOT be retained by the registry or by a binding.
+- `GpuRegistryRegisterDdxDevice` validates the DDX-supplied identity, native handle, device context, operation vectors, and owning module-role generation as one atomic registration. It returns the canonical PhysicalDevice reference and a fresh binding generation. The native handle is retained directly by the binding; no DDX-local numeric ID or candidate-list map is part of the registry API. The registry obtains the complete immutable snapshot by calling `query_physical_snapshot` through that exact binding. Failure leaves no published XID, binding, or leaked reference. Repeating an identical live registration is idempotent; conflicting registration data returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT. Removal releases binding references only after in-flight calls through that binding drain.
 - Removal of a binding, observation, or ScreenAttachment requires the exact generation. A completed repeated removal returns `NOT_FOUND`; a concurrent removal still draining returns `PENDING`, and the caller retries the same exact operation until terminal success. Screen detach is addressed by attachment generation so the caller may release its attachment handle while callback retirement is pending. No removal broadens to another source, binding, Screen, or incarnation.
 - Unavailable/recovered transitions are scoped and sequenced. Context-wide sequence numbers are strictly increasing per DDX module-role generation; device-scoped sequence numbers are strictly increasing per exact (DDX module-role generation, binding generation). Sequences start at one and MUST NOT wrap or be reused; exhaustion requires retiring the affected DDX module-role generation or binding and allocating a new generation. A lower sequence returns `STALE_EVENT`; reusing the same sequence with the same state is idempotent `SUCCESS`, while reusing it with a different state is `IDENTITY_CONFLICT`. Device-scoped calls MUST include the exact registry binding generation. Effective availability is the conjunction of DDX backend-context availability, exact-binding availability, and non-REMOVED PhysicalDevice state: recovery at one scope MUST NOT clear unavailability at another scope. Recovery after binding removal, DDX backend shutdown, or physical `REMOVED` returns `STALE_GENERATION` or `SHUTTING_DOWN`; it never resurrects state.
 - `AttachScreen` validates the live Screen only during the call, the exact PhysicalDevice generation, nonzero Screen generation, and known non-conflicting role bits. An unloadable DDX MUST pass its live owner role/generation; server-resident DDX code MAY pass NULL/zero. The attachment retains a non-NULL owner role once. `GpuScreenAttachmentRetain` is accepted only before detach begins; after detach, existing holders may release but no new attachment references are admitted. If the DDX callback code is unloadable, the attachment MUST retain the supplied live owner role and generation; the role remains pinned until detach and all attachment callbacks have retired. At least one role MUST be set; DISCOVERY_ONLY is mutually exclusive with RENDER_ACCESS, SCANOUT, and DISPLAY_CONTROL, while RENDER_ACCESS and SCANOUT MAY coexist. It returns a retained attachment plus a registry-assigned attachment generation. An exact duplicate returns the existing attachment with one caller reference; conflicting roles return `ALREADY_EXISTS`. The registry stores no Xserver Screen pointer. Detach closes the exact attachment immediately to new work; storage remains until references/callbacks retire.
