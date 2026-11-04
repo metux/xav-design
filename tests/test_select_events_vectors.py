@@ -695,7 +695,7 @@ class GoldenSelectEventsTests(unittest.TestCase):
         self.assertIn("`DEVICE_LOST`", errors)
         self.assertIn("Detected dependency cycle while waiting for earlier GPU work, including a deferred GPU signal that is the only candidate to satisfy an earlier wait: `DEPENDENCY_FAILED`", errors)
         self.assertIn("Detected dependency cycle before capturing the data snapshot: `DEPENDENCY_FAILED`", errors)
-        self.assertIn("Quarantäne gehalten", lifetime)
+        self.assertIn("in Quarantäne", lifetime)
 
 
     def test_buffer_wire_lengths_padding_and_bounds_are_overflow_safe(self):
