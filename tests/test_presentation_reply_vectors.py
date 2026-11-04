@@ -99,7 +99,7 @@ def validate_presentation_reply(
         if len(wire) < 64:
             raise ValueError("capabilities reply shorter than fixed fields")
         status = u32(wire, 8, order)
-        if status not in range(4):
+        if status not in range(5):
             raise ValueError("invalid capabilities status")
         if status:
             if len(wire) != 64 or declared != 8 or any(wire[12:64]):
@@ -167,9 +167,9 @@ def validate_presentation_reply(
                 raise ValueError("presentable capabilities do not advertise baseline FIFO mode")
     else:
         size, words, statuses = {
-            "create_swapchain": (40, 2, 6),
-            "acquire": (44, 3, 7),
-            "queue_present": (36, 1, 4),
+            "create_swapchain": (40, 2, 7),
+            "acquire": (44, 3, 8),
+            "queue_present": (36, 1, 5),
         }[kind]
         if len(wire) != size or declared != words:
             raise ValueError("invalid fixed presentation reply size")
@@ -268,7 +268,7 @@ class PresentationReplyWireTests(unittest.TestCase):
                       re.findall(r"([A-Z][A-Z_]+)\s*=\s*(\d+)", match.group(1))}
         self.assertEqual(documented, {
             "SUCCESS": 0, "TIMEOUT": 1, "NOT_READY": 2, "OUT_OF_DATE": 3,
-            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6,
+            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6, "DEVICE_UNAVAILABLE": 7,
         })
         for order in ("little", "big"):
             for status in documented.values():
@@ -298,7 +298,7 @@ class PresentationReplyWireTests(unittest.TestCase):
     def test_queue_present_reply_size_and_status(self) -> None:
         for order in ("little", "big"):
             with self.subTest(order=order):
-                for status in range(4):
+                for status in range(5):
                     wire = encode_queue_present_reply(order, status)
                     self.assertEqual(len(wire), 36)
                     self.assertEqual(u32(wire, 4, order), 1)
@@ -314,7 +314,7 @@ class PresentationReplyWireTests(unittest.TestCase):
         def named_statuses(text: str) -> dict[str, int]:
             return {name: int(value) for name, value in re.findall(r"\b([A-Z][A-Z_]+)\s*=\s*(\d+)\b", text)}
 
-        capabilities = re.search(r"Status values:\s*(.*?)(?=\.\s+CreateSwapchain status values)", spec, re.S)
+        capabilities = re.search(r"GetSurfaceCapabilities status values are\s*(.*?)(?=\.\s+CreateSwapchain status values)", spec, re.S)
         swapchain = re.search(r"CreateSwapchain status values are\s*(.*?)(?=\.\s+SUCCESS with)", spec, re.S)
         acquire = re.search(r"Acquire status values are\s*(.*?)(?=\.\s+TIMEOUT/)", spec, re.S)
         present = re.search(r"QueuePresent reply status values are\s*(.*?)(?=; these are local)", spec, re.S)
@@ -329,11 +329,11 @@ class PresentationReplyWireTests(unittest.TestCase):
             "queue_present": numbered_statuses(present.group(1)),
         }
         self.assertEqual(expected["capabilities"], {
-            "SUCCESS": 0, "TEMPORARILY_NOT_PRESENTABLE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
+            "SUCCESS": 0, "TEMPORARILY_NOT_PRESENTABLE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3, "DEVICE_UNAVAILABLE": 4,
         })
         self.assertEqual(expected["create_swapchain"], {
-            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
-            "UNSUPPORTED_CONFIGURATION": 4, "ALLOCATION_FAILED": 5,
+            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3, "DEVICE_UNAVAILABLE": 4,
+            "UNSUPPORTED_CONFIGURATION": 4, "ALLOCATION_FAILED": 5, "DEVICE_UNAVAILABLE": 6,
         })
         self.assertEqual(expected["acquire"], {
             "SUCCESS": 0, "TIMEOUT": 1, "NOT_READY": 2, "OUT_OF_DATE": 3,
@@ -344,10 +344,10 @@ class PresentationReplyWireTests(unittest.TestCase):
         })
 
         tested = {
-            "capabilities": set(range(4)),
-            "create_swapchain": set(range(6)),
-            "acquire": set(range(7)),
-            "queue_present": set(range(4)),
+            "capabilities": set(range(5)),
+            "create_swapchain": set(range(7)),
+            "acquire": set(range(8)),
+            "queue_present": set(range(5)),
         }
         for kind, values in expected.items():
             self.assertEqual(set(values.values()), tested[kind],
@@ -357,10 +357,10 @@ class PresentationReplyWireTests(unittest.TestCase):
         # Status values are separate per-reply namespaces. Exercise every
         # normative value, not only representative failure codes.
         cases = (
-            ("capabilities", range(4), 64, 8),
-            ("create_swapchain", range(6), 40, 2),
-            ("acquire", range(7), 44, 3),
-            ("queue_present", range(4), 36, 1),
+            ("capabilities", range(5), 64, 8),
+            ("create_swapchain", range(7), 40, 2),
+            ("acquire", range(8), 44, 3),
+            ("queue_present", range(5), 36, 1),
         )
         for order in ("little", "big"):
             for kind, statuses, total, reply_words in cases:
@@ -431,13 +431,13 @@ class PresentationReplyWireTests(unittest.TestCase):
                 ("acquire", 8, "I", 1, "fixed presentation reply has nonzero unused reply-header bytes"),
                 ("queue_present", 8, "I", 1, "fixed presentation reply has nonzero unused reply-header bytes"),
                 ("create_swapchain", 4, "I", 1, "reply length does not match packet size"),
-                ("create_swapchain", 32, "I", 6, "invalid presentation status"),
+                ("create_swapchain", 32, "I", 7, "invalid presentation status"),
                 ("create_swapchain", 36, "I", 0, "successful CreateSwapchain has zero image count"),
                 ("create_swapchain", 36, "I", 1, "failed CreateSwapchain has nonzero image count"),
-                ("acquire", 32, "I", 7, "invalid presentation status"),
+                ("acquire", 32, "I", 8, "invalid presentation status"),
                 ("acquire", 36, "I", 1, "failed AcquireNextImage has nonzero image index"),
                 ("acquire", 40, "I", 1, "AcquireNextImage reserved word is nonzero"),
-                ("queue_present", 32, "I", 4, "invalid presentation status"),
+                ("queue_present", 32, "I", 5, "invalid presentation status"),
             )
             for kind, offset, fmt, value, message in cases:
                 with self.subTest(order=order, kind=kind, offset=offset):
