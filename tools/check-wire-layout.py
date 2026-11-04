@@ -845,7 +845,7 @@ def check_request_field_offsets_and_widths(c: Check) -> None:
             continue
         request_lines = []
         for line in section.splitlines():
-            if re.match(r"^\s*(?:Reply(?: layout| fields)?|Reply:|The reply contains|Reply payload)\b", line, re.I):
+            if re.match(r"^\s*(?:Reply(?: layout| fields)?|Reply:|The reply contains|Reply payload|A reply contains|The standard X11 reply header)\b", line, re.I):
                 break
             request_lines.append(line)
         # Reserved fields and alignment bytes are protocol invariants, not
