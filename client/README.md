@@ -30,7 +30,9 @@ The static library is `client/libxaverius-client.a`. Link with `-lxcb` and add `
 2. Send XAverius `QueryVersion` (subopcode 0), validate the reply envelope and reject incompatible major/older minor versions.
 3. Send `EnumeratePhysicalDevices` (subopcode 1), validate every variable-length PHYSICALDEVICEINFO record, and return host-order records.
 
-The runtime exposes `xav_connection_negotiate_xge()` for the standard Generic Event Extension `GEQueryVersion` request. Call it successfully before selecting XAverius XGE events or issuing `CreateDevice`. Event decoding/dispatch is the next slice; this prototype currently negotiates XGE but does not yet consume XAverius events.
+The runtime exposes xav_connection_negotiate_xge() for the standard Generic Event Extension GEQueryVersion request. Call it successfully before selecting XAverius XGE events or issuing CreateDevice. xav_connection_select_events() sends a checked SelectEvents request, and xav_event_decode() decodes all nine registered XAverius XGE event types. It accepts events already obtained from the caller-owned XCB event queue; it does not poll or consume that queue.
+
+XCB's in-memory GE event representation includes an extra full_sequence CARD32 at offset 32. Consequently, the event-specific payload begins at byte 36 in the XCB event allocation even though it begins at byte 32 on the wire. The decoder accounts for this insertion, checks the exact registered payload length and all reserved bytes, and returns unknown event types without interpreting them. Decoded scalar fields are host-order. For an unknown event, the payload pointer is borrowed from the original XCB event and becomes invalid when that event is freed.
 
 ## Next slices
 

@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <xcb/xcb.h>
 #include <xcb/xcbext.h>
+#include <xcb/xproto.h>
 #include <xaverius.h>
 #include "xaverius_client.h"
+extern xcb_extension_t xav_extension;
 struct xav_connection {
     xcb_connection_t *xcb;
     const xcb_query_extension_reply_t *extension;

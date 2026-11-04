@@ -3,7 +3,7 @@
 #include <string.h>
 #include "internal.h"
 
-static xcb_extension_t xav_extension = { "XAVERIUS", 0 };
+xcb_extension_t xav_extension = { "XAVERIUS", 0 };
 
 uint16_t xav_get_u16(const struct xav_connection *c, const uint8_t *p)
 {
@@ -116,7 +116,8 @@ const char *xav_client_status_string(xav_client_status s)
     static const char *const names[] = {
         "success", "invalid argument", "X connection error",
         "XAverius extension unavailable", "incompatible XAverius version",
-        "malformed XAverius reply", "out of memory", "X11 request error"
+        "malformed XAverius reply", "out of memory", "X11 request error",
+        "XGE 1.0 negotiation required"
     };
     return (unsigned)s < sizeof(names) / sizeof(names[0]) ? names[s] : "unknown client status";
 }
