@@ -59,6 +59,9 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 - [Historical status log](PROJECT_STATUS_HISTORY_2026-11-04.md)
 
 
+## Historical audit notes — superseded where they conflict with the current architecture above
+
+
 The Xlibre/Xorg integration profile now specifies platform-discovery, DDX-topology, and Vulkan-provider adapters; a Screen-independent startup barrier; hotplug reconciliation; late discovery; and safe Screen/module teardown. The non-normative mapping to current XLibre source hooks is now documented in §8.1; runtime validation against a built Xlibre server and real driver-supplied identity evidence remains unverified.
 
 
