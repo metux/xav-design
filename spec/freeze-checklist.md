@@ -199,3 +199,6 @@ Retain admission closes at provider shutdown/quarantine, ModuleRole unregister, 
 
 
 Repeated successful ObserveDevice calls with identical source event sequence/payload return the same observation ID and one additional caller-owned PhysicalDevice reference per call, without duplicating the observation. Vector 141 checks balanced releases.
+
+
+After GPU_PROVIDER_FATAL quarantine, TryQuiesceProvider and FinalizeProviderShutdown must return QUARANTINED without entering provider code or dropping references. Vector 142 covers this barrier.
