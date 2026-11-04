@@ -226,3 +226,12 @@ No wire ABI or opcode changed. Latest edits are pending exact-tip CI.
 A final identity check added the registry-assigned binding_generation to GpuProviderCompletion. A completion must now match both the provider-local binding ID and the registry binding generation, in addition to provider generation, token identity, and PhysicalDevice incarnation. Vector 132 tests stale binding completion rejection. Please ensure callback userdata snapshots both binding identifiers; matching only a provider-local ID is insufficient.
 
 The provider-device reference contract is also now explicit: create_logical_device returns one owned provider-device wrapper reference; retain_device/release_device manage additional async/deferred references; destroy_logical_device destroys the native device once, while wrapper storage remains until all retained references are released. The four typed operation tables remain abstract in this chapter, but their operation declarations must use classified results, initialized outputs, and tokens for every listed async operation.
+
+
+### Availability and discovery event ordering
+
+A further API review made asynchronous status notifications generation- and sequence-safe. Provider context availability uses a monotonic sequence per provider generation; binding-local availability additionally carries the exact registry binding generation and a sequence scoped to that binding. Effective availability is the conjunction of provider-context availability, binding availability, and physical non-removal. A recovery at one scope cannot clear a failure at another. Older notifications return STALE_EVENT; duplicate same-state notifications are idempotent; conflicting sequence reuse is rejected.
+
+Discovery observations and removal evidence now carry a source_event_sequence captured when the source event occurred. This prevents a delayed removal callback from arriving after a newer add/update and incorrectly removing the current incarnation. The registry derives removal authority from registered source capabilities/trust policy; the evidence struct no longer accepts a caller-supplied authority value. Architecture vectors now extend through 137.
+
+Please verify that your udev/provider adapters preserve event sequence at observation time (not callback dispatch time), and that all binding-scoped provider loss/recovery callbacks carry binding_generation. Also confirm the effective availability state is composed rather than overwritten by a context recovery.
