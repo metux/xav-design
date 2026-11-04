@@ -176,3 +176,8 @@ A focused review found missing result contracts and ownership rules in the inter
 
 
 The API audit was extended to close the asynchronous token lifecycle: `PrepareOperation`, `CommitOperationSubmission`, `RejectOperationSubmission`, and `RetireOperationToken` now define server-assigned token identity, admission linearization, early callback buffering, synchronous failure rejection, and per-token retirement/quarantine. Architecture vectors 115–119 cover admission races, callback-before-commit, invalid late callbacks, retirement outcomes, and teardown races. These changes are pending exact-tip CI; no wire layout or opcode changed.
+
+
+### Provider API second-pass audit — 2026-11-04
+
+Section 7 now also specifies provider candidate-list ownership, provider-local binding-ID/native-handle mapping, exact binding identity in Device/Surface operations, all six asynchronous provider operation kinds, complete per-token resource pin sets, call-scoped token pointer semantics, operation-specific status codes, completion payload bounds, and shutdown admission closure. Section 8.3 contains implementation guidance. Architecture vectors 120–131 cover candidate-list release, native handle retention, context access, async operation coverage, multi-resource submissions, status validation, and completion payload validation. Exact-tip CI pending; no wire ABI/opcode changed.
