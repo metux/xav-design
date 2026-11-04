@@ -142,7 +142,7 @@ The server MUST preserve the first terminal outcome committed for each request, 
 
 An operation is synchronous when the XAverius request can be completed from the provider's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
 
-An operation is deferred/asynchronous when its request remains open pending backend work or a protocol chapter defines acceptance separately from completion. This includes QueueSubmit, WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence registrations, AcquireNextImage, and any other transfer/presentation path explicitly defined as deferred. The provider MUST return either an immediate classified rejection/status or an accepted operation token. The provider MUST return either an immediate classified rejection, or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
+An operation is deferred/asynchronous when its request remains open pending backend work or a protocol chapter defines acceptance separately from completion. This includes QueueSubmit, WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence registrations, AcquireNextImage, and any other transfer/presentation path explicitly defined as deferred. The provider MUST return either an immediate classified rejection/status or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
 
 The server, not the provider, owns X11 wait deadlines and timeout arbitration for WaitSemaphores and WaitForFence. A provider wait registration reports only backend predicate completion or a classified backend failure; the server's serialized domain decides whether completion, timeout, Device Loss, DestroyDevice, or disconnect wins. A provider wait MUST NOT block the X11 request dispatcher.
 
@@ -257,13 +257,13 @@ typedef struct GpuProviderOps {
         GpuProviderQueue **);
     void (*destroy_logical_device)(GpuProviderDevice *);
 
-    /* Resource operations are grouped by XAverius object family:
-       Buffer/Memory; Shader/Descriptor/Pipeline; CommandPool/CommandBuffer;
-       Semaphore/Fence; Surface/Swapchain. Each family has typed create,
-       query/update, and destroy operations. */
-    GpuProviderResult (*resource_operation)(
-        GpuProviderDevice *, GpuProviderObjectKind,
-        GpuProviderOperation, const void *input, void *output);
+    /* These are separate typed operation tables, not a generic wire-payload
+       dispatcher. Each table provides the create/query/update/execute/destroy
+       operations listed in Section 4.1 for its object family. */
+    const GpuProviderBufferMemoryOps *buffer_memory;
+    const GpuProviderShaderPipelineOps *shader_pipeline;
+    const GpuProviderCommandOps *commands;
+    const GpuProviderSynchronizationOps *synchronization;
 
     GpuProviderResult (*queue_submit)(
         GpuProviderQueue *, const GpuProviderSubmitInfo *,
@@ -278,7 +278,7 @@ typedef struct GpuProviderOps {
         GpuProviderDevice *, const GpuProviderWaitInfo *,
         GpuProviderOperationToken *);
     GpuProviderResult (*wait_for_fence)(
-        GpuProviderDevice *, GpuProviderFence *, uint64_t timeout_ns,
+        GpuProviderDevice *, GpuProviderFence *,
         GpuProviderOperationToken *);
     GpuProviderResult (*query_semaphore_counter)(
         GpuProviderDevice *, GpuProviderSemaphore *, uint64_t *value);
