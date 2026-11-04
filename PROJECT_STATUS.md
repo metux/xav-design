@@ -5,7 +5,7 @@
 **Current verified tip:** `7f2620726f88bbd28ff6ac5c21a27d87659301e7`  
 **Status:** Normative v0.1 specification work is substantially complete; current static CI is green. Runtime implementation acceptance remains open.
 
-The previous chronological work log is preserved in [project-status-history-2026-11-04.md](audit/project-status-history-2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
+The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
@@ -55,7 +55,7 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 
 ## Authoritative references
 
-- [Specification index](spec/index.md)
+- [Specification index](spec/README.md)
 - [Freeze checklist](spec/freeze-checklist.md)
 - [Open issues and deferred work](spec/open-issues.md)
 - [Physical-device registry architecture](spec/device-registry-architecture.md)
