@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`  
-**Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later status-document refreshes are pending exact-tip CI. Runtime implementation acceptance remains open.
+**Latest exact-tip CI-verified tip:** `ceac0d09dc7e9456e372ae52cea97d46007697fc`  
+**Status:** Normative v0.1 specification work is substantially complete; exact-tip static CI is green through `ceac0d09`. The multi-provider ownership refinement at `c88668e` is newer and its exact-tip CI is pending. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41843078578](https://github.com/metux/xav-design/actions/runs/41843078578) — SUCCESS on `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`.
-- All 19 workflow steps passed: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
-- This verifies the XLibre source mapping, DDX Screen-close/provider-module lease rules, architecture vectors 67–75, mandatory provider-wide `quiesce_provider` hook, PENDING/SUCCESS/FAILURE semantics, and callback-return requirement on exact-token retirement. The newer source-mapping/vector commit `3a42c1a63e68016d952f91542b858fee3d35d300` adds vectors 76–77 about `DuplicateModule()` and final `dlclose()`; its exact-tip CI is still running.
+- Exact-tip CI: [workflow 41843634177](https://github.com/metux/xav-design/actions/runs/41843634177) — SUCCESS on `ceac0d09dc7e9456e372ae52cea97d46007697fc`.
+- All required workflow steps passed, including the wire-layout checks, Timeline regressions, Python suite, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
+- This verifies architecture vectors 76–78, the XLibre loader-source mapping, provider-wide `quiesce_provider` semantics, callback-return retirement, and the prohibition on raw Screen pointers in asynchronous callbacks. The newer multi-provider ownership/binding/module-lease refinement at `c88668e023ba31fa38293dba4aef5a827adedb64` adds vectors 79–88 and is pending exact-tip CI.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -73,3 +73,10 @@ The source-level loader review adds one important implementation constraint: Xor
 
 
 The Screen-close contract was tightened further: asynchronous callbacks cannot retain raw Xserver Screen/ScrnInfo pointers or FreeScreen-owned storage. They use copied immutable values or a detached, generation-checked ScreenAttachment context with no borrowed Screen pointers. Architecture vector 78 tests callback completion after Screen deletion. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` is pending exact-tip CI.
+
+
+## Multi-provider ownership and teardown — 2026-11-04
+
+The registry architecture now makes multiplicity explicit: one provider generation may bind many PhysicalDevices; one PhysicalDevice may have bindings from multiple providers; one module may own multiple independent provider generations and adapter roles. Each (provider generation, PhysicalDevice incarnation) has at most one executable binding. Discovery observations remain source-owned, and withdrawing one source cannot remove another source's evidence or binding. The v0.1 selected-provider rule remains unchanged: exactly one immutable snapshot, no capability union, and no transparent failover when the selected provider is removed or unavailable.
+
+Provider shutdown now has an explicit generation-scoped admission-close step, followed by exact binding/observation/ScreenAttachment withdrawal, accepted-operation drain, per-provider quiescence, and per-generation module-lease release. Quiescence of one provider does not authorize unloading a shared module while another provider or adapter role remains live. Architecture vectors 79–88 cover these cases. Spec commit `c88668e023ba31fa38293dba4aef5a827adedb64`; exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) is pending.
