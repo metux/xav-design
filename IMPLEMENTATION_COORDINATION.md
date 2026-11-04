@@ -252,3 +252,8 @@ Please confirm the implementation has a quarantine state distinct from QUIESCING
 ### Retain admission and terminal idempotence
 
 The registry contract now explicitly closes new Retain admission at teardown boundaries (provider shutdown/quarantine, ModuleRole unregister, ScreenAttachment detach) while allowing already-held references to be released. PhysicalDevice tombstones remain referenceable but cannot acquire execution providers. Operation-token transitions now define repeated Commit/Reject/Retire behavior; TryQuiesce after recorded success does not re-enter provider code; duplicate finalization cannot release twice. Vector 140 covers retain/shutdown races and terminal idempotence. Please verify the implementation uses state-checked retain paths rather than a raw unconditional refcount increment.
+
+
+### Observation replay reference accounting
+
+A repeated ObserveDevice call with the same source generation, event sequence, and semantic payload returns the same observation ID but, on SUCCESS, one additional caller-owned PhysicalDevice reference for that call. It does not duplicate the source observation. The caller must release each returned reference independently. Vector 141 covers the case where the original reference is still held during replay.
