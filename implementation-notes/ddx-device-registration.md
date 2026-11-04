@@ -95,3 +95,13 @@ Observed gaps in this exact source revision:
 - `XaveriusRegisterDevice()` allocates a server XID, but this change does not show registration of a DIX resource wrapper/lifecycle callback for the PhysicalDevice XID as required by the resource model.
 
 Required next implementation alignment (spec-side guidance only): retain the global registry; replace the capability-pointer pseudo-callback with a complete immutable per-device binding; expose a DDX registration call that takes identity evidence, exact native handle, per-device context, typed operations, and module-role generation; make duplicate claims go through explicit pre-publication selection and never overwrite a published binding; populate the registry from a DDX-wide pass independent of Screens; create ScreenAttachments separately; and wire finalization/resource ownership into server lifecycle. Do not reintroduce a per-Screen inventory or a separate dispatch-provider object.
+
+
+### Additional request-handler conformance findings from the same revision
+
+- `ProcXaveriusEnumeratePhysicalDevices()` filters out every entry whose status is not AVAILABLE. The normative reply includes all retained identities, including UNAVAILABLE devices and REMOVED tombstones; status is queried separately through `XAverius.deviceStatus`.
+- `ProcXaveriusGetPhysicalDeviceQueueFamilyProperties()` rejects non-AVAILABLE devices with `BadMatch`, although the normative query returns the immutable stored queue-family snapshot without a backend call or availability gate.
+- `ProcXaveriusGetPhysicalDeviceProperty()` similarly rejects all non-AVAILABLE devices before property-specific status mapping. It must distinguish a live PhysicalDevice from its availability and return the defined NOT_AVAILABLE/NOT_SUPPORTED property status where applicable; it must not collapse these cases into `BadMatch`.
+- These handlers resolve XIDs by scanning the private list rather than validating a typed DIX PhysicalDevice resource. The implementation needs a server-owned resource wrapper and the normative unknown-XID / wrong-live-resource error precedence.
+
+These are protocol-visible correctness gaps independent of the backend-binding refactor and should be fixed before request-handler conformance is considered complete.
