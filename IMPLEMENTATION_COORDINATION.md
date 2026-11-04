@@ -12,10 +12,9 @@
 
 ## Current verified baseline
 
-- Latest verified specification commit: `7f2620726f88bbd28ff6ac5c21a27d87659301e7`.
-- Exact-tip CI: [workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) — SUCCESS.
-- Verified: 4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit.
-- Subsequent edits only consolidate status/coordination documents and relocate their history archives; the current exact-tip CI run is tracking those documentation-only changes.
+- Latest previously verified specification commit: `7f2620726f88bbd28ff6ac5c21a27d87659301e7`.
+- Exact-tip CI for that baseline: [workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) — SUCCESS (4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit).
+- Current unverified specification candidate: `44c0a9c88919c6b72555d83e0cb330ceb58ed704`; identity-evidence hierarchy, provider correlation/selection, and new architecture vectors have been added. Exact-tip CI is required; no result is claimed yet.
 
 ## Architecture contracts implementation must follow
 
@@ -42,7 +41,7 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 
 ## Active coordination items
 
-1. **Inventory/driver registration:** implementation feedback is needed on how DDX/Screen observations, Vulkan discovery providers, canonical identity matching, and provider execution registration are wired together. Do not let a Screen choose or publish the PhysicalDevice or selected provider.
+1. **Inventory/driver registration:** identity matching now defines evidence precedence and conflict outcomes, including DRM node equivalence, Vulkan UUID corroboration, derived-device instance identity, and provider-scoped fallback. Implementation feedback is still needed on which Xlibre/Xorg discovery interfaces can supply authoritative evidence for each device class. Do not let a Screen choose or publish the PhysicalDevice or selected provider.
 2. **Shared interfaces:** before parallel agents edit shared dispatch, resource lookup, registry, provider, or header code, record one integration owner and the agreed interface here.
 3. **Request ownership:** maintain exactly one handler owner per request. Shared helpers have a separately named owner; request ownership does not imply shared-file ownership.
 4. **Lifecycle integration:** report any implementation assumption that conflicts with provider pinning, generation checks, accepted-operation terminalization, or quarantine rules.
@@ -53,6 +52,10 @@ Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-archi
 The registry architecture now separates discovery-source observations, provider-local execution bindings, ScreenAttachments, and XAverius publication. DDX/Screen drivers report topology; only components implementing the complete backend contract register as BackendProviders. Provider registration order and Screen initialization order do not select the execution provider. The startup discovery barrier and the equivalent per-device hotplug publication path are specified in `spec/device-registry-architecture.md`.
 
 The current specification baseline `7f2620726f88bbd28ff6ac5c21a27d87659301e7` passed [exact-tip wire-layout workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364): 4,873 wire-layout checks, 72 Timeline tests, 693 Python tests, header/client builds, and required CI gates all passed. Subsequent status/checklist/open-issues edits are documentation-only; a fresh CI run is tracking those documentation changes. Runtime Xorg/Vulkan integration remains untested.
+
+## Latest specification update — identity evidence and provider selection
+
+The registry architecture now defines an evidence hierarchy and explicit conflict outcomes for platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived devices (mediated/SR-IOV/partitioned/MIG), and provider-scoped software/virtual identities. Ambiguous or contradictory candidates remain unpublished; published identities are never merged or rebound. Provider selection now rejects duplicate stable keys and ambiguous preference identifiers, and evaluates identity/snapshot eligibility before ranking. Architecture vectors 36–44 cover these cases. The normative device chapter links to the architecture contract. Candidate commit `44c0a9c88919c6b72555d83e0cb330ceb58ed704` is not yet CI-verified.
 
 ## Agent update format
 
