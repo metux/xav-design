@@ -91,7 +91,7 @@ A selected provider MUST implement the following operation groups for every capa
 | Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-recording.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
 | Synchronization | create/destroy semaphores and fences; host signal; host wait; queue signal/wait integration; fence status/wait/reset operations | Implement binary/timeline semaphore and fence behavior in `synchronization.md`, including the specified WAIT_ANY/WAIT_ALL and timeout semantics. |
 | Queue execution | `queue_submit` and any backend completion/retirement operation | Submit the already validated dependency graph to the exact queue. Accepted submissions complete asynchronously and report one terminal outcome through the server's serialized completion path. |
-| Presentation | surface create/destroy; surface support/capability query for an exact Device/Surface pair; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. ScreenAttachment MUST NOT substitute for the exact Device/Surface support query. |
+| Presentation | provider-scoped surface create/destroy (from the XAverius Surface's retained Window identity); surface support/capability query for an exact Device/Surface pair; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. ScreenAttachment MUST NOT substitute for the exact Device/Surface support query. |
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
@@ -125,7 +125,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `UNAVAILABLE` | Provider context or physical-device access is temporarily unavailable; no logical-Device-loss result has been established | Mark the selected PhysicalDevice UNAVAILABLE through the registry serialization domain. A request creating a new logical Device fails with `DEVICE_UNAVAILABLE`. Existing logical Devices are not automatically declared lost solely by this result. |
 | `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Synchronous requests use `DEVICE_LOST` where their request contract specifies an X11 error; accepted asynchronous work uses its defined terminal status/events. |
 | `OUT_OF_HOST_MEMORY` / `OUT_OF_DEVICE_MEMORY` | Backend allocation failed for lack of host/device memory | Map to `ALLOCATION_FAILED` where the request contract exposes a synchronous allocation error; otherwise use that operation's specified asynchronous failure result. |
-| `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for synchronous transfer requests; asynchronous operations use their defined terminal failure path. |
+| `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for reply-bearing transfer requests such as WriteBuffer/ReadBuffer; operations whose protocol contract is event-terminal use their defined asynchronous failure path. |
 | `EXECUTION_FAILURE` | Accepted GPU execution failed without a Device-Loss classification | Do not turn it into a delayed X11 request error. Use the submission/fence terminal status and diagnostic event defined by the relevant chapter. |
 | `CANCELLED` | Operation was prevented from starting because its captured Device/resource generation was destroyed or terminalized | Complete it with the lifecycle result already committed by the server (for example `DEVICE_DESTROYED`); never invoke backend work after cancellation wins. |
 | `FATAL` | Unclassified backend/provider failure or violated provider contract | Fail with `INTERNAL_SERVER_ERROR` if a synchronous request is still awaiting a result; mark the provider unavailable if its continued correctness cannot be trusted. Preserve all references until safe retirement. |
@@ -143,6 +143,8 @@ The server MUST preserve the first terminal outcome committed for each request, 
 An operation is synchronous when the XAverius request can be completed from the provider's immediate result. Its provider call MUST either complete or return a classified result; it MUST NOT retain request-owned input pointers after return. The server MUST hold the relevant provider/device/resource references for the entire call.
 
 An operation is deferred/asynchronous when its request remains open pending backend work or a protocol chapter defines acceptance separately from completion. This includes QueueSubmit, WriteBuffer, ReadBuffer, nonzero-timeout WaitSemaphores/WaitForFence registrations, AcquireNextImage, and any other transfer/presentation path explicitly defined as deferred. The provider MUST return either an immediate classified rejection/status or an accepted operation token. The provider MUST return either an immediate classified rejection, or an accepted operation token. For every accepted token, it MUST eventually deliver exactly one terminal completion notification to the server, unless the provider contract explicitly reports that it cannot establish completion; in that case it MUST report a terminal provider failure and the server MUST retain/quarantine the affected objects until backend access is impossible. Completion callbacks MUST carry immutable internal operation, Device, provider, and resource generations; they MUST NOT resolve public XIDs at callback time.
+
+The server, not the provider, owns X11 wait deadlines and timeout arbitration for WaitSemaphores and WaitForFence. A provider wait registration reports only backend predicate completion or a classified backend failure; the server's serialized domain decides whether completion, timeout, Device Loss, DestroyDevice, or disconnect wins. A provider wait MUST NOT block the X11 request dispatcher.
 
 Provider callbacks MAY run on arbitrary backend threads, but MUST only enqueue immutable completion records. They MUST NOT mutate XAverius state, release server resources directly, or write X11 events. The server's serialized event domain arbitrates the callback against Device Loss, DestroyDevice, disconnect, timeout, and other terminal events. Internal cleanup and public event delivery are separate: after public invalidation, callbacks may retire old internal state but MUST NOT emit events for the destroyed Device.
 
@@ -181,6 +183,8 @@ A ScreenAttachment MUST NOT:
 - imply that a device attached to Screen 0 is preferred by CreateDefaultDevice.
 
 Surface presentation support MUST continue to be evaluated for the exact logical Device/Surface pair by the presentation capability path. ScreenAttachment is discovery/topology information, not a substitute for a Vulkan surface-support query.
+
+A provider surface object is scoped to the provider's Vulkan instance/context, not to one logical Device. A single XAverius Surface may therefore have separate provider-local surface objects when queried against Devices created by different providers. Such objects MUST be keyed by the exact provider generation and retained Window/Screen generation; they MUST NOT be shared across provider instances or treated as proof that another provider supports presentation. Creation MAY be lazy at the first exact Device/Surface capability query. DestroySurface retires every provider-local surface object for that Surface only after no swapchain or in-flight WSI operation can reference it. Each provider-local surface object pins its provider context until destruction is safe.
 
 A ScreenAttachment MUST be detached when its exact Screen generation is destroyed or replaced. A late detach event from an old Screen generation MUST NOT detach a newer Screen that reuses the same numeric server-side index or pointer slot.
 
@@ -279,9 +283,9 @@ typedef struct GpuProviderOps {
     GpuProviderResult (*query_fence_status)(
         GpuProviderDevice *, GpuProviderFence *, GpuProviderWaitResult *);
     GpuProviderResult (*create_surface)(
-        GpuProviderDevice *, const GpuProviderSurfaceInfo *,
+        GpuBackendProvider *, const GpuProviderSurfaceInfo *,
         GpuProviderSurface **);
-    void (*destroy_surface)(GpuProviderSurface *);
+    void (*destroy_surface)(GpuBackendProvider *, GpuProviderSurface *);
     GpuProviderResult (*query_surface_support)(
         GpuProviderDevice *, GpuProviderSurface *,
         GpuProviderSurfaceSupport *);
