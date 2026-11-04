@@ -118,3 +118,6 @@ The token resource-set contract now requires a nonzero logical-Device identity a
 
 
 Fatal provider results now have explicit quarantine semantics: admission closes, selected PhysicalDevices become UNAVAILABLE but not REMOVED, and provider context/module/object references remain pinned with normal finalization forbidden. DEVICE_LOST is scoped to the logical Device/operation; CANCELLED is terminal only for an accepted cancellable token. Vector 139 added. Exact-tip CI pending.
+
+
+The API audit additionally defines retain admission during teardown, repeat behavior for Commit/Reject/Retire/Quiesce/Finalize, and single-process registry creation failure. Vector 140 covers retain races and idempotence. Exact-tip CI pending.
