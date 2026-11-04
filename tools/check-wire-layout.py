@@ -764,6 +764,9 @@ def check_other_numeric_registries(c: Check) -> None:
         "MUST NOT resurrect a `REMOVED` tombstone",
         "A Vulkan physical-device group or linked-adapter relationship is not itself a Physical-Device identity",
         "v0.1 does not expose Vulkan physical-device groups",
+        "selection MUST follow a deterministic server policy",
+        "MUST NOT depend on Screen initialization order",
+        "stable ordering derived from canonical Physical-Device identity",
     )
     for contract in provider_contracts:
         c.require(contract in devices,
