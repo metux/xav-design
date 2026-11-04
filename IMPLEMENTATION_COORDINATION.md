@@ -950,3 +950,13 @@ Additional commits:
 - 73e163d — WSI isolation and deferred-wait architecture tests.
 
 The operation inventory is an internal semantic contract, not a stable C ABI. The abstract C sketch is illustrative; implementations must use typed wrappers and preserve the stated ownership/result/callback semantics.
+
+
+### Final provider API consistency pass — 2026-11-04
+
+- Provider API now explicitly exposes candidate enumeration, physical snapshot query, logical Device create/get-queue/destroy, typed object-family operation tables, queue submission, provider-scoped WSI surface operations, swapchain/acquire/present operations, and lifecycle/refcount hooks.
+- Removed a duplicate async-operation sentence and duplicate sync operation pointers from the illustrative base ops table; Buffer/Memory, Shader/Pipeline, Command, and Synchronization functions are represented by separate typed operation tables.
+- Provider wait registrations carry operation tokens; they do not receive a provider-owned timeout. The X server owns WaitSemaphores/WaitForFence deadlines and first-terminal-outcome arbitration.
+- The exact same XAverius Surface can be used with Devices from multiple providers, but each provider owns a separate VkSurface/WSI object tied to the Window/Screen generation. This follows the presentation chapter's cross-Device Surface semantics.
+- Latest architecture/API consistency commits: 8b8ae12 and 3d508e6.
+- GitHub status and workflow-run queries for the coordination commit returned empty lists. CI is unverified; no claim of passing tests is made.
