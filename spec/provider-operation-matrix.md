@@ -18,6 +18,12 @@ For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemapho
 
 The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. Provider-local handles MUST remain private behind typed opaque wrappers. The provider MUST validate exact provider-local binding ID plus registry binding generation whenever an operation resolves a PhysicalDevice binding.
 
+## 1.1 DDX binding is the direct dispatch target
+
+In the Xlibre/Xorg integration profile, the DDX registers each PhysicalDevice it serves and binds the applicable immutable operation tables, per-device context, and native physical-device handle to that device's registry binding. The selected PhysicalDevice binding is the direct dispatch target for every operation in this matrix. The server MUST NOT perform an additional BackendProvider-object lookup between resolving the PhysicalDevice/logical Device and invoking the typed operation.
+
+The legacy `GpuBackendProvider`/provider-generation terminology in the internal API sketch refers only to a shared DDX module-role lifetime/control record (module lease, callback admission, and quiescence). It is not a per-device backend instance and is not a dispatch proxy. Operation arguments MUST identify the exact device binding and binding generation; the provider/module-role generation is additional lifetime provenance only. Per-device native handles and context remain on the binding. See [ddx-device-registration.md](../implementation-notes/ddx-device-registration.md).
+
 ## 2. Complete request-to-provider mapping
 
 | Subopcode | Request | Provider operation(s) | Provider involvement |
