@@ -12,9 +12,9 @@
 
 ## Current verified baseline
 
-- Latest previously verified specification commit: `7f2620726f88bbd28ff6ac5c21a27d87659301e7`.
-- Exact-tip CI for that baseline: [workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364) — SUCCESS (4,873 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, and required-check audit).
-- Current unverified specification candidate: `44c0a9c88919c6b72555d83e0cb330ceb58ed704`; identity-evidence hierarchy, provider correlation/selection, and new architecture vectors have been added. Exact-tip CI is required; no result is claimed yet.
+- Latest exact-tip verified specification commit: `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2`.
+- Exact-tip CI: [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751) — SUCCESS.
+- Verified: 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 18 workflow steps completed successfully.
 
 ## Architecture contracts implementation must follow
 
@@ -55,7 +55,7 @@ The current specification baseline `7f2620726f88bbd28ff6ac5c21a27d87659301e7` pa
 
 ## Latest specification update — identity evidence and provider selection
 
-The registry architecture now defines an evidence hierarchy and explicit conflict outcomes for platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived devices (mediated/SR-IOV/partitioned/MIG), and provider-scoped software/virtual identities. Ambiguous or contradictory candidates remain unpublished; published identities are never merged or rebound. Provider selection now rejects duplicate stable keys and ambiguous preference identifiers, and evaluates identity/snapshot eligibility before ranking. Architecture vectors 36–44 cover these cases. The normative device chapter links to the architecture contract. Candidate commit `44c0a9c88919c6b72555d83e0cb330ceb58ed704` is not yet CI-verified.
+The registry architecture now defines an evidence hierarchy and explicit conflict outcomes for platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived devices (mediated/SR-IOV/partitioned/MIG), and provider-scoped software/virtual identities. Ambiguous or contradictory candidates remain unpublished; published identities are never merged or rebound. Provider selection now rejects duplicate stable keys and ambiguous preference identifiers, and evaluates identity/snapshot eligibility before ranking. Architecture vectors 36–44 cover these cases. The normative device chapter links to the architecture contract. Exact-tip candidate `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2` passed [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751): 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, header/client builds, request/reply/XGE validation, and all required gates.
 
 ## Agent update format
 
