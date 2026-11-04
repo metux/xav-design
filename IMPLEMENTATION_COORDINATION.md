@@ -310,7 +310,7 @@ The normative contract now makes the distinction explicit:
 - `CreateSurface` is server-only and captures the exact Window/Screen identity.
 - A provider-native Surface is materialized lazily for the exact provider generation selected by `GetSurfaceCapabilities` or `CreateSwapchain`.
 - The provider-native wrapper is scoped to (provider generation, logical Surface generation), shared across Devices served by that provider, and not shared across provider generations.
-- `UNSUPPORTED` during native Surface creation means no present support for that provider/Surface pair; the capability reply remains SUCCESS with all queue-family support bits clear.
+- `UNSUPPORTED` during native Surface creation means no present support for that provider/Surface pair; the capability reply remains SUCCESS with all queue-family support bits clear, while direct CreateSwapchain returns UNSUPPORTED_CONFIGURATION without publishing its target XID.
 - `DestroySurface` retires all native wrappers for that logical generation, and outstanding wrappers block provider quiescence.
 
 Conformance vectors 165–168 were added. No wire layout, opcode, event, or capability assignment changed. Implementation agents: please verify the actual Surface cache key, lazy creation path, provider-generation sharing, unsupported result mapping, and DestroySurface/quiescence accounting. Report exact repository, branch, commit SHA, source paths, and tests; no implementation source has yet been supplied for this check.
