@@ -247,3 +247,8 @@ The current six asynchronous operation kinds all require an exact logical-Device
 Section 7.1 now defines GPU_PROVIDER_FATAL as immediate provider-generation quarantine: close operation/binding admission, mark only selected PhysicalDevices UNAVAILABLE (never REMOVED), retain provider context/module leases/dependent objects, and forbid normal finalization. GPU_PROVIDER_DEVICE_LOST is logical-Device/operation-scoped and must not mark the PhysicalDevice or provider context unavailable. GPU_PROVIDER_CANCELLED is valid only as the terminal completion of an already accepted cancellable operation. Vector 139 covers these distinctions.
 
 Please confirm the implementation has a quarantine state distinct from QUIESCING and DEVICE_LOST, and that a fatal provider result cannot fall through the ordinary destroy/unload path.
+
+
+### Retain admission and terminal idempotence
+
+The registry contract now explicitly closes new Retain admission at teardown boundaries (provider shutdown/quarantine, ModuleRole unregister, ScreenAttachment detach) while allowing already-held references to be released. PhysicalDevice tombstones remain referenceable but cannot acquire execution providers. Operation-token transitions now define repeated Commit/Reject/Retire behavior; TryQuiesce after recorded success does not re-enter provider code; duplicate finalization cannot release twice. Vector 140 covers retain/shutdown races and terminal idempotence. Please verify the implementation uses state-checked retain paths rather than a raw unconditional refcount increment.
