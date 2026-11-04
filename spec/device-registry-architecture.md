@@ -1353,5 +1353,13 @@ The implementation test suite SHOULD include at least:
 
 127. Return STATUS/ALREADY_COMPLETED from cancel_acquire after the backend image acquisition has already terminalized. Verify cancellation does not create a second completion or change the first terminal outcome; the server still performs late-image release/retention as required.
 
+128. Return candidate lists with zero entries, malformed count/items combinations, duplicate provider-local binding IDs, duplicate or conflicting canonical identities, and a failure after partial allocation. Verify successful lists are released exactly once, failed lists expose no partial entries, and candidate storage is never referenced after release_candidate_list.
+
+129. Remove a provider binding while an operation or deferred object still references its provider-local binding ID. Verify the provider's native handle mapping remains alive until all operation/object references retire; a removed binding ID is never reused within that provider generation.
+
+130. Enumerate one provider's candidates, register bindings for several PhysicalDevices, then release the candidate list. Verify copied identity/snapshot data remains valid, provider-native handle mappings remain usable by binding ID, and one provider context can serve all bindings without sharing mutable candidate-list storage.
+
+131. Race GpuBackendProviderGetContext against provider finalization and module quiescence. Verify the accessor is callable only while an exact provider reference is held, returns a borrowed pointer, and cannot extend or outlive provider-context/module lifetime.
+
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
