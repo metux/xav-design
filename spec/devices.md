@@ -232,7 +232,7 @@ Physical-device XIDs are assigned by the server from the server-wide XID namespa
 
 ### Canonical identity and server-wide deduplication
 
-Physical-Device status is exactly one of `AVAILABLE`, `UNAVAILABLE`, or `REMOVED`; this is the normative Physical-Device status enum. A status transition alone does not mutate an already-created logical Device or synthesize `DEVICE_LOST`. Existing logical Devices are governed only by their own logical-Device lifecycle and positive backend loss result.
+The Physical-Device status (`AVAILABLE`, `UNAVAILABLE`, or `REMOVED`) is the normative Physical-Device status enum. A status transition alone does not mutate an already-created logical Device or synthesize `DEVICE_LOST`. Existing logical Devices are governed only by their own logical-Device lifecycle and positive backend loss result.
 
 
 The Physical-Device inventory is one server-wide registry shared by all X11 Screens and all backend discovery paths. Screen initialization MUST NOT create or publish a separate Physical-Device identity for a device already represented in that registry. The server MUST canonicalize discovered devices before assigning or publishing XIDs. `EnumeratePhysicalDevices` MUST contain exactly one record for each canonical Physical-Device incarnation, irrespective of how many Screens can render to or present through it, which Screen initialized first, or how many backend paths discovered it.
