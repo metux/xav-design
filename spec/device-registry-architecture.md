@@ -919,10 +919,18 @@ typedef struct {
    On failure all outputs are zero. The complete resource set is copied and
    retained by the registry before return. Each entry's access_flags MUST
    contain only declared GPU_PROVIDER_RESOURCE_ACCESS_* bits and MUST be
-   nonzero. resources is non-NULL iff resource_count is nonzero; duplicate (resource_id,generation) pairs,
-   zero IDs/generations, invalid access flags, and resources owned by another
-   logical Device are INVALID_ARGUMENT/IDENTITY_CONFLICT. The server enforces
-   a documented implementation maximum before copying the array. */
+   nonzero. resources is non-NULL iff resource_count is nonzero; duplicate resource IDs (including the same ID with a different
+   generation), zero IDs/generations, invalid access flags, and resources
+   owned by another logical Device are INVALID_ARGUMENT/IDENTITY_CONFLICT. The server enforces
+   a documented implementation maximum before copying the array. Every
+   currently defined operation kind requires a nonzero logical-Device
+   ID/generation pair and at least one resource reference. WRITE_BUFFER and
+   READ_BUFFER pin the Buffer and backing Memory; HOST_SIGNAL_SEMAPHORE pins
+   the target Semaphore; QUEUE_SUBMIT pins the Queue and the complete validated
+   command/dependency graph; ACQUIRE_NEXT_IMAGE and QUEUE_PRESENT pin the exact
+   Swapchain and all image/synchronization/route objects that backend access
+   may touch. A resource ID MUST NOT appear more than once even with different
+   generations. */
 GpuRegistryResult GpuRegistryPrepareOperation(
     GpuRegistry *registry, uint64_t provider_generation,
     GpuPhysicalDevice *device, uint64_t device_generation,
@@ -1406,6 +1414,8 @@ The implementation test suite SHOULD include at least:
 136. Deliver discovery-source events out of order across concurrent scan/hotplug callbacks. Verify the per-source event sequence rejects older observations, exact replay is idempotent, and the same sequence with conflicting payload returns IDENTITY_CONFLICT.
 
 137. Deliver a removal observation captured before a later add/update but dispatched afterward. Verify source_event_sequence and PhysicalDevice generation reject the stale removal and leave the current incarnation unchanged.
+
+138. Prepare each defined operation kind with missing logical-Device identity, an empty resource set, incomplete WriteBuffer/ReadBuffer memory pins, a QueueSubmit dependency set missing one referenced object, or an Acquire/Present token missing its Swapchain/route/synchronization references. Verify rejection before provider entry and no partial reference retention.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
