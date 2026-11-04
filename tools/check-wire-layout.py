@@ -3245,11 +3245,11 @@ def check_presentation_profile(c: Check) -> None:
         "Validate exact/fixed or formula-derived wire length using checked wide arithmetic.",
         "`CreateSurface` checks `surface_xid` before resolving `window_xid`",
         "`CreateSwapchain` checks `device_xid`, then target `swapchain_xid`, then `surface_xid`",
-        "Device loss takes precedence over Surface loss and all later mutable-state checks.",
+        "Device loss takes precedence over provider unavailability, Surface loss, and all later mutable-state checks.",
         "A zero token is always `BadValue`.",
         "Do not test whether a nonzero presentation token was previously accepted at this stage",
         "after higher-priority XID, Device, queue/index, lifecycle, and presentation-support checks, reject reuse of a token",
-        "For a new `AcquireNextImage` evaluation, after the preceding validation stages, `DEVICE_LOST` takes precedence over `SURFACE_LOST`, which takes precedence over `OUT_OF_DATE`;",
+        "For a new `AcquireNextImage` evaluation, after the preceding validation stages, `DEVICE_LOST` takes precedence over `DEVICE_UNAVAILABLE`, which takes precedence over `SURFACE_LOST`, which takes precedence over `OUT_OF_DATE`;",
         "validate every supplied semaphore/fence for acquisition-signal eligibility and absence of a conflicting pending acquire before polling or registering the wait",
     )
     for contract in precedence_contracts:
@@ -3257,7 +3257,8 @@ def check_presentation_profile(c: Check) -> None:
                   f"presentation error precedence: missing normative contract: {contract}")
     presentation_precedence_contracts = (
         "## 5.3 Request validation, status precedence, and atomic acceptance",
-        "`DEVICE_LOST` takes precedence over `SURFACE_LOST`",
+        "`DEVICE_LOST` takes precedence over `DEVICE_UNAVAILABLE`",
+        "`DEVICE_UNAVAILABLE` takes precedence over `SURFACE_LOST`",
         "`SURFACE_LOST` takes precedence over `OUT_OF_DATE`",
         "A valid queue tuple with no presentation support is a synchronous `BadMatch` before token-reuse and image-state checks.",
         "`OUT_OF_DATE` takes precedence over `UNSUPPORTED_CONFIGURATION`",
@@ -3295,7 +3296,7 @@ def check_presentation_profile(c: Check) -> None:
               "GetSurfaceCapabilities: non-success statuses must define zeroed capability fields")
     c.require("Temporary-not-presentable, surface-lost, and device-lost statuses return zeroed capability fields as specified." in conformance,
               "presentation conformance: capability failure statuses must cover zeroed fields")
-    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation and
+    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED/DEVICE_UNAVAILABLE are not X11 framing errors" in presentation and
               "DEVICE_DESTROYED=6" in presentation,
               "AcquireNextImage: device destruction must have a distinct terminal reply status")
     c.require("terminalizes each still-open acquire with reply status `DEVICE_DESTROYED`" in presentation and
