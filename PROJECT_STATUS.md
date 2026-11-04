@@ -2,7 +2,7 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Current status:** Normative v0.1 protocol work is substantially complete. The DDX-owned PhysicalDevice registration and direct-binding API cleanup is the latest unverified specification delta. Exact-tip CI and implementation-agent conformance review are pending. Runtime implementation acceptance remains open.
+**Current status:** Normative v0.1 protocol work is substantially complete. The DDX-owned PhysicalDevice registration, direct-binding cleanup, and removal of residual candidate-ranking assumptions are the latest unverified specification delta. Exact-tip CI and implementation-agent conformance review are pending. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). Older provider terminology and provider-object APIs in historical entries describe superseded designs; the current normative model is the DDX binding architecture below and in the specification.
 
@@ -46,7 +46,7 @@ These are implementation/conformance gates, not unresolved wire-design decisions
 3. Keep protocol rules in normative chapters; keep this file concise and coordination notes operational.
 4. Treat registries as append-only. Never guess or reuse unassigned values.
 5. Preserve the distinction between server request order and GPU dependency synchronization.
-6. Do not infer PhysicalDevice identity, provider selection, or presentation support from the first XAverius-capable Screen.
+6. Do not infer PhysicalDevice identity, DDX-binding selection, or presentation support from the first XAverius-capable Screen.
 7. Static CI is not runtime conformance.
 
 ## Authoritative references
@@ -141,3 +141,8 @@ The registry API lifetime addendum now explicitly scopes `GpuBackendProviderGetC
 ## Provider API terminology cleanup — 2026-11-04
 
 The normative architecture and operation contract now use DDX module roles only for shared module/code lifetime and per-PhysicalDevice DDX bindings for direct dispatch. Legacy candidate-list enumeration, provider-local ID-to-handle maps, provider-object acquisition/dispatch, and the generic provider-context accessor are removed from the current API model. Each DDX must enumerate/register all devices it serves. Implementation-agent conformance and exact-tip CI remain pending.
+
+
+## Follow-up DDX binding consistency audit — 2026-11-04
+
+A second pass removed residual candidate-list ranking language from §8.2, aligned conformance vectors 42–44 and 88–90 with direct per-device registration, and replaced the stale execution-backend acquisition prose with `GpuPhysicalDeviceAcquireBackendBinding`. The operation matrix and implementation notes now consistently treat `GpuModuleRole` as shared lifetime/quiescence state only. The coordination board contains the exact implementation evidence request. This delta is not CI-verified until the exact branch tip passes; runtime implementation acceptance remains open.
