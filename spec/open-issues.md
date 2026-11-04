@@ -113,3 +113,6 @@ The API audit now also closes delayed status-event races: context and binding av
 
 
 Runtime acceptance now also requires evidence that all six asynchronous operation paths build the complete per-token resource pin set, especially QueueSubmit's full dependency graph and presentation's Swapchain/route/image/synchronization dependencies. Vector 138 added.
+
+
+Runtime acceptance requires a distinct provider-generation quarantine state for GPU_PROVIDER_FATAL, separate from logical-device DEVICE_LOST and ordinary shutdown/quiescence. Verify fatal paths close admission and retain the module/context rather than entering normal unload. Vector 139 added.
