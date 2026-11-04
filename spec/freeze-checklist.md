@@ -143,3 +143,6 @@ The loader-specific refinement in §8.1 and vectors 76–77 distinguishes Xorg's
 
 
 The provider-wide quiescence ABI refinement at `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` passed exact-tip workflow 41843078578: all 19 steps, 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, and all required audits. The follow-up XLibre loader-source mapping and vectors 76–77 at `3a42c1a63e68016d952f91542b858fee3d35d300` are newer and pending exact-tip CI.
+
+
+The final Screen-pointer safety clarification adds architecture vector 78: asynchronous provider callbacks may use only copied immutable data or a detached generation-checked ScreenAttachment context, never raw `ScreenPtr`/`ScrnInfoPtr` or `FreeScreen()`-owned storage after Screen close. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` and subsequent summary updates are pending exact-tip CI.
