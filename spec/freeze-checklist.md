@@ -225,3 +225,5 @@ The provider operation matrix now defines concrete typed operations for all four
 - [ ] Confirm ScreenAttachment teardown is independent of DDX device-binding and module lifetime.
 
 See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implementation-agent source review are pending.
+
+- [ ] Confirm `GpuBackendProviderGetContext()` is used only for shared DDX module-role state, never as an intermediate per-device dispatch lookup.
