@@ -873,3 +873,6 @@ Closed the two pre-implementation architecture choices:
 - The exact Xorg config spelling is deliberately left to the implementation patch; the semantic contract is fixed in `spec/device-registry-architecture.md`.
 
 No implementation source has been changed.
+
+
+Registry-location clarification: the registry itself remains in the XAverius subsystem (`Xext/xaverius/`) for both Xorg and Xvfb. Only Xorg-specific platform/udev discovery adapters belong in `hw/xfree86/common/` and `config/`. Generic DIX is not made Vulkan-aware. This supersedes any earlier suggestion to place an Xorg-only registry beside `xf86platformBus.c`.
