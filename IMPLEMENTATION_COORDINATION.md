@@ -845,3 +845,20 @@ A source review of X11Libre/xserver's current Xorg DDX confirms that it already 
 - `CreateDefaultDevice` is now explicitly Screen-independent: when several devices qualify, choose deterministically from server policy and canonical identity, never “the first Screen that supports XAverius”.
 
 This is architecture guidance only; no Xserver source files or backend implementation were changed.
+
+
+## Physical-Device registry API boundary — 2026-11-04
+
+Added `spec/device-registry-architecture.md` and linked it from `spec/devices.md`. This records the implementation contract before backend coding:
+
+- `PhysicalDevice`: canonical hardware incarnation, immutable published snapshot, status, provider references; registry-owned.
+- `BackendProvider`: one concrete ICD/DDX/backend execution context, private Vulkan handles/ops/module lifetime; provider-manager-owned and pinned by logical Devices/async work.
+- `ScreenAttachment`: generation-checked, non-owning relation between a Screen and a PhysicalDevice; Screen/DDX-owned. It conveys topology/role only, never identity or presentation support.
+- One process-wide registry, independent of ScreenRec/Entity and client connections. XAverius alone maps published canonical records to server-owned Physical-Device XIDs.
+- Provider discovery/selection must finish deterministically before first publication. A later provider may be attached but cannot change the selected execution provider or published metadata snapshot in v0.1.
+- All registry mutation and status/XGE publication is serialized through the server event/request domain. Worker callbacks submit immutable observations; all delayed references carry object generations.
+- The abstract API sketch and 12 required architecture tests are in the new document. No C implementation, Xserver source, backend, wire field, or opcode was changed.
+
+Xorg integration findings: `xf86_platform_devices` and `config/udev.c` remain discovery inputs, not the canonical registry. The existing platform list and major/minor lookup are tied to device-node/Xorg ownership; udev currently filters DRM `card*` nodes. The new architecture explicitly prevents treating these as cross-ICD, primary/render-node, or hotplug-incarnation identity.
+
+Remaining design point before coding: settle the concrete provider-selection configuration syntax and the exact Xserver module/ABI location for the registry service. The object model and ownership semantics are now fixed.
