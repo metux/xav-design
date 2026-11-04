@@ -271,7 +271,7 @@ Implementation agents: please confirm (a) whether the DDX backend context access
 
 ## Complete DDX backend-operation matrix — 2026-11-04
 
-The full cross-check against request subopcodes 0–47 found a material API gap: `GpuProviderBufferMemoryOps`, `GpuProviderShaderPipelineOps`, `GpuProviderCommandOps`, and `GpuProviderSynchronizationOps` were only forward-declared and had no concrete operation signatures. The DDX backend operation matrix now defines these tables and maps every assigned request to DDX backend work or explicitly server-only work. It also found and fixes a missing `free_buffer` operation, defines all six async operations, output initialization/rollback, result mapping, surface-capability completeness, and typed DestroyResource dispatch. See [DDX backend-operation-matrix.md](spec/DDX backend-operation-matrix.md); vectors 151–164.
+The full cross-check against request subopcodes 0–47 found a material API gap: `GpuProviderBufferMemoryOps`, `GpuProviderShaderPipelineOps`, `GpuProviderCommandOps`, and `GpuProviderSynchronizationOps` were only forward-declared and had no concrete operation signatures. The DDX backend operation matrix now defines these tables and maps every assigned request to DDX backend work or explicitly server-only work. It also found and fixes a missing `free_buffer` operation, defines all six async operations, output initialization/rollback, result mapping, surface-capability completeness, and typed DestroyResource dispatch. See [DDX backend operation matrix](spec/provider-operation-matrix.md); vectors 151–164.
 
 Implementation agents: compare each implemented DDX backend vtable against the normative table declarations. In particular report exact signatures and result types for all four tables; whether Buffer has a distinct `free_buffer`; how DescriptorSet allocation/free and CommandBuffer pool ownership are represented; whether surface capability query returns the full format/mode/limit set; and whether all six async operations use token prepare/commit-or-reject/complete/retire. Also identify any extra backend callbacks that are currently not in the normative table. Do not treat a single generic destroy/dispatch callback as satisfying typed destroy symmetry unless the exact resource-type dispatch and lifetime guarantees are preserved.
 
@@ -340,3 +340,18 @@ The registry API lifetime addendum now explicitly removes the generic `GpuModule
 ### DDX binding API cleanup — 2026-11-04
 
 The normative spec has been reconciled to the DDX-owned registration model. The old independent candidate inventory, DDX-local numeric handle mapping, separate backend-object dispatch lookup, and generic module-role context accessor are removed from the API sketch. Each DDX enumerates all devices it serves and registers each exact device binding directly. Please align implementation code with `GpuRegistryRegisterDdxDevice` and `GpuPhysicalDeviceAcquireBackendBinding`, and report any remaining standalone provider object that is still in the call path.
+
+
+## Follow-up audit — obsolete selection and registration model removed — 2026-11-04
+
+A second pass found residual old-model text outside the main DDX binding contract. The following are now corrected in the normative architecture and implementation guidance:
+
+- §8.2 no longer asks the registry to collect/rank a separate candidate list or use a stable DDX-backend key as a dispatch-selection layer. Each DDX enumerates its served devices and submits a complete `GpuRegistryRegisterDdxDevice` registration; the registry canonicalizes identity and commits one complete binding/snapshot before publication.
+- Conformance vectors 42–44 now test duplicate module-role owner keys, ambiguous duplicate device claims, complete-snapshot eligibility, and order-independent publication without a provider-object ranking API.
+- Vectors 88–90 now exercise `GpuRegistryBeginModuleRoleShutdown` and direct per-device registration against an already registered module role. They no longer describe registering a backend descriptor followed by separate device bindings.
+- The old “DDX backend acquisition” prose is replaced by the exact `GpuPhysicalDeviceAcquireBackendBinding` contract. Module-role references, rather than caller-owned DDX-backend references, gate module-role finalization.
+- The operation matrix and DDX implementation notes now consistently describe `GpuModuleRole` as shared lifetime/quiescence state only. The implementation-note type typo and the coordination link to the matrix were corrected.
+
+**Current implementation alignment request:** report the exact implementation repository, branch, and commit, then show the DDX enumeration loop and the call site that registers each served PhysicalDevice directly with its native handle, per-device context, and immutable operation vectors. Also show that request dispatch uses the binding directly and that module-role lookup is limited to lifetime/quiescence. No implementation source or agent response has yet been supplied for this review.
+
+The current spec branch remains `docs/restructure-2026-10-21`. Exact-tip CI for the resulting documentation/API cleanup must pass before this delta is marked verified. Historical coordination entries above describe superseded provider/candidate APIs where they conflict with this section.
