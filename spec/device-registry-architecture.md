@@ -724,6 +724,20 @@ Recommended layering:
 - Screen initialization creates/destroys ScreenAttachments only; detaching a Screen does not remove a still-discovered device.
 - Surface/WSI code performs the actual Device/Surface presentation-support query; it must not infer support from a ScreenAttachment.
 
+### 8.1 Practical mapping to the current XLibre Xserver tree (non-normative)
+
+The following mapping was checked against X11Libre/xserver commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. It is an integration guide, not a promise that these private interfaces remain stable across XLibre revisions.
+
+- `InitOutput()` in `hw/xfree86/common/xf86Init.c` calls `xf86BusProbe()` before `xf86ExtensionInit()`, driver-module loading, `xf86BusConfig()`, and DDX `PreInit()`. This means a registry/hotplug bootstrap that must observe the initial platform scan cannot be deferred solely to the normal XAverius extension setup. The integration SHOULD split early registry/event-source bootstrap from later protocol-extension registration.
+- `xf86BusProbe()` in `hw/xfree86/common/xf86Bus.c` calls `xf86platformProbe()`. The latter calls `config_odev_probe(xf86PlatformDeviceProbe)` and populates `xf86_platform_devices`. This is a useful place to feed platform observations into the registry, or to snapshot the completed platform list immediately after the probe. The platform list remains an Xorg discovery/ownership structure, not the canonical XAverius inventory.
+- `config_udev_odev_probe()` in `config/udev.c` enumerates DRM subsystem nodes matching `card[0-9]*`; the event path similarly filters for `card*` and checks existing entries by major/minor. Therefore this path MUST NOT be treated as a complete primary-plus-render-node identity source. XAverius discovery must independently obtain or correlate render-node evidence (for example through libdrm/sysfs) and must use the underlying DRM device relationship rather than major/minor as identity.
+- DDX provider bindings, when a DDX genuinely implements the BackendProvider contract, can be registered during its driver probe/PreInit phase before the X11 Screen object is created. ScreenAttachments are later created only after the corresponding Screen generation exists. A DDX that does not implement the full provider contract contributes topology only.
+- `xf86platformAddDevice()` performs a GPU-screen probe/PreInit, creates a GPU Screen, attaches it to a configured protocol Screen, and updates RandR. `xf86platformRemoveDevice()` closes/removes that GPU Screen and removes the Xorg platform-device entry. XAverius MUST map these operations to ScreenAttachment attach/detach and source-observation withdrawal as appropriate; the screen-removal path alone is not proof of physical removal.
+- `xf86platformPrimary()` may fall back to the first platform device when no primary bus is configured. That fallback is an Xorg primary-device convention and MUST NOT feed XAverius PhysicalDevice ordering, provider selection, or `CreateDefaultDevice`.
+
+A practical initial sequence is therefore: bootstrap the XAverius registry and hotplug observation before `xf86BusProbe()`; ingest platform observations during/after `xf86platformProbe()`; accept provider bindings during provider discovery and DDX probe/PreInit; close the initial discovery barrier and publish complete records before client requests are dispatched; then attach Screen generations as Xorg creates them. The exact hook placement is an XLibre integration decision, but the ordering and separation are mandatory.
+
+
 The registry implementation SHOULD remain in the XAverius subsystem even when the first deployment is Xorg-only; Xorg-specific discovery adapters belong beside the platform bus code. This avoids coupling the registry to Xorg-only data structures and permits the same XAverius registry to serve Xvfb or another DDX. Moving the registry into generic DIX is not required unless a separate non-XAverius server service later needs the same device inventory.
 
 ## 9. Required architecture tests
