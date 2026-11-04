@@ -198,6 +198,8 @@ Accordingly:
 - The DDX MUST detach the ScreenAttachment for the exact Screen generation before releasing Screen-private data. The ScreenAttachment MUST NOT own the provider context or provider module lease.
 - A Screen close MUST NOT unregister a shared BackendProvider merely because the provider was first discovered or opened through that Screen. Provider registration lifetime is independent of every ScreenAttachment lifetime. If a provider truly has per-Screen backend state, that state MUST be a separately retained child of the provider context and MUST retire only after its own Screen-generation work is quiescent.
 - A DDX module that supplies provider operation functions, completion callback functions, callback trampolines, or callback userdata MUST acquire a provider/module lease independent of Xorg's Screen-held module reference and driver Screen reference count. The lease MUST cover every function pointer and data object that can be reached by an accepted operation or a callback, including deferred cleanup and retirement paths.
+
+- No asynchronous provider operation, worker, or callback may retain or later dereference a raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or pointer into storage owned by `FreeScreen()`. Before crossing an asynchronous boundary, the DDX MUST copy the required immutable values or create a separately reference-counted ScreenAttachment context that contains no borrowed Xserver Screen/`ScrnInfo` pointers. Closing the Screen marks that context detached and prevents new Screen-facing work; the detached context may remain alive solely for callback bookkeeping until its own references retire. A callback after `CloseScreen` may complete backend cleanup using that detached context, but MUST NOT call Screen hooks, access RandR objects, or re-enter the deleted Screen.
 - A provider callback that has entered module code MUST hold a callback-execution reference until it has returned to the server-owned completion sink. The sink MUST copy/enqueue the immutable completion before returning; the provider callback MUST NOT retain server-owned transient payload pointers after that return.
 
 Provider/module shutdown is a two-phase operation, not an ordinary Screen cleanup:
@@ -882,6 +884,9 @@ The implementation test suite SHOULD include at least:
 
 76. Duplicate a DDX `ModuleDesc` for a GPU Screen, then remove that Screen and drop its `DriverPtr.refCount` while a provider token remains live. Verify that the provider's independent loader/module pin prevents `dlclose()` and keeps operation/callback code executable until exact provider quiescence.
 77. Delete the final Xorg Screen using a DDX that also implements a provider. Verify that Xorg's normal driver/module cleanup cannot unload the provider while a PhysicalDevice, logical Device, accepted operation, callback, or deferred backend destroy still retains the provider generation; after successful provider-wide quiescence and final release, the loader pin is dropped exactly once.
+
+
+78. Close and delete a GPU Screen while a provider callback still holds attachment-scoped state. Verify that the callback has no raw `ScreenPtr`/`ScrnInfoPtr` or `FreeScreen()`-owned pointer to dereference; it uses only a detached, generation-checked retained context, performs no Screen/RandR callback after close, and releases that context only after callback return and operation retirement.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
