@@ -2,14 +2,14 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`  
+**Latest exact-tip CI-verified tip:** `a66d977b436cb05818a07a847e7c4fc1e8065598`  
 **Status:** Normative v0.1 specification work is substantially complete. Exact-tip CI is green, including provider registration/module-lease lifecycle refinements and architecture vectors 89–96. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and [required-check workflow 41846198977](https://github.com/metux/xav-design/actions/runs/41846198977) — SUCCESS on `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`.
+- Exact-tip CI: [wire-layout/request-reply/XGE workflow 41848200892](https://github.com/metux/xav-design/actions/runs/41846198875) and [required-check workflow 41848200803](https://github.com/metux/xav-design/actions/runs/41846198977) — SUCCESS on `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`.
 - Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
 - This includes vectors 76–78, multi-provider ownership vectors 79–88, and provider registration, generation allocation, shared module leases, finalization ordering, and quiescence vectors 89–96. All required static/specification gates passed.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
@@ -90,3 +90,6 @@ The provider API now separates registering a provider generation from registerin
 ## Xlibre implementation guidance — 2026-11-04
 
 The architecture chapter now includes a practical non-normative decomposition and staged integration sequence in §8.2: XAverius-owned registry; separate discovery, provider, lifetime, ScreenAttachment, and PresentationRoute responsibilities; immutable queued observations; serialized state mutation; subscribe-before-scan hotplug reconciliation; explicit provider-selection/publication commit; independent loader-pin verification; and staged headless tests. Implementation feedback is requested in [IMPLEMENTATION_COORDINATION.md](IMPLEMENTATION_COORDINATION.md). No Xserver/backend implementation was added to this repository.
+
+
+The borrowed `ScreenPtr` lifetime clarification in the `GpuRegistryAttachScreen()` API sketch was added in `a66d977b436cb05818a07a847e7c4fc1e8065598` and passed both exact-tip workflows 41848200892 and 41848200803. The API now explicitly forbids retaining the supplied Screen pointer; the registry retains only server-owned identity/generation data.
