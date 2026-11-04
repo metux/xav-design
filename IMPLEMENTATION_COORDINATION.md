@@ -12,10 +12,9 @@
 
 ## Current verified baseline
 
-- Latest exact-tip verified specification commit: `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2`.
-- Exact-tip CI: [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751) — SUCCESS.
-- Verified: 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 18 workflow steps completed successfully.
-- Current unverified candidate: `013be364ea8cc7126b092f46d7c266b43dcda02f`; render/scanout routing, PRIME/DRI3 bridge contract, and route-generation lifecycle added. Exact-tip CI is pending; do not treat the earlier green run as evidence for this candidate.
+- Latest exact-tip verified specification commit: `47651058aa078d6727d681aa832630c2516bff5c`.
+- Exact-tip CI: [workflow 41835144462](https://github.com/metux/xav-design/actions/runs/41835144462) — SUCCESS.
+- Verified: 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully.
 
 ## Architecture contracts implementation must follow
 
@@ -60,7 +59,7 @@ The registry architecture now defines an evidence hierarchy and explicit conflic
 
 ## Latest specification update — render GPU versus scanout GPU
 
-The presentation contract now separates the logical Device's render PhysicalDevice from the Surface's owning Screen and scanout PhysicalDevice. ScreenAttachment roles are topology only. The selected execution provider coordinates the exact Device/Surface route, either direct WSI or an explicit PRIME/DRI3 import/copy/composition bridge with complete format/modifier, usage, synchronization, ownership-transfer, and release/completion guarantees. No implicit migration to another PhysicalDevice, provider, Screen, or RandR output is permitted. A successful Swapchain pins one route generation; route changes invalidate it as OUT_OF_DATE. Temporary route unavailability and accepted route failure have explicit status mappings. Architecture vectors 48–54 cover split render/scanout GPUs, missing bridge support, route changes, and independent failure domains. Candidate `013be364ea8cc7126b092f46d7c266b43dcda02f` is pending exact-tip CI.
+The presentation contract now separates the logical Device's render PhysicalDevice from the Surface's owning Screen and scanout PhysicalDevice. ScreenAttachment roles are topology only. The selected execution provider coordinates the exact Device/Surface route, either direct WSI or an explicit PRIME/DRI3 import/copy/composition bridge with complete format/modifier, usage, synchronization, ownership-transfer, and release/completion guarantees. A private DDX/display bridge may participate, but Vulkan handles never cross provider boundaries. No implicit migration to another PhysicalDevice, provider, Screen, or RandR output is permitted. A successful Swapchain pins one route generation; topology changes invalidate it as OUT_OF_DATE. Temporary route unavailability, pending-acquire behavior, and accepted-present failure have explicit status mappings. Architecture vectors 48–56 cover split render/scanout GPUs, bridge eligibility, route outage, route invalidation races, and independent failure domains. Exact-tip CI passed at `47651058aa078d6727d681aa832630c2516bff5c` in workflow 41835144462.
 
 ## Agent update format
 
