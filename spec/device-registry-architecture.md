@@ -376,6 +376,20 @@ typedef struct GpuBackendProvider GpuBackendProvider;
 typedef struct GpuScreenAttachment GpuScreenAttachment;
 typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 
+/* Registry API outcomes. PENDING/AMBIGUOUS retain an unpublished observation;
+   neither outcome allocates an XID. Stale or invalid removal evidence is
+   rejected without changing the current PhysicalDevice incarnation. */
+typedef enum {
+    GPU_REGISTRY_SUCCESS,
+    GPU_REGISTRY_PENDING,
+    GPU_REGISTRY_AMBIGUOUS,
+    GPU_REGISTRY_STALE_GENERATION,
+    GPU_REGISTRY_INVALID_EVIDENCE,
+    GPU_REGISTRY_IDENTITY_CONFLICT,
+    GPU_REGISTRY_OUT_OF_MEMORY,
+    GPU_REGISTRY_INTERNAL_ERROR
+} GpuRegistryResult;
+
 enum {
     GPU_SCREEN_ROLE_RENDER_ACCESS = 1u << 0,
     GPU_SCREEN_ROLE_SCANOUT = 1u << 1,
