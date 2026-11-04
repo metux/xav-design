@@ -1,4 +1,4 @@
-# Provider operation matrix and typed interface contract
+# DDX backend operation matrix and typed interface contract
 
 **Status:** Normative supplement to Sections 4, 4.1, 4.1.1, and 7 of [device-registry-architecture.md](device-registry-architecture.md). This document closes the abstract DDX backend-table declarations. It does not define a client ABI and changes no request subopcode, wire field, event ID, or Vulkan capability.
 
@@ -6,15 +6,15 @@ If a summary table in Section 4.1 differs from this matrix, this document govern
 
 ## 1. Common operation contract
 
-Every backend operation MUST be reached only after the server has completed the request-specific validation required by the normative request chapter. Provider functions MUST NOT parse XAverius wire data, resolve client XIDs, select a PhysicalDevice, choose a queue family, or make client-visible state transitions.
+Every backend operation MUST be reached only after the server has completed the request-specific validation required by the normative request chapter. DDX backend functions MUST NOT parse XAverius wire data, resolve client XIDs, select a PhysicalDevice, choose a queue family, or make client-visible state transitions.
 
 Every synchronous backend operation returns a fully initialized `GpuBackendResult`. Every output parameter MUST be initialized to its failure sentinel before any backend call. On any non-success result, object outputs are NULL, scalar outputs are zero, and output arrays are empty unless that operation explicitly defines a non-error STATUS result. The DDX binding MUST NOT expose a partially created object. It MUST roll back partial backend creation or retain it privately for safe cleanup.
 
-For synchronous operations, `GPU_PROVIDER_SUCCESS` means the requested backend action completed sufficiently for the request handler to commit its server-side state transition. It does not mean that unrelated queued GPU work completed.
+For synchronous operations, `GPU_BACKEND_SUCCESS` means the requested backend action completed sufficiently for the request handler to commit its server-side state transition. It does not mean that unrelated queued GPU work completed.
 
-For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, QueuePresent), `GPU_PROVIDER_SUCCESS` means **accepted** and requires exactly one eventual completion for the prepared token. It does not mean completion. Any other immediate result means not accepted and requires the matching token rejection path; the DDX binding MUST NOT later access resources or emit a completion for it. A DDX backend that has performed backend access or emitted a completion and then returns non-success violates the contract and is quarantined.
+For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, QueuePresent), `GPU_BACKEND_SUCCESS` means **accepted** and requires exactly one eventual completion for the prepared token. It does not mean completion. Any other immediate result means not accepted and requires the matching token rejection path; the DDX binding MUST NOT later access resources or emit a completion for it. A DDX backend that has performed backend access or emitted a completion and then returns non-success violates the contract and is quarantined.
 
-`GPU_PROVIDER_UNSUPPORTED` is legal only for an operation/capability not advertised by the selected DDX binding. If a previously advertised operation returns UNSUPPORTED, this is a DDX backend-contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch.
+`GPU_BACKEND_UNSUPPORTED` is legal only for an operation/capability not advertised by the selected DDX binding. If a previously advertised operation returns UNSUPPORTED, this is a DDX backend-contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch.
 
 The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. Provider-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate exact DDX-local binding ID plus registry binding generation whenever an operation resolves a PhysicalDevice binding.
 
@@ -26,10 +26,10 @@ The legacy `GpuDdxModuleRole`/DDX backend-generation terminology in the internal
 
 ## 2. Complete request-to-DDX backend mapping
 
-| Subopcode | Request | Provider operation(s) | Provider involvement |
+| Subopcode | Request | DDX backend operation(s) | DDX backend involvement |
 |---:|---|---|---|
 | 0 | QueryVersion | None | Entirely server-side |
-| 1 | EnumeratePhysicalDevices | `enumerate_candidates` during discovery only | No per-request DDX backend call; reply from registry snapshot |
+| 1 | EnumeratePhysicalDevices | DDX enumerates devices itself and registers each served device | No per-request DDX backend call; reply from registry snapshot |
 | 2 | GetPhysicalDeviceProperty | None | Snapshot lookup |
 | 3 | GetPhysicalDeviceQueueFamilyProperties | None | Snapshot lookup |
 | 4 | CreateDevice | `create_logical_device`, `get_queue` for each requested queue | Synchronous create; rollback all queues/device if any step fails |
@@ -220,7 +220,7 @@ The types shown above are opaque server/DDX backend boundary types. Their payloa
 
 The top-level `GpuBackendOps` retains the following operations in addition to the four typed tables:
 
-- `enumerate_candidates`, `release_candidate_list`, `query_physical_snapshot`;
+- `query_physical_snapshot`;
 - `create_logical_device`, `get_queue`, `destroy_logical_device`;
 - `queue_submit`;
 - `create_surface`, `destroy_surface`, `query_surface_support`;
