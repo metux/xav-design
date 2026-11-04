@@ -15,6 +15,7 @@
 - Latest exact-tip verified specification commit: `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2`.
 - Exact-tip CI: [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751) — SUCCESS.
 - Verified: 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 18 workflow steps completed successfully.
+- Current unverified candidate: `013be364ea8cc7126b092f46d7c266b43dcda02f`; render/scanout routing, PRIME/DRI3 bridge contract, and route-generation lifecycle added. Exact-tip CI is pending; do not treat the earlier green run as evidence for this candidate.
 
 ## Architecture contracts implementation must follow
 
@@ -56,6 +57,10 @@ The current specification baseline `7f2620726f88bbd28ff6ac5c21a27d87659301e7` pa
 ## Latest specification update — identity evidence and provider selection
 
 The registry architecture now defines an evidence hierarchy and explicit conflict outcomes for platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived devices (mediated/SR-IOV/partitioned/MIG), and provider-scoped software/virtual identities. Ambiguous or contradictory candidates remain unpublished; published identities are never merged or rebound. Provider selection now rejects duplicate stable keys and ambiguous preference identifiers, and evaluates identity/snapshot eligibility before ranking. Architecture vectors 36–44 cover these cases. The normative device chapter links to the architecture contract. Exact-tip candidate `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2` passed [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751): 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, header/client builds, request/reply/XGE validation, and all required gates.
+
+## Latest specification update — render GPU versus scanout GPU
+
+The presentation contract now separates the logical Device's render PhysicalDevice from the Surface's owning Screen and scanout PhysicalDevice. ScreenAttachment roles are topology only. The selected execution provider coordinates the exact Device/Surface route, either direct WSI or an explicit PRIME/DRI3 import/copy/composition bridge with complete format/modifier, usage, synchronization, ownership-transfer, and release/completion guarantees. No implicit migration to another PhysicalDevice, provider, Screen, or RandR output is permitted. A successful Swapchain pins one route generation; route changes invalidate it as OUT_OF_DATE. Temporary route unavailability and accepted route failure have explicit status mappings. Architecture vectors 48–54 cover split render/scanout GPUs, missing bridge support, route changes, and independent failure domains. Candidate `013be364ea8cc7126b092f46d7c266b43dcda02f` is pending exact-tip CI.
 
 ## Agent update format
 
