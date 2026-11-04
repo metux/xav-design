@@ -824,4 +824,9 @@ The implementation test suite SHOULD include at least:
 66. Unload a DDX/provider module while an old Screen-generation callback or provider operation remains outstanding: new callbacks are stopped, old references remain pinned or quarantined, and neither module code nor callback userdata is released until exact-generation retirement proves quiescence.
 
 
+67. On an XLibre build whose udev DRM discovery enumerates only `card[0-9]*` and deduplicates by major/minor, independently discover/correlate the render node for the same DRM device. Verify one canonical PhysicalDevice and prove that neither major/minor equality nor node name is used as its identity key.
+68. Invoke the Xorg GPU-screen removal path for a device whose underlying hardware remains present: the exact ScreenAttachment and Xorg discovery observation are retired, but the PhysicalDevice is not marked REMOVED while authoritative platform/provider evidence for the same incarnation remains.
+69. Configure no Xorg primary bus so `xf86platformPrimary()` uses its first-platform-device fallback, then permute platform/Screen enumeration: XAverius canonical inventory order, provider selection, and `CreateDefaultDevice` remain unchanged.
+
+
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
