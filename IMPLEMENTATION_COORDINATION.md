@@ -1159,3 +1159,17 @@ The same file now contains a normative arbitration matrix covering Device Loss, 
 `spec/conformance.md` now has explicit pairwise serialization vectors, including duplicate/stale callbacks, XID reuse, event suppression, provider quarantine, and both DestroyDevice/disconnect orders. `spec/device-registry-architecture.md` adds architecture vectors 28–29 for the same cross-event races and the distinction between unproven quiescence and positive Device Loss.
 
 No wire ABI/opcode change. Spec-only; implementation agents should not infer that quarantine means Device Loss or unload a provider before quiescence.
+
+
+## CI repair — presentation status and lifecycle regression drift — 2026-11-04
+
+Inspected failing exact-tip run [41825640334](https://github.com/metux/xav-design/actions/runs/41825640334). Wire-layout, shared-header compile, XCB prototype, request/reply/XGE validation, and Timeline semaphore regressions passed. The full Python suite failed with 14 failures and 1 error. The failures were stale test expectations against already-current normative contracts, not failures in the lifecycle arbitration changes:
+
+- Presentation status tests omitted the defined `DEVICE_UNAVAILABLE` values (GetSurfaceCapabilities=4, CreateSwapchain=6, AcquireNextImage=7, QueuePresent=4), and the reply validator/negative vectors still treated those assigned values as invalid.
+- The physical-device property test still expected five properties and omitted the registered `XAverius.deviceStatus` CARD32 property.
+- Presentation precedence tests expected the pre-provider wording/order and old exact text anchors; the current contract is `DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > OUT_OF_DATE`, with request-stage ordering preserved (notably QueuePresent's invalid queue/index check on an otherwise usable Device).
+- Multi-Screen checks and ReadBuffer quarantine checks used stale phrases despite the normative content already being present.
+
+Updated the Python regression tests to parse the current status-list heading, exercise all assigned status values, validate the sixth property, and assert the actual current Multi-Screen, lifecycle-precedence, and quarantine contracts. No protocol ABI, status IDs, request assignments, or normative semantics were changed by this test repair.
+
+Latest test-repair tip: `0b74e3401c17e9c3236bcfabc13cad109915aaeb`. Exact-tip workflow [41827738924](https://github.com/metux/xav-design/actions/runs/41827738924) is running; request/reply/XGE validation and Timeline/Python tests are not yet confirmed complete. Do not treat the branch as CI-green until this exact-tip run finishes successfully.
