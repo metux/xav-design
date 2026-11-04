@@ -1,443 +1,80 @@
 # XAverius Implementation Coordination
 
-**Purpose:** Live hand-off for parallel implementation work. This file contains current decisions, interfaces to coordinate, open questions, and verification state. Historical discussion is preserved in [the coordination history archive](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md).
+**Live hand-off only.** Historical discussion and superseded audit snapshots are preserved in [IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md). Do not append long audit narratives here.
 
-## Authoritative baseline
+## Authoritative repositories
 
-- Specification repository: `metux/xav-design`.
-- Authoritative branch: `docs/restructure-2026-10-21`. Do not use `master`, `wip/001`, or an implementation branch as the specification source.
-- The current branch tip is authoritative; agents MUST sync from it before implementation or rebasing.
-- This repository is in specification/architecture work. Do not add Xorg/Xlibre backend implementation here unless explicitly requested.
-- Wire assignments are fixed: QueryVersion = 0, Compute-Baseline = 1–40, Presentation-Profile = 41–47. The registry is append-only.
+- Spec: `metux/xav-design`, branch **`docs/restructure-2026-10-21`**. Always sync this branch before acting. `master`, `wip/001`, and old spec branches are not authoritative.
+- Xserver implementation: `X11Libre/xserver`, branch **`wip/xaverius`**.
+- This repository is the specification/coordination workspace. Do not implement Xserver source here.
+- Agents poll this file every five minutes. Treat the latest active assignment and its linked task file as instructions.
 
-## Current verified baseline
+## Normative architecture — short form
 
-- Latest exact-tip CI-verified specification commit: `72f3f17f3e7ea336658ba59ed5ed93a65805e3a9`.
-- Exact-tip CI: [workflow 41844649170](https://github.com/metux/xav-design/actions/runs/41844649170) — SUCCESS. Required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
-- This verifies vectors 76–78 and multi-DDX backend ownership/vectors 79–88; the multi-DDX backend architecture commit `c88668e023ba31fa38293dba4aef5a827adedb64` independently passed [workflow 41844488352](https://github.com/metux/xav-design/actions/runs/41844488352).
-- Newer DDX backend registration/module-lease lifecycle commits `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da55747e877177782492a5`, `7545bda9018b2cc3cb6ef3d666cd3619a14efb36`, and `dc6c8589f7961b587f37a97cc2f4e76c67f8d627` add vectors 89–96. Exact-tip CI is pending; do not treat this refinement as verified until it completes.
+- One process-wide XAverius registry owns canonical PhysicalDevice identities, generations, publication and protocol XIDs.
+- Every DDX registers every executable PhysicalDevice it serves, including headless/render-only/compute-only and Screen-unattached devices. Platform/udev supplies identity/hotplug evidence, not a second executable inventory.
+- The exact PhysicalDevice binding owns/references its native handle, per-device context and immutable typed operation vectors. Request dispatch uses that binding directly.
+- A shared `GpuModuleRole` is lifetime/admission/quiescence control only; it is not a per-device Provider or dispatch proxy.
+- ScreenAttachment is separate, non-owning, and generation-checked. Screen close detaches topology only; it never unregisters a shared PhysicalDevice.
+- Identity ambiguity/conflict remains unpublished. Never merge snapshots, operation vectors, handles or contexts. No transparent binding failover in v0.1.
+- Startup hotplug observation precedes initial scan; reconcile ordered events. Initial inventory publication does not wait for Screen creation, RandR, or a window.
+- Async operations require exact generation/resource pins, token prepare/commit-or-reject/complete/retire, callback-return proof, and quarantine when quiescence is uncertain.
 
-## Architecture contracts implementation must follow
+Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `spec/registry-api-lifetime-addendum.md`, `spec/provider-operation-matrix.md`, and `implementation-notes/ddx-device-registration.md`.
 
-### Physical-device inventory
+## Active assignment — Phase A DDX-wide discovery
 
-- One process-wide registry owns canonical PhysicalDevice identities and server-owned Physical-Device XIDs.
-- A PhysicalDevice is not a Screen, DDX instance, DRM node, Vulkan handle, DDX backend, or Vulkan device group.
-- Identity is canonicalized across Xorg/DRM, udev, Vulkan-loader, and other discovery paths before publication. Primary and render nodes for one DRM device resolve to one identity; remove/re-add creates a new incarnation and XID.
-- Each published v0.1 PhysicalDevice has exactly one selected execution DDX backend and one immutable metadata snapshot from that DDX backend. No cross-DDX backend capability union or transparent failover.
-- ScreenAttachment is a non-owning, generation-checked relation. A Screen may attach to multiple GPUs and a GPU may attach to multiple Screens. Attachment does not establish presentation support; the exact Device/Surface query does.
-- Status is AVAILABLE, UNAVAILABLE, or terminal REMOVED. DDX backend failure is not hardware removal or logical Device Loss. REMOVED entries remain tombstones until server shutdown.
+<badge>ACTIVE — NOT ACCEPTED</badge>
 
-### DDX backend boundary and lifetime
+**Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
-- The server owns request validation, XID/resource ownership, request ordering, public state transitions, error mapping, and event delivery.
-- A DDX backend owns its private Vulkan/backend handles and executes only validated operations supplied through the DDX backend interface.
-- DDX backend selection is deterministic and completed before publication. The selected DDX backend and published snapshot do not change during the PhysicalDevice XID lifetime.
-- DDX backend results are classified. UNAVAILABLE carries explicit PROVIDER_CONTEXT or PHYSICAL_DEVICE scope. Only positive loss for an exact logical Device establishes DEVICE_LOST.
-- Accepted asynchronous operations carry non-reusable DDX backend/operation/device/resource generations. Completion callbacks only enqueue immutable records; the server serializes state changes.
-- A terminal callback is not proof of quiescence. Only successful exact-token retirement proves no further backend access and permits releasing retained references. Otherwise quarantine; never unload reachable DDX backend code.
-- WaitSemaphores and WaitForFence are server-owned registrations, not DDX backend operations and have no DDX backend tokens.
+Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). It supersedes all older Phase A task wording.
 
-Normative and detailed contracts: `spec/devices.md`, `spec/device-registry-architecture.md`, `spec/resource-lifetime.md`, `spec/presentation.md`, and `spec/synchronization.md`.
+The task requires:
+- a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
+- registration of every DDX-served device, including no-Screen devices;
+- removal of the three PhysicalDevice callbacks from `XaveriusDDXOps`;
+- no lazy discovery from client requests;
+- concrete modesetting integration or a precise evidence-based blocker (no guessed `PreInit`/`ScreenInit` hook);
+- reproducible A1–A8 tests, exact build/test commands and a structured agent report.
 
-## Active coordination items
+**Forbidden:** first-Screen/first-GPU selection, output/connector-gated registration, per-Screen inventory, a Provider dispatch object, capability snapshots masquerading as operation vectors, last-writer-wins rebinding, fake identities/capabilities, or claiming tests without evidence.
 
-1. **Inventory/driver registration:** identity matching now defines evidence precedence and conflict outcomes, including DRM node equivalence, Vulkan UUID corroboration, derived-device instance identity, and DDX backend-scoped fallback. Implementation feedback is still needed on which Xlibre/Xorg discovery interfaces can supply authoritative evidence for each device class. Do not let a Screen choose or publish the PhysicalDevice or selected DDX backend.
-2. **Shared interfaces:** before parallel agents edit shared dispatch, resource lookup, registry, DDX backend, or header code, record one integration owner and the agreed interface here.
-3. **Request ownership:** maintain exactly one handler owner per request. Shared helpers have a separately named owner; request ownership does not imply shared-file ownership.
-4. **Lifecycle integration:** report any implementation assumption that conflicts with DDX backend pinning, generation checks, accepted-operation terminalization, or quarantine rules.
-5. **Verification:** every implementation/spec change report must include branch, commit SHA, exact test commands or CI run, result, and remaining unverified runtime behavior.
-6. **Xlibre startup/hotplug integration:** the normative adapter/barrier contract and source-level hook mapping are in `spec/device-registry-architecture.md` §§2.4 and 8.1. Runtime feedback is still needed on driver-supplied authoritative identity evidence and live hotplug behavior; do not substitute Screen indices or DDX initialization order.
+**Gate:** Phase B is not authorized until Phase A is independently audited and marked ACCEPTED here. If the complete-binding registry API is missing, report the exact gap and keep the adapter seam honest; do not invent a temporary competing API.
 
-## Latest specification update — Physical-device registration
+## Current implementation review
 
-The registry architecture now separates discovery-source observations, DDX backend-local execution bindings, ScreenAttachments, and XAverius publication. DDX/Screen drivers report topology; only components implementing the complete backend contract register as BackendProviders. DDX backend registration order and Screen initialization order do not select the execution DDX backend. The startup discovery barrier and the equivalent per-device hotplug publication path are specified in `spec/device-registry-architecture.md`.
+- Last inspected Xserver tip: `89df8ba0bc41dbb4b291b2242b9945661bb47fad`.
+- `89df8ba` only removes a redundant include-wrapper header; it does not implement Phase A.
+- At that tip, `XaveriusDDXOps` still contains the three device callbacks; no DDX-wide registration caller exists; modesetting has no XAverius registration call; `XaveriusRegisterDevice(identity, callbacks)` still overwrites callbacks for duplicate identity.
+- Phase A audit: NOT ACCEPTED. Detailed source findings and the acceptance matrix are in the history archive; the active acceptance criteria are in the dedicated task file.
+- No agent response with a new implementation SHA, registration call site, tests or build evidence has yet been accepted.
 
-The current specification baseline `7f2620726f88bbd28ff6ac5c21a27d87659301e7` passed [exact-tip wire-layout workflow 41830758364](https://github.com/metux/xav-design/actions/runs/41830758364): 4,873 wire-layout checks, 72 Timeline tests, 693 Python tests, header/client builds, and required CI gates all passed. Subsequent status/checklist/open-issues edits are documentation-only; a fresh CI run is tracking those documentation changes. Runtime Xorg/Vulkan integration remains untested.
+## Other open implementation evidence requests
 
-## Latest specification update — identity evidence and DDX backend selection
+Do not let these distract from Phase A, but preserve them for subsequent phases:
 
-The registry architecture now defines an evidence hierarchy and explicit conflict outcomes for platform identity, DRM primary/render-node equivalence, Vulkan `deviceUUID` correlation, derived devices (mediated/SR-IOV/partitioned/MIG), and DDX backend-scoped software/virtual identities. Ambiguous or contradictory candidates remain unpublished; published identities are never merged or rebound. DDX backend selection now rejects duplicate stable keys and ambiguous preference identifiers, and evaluates identity/snapshot eligibility before ranking. Architecture vectors 36–44 cover these cases. The normative device chapter links to the architecture contract. Exact-tip candidate `f6ae4c056b3621d8b491dc64aad4d361baf2c0c2` passed [workflow 41832770751](https://github.com/metux/xav-design/actions/runs/41832770751): 4,886 wire-layout checks, 72 Timeline regressions, 693 Python tests, header/client builds, request/reply/XGE validation, and all required gates.
+1. Exact Xorg loader object/call chain that provides an independent module pin preventing final `dlclose()`; include an unload test or state whether permanent residency is the initial policy.
+2. Actual subscribe-before-scan hotplug hook and event sequencing in the target Xserver revision.
+3. Canonical identity evidence for supported buses and primary/render-node correlation; identify unresolved classes.
+4. Concrete ownership for one DDX context serving multiple devices, multiple contexts per module, and multiple DDX sources observing one PhysicalDevice.
+5. Inventory of module-global workers/callbacks and their generation-scoped quiescence.
+6. Exact conformance of all DDX operation tables and six asynchronous token paths to `spec/provider-operation-matrix.md` and the registry lifetime addendum.
 
-## Latest specification update — render GPU versus scanout GPU
+Do not weaken normative requirements to accommodate an implementation shortcut. Report concrete source paths, function signatures, commit SHAs and tests.
 
-The presentation contract now separates the logical Device's render PhysicalDevice from the Surface's owning Screen and scanout PhysicalDevice. ScreenAttachment roles are topology only. The selected execution DDX backend coordinates the exact Device/Surface route, either direct WSI or an explicit PRIME/DRI3 import/copy/composition bridge with complete format/modifier, usage, synchronization, ownership-transfer, and release/completion guarantees. A private DDX/display bridge may participate, but Vulkan handles never cross DDX backend boundaries. No implicit migration to another PhysicalDevice, DDX backend, Screen, or RandR output is permitted. A successful Swapchain pins one route generation; topology changes invalidate it as OUT_OF_DATE. Temporary route unavailability, pending-acquire behavior, and accepted-present failure have explicit status mappings. Architecture vectors 48–56 cover split render/scanout GPUs, bridge eligibility, route outage, route invalidation races, and independent failure domains. Exact-tip CI passed at `47651058aa078d6727d681aa832630c2516bff5c` in workflow 41835144462. The architecture model now has an explicit internal PresentationRoute object and DDX backend operations to create/retire it; CreateSwapchain pins the exact route, and the lifecycle serializer tracks route generations alongside Device/Surface/Screen/Swapchain generations. The explicit PresentationRoute object, route create/retire operations, and route-generation lifecycle references are CI-verified at `df2d09ac8992229934cb407506baed2865a0416d` by workflow 41836070379.
+## Agent report format
 
-## Agent update format
+Append a concise report under the relevant active task, using:
 
-Post concise updates under this heading using:
+- **Agent / repository / branch / commit:** full SHA and parent SHA.
+- **Files changed:** paths and purpose.
+- **Interfaces/call sites:** exact symbols and ownership.
+- **Tests:** exact commands, exit status, results; identify PASS/FAIL/BLOCKED individually.
+- **Open blockers:** precise missing contract or lifecycle evidence.
 
-- **Agent / branch / commit:**
-- **Files or request groups:**
-- **Interfaces or assumptions needing coordination:**
-- **Tests and result:**
-- **Open blockers:**
+Do not report a spec CI pass as evidence that the Xserver implementation builds or works.
 
-Do not copy historical audit narratives into this live file. Put durable design decisions in the relevant specification chapter and historical review detail in `audit/`.
+## Specification CI status
 
-
-## Latest specification update — PresentationRoute result mapping and lifetime — 2026-11-04
-
-The seven presentation requests were audited against DDX backend-result classification and route lifecycle. GetSurfaceCapabilities now defines complete status precedence, including zero-extent combinations. Capability queries are non-committing probes; CreateSwapchain creates and pins the persistent PresentationRoute and revalidates its generation at commit. DDX backend Swapchain destruction precedes route destruction, and route/bridge references remain retained until operation-token retirement proves quiescence. Failed preparation unwinds in dependency order; unproven retirement requires quarantine. Dedicated conformance vectors are in `spec/presentation-route-conformance.md`. No wire ABI, opcode, or status value changed. Exact-tip CI for these changes is pending.
-
-## Latest specification update — exact logical-Device PresentationRoute binding — 2026-11-04
-
-The DDX backend API sketch now creates a PresentationRoute from the exact DDX backend logical-Device handle plus the DDX backend-scoped Surface, rather than from a PhysicalDevice handle. This matches the normative route scope (logical-Device generation + Surface/Window/Screen generation) and prevents two logical Devices on the same PhysicalDevice from accidentally sharing route lifetime. Architecture vector 57 covers independent route and Swapchain teardown. The removal API now also requires provenance-bearing authoritative evidence for the exact current PhysicalDevice incarnation and returns a classified registry result; vector 58 covers stale or insufficient removal evidence. Spec commits: `084de5c0ccb9f7931c44b2b21fcaba9cb19b94b1`, `d44efd16010b94177199a1b97a9855f64555fbe6`, and `ad6d993cd9fd00eedb68bf42e23f7dd7236d8361`. The registry API result enum now distinguishes success, pending, ambiguity, stale generations, invalid evidence, identity conflicts, allocation failure, and internal failure. Exact-tip CI pending.
-
-
-## Latest specification update — generation-checked registry mutations — 2026-11-04
-
-The DDX backend availability/recovery API now returns `GpuRegistryResult` for context-wide and device-scoped transitions. Stale DDX backend/device generations, unknown providers, and absent selected bindings are observable rejections and MUST leave state unchanged; valid transitions return `GPU_REGISTRY_SUCCESS` and affect only the exact selected scope. `GpuDeviceRemovalEvidence.source_key` is explicitly borrowed for the call only and resolved before return. Architecture vector 59 covers stale/unknown mutation attempts. Change commit: `bbda0c5036306b0497cda41b825a074b6608460f`; exact-tip CI pending.
-
-The status, freeze checklist, and open-issues summaries have also been refreshed to identify exact-tip workflow 41840312155 as the latest verified baseline and to distinguish subsequent unverified documentation/API deltas.
-
-
-## Latest specification update — Xlibre/Xorg discovery integration — 2026-11-04
-
-`spec/device-registry-architecture.md` §2.4 now defines the Xlibre/Xorg adapter roles (platform discovery, DDX topology, Vulkan DDX backend), the startup barrier and hotplug scan/event reconciliation, late-source behavior, DRM identity hand-off, Screen-generation teardown, and module/DDX backend unload pinning. It deliberately specifies lifecycle semantics rather than version-specific Xserver hook names. Architecture vectors 61–66 cover barrier independence, discovery failure/late registration, unresolved DDX identity, and unload with outstanding callbacks; the combined contract and vectors passed exact-tip workflow 41842074182 at `4eb0d35938def3f74de579a7bb2e7729a304325f`. A subsequent non-normative source mapping to XLibre master commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00` is in `d070c735c3057940c00ac42c1dd0d443363e1fef`; vectors 67–69 in `a90544633e8a9c477ea380ecbac7ee24b27f2653` cover the card/render-node split, GPU-screen removal, and primary-device fallback. Both newer commits are pending exact-tip CI. Runtime Xlibre hook mapping remains an implementation acceptance task.
-
-
-## XLibre source mapping review — 2026-11-04
-
-The current X11Libre/xserver source was reviewed at `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`. The practical mapping in `spec/device-registry-architecture.md` §8.1 records that `xf86BusProbe()` invokes `xf86platformProbe()` before extension setup; `config_udev_odev_probe()` enumerates DRM `card[0-9]*` and deduplicates by major/minor; GPU-screen add/remove is a separate DDX/Screen lifecycle; and `xf86platformPrimary()` may fall back to the first platform device. XAverius must not use those Xorg-specific conventions as canonical identity or default-device policy. The §8.1 mapping commit `d070c735c3057940c00ac42c1dd0d443363e1fef` passed workflow 41842380756, and conformance vectors 67–69 (`a90544633e8a9c477ea380ecbac7ee24b27f2653`) passed workflow 41842404893. The follow-up Screen-close/module-quiescence contract and vectors 70–75 are covered by the later verified baseline `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`.
-
-
-## Latest specification update — DDX Screen close and DDX backend module quiescence — 2026-11-04
-
-The XLibre Screen lifecycle is now explicitly topology-only: `dixScreenRaiseClose()` / `RemoveGPUScreen()` / `xf86DeleteScreen()` and DDX `FreeScreen()` do not prove DDX backend callback or backend quiescence. A DDX/DDX backend module must hold a DDX backend/module lease independent of the `ScrnInfo`/driver Screen reference. Closing one Screen detaches only that exact ScreenAttachment and does not unregister a shared DDX backend. DDX backend unload is two-phase: close admission, withdraw topology/observations, drain and retire exact operation tokens (including callback return), then perform DDX backend-wide callback/worker quiescence before releasing the final DDX backend/module lease. PENDING/FAILURE means retain or quarantine, never unload. Normative text and vectors 70–75 are in `spec/device-registry-architecture.md`. Contract/vector commit `03253eef3631ff3faf7fbaa55611d5d13388c4a5` passed workflow 41843032895; vectors 70–75 at `5e213d62a116fe2c785c9ba5513a8129f3a4eda0` passed workflow 41843046752. The explicit `quiesce_provider` ABI hook and callback-return strengthening in `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` passed exact-tip workflow 41843078578. A further source-level review of `DuplicateModule()`, `UnloadModule()`, and `LoaderUnload()` shows that duplicated `ModuleDesc` records do not create an independent loader pin, while final unload reaches `dlclose()`. This is documented in §8.1 with vectors 76–77 (`3a42c1a63e68016d952f91542b858fee3d35d300`); exact-tip CI for these additions is pending.
-
-
-A final Screen-lifetime clarification is in `device-registry-architecture.md` §2.4: asynchronous DDX backend callbacks MUST NOT retain raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or `FreeScreen()`-owned pointers. Required values are copied or held in a detached, generation-checked ScreenAttachment context with no borrowed Xserver Screen pointers. Vector 78 covers callback completion after Screen deletion. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` is newer than the current green baseline and pending exact-tip CI.
-
-
-## Latest specification update — multi-DDX backend ownership and teardown — 2026-11-04
-
-The DDX backend registry contract now explicitly supports multiple independent BackendProvider generations per canonical PhysicalDevice and multiple PhysicalDevice bindings per DDX backend generation. Each (DDX backend generation, PhysicalDevice incarnation) has at most one executable binding; providers must deduplicate multiple Vulkan aliases inside their own context before registration. A loaded DDX/DDX backend module may own several independent DDX backend generations and adapter roles, each with its own generation, admission state, quiescence, and module-lease reference.
-
-Discovery observations remain source-owned. Removing one DDX backend binding or unloading one DDX source cannot withdraw another source's evidence, another DDX backend's binding, or another DDX's ScreenAttachment. v0.1 still selects one DDX backend and one immutable snapshot per published PhysicalDevice. Non-selected providers are not a failover pool and cannot contribute metadata/capabilities or take over after selected-DDX backend loss; the selected PhysicalDevice becomes UNAVAILABLE if its binding is removed.
-
-DDX backend-generation shutdown now has an explicit generation-scoped BeginProviderShutdown admission barrier, followed by exact binding/observation/attachment withdrawal, accepted-operation drain, DDX backend-wide quiescence, and release of that generation's module-lease reference. Quiescing one DDX backend does not unload a shared module while another DDX backend or adapter role remains live. Architecture vectors 79–88 cover the multiplicity and race cases.
-
-**Implementation feedback requested:** confirm whether the current DDX backend/driver split can represent (a) multiple DDX backend contexts exported by one DDX module, (b) two independent DDX modules observing the same DRM-backed PhysicalDevice, and (c) one DDX backend context serving several PhysicalDevices. Report any source of shared module-global workers/callbacks that cannot be attributed to an exact DDX backend generation. Do not implement DDX backend failover or merge snapshots to work around ownership issues.
-
-Spec commit: `c88668e023ba31fa38293dba4aef5a827adedb64`. Exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) pending.
-
-
-## Latest specification update — DDX backend registration and module-lease finalization — 2026-11-04
-
-The API sketch now has a one-time `GpuRegistryRegisterDdxDevice()` operation, separate from `GpuRegistryRegisterDdxDeviceBinding()`. The descriptor, DDX backend context, and module lease are retained once per DDX backend generation; each PhysicalDevice binding references that registered DDX backend. The server assigns the non-reusable DDX backend generation. This removes the earlier ambiguity in which a DDX backend descriptor appeared to be reinstalled for every binding.
-
-The shared module lease is a server-owned loader pin, shared by all DDX backend generations and adapter roles belonging to one loaded module instance. DDX backend-wide quiescence and final DDX backend-context release are separate operations. The quiescence hook stops DDX backend-internal workers after externally initiated calls and accepted tokens have drained. PENDING and FAILURE retain/quarantine the module. SUCCESS still does not release the lease while logical-device/DDX backend-object references remain. Finalization performs the last DDX backend release while the module is pinned, then releases that DDX backend generation's lease reference exactly once.
-
-The API now separates registry errors from quiescence status: stale generations are rejected without invoking DDX backend code; unmet preconditions return PENDING; hook FAILURE quarantines; hook SUCCESS records quiescence. Architecture vectors 89–93 exercise the registration, shared lease, and finalization cases.
-
-Implementation feedback requested: confirm that the planned DDX backend registry can install a descriptor once and associate multiple PhysicalDevice bindings with the same DDX backend object. Also identify the Xlibre loader-owned object that can back one shared lease across several DDX backend generations and DDX callback roles. No implementation work is requested in this spec repository.
-
-Spec commits: `1029787cbf4b7d3f0b8675264e39e9c4527da754`, `63c5339ca702a913f7da55747e877177782492a5`. Exact-tip CI pending.
-
-
-DDX backend lifecycle follow-up: reserve DDX backend generations through the registry before constructing descriptors; a failed registration consumes its generation. The module lease must be backed by a stable server-owned Xorg loader-owner record and a real independent loader pin. Quiescence waits until DDX backend-owned objects requiring DDX backend code have been destroyed or safely quarantined; after SUCCESS only the registry-controlled final `release_provider` call may enter DDX backend code. Vectors 94–96 cover this ordering and loader-pin validation. No wire ABI changed.
-
-
-## Implementation guidance follow-up — 2026-11-04
-
-The exact branch tip before this guidance, `de9ec7ee1d3f92b0d55c8d32a4477637760ec0b9`, passed both required workflows: [wire-layout/request-reply/XGE 41846198875](https://github.com/metux/xav-design/actions/runs/41846198875) and [required checks 41846198977](https://github.com/metux/xav-design/actions/runs/41846198977). DDX backend registration, generation allocation, module-lease, and quiescence refinements through vectors 89–96 are therefore CI-verified.
-
-The non-normative implementation decomposition and sequencing guidance is now in `spec/device-registry-architecture.md` §8.2. It recommends a XAverius-owned registry, separate discovery/DDX backend/lifetime/Screen/presentation responsibilities, immutable queued observations, serialized state mutation, subscribe-before-scan hotplug reconciliation, DDX backend selection as an explicit publication commit, and staged headless tests before full Xorg integration.
-
-**Implementation agents: please report concrete evidence, not just design agreement:**
-
-1. Which Xlibre object/API can provide a server-owned loader pin that demonstrably prevents the final `dlclose()` after `FreeScreen()`? Include the exact source path/call chain and a minimal unload test. If none exists, confirm whether permanent residency is acceptable for the first implementation.
-2. Where can platform/udev hotplug subscription be installed before the initial enumeration, and how will add/remove events be sequenced against the scan? Include the actual hook names for the target Xlibre revision.
-3. Which existing DDX data can provide authoritative canonical device identity for each supported bus, including the relationship between primary and render DRM nodes? Identify any device classes that must remain unresolved.
-4. Can the current DDX backend split support one DDX backend context with multiple PhysicalDevice bindings, multiple DDX backend contexts from one module, and independent DDX sources observing the same PhysicalDevice? Point to the concrete structures/ownership.
-5. Identify any worker, callback, or callback trampoline that is module-global rather than DDX backend-generation-scoped, and explain how its lifetime will be pinned/quiesced.
-6. Provide the proposed integration order and tests for hotplug-during-scan, two Screens/one GPU, one Screen/multiple GPUs, delayed callbacks after Screen close, and unload after final Screen removal.
-
-Do not start implementation changes in this specification repository. Record implementation evidence and blockers here; durable protocol/architecture changes belong in the corresponding spec chapters.
-
-
-## CI confirmation and status refresh — 2026-11-04
-
-The implementation-guidance and borrowed-Screen-pointer clarification at `a66d977b436cb05818a07a847e7c4fc1e8065598` passed both exact-tip workflows: [wire-layout/request-reply/XGE 41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [required checks 41848200803](https://github.com/metux/xav-design/actions/runs/41848200803). This is now the latest fully CI-verified architecture/spec baseline. The status, freeze checklist, and open-issues summary have been refreshed accordingly.
-
-No new concrete implementation-agent evidence was present in the coordination file at this check. The outstanding requests above remain open: actual loader pin/dlclose proof, exact subscribe-before-scan hook and event sequencing, authoritative per-bus identity mapping, concrete DDX backend multiplicity ownership, module-global callback/worker inventory, and staged integration evidence.
-
-
-## Registry API audit — 2026-11-04
-
-The internal API sketch in `spec/device-registry-architecture.md` §7 has been audited for missing return values, failure modes, and lifetime ownership. The updated contract now includes:
-
-- classified registry outcomes (`INVALID_ARGUMENT`, `NOT_FOUND`, `NOT_REGISTERED`, `ALREADY_EXISTS`, `BUSY`, `SHUTTING_DOWN`, `UNSUPPORTED`, `QUARANTINED`, etc.) and initialized output sentinels;
-- retained caller references with generation-checked retain/release operations, atomic rollback, and explicit borrowed-input copying;
-- server-assigned source, DDX backend, binding, ScreenAttachment, and module-role generations;
-- explicit discovery-source and module-role registration, including module-lease retention for DDX topology/discovery/callback bridges;
-- generation-addressed DDX backend shutdown/quiescence/finalization and Screen detach retry, so callers can release object handles while retirement remains pending;
-- transactional PhysicalDevice XID publication and exact failure rollback;
-- DDX backend output ownership, candidate-list release, synchronous result validation, server-assigned async tokens, and completion records without raw Xserver/registry/Vulkan pointers.
-
-Architecture vectors 97–114 exercise invalid inputs, reference races, source/module-role retirement, DDX backend registration failures, binding generations, Screen attachment validation, XID allocation rollback, acquisition during loss, registry shutdown, async callback violations, and shared module-role leases.
-
-**Implementation agents: please compare your current registry/DDX backend API against these additions.** Report every incompatible function signature, missing owner reference, or lifecycle transition that cannot be represented. In particular, confirm how the implementation assigns source/binding/module-role generations, represents module roles independently of Screen/DriverPtr lifetime, and handles a PENDING unregister/detach without retaining caller pointers indefinitely. Do not change wire requests or implement DDX backend failover to accommodate an API mismatch.
-
-These API changes are newer than the last verified baseline `a66d977b436cb05818a07a847e7c4fc1e8065598`; exact-tip CI is pending. No wire ABI or opcode changed.
-
-
-### Operation-token API follow-up
-
-Section 7 now exposes the server-side token handoff explicitly:
-
-- `GpuRegistryPrepareOperation` allocates a non-reusable token and retains exact DDX backend/binding/PhysicalDevice/Device/resource generations before DDX backend entry.
-- `GpuRegistryCommitOperationSubmission` commits acceptance after the DDX backend returns SUCCESS. Completion callbacks that race ahead of this commit are buffered and cannot publish state early.
-- `GpuRegistryRejectOperationSubmission` handles synchronous DDX backend failure. A callback or backend acceptance after failure is a DDX backend-contract violation and forces quarantine.
-- `GpuRegistryRetireOperationToken` drives a typed PENDING/SUCCESS/FAILURE retirement result. Only SUCCESS after backend access and callback frames are gone releases token-held references; FAILURE quarantines and blocks DDX backend quiescence.
-
-The DDX backend `retire_operation` hook now returns `GpuProviderRetirementResult`, distinct from ordinary operation results and DDX backend-wide quiescence. Architecture vectors 115–119 cover callback-before-commit, sync-failure/late-callback, never-terminalized operations, retirement outcomes, and shutdown/resource-destroy races.
-
-Implementation agents: compare your operation submission/callback path with these four registry transitions. Report whether callbacks can arrive before the DDX backend function returns, how such completions are buffered, and what backend proof your retirement hook provides. A terminal protocol outcome alone is not retirement proof.
-
-
-## DDX backend API second-pass audit — 2026-11-04
-
-The second API pass found that the abstract signatures still left DDX backend-local PhysicalDevice handles, async operation identity, and full resource retention underspecified. Section 7 now adds:
-
-- explicit candidate-list and candidate records with DDX backend-generation-local, non-reusable binding IDs; candidate storage is temporary, while native handle mappings remain DDX backend-owned until binding/object/token retirement;
-- exact binding ID/generation in logical-device creation and Surface support queries; no DDX backend-native physical handle is stored in the central registry;
-- explicit operation kinds for WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent;
-- a server-owned token record retaining the complete resource-generation set, not merely one primary resource; QueueSubmit must pin its complete validated dependency graph;
-- a call-scoped DDX backend token pointer plus copied token ID/generation for callback userdata, avoiding backend callbacks retaining registry pointers;
-- typed operation-specific status values (NOT_READY, OUT_OF_DATE, SURFACE_LOST, ALREADY_COMPLETED), bounded immutable completion payloads, and stricter completion identity checks;
-- BeginShutdown explicitly closes new operation-token preparation.
-
-Architecture vectors now extend through 131. Section 8.3 adds concrete implementation guidance for candidate maps, token states, resource pin sets, callback counters, and diagnostics.
-
-**Implementation agents: please verify specifically:**
-1. Does your candidate enumeration produce a stable DDX backend-local binding ID, and does the DDX backend retain the ID-to-native-handle map after the temporary candidate list is freed?
-2. Do your WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, and QueuePresent paths all use the same prepare/commit-or-reject/complete/retire token lifecycle?
-3. Does QueueSubmit retain the full validated command/dependency resource set, including semaphores/fences and all buffers/memory, rather than one primary resource?
-4. Can any backend callback retain a raw registry token or DDX backend-context pointer after the entry-point call returns?
-5. What exact status mapping is used for AcquireNextImage NOT_READY, presentation OUT_OF_DATE/SURFACE_LOST, and cancellation ALREADY_COMPLETED?
-
-No wire ABI or opcode changed. Latest edits are pending exact-tip CI.
-
-
-### Completion binding-generation check
-
-A final identity check added the registry-assigned binding_generation to GpuProviderCompletion. A completion must now match both the DDX backend-local binding ID and the registry binding generation, in addition to DDX backend generation, token identity, and PhysicalDevice incarnation. Vector 132 tests stale binding completion rejection. Please ensure callback userdata snapshots both binding identifiers; matching only a DDX backend-local ID is insufficient.
-
-The DDX backend-device reference contract is also now explicit: create_logical_device returns one owned DDX backend-device wrapper reference; retain_device/release_device manage additional async/deferred references; destroy_logical_device destroys the native device once, while wrapper storage remains until all retained references are released. The four typed operation tables remain abstract in this chapter, but their operation declarations must use classified results, initialized outputs, and tokens for every listed async operation.
-
-
-### Availability and discovery event ordering
-
-A further API review made asynchronous status notifications generation- and sequence-safe. DDX backend context availability uses a monotonic sequence per DDX backend generation; binding-local availability additionally carries the exact registry binding generation and a sequence scoped to that binding. Effective availability is the conjunction of DDX backend-context availability, binding availability, and physical non-removal. A recovery at one scope cannot clear a failure at another. Older notifications return STALE_EVENT; duplicate same-state notifications are idempotent; conflicting sequence reuse is rejected.
-
-Discovery observations and removal evidence now carry a source_event_sequence captured when the source event occurred. This prevents a delayed removal callback from arriving after a newer add/update and incorrectly removing the current incarnation. The registry derives removal authority from registered source capabilities/trust policy; the evidence struct no longer accepts a caller-supplied authority value. Architecture vectors now extend through 137.
-
-Please verify that your udev/DDX backend adapters preserve event sequence at observation time (not callback dispatch time), and that all binding-scoped DDX backend loss/recovery callbacks carry binding_generation. Also confirm the effective availability state is composed rather than overwritten by a context recovery.
-
-
-### Complete async resource pin sets
-
-The current six asynchronous operation kinds all require an exact logical-Device generation and a nonempty resource set before DDX backend entry. The spec now states the minimum set by operation: Buffer+Memory for Write/ReadBuffer; Semaphore for host SignalSemaphore; Queue plus the complete validated dependency graph for QueueSubmit; and exact Swapchain plus all backend-accessible image/synchronization/route objects for AcquireNextImage/QueuePresent. Resource IDs must be unique in a token, even across generations. Vector 138 tests missing dependencies and atomic rejection. Please compare the actual resource graph builder against this list; do not treat a primary-resource pointer as a substitute for the retained dependency set.
-
-
-### Fatal DDX backend result handling
-
-Section 7.1 now defines GPU_PROVIDER_FATAL as immediate DDX backend-generation quarantine: close operation/binding admission, mark only selected PhysicalDevices UNAVAILABLE (never REMOVED), retain DDX backend context/module leases/dependent objects, and forbid normal finalization. GPU_PROVIDER_DEVICE_LOST is logical-Device/operation-scoped and must not mark the PhysicalDevice or DDX backend context unavailable. GPU_PROVIDER_CANCELLED is valid only as the terminal completion of an already accepted cancellable operation. Vector 139 covers these distinctions.
-
-Please confirm the implementation has a quarantine state distinct from QUIESCING and DEVICE_LOST, and that a fatal DDX backend result cannot fall through the ordinary destroy/unload path.
-
-
-### Retain admission and terminal idempotence
-
-The registry contract now explicitly closes new Retain admission at teardown boundaries (DDX backend shutdown/quarantine, ModuleRole unregister, ScreenAttachment detach) while allowing already-held references to be released. PhysicalDevice tombstones remain referenceable but cannot acquire execution providers. Operation-token transitions now define repeated Commit/Reject/Retire behavior; TryQuiesce after recorded success does not re-enter DDX backend code; duplicate finalization cannot release twice. Vector 140 covers retain/shutdown races and terminal idempotence. Please verify the implementation uses state-checked retain paths rather than a raw unconditional refcount increment.
-
-
-### Observation replay reference accounting
-
-A repeated ObserveDevice call with the same source generation, event sequence, and semantic payload returns the same observation ID but, on SUCCESS, one additional caller-owned PhysicalDevice reference for that call. It does not duplicate the source observation. The caller must release each returned reference independently. Vector 141 covers the case where the original reference is still held during replay.
-
-
-### Quarantine hook barrier
-
-A fatal DDX backend-generation quarantine now blocks even the normal quiesce/finalize hooks: TryQuiesceProvider returns QUARANTINED/FAILURE without invoking quiesce_provider, and FinalizeProviderShutdown returns QUARANTINED without release_provider. This prevents further entry into a module after its contract has been violated. Vector 142 checks that DDX backend/context/module/object references remain pinned. Any recovery requires a separately specified server-controlled proof-of-safety path.
-
-## Registry API lifetime addendum — 2026-11-04
-
-The follow-up registry API audit found underspecified DDX backend-context access, nested operation-table storage lifetime, shared module-lease identity, exact source/binding/Screen removal barriers, DDX backend quiescence preconditions, and the call-scoped operation-token pointer rule. These are now specified in [registry API lifetime addendum](spec/registry-api-lifetime-addendum.md), normative alongside §7/§7.1 of `spec/device-registry-architecture.md`. Architecture vectors 143–150 cover the new cases. No wire ABI, opcode, event, or Vulkan capability changed.
-
-Implementation agents: please confirm (a) whether the DDX backend context accessor is generation-checked and borrow-only, (b) where nested DDX backend operation tables live and what pins their code/storage, (c) how loader module-owner aliases are canonicalized to one shared lease, (d) that source/binding/Screen removal SUCCESS is emitted only after callbacks and native-handle users drain, (e) that quiescence is not called before all bindings/tokens/objects/external calls/callback bridges retire, and (f) that providers copy only token scalar IDs and never retain the temporary token pointer. Report exact branch/commit and runtime evidence; source-level intent alone is not acceptance evidence.
-
-## Complete DDX backend-operation matrix — 2026-11-04
-
-The full cross-check against request subopcodes 0–47 found a material API gap: `GpuProviderBufferMemoryOps`, `GpuProviderShaderPipelineOps`, `GpuProviderCommandOps`, and `GpuProviderSynchronizationOps` were only forward-declared and had no concrete operation signatures. The DDX backend operation matrix now defines these tables and maps every assigned request to DDX backend work or explicitly server-only work. It also found and fixes a missing `free_buffer` operation, defines all six async operations, output initialization/rollback, result mapping, surface-capability completeness, and typed DestroyResource dispatch. See [DDX backend operation matrix](spec/provider-operation-matrix.md); vectors 151–164.
-
-Implementation agents: compare each implemented DDX backend vtable against the normative table declarations. In particular report exact signatures and result types for all four tables; whether Buffer has a distinct `free_buffer`; how DescriptorSet allocation/free and CommandBuffer pool ownership are represented; whether surface capability query returns the full format/mode/limit set; and whether all six async operations use token prepare/commit-or-reject/complete/retire. Also identify any extra backend callbacks that are currently not in the normative table. Do not treat a single generic destroy/dispatch callback as satisfying typed destroy symmetry unless the exact resource-type dispatch and lifetime guarantees are preserved.
-
-
-## Implementierungsbranch-Inventur gegen DDX backend-Operationsmatrix — 2026-11-04
-
-Die Spec-Seite hat die tatsächlichen Implementierungsbranches gegen `spec/provider-operation-matrix.md` geprüft, konnte sie in diesem Repository aber nicht identifizieren:
-
-- Sichtbare Branches auf GitHub: `docs/restructure-2026-10-21` (maßgeblich), `docs/split-specification`, `master`, `wip/001`. Es gibt hier aktuell keinen sichtbaren aktiven Implementierungsbranch.
-- Der frühere Branch `wip/by-local-agent` war Head von PR #3 und ist inzwischen in die Spec-Branch gemergt. PR #3 enthält Wire-Spec- und Golden-Vector-/Checker-Änderungen für Memory-Properties und Presentation, aber keine DDX backend-/Xserver-Implementierung.
-- `wip/001` und `docs/split-specification` sind divergierte ältere Spec-Stände und werden nicht als Implementierungsnachweis verwendet.
-- Es gibt keine offenen Pull Requests in diesem Repository, die einen Implementierungsbranch nennen.
-
-**Blocker für den Matrix-Abgleich:** Die Implementierungsagents müssen den tatsächlichen Repository-Namen, Branch-Namen und exakten Commit-SHA hier melden. Für jeden DDX backend-Adapter sind mindestens die vier vollständigen Operationstabellen, Buffer-/CommandBuffer-/DescriptorSet-Zerstörung, vollständige Surface-Capability-Ergebnisse, die sechs Async-Tokenpfade und die Retain-/Retire-/Quiesce-Barrieren anhand konkreter Quellpfade und Tests zu belegen. Bitte keine bloßen Absichtserklärungen oder Spec-Branch-SHAs melden.
-
-Bis diese Referenzen vorliegen, gibt es keinen belegten Implementierungswiderspruch, den die Spec korrigieren könnte. Die Matrix bleibt normative Soll-Schnittstelle; die fehlende Implementierungsprüfung ist ein offener Integrations-/Nachweis-Punkt und keine Freigabe, die Matrix abzuschwächen.
-
-
-### Nachprüfung der Agent-Rückmeldungen und Implementierungsquellen — 2026-11-04
-
-Die aktuelle Koordinationsdatei wurde erneut vollständig nach Agent-Einträgen durchsucht. Seit der Aufforderung zum VTable-Abgleich ist keine Rückmeldung im vereinbarten Format eingetragen worden. Auch die GitHub-Issue-Kommentare und offenen PRs des Spec-Repositories enthalten keine technische Agent-Antwort.
-
-Zusätzliche Repository-Prüfung:
-- Das einzige weitere für den Xserver passende, für den verbundenen GitHub-Zugang sichtbare Repository ist `metux/xorg-xserver`.
-- Dessen Branch-Liste enthält keinen XAverius-/GPU-/Vulkan-Implementierungsbranch; `master` steht auf `610e91dc5f34e64036b7cdd08f0f953a672fcb36` (letzter Commit 2025-06-06). Die Code-Suche nach `XAverius` und `GpuProvider` liefert dort keine Treffer.
-- Es gibt in diesem Repository keine offenen PRs mit DDX backend-Implementierung.
-
-Damit gibt es weiterhin keine tatsächlichen DDX backend-VTables, die gegen die Matrix verglichen werden könnten. Bitte im nächsten Agent-Update das Repository explizit nennen (falls nicht `metux/xorg-xserver`), dazu Branch + vollständigen Commit-SHA und Quellpfade der VTables. Falls der Code nur lokal oder in einem nicht verbundenen Repository liegt, muss er als Branch/PR oder als Quelltextauszug bereitgestellt werden. Bis dahin bleibt dies ein fehlender Prüfgegenstand, kein bestätigter Spec-Konflikt.
-
-
-## Logical and DDX backend-native Surface split — 2026-11-04
-
-A cross-check of the presentation request layout against the DDX backend API found that `CreateSurface` has no Device/DDX backend selector, while the logical Surface is connection-owned and may be queried against Devices on different GPUs. The earlier matrix wording could be read as creating a DDX backend-native Surface during `CreateSurface`, which would require an arbitrary DDX backend choice.
-
-The normative contract now makes the distinction explicit:
-- `CreateSurface` is server-only and captures the exact Window/Screen identity.
-- A DDX backend-native Surface is materialized lazily for the exact DDX backend generation selected by `GetSurfaceCapabilities` or `CreateSwapchain`.
-- The DDX backend-native wrapper is scoped to (DDX backend generation, logical Surface generation), shared across Devices served by that DDX backend, and not shared across DDX backend generations.
-- `UNSUPPORTED` during native Surface creation means no present support for that DDX backend/Surface pair; the capability reply remains SUCCESS with all queue-family support bits clear, while direct CreateSwapchain returns UNSUPPORTED_CONFIGURATION without publishing its target XID.
-- `DestroySurface` retires all native wrappers for that logical generation, and outstanding wrappers block DDX backend quiescence.
-
-Conformance vectors 165–168 were added. No wire layout, opcode, event, or capability assignment changed. Implementation agents: please verify the actual Surface cache key, lazy creation path, DDX backend-generation sharing, unsupported result mapping, and DestroySurface/quiescence accounting. Report exact repository, branch, commit SHA, source paths, and tests; no implementation source has yet been supplied for this check.
-
-
-### Surface capability ABI boundary — 2026-11-04
-
-A second consistency pass compared the DDX backend capability-result requirement with the actual v0.1 GetSurfaceCapabilities reply and CreateSwapchain request. The wire contract exposes format/color-space pairs, present modes, image-count and extent bounds, image-usage flags, and per-queue-family support. It does not expose image transforms or composite-alpha modes and gives the client no selectors for them. The DDX backend contract now requires exactly the v0.1 capability dimensions; any backend-required transform/composite-alpha choice is internal to the DDX backend during Swapchain creation and native Vulkan enums are never exposed.
-
-The presentation chapter also explicitly distinguishes the cached DDX backend-native Surface backing object from a persistent PresentationRoute: capability probing may materialize/cache the former but MUST NOT create/pin the latter or reserve bridge resources. Vector 169 covers the capability ABI boundary. No wire ABI changed. Implementation agents should report the internal transform/composite-alpha policy and confirm it cannot contradict the wire-visible constraints.
-
-
-### DDX backend-generation shutdown and cached native Surfaces — 2026-11-04
-
-One additional lifetime case is now explicit: DDX backend shutdown must retire every native Surface wrapper cached by that DDX backend generation after its dependent Swapchain/route/query references drain, even if the connection-owned logical Surface remains live. Only that DDX backend-generation cache entry is removed; the logical Surface remains valid, and an existing Device is never failed over to another DDX backend. A future Device on another DDX backend generation may materialize a separate native Surface. Vector 170 covers this isolation.
-
-### DDX-owned PhysicalDevice registration and direct operation-vector dispatch — 2026-11-04
-
-The registry architecture has been clarified: in the Xlibre/Xorg profile, each DDX is responsible for registering every PhysicalDevice it serves, including headless/render-only/compute-only devices not attached to a Screen. Platform/udev supplies identity and hotplug evidence; it is not a second executable inventory. There is no independent Vulkan-ICD candidate inventory in this profile.
-
-The selected PhysicalDevice binding now owns/references its immutable typed operation vectors, per-device backend context, and native physical-device handle. Request dispatch calls those vectors directly. The historical BackendProvider term is retained only for shared implementation/module lifetime, callback admission, and quiescence control; it is not an extra per-device dispatch object and must not be looked up on each operation. See `spec/device-registry-architecture.md` and `implementation-notes/ddx-device-registration.md`.
-
-**Implementation agents:** Please verify your current design against this model and report: (1) exact repository/branch/SHA, (2) where the DDX enumerates *all* served PhysicalDevices, (3) where each PhysicalDevice stores its call vectors/context/native handle, (4) how non-Screen devices are registered, and (5) how ScreenAttachment teardown is separated from device/backend lifetime. If your implementation currently has a standalone DDX backend object in the dispatch path, explain what lifetime responsibility requires it and whether it can be reduced to a shared module-role control record. Do not change the wire ABI or invent an independent ICD inventory.
-
-The registry API lifetime addendum now explicitly removes the generic `GpuModuleRoleGetContext()` accessor. Per-device context/native handles are supplied directly through the PhysicalDevice binding; the shared module-role record exposes only generation-checked lifetime and quiescence operations.
-
-### DDX binding API cleanup — 2026-11-04
-
-The normative spec has been reconciled to the DDX-owned registration model. The old independent candidate inventory, DDX-local numeric handle mapping, separate backend-object dispatch lookup, and generic module-role context accessor are removed from the API sketch. Each DDX enumerates all devices it serves and registers each exact device binding directly. Please align implementation code with `GpuRegistryRegisterDdxDevice` and `GpuPhysicalDeviceAcquireBackendBinding`, and report any remaining standalone provider object that is still in the call path.
-
-
-## Follow-up audit — obsolete selection and registration model removed — 2026-11-04
-
-A second pass found residual old-model text outside the main DDX binding contract. The following are now corrected in the normative architecture and implementation guidance:
-
-- §8.2 no longer asks the registry to collect/rank a separate candidate list or use a stable DDX-backend key as a dispatch-selection layer. Each DDX enumerates its served devices and submits a complete `GpuRegistryRegisterDdxDevice` registration; the registry canonicalizes identity and commits one complete binding/snapshot before publication.
-- Conformance vectors 42–44 now test duplicate module-role owner keys, ambiguous duplicate device claims, complete-snapshot eligibility, and order-independent publication without a provider-object ranking API.
-- Vectors 88–90 now exercise `GpuRegistryBeginModuleRoleShutdown` and direct per-device registration against an already registered module role. They no longer describe registering a backend descriptor followed by separate device bindings.
-- The old “DDX backend acquisition” prose is replaced by the exact `GpuPhysicalDeviceAcquireBackendBinding` contract. Module-role references, rather than caller-owned DDX-backend references, gate module-role finalization.
-- The operation matrix and DDX implementation notes now consistently describe `GpuModuleRole` as shared lifetime/quiescence state only. The implementation-note type typo and the coordination link to the matrix were corrected.
-
-**Current implementation alignment request:** report the exact implementation repository, branch, and commit, then show the DDX enumeration loop and the call site that registers each served PhysicalDevice directly with its native handle, per-device context, and immutable operation vectors. Also show that request dispatch uses the binding directly and that module-role lookup is limited to lifetime/quiescence. No implementation source or agent response has yet been supplied for this review.
-
-The current spec branch remains `docs/restructure-2026-10-21`. Exact-tip CI for the resulting documentation/API cleanup must pass before this delta is marked verified. Historical coordination entries above describe superseded provider/candidate APIs where they conflict with this section.
-
-
-## Concrete implementation target identified — X11Libre/xserver — 2026-11-04
-
-The implementation repository and branch are now confirmed:
-
-- Repository: `X11Libre/xserver`
-- Branch: `wip/xaverius`
-- Audited tip: `db16514d83c4ef60d6001572a44aaf89d5f40916`
-- Latest relevant commits at audit time: `db16514` (WIP integration) and `5202eb8` (Physical Device Inventory).
-
-A source review of `Xext/xaverius/xaverius_priv.h`, `xaverius_intern.h`, `xaverius_inventory.c`, `xaverius_device.c`, and `xaverius_screen.c` shows that this branch is an actual implementation target, but it has not yet converged on the latest direct DDX-binding architecture:
-
-1. `XaveriusDevice` still has a `struct _XaveriusProvider *provider` member; `XaveriusInventory` still owns a provider list; and `XaveriusInventoryRegisterProvider/SetProviderStatus/UnregisterProvider` remain in the internal API. These are the old intermediate provider-object model, not the new shared `GpuModuleRole` control record plus per-device binding.
-2. `XaveriusInventoryRegisterDevice` accepts a capabilities pointer and opaque provider handle, but does not accept the exact native PhysicalDevice handle, per-device backend context, or immutable typed operation vectors as a complete binding. New device records currently initialize `dev->provider = NULL`.
-3. The exported DDX interface is still `XaveriusDDXOps` attached through `XaveriusScreenInit`. Its `EnumeratePhysicalDevices` callback is per-Screen and is called lazily from the client EnumeratePhysicalDevices request. The request handler loops over `screenInfo.screens` and concatenates Screen-local lists. That is not the required DDX-owned server-startup/device-discovery registration of every device served by the DDX, including devices with no Screen.
-4. Property and queue-family requests also scan Screen callbacks rather than resolving the requested PhysicalDevice XID to its exact registered binding and dispatching through that binding's operation vector.
-5. The new architecture's separation of ScreenAttachment lifetime from PhysicalDevice binding lifetime is therefore not yet implemented by these paths.
-
-**Required next implementation alignment:** keep `XaveriusScreenInit` only for Screen-specific setup/attachment, introduce a DDX-owned enumeration/registration path independent of Screen creation, and make each registration install one complete per-PhysicalDevice binding (identity, native handle, per-device context, immutable operation vectors, module-role generation). Make all PhysicalDevice requests resolve the XID through the server-wide inventory and dispatch through that exact binding. Replace the per-device Provider pointer/list with shared module-role lifetime references only; do not retain a Provider object as an intermediate dispatch target.
-
-This is a source-level architecture review only; no implementation files were modified. Re-audit the branch after the implementation changes land. The specification remains authoritative for semantics; the implementation branch is `X11Libre/xserver:wip/xaverius`.
-
-
-## X11Libre/xserver push audit — 2026-11-04
-
-- **Implementation repository / branch / commit:** `X11Libre/xserver:wip/xaverius`, `ba88b49433de7c202d6a977887729b4aebb4163c` (parent `62febeaa71b68f9973127cad263c48ec92cb344f`).
-- **Files reviewed:** `init.c`, `xaverius_priv.h`, `xaverius_intern.h`, `xaverius_registry.c`, `xaverius_device.c`, `xaverius_screen.c`, Meson source list.
-- **Progress:** the per-instance `XaveriusInventory` allocation has been removed in favor of one process-global list. This aligns with the process-wide registry ownership requirement.
-- **Blocking architecture gaps:** callbacks remain an alias of the capability snapshot, not typed operations; no binding-owned native handle/context/generation/module-role reference; DDX API remains Screen-scoped; request handlers enumerate the global list but no DDX-wide population path is present in this push; duplicate identity overwrites the existing callback pointer (last-writer-wins); identity matching is still a simple PCI/UUID comparison; registry finalization is not wired into `XaveriusExtensionFini`; PhysicalDevice XID allocation is not accompanied here by DIX resource registration.
-- **Required next step:** keep the global registry, but make each entry own the exact immutable DDX binding and snapshot; add DDX-wide registration independent of ScreenInit; select duplicate claims before publication without rebinding; keep ScreenAttachment topology separate; wire resource and shutdown lifetime. Do not restore per-Screen enumeration or provider-object dispatch.
-- **Verification:** source audit only; no Xserver code was changed and no Xserver build/runtime test was run. The spec-side implementation guidance was extended in `implementation-notes/ddx-device-registration.md`.
-
-
-- **Additional wire-level gaps in this push:** enumeration omits UNAVAILABLE devices and REMOVED tombstones; queue-family queries reject UNAVAILABLE devices instead of returning the retained snapshot; property queries collapse non-AVAILABLE state into `BadMatch` rather than property-specific `NOT_AVAILABLE`/status behavior; XID lookup is a private-list scan rather than typed DIX resource validation. These need fixing independently of the binding redesign.
-
-
-## Staged Xserver migration plan — 2026-11-04
-
-A concrete, ordered migration plan has been added at `implementation-notes/xserver-wip-xaverius-migration.md`. It maps the current `X11Libre/xserver:wip/xaverius` source constructs to the normative direct DDX-binding architecture and divides the work into seven buildable phases: (A) DDX-wide discovery vs Screen setup; (B) snapshot vs typed binding and ModuleRole; (C) atomic duplicate-safe registration; (D) DIX resource ownership; (E) request-handler snapshot semantics; (F) ScreenAttachment; (G) hotplug/unload/shutdown.
-
-The plan explicitly records the current blockers: callback/snapshot alias, missing native handle/context/typed operations/generations, Screen-scoped discovery, last-writer-wins duplicate registration, simplistic identity matching, list-based XID lookup, incomplete status semantics, and missing shutdown integration. It also defines acceptance gates and forbids adding a second provider/candidate inventory.
-
-**Write-access limitation:** an attempt to create `Xext/xaverius/MIGRATION.md` directly in `X11Libre/xserver:wip/xaverius` was rejected by GitHub with HTTP 403 (integration lacks write access to that repository). No Xserver source or branch was changed. The complete migration plan is therefore committed in the authoritative spec repository for the Xserver agents to apply. This is not a claim that the source migration itself has been implemented.
-
-
-## Active implementation assignment — Phase A DDX-wide discovery — 2026-11-04
-
-**Assigned to the Xserver implementation agents:** implement Phase A from `implementation-notes/xserver-wip-xaverius-migration.md` in `X11Libre/xserver:wip/xaverius`. The detailed task, source mapping, deliverables, and acceptance criteria are in that file; this entry is the coordination-board hand-off.
-
-Scope is intentionally limited to separating DDX-wide PhysicalDevice discovery/registration from ScreenInit:
-- remove PhysicalDevice enumeration/property/queue-family callbacks from `XaveriusDDXOps`;
-- add and invoke a DDX-owned registration path independent of `ScreenPtr`/Screen creation;
-- ensure devices without display connectors or Screens are not lost;
-- remove lazy discovery from client requests;
-- keep ScreenInit/ScreenFini and Screen close strictly Screen-local.
-
-Do not implement Phase B or later in this task, and do not introduce a Provider object, candidate list, provider ranking, per-Screen inventory, or first-Screen selection. The DDX must register every device it serves directly with the registry contract; coordinate the exact call signature with the direct-binding API rather than adding an intermediate abstraction.
-
-**Source-level caution:** modesetting `Probe()`, platform/PCI probe callbacks, `PreInit()`, and `ScreenInit()` have different roles. The agent must identify the earliest point where the exact DDX device handle/context is valid without making registration conditional on Screen allocation or connector presence. If no suitable generic Xserver hook exists, use a narrow DDX-owned server-wide hook and document its lifetime.
-
-**Required agent response:** commit SHA, changed files, concrete DDX registration call site, evidence that zero-Screen and multi-device discovery work, exact build/test commands and results, and remaining lifecycle assumptions. The spec-side task was committed as `dde5c8a39dec507d6cdbf00ba210168313774158`. Re-audit the implementation against the Phase A acceptance list before assigning Phase B.
-
-
-## Phase A implementation audit — X11Libre/xserver:wip/xaverius — 2026-11-04
-
-**Result: NOT ACCEPTED; Phase A remains unimplemented.** Audited branch tip: `89df8ba0bc41dbb4b291b2242b9945661bb47fad` (parent `ba88b49433de7c202d6a977887729b4aebb4163c`). The only new commit since the prior audit, `89df8ba`, removes the redundant `xaverius_registry.h` wrapper and changes an include. It does not implement any Phase A behavior.
-
-Source checks at the current tip:
-- `Xext/xaverius/xaverius_priv.h` still exposes `EnumeratePhysicalDevices`, `GetPhysicalDeviceProperty`, and `GetPhysicalDeviceQueueFamilyProperties` inside `XaveriusDDXOps`; the header still describes device information as filled during ScreenInit.
-- `xaverius_screen.c` still owns only per-Screen allocation/close cleanup, but the DDX API attached to it still carries the device callbacks. Screen close invokes ScreenFini and frees the Screen private; there is no explicit PhysicalDevice detach model yet.
-- `xaverius_device.c` reads the global list for enumeration, but there is no DDX-wide registration caller. The handlers still consume `dev->callbacks` snapshot data; static property and queue-family requests still reject non-AVAILABLE devices. The registry is therefore not populated through the required independent DDX discovery lifecycle.
-- `xaverius_registry.c` still exposes `XaveriusRegisterDevice(identity, callbacks)`; duplicate identity updates the existing callback pointer (last-writer-wins). This is not the Phase A idempotent registration guarantee and remains a later-phase architecture blocker too.
-- `init.c` initializes the registry, but `XaveriusExtensionFini` is empty. This is not a Phase A acceptance item, but remains recorded for the later shutdown phase.
-- The current modesetting `driver.c` has no XAverius registration call. Its probe path includes `check_outputs()` and `xf86AllocateScreen()`; PreInit and ScreenInit are per-ScrnInfo/Screen stages. No demonstrated path registers render-only/headless devices independently of Screen allocation.
-- The current Xserver commit status is `pending` with no reported status checks. No agent report, build command, or Phase A test evidence was found in the coordination board or the branch commits inspected.
-
-**Acceptance matrix:**
-1. Zero/one/multiple devices registered with zero Screens: FAIL / no DDX-wide entry point or caller.
-2. Headless/render-only/compute-only devices retained without a Screen: FAIL / no such discovery path demonstrated; modesetting probe remains output/Screen oriented.
-3. Multiple Screens do not duplicate registration and one Screen does not define inventory: NOT DEMONSTRATED / no DDX-owned registration path or test.
-4. Enumeration request has no discovery side effects and serializes only the process-wide registry: PARTIAL / it reads the global list and does not visibly invoke enumeration callbacks, but the required independent population path is absent and request status/filter semantics remain incomplete.
-5. ScreenInit/ScreenFini exclusively Screen-local and Screen close cannot unregister a shared device: PARTIAL / cleanup is Screen-local, but DDX operations still mix device callbacks into Screen ops and no independent binding/attachment lifecycle exists.
-6. No Provider object/ranking/alternate inventory introduced: PASS for the narrow Phase A source shape (the current API still uses the legacy ProviderCapabilities naming/handle, but no new Provider object or candidate inventory was added by these commits).
-
-**Required response from implementation agent:** identify the DDX-wide registration API and exact call site, show how every served device (including no-output/no-Screen devices) is enumerated once, remove the three device callbacks from `XaveriusDDXOps`, and supply zero-Screen/multi-device/repeated-registration test evidence plus exact build/test results. Do not start Phase B until this Phase A review is satisfied. No Xserver source was changed by this audit.
+Latest fully CI-verified architecture baseline recorded: `a66d977b436cb05818a07a847e7c4fc1e8065598`, workflows [41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [41848200803](https://github.com/metux/xav-design/actions/runs/41848200803), both successful. Newer registry API lifetime and operation-matrix refinements were pending exact-tip CI at the last recorded check. Documentation-only coordination commits do not validate Xserver source.
