@@ -21,6 +21,7 @@ typedef struct xav_physical_device {
 } xav_physical_device;
 xav_client_status xav_connection_create(xcb_connection_t *, xav_connection **,
  xav_version *, xcb_generic_error_t **);
+/* Call successfully before XAverius event selection or CreateDevice. */
 xav_client_status xav_connection_negotiate_xge(xav_connection *, xav_version *, xcb_generic_error_t **);
 void xav_connection_destroy(xav_connection *);
 uint8_t xav_connection_major_opcode(const xav_connection *);
