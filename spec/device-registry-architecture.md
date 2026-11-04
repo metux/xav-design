@@ -78,7 +78,7 @@ An ambiguous identity match is not a license to merge or publish. The registry M
 
 Initial publication has a server-wide discovery barrier: all configured discovery sources and providers complete their initial candidate pass, identity canonicalization, deterministic provider selection, and snapshot query before the XAverius inventory is exposed. Enumeration order and Screen initialization order MUST NOT affect the resulting inventory or selected provider.
 
-A provider or source discovered after publication MAY add corroborating evidence or a non-selected provider binding to an existing identity. It MUST NOT replace the selected provider, mutate the published snapshot, or cause a second XID. v0.1 does not support transparent execution-provider failover. If the selected provider binding is withdrawn or its provider context is permanently deregistered, the PhysicalDevice becomes UNAVAILABLE and remains so until the same selected provider generation can recover; a new provider generation is not transparent recovery. The PhysicalDevice becomes REMOVED only after confirmed removal of that hardware incarnation.
+A provider or source discovered after publication MAY add corroborating evidence or a non-selected provider binding to an existing identity. It MUST NOT replace the selected provider, mutate the published snapshot, or cause a second XID. A newly hotplugged physical-device incarnation discovered after the startup barrier follows the same canonicalize/select/snapshot/publish sequence independently before it becomes visible to clients. v0.1 does not support transparent execution-provider failover. If the selected provider binding is withdrawn or its provider context is permanently deregistered, the PhysicalDevice becomes UNAVAILABLE and remains so until the same selected provider generation can recover; a new provider generation is not transparent recovery. The PhysicalDevice becomes REMOVED only after confirmed removal of that hardware incarnation.
 
 A DDX unload or Screen teardown MUST detach every ScreenAttachment owned by that exact Screen generation before its Screen-private state is freed. It MUST also withdraw any discovery observations and provider registrations that it owns, each through their distinct lifecycle operations. Detaching the last Screen does not remove a PhysicalDevice: headless, off-screen, render-only, or temporarily unbound devices remain in the server-wide inventory if their physical/provider discovery remains valid. Similarly, removing one DRM access node does not prove physical removal if another node or authoritative source still identifies the same device.
 
@@ -438,7 +438,8 @@ void GpuRegistryDestroy(GpuRegistry *registry);
 GpuRegistryResult GpuRegistryObserveDevice(
     GpuRegistry *registry, const char *source_key,
     uint64_t source_generation, const GpuDeviceIdentity *identity,
-    GpuPhysicalDevice **out_device, uint64_t *out_device_generation);
+    GpuPhysicalDevice **out_device, uint64_t *out_device_generation,
+    uint64_t *out_observation_id);
 
 /* Provider execution binding is registered separately from observation.
    The provider-local handle remains private to this provider generation. */
