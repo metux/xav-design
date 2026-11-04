@@ -722,7 +722,10 @@ def check_other_numeric_registries(c: Check) -> None:
         "`XAverius.compute.maxWorkGroupInvocations` | `CARD32` (1) | One unsigned 32-bit integer",
         "`XAverius.compute.maxWorkGroupSize` | `CARD32_ARRAY` (6) | Exactly three unsigned 32-bit integers",
         "`XAverius.timelineSemaphore` | `CARD32` (1) | `1` if the Physical Device supports",
+        "`XAverius.deviceStatus` | `CARD32` (1) | `0 = AVAILABLE`, `1 = UNAVAILABLE`, `2 = REMOVED`",
         "For `SUCCESS`, the reply's `property_type` MUST match the registered type",
+        "For `XAverius.deviceUUID`, an all-zero 16-byte value is invalid and MUST be reported as `NOT_AVAILABLE`",
+        "`XAverius.deviceStatus` is a server-maintained snapshot, not a backend property",
         "`value_length` MUST equal the exact size specified above",
         "padding bytes MUST be zero",
         "MUST NOT fabricate a UUID",
@@ -731,8 +734,8 @@ def check_other_numeric_registries(c: Check) -> None:
         c.require(contract in property_registry,
                   f"physical-device property registry missing exact value/reply contract: {contract}")
     c.require(
-        len(re.findall(r"^\| `XAverius\.[^|]+` \|", property_registry, re.M)) == 5,
-        "physical-device property registry must contain exactly five v0.1 properties",
+        len(re.findall(r"^\| `XAverius\.[^|]+` \|", property_registry, re.M)) == 6,
+        "physical-device property registry must contain exactly six v0.1 properties",
     )
     c.require(
         "For a status other than `SUCCESS`, `property_type` and `value_length` MUST be zero" in devices
