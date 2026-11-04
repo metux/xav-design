@@ -3304,8 +3304,8 @@ def check_presentation_profile(c: Check) -> None:
               "AcquireNextImage: pending registration must terminate on DestroyDevice without overriding prior terminal outcomes")
     c.require("DEVICE_DESTROYED" in errors.split("`AcquireNextImage`:", 1)[-1].split("\n", 1)[0],
               "AcquireNextImage: error map must include device-destroyed reply outcome")
-    # previous baseline status guard intentionally replaced below
-    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED are not X11 framing errors" in presentation,
+    # all presentation status values are checked against the profile-local enum
+    c.require("TIMEOUT/NOT_READY/OUT_OF_DATE/SURFACE_LOST/DEVICE_LOST/DEVICE_DESTROYED/DEVICE_UNAVAILABLE are not X11 framing errors" in presentation,
               "AcquireNextImage: all non-success operation statuses must be distinguished from X11 errors")
     c.require("image index is meaningful only for SUCCESS and must be zero on every non-success result" in presentation,
               "AcquireNextImage: failure reply must use image_index = 0")
