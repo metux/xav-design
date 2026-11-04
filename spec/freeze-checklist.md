@@ -36,6 +36,10 @@ The synchronization ownership correction is explicit: WaitSemaphores/WaitForFenc
 
 A final source review found stale `cancel_host_wait` and generic provider-wait wording in the architecture chapter. These were corrected in `b3ac2f2b7eeb51d8d7a785225edbe3567774ed31`; the coordination record is `feb6bbe53446580107b96cddb4e853382dbb019f`. The conformance host-wait cancellation vector already reflected the correct server-owned model and required no change. The user reports the preceding latest CI job green; exact-tip CI for the new wording correction still needs confirmation. This is a verification item, not an unresolved protocol design decision.
 
+### Logical/provider-native Surface audit — 2026-11-04
+
+The presentation request and provider API were cross-checked for multi-GPU semantics. CreateSurface is now explicitly server-only: it captures the exact Window/Screen identity and does not choose a provider. Provider-native Surfaces are materialized lazily for the provider generation selected by the exact logical Device, keyed by provider generation plus logical Surface generation. The wrapper may be reused by Devices served by the same provider generation but cannot cross provider generations. DestroySurface retires all materialized wrappers after their users drain. UNSUPPORTED native creation maps to a valid capability result with no present-capable queue. Vectors 165–168 cover scope, lazy creation, unsupported mapping, and teardown. No wire ABI changed; exact-tip CI for these additions is pending.
+
 ## Normative contract gates
 
 - [x] Every registered request has one authoritative defining chapter, a stable subopcode, request kind, exact fixed/formula length, field widths/offsets, reserved-field and padding rules, validation order, error/status mapping, atomicity, and lifecycle effects as applicable.
