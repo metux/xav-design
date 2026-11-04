@@ -1319,13 +1319,13 @@ The implementation test suite SHOULD include at least:
 
 127. Return STATUS/ALREADY_COMPLETED from cancel_acquire after the backend image acquisition has already terminalized. Verify cancellation does not create a second completion or change the first terminal outcome; the server still performs late-image release/retention as required.
 
-128. Have a DDX enumerate zero, one, and multiple devices and call RegisterDdxDevice for each. Verify no candidate-list API is involved, each exact native handle is stored in its binding, and partial registration failure leaves no published XID or leaked reference.
+128. Have a DDX enumerate zero, one, and multiple devices and call `GpuRegistryRegisterDdxDevice` for each. Verify there is no candidate-list API, every native handle is retained directly by its binding, and partial registration failure leaves no published XID or leaked reference.
 
-129. Remove a DDX device binding while an operation or deferred object still references its native handle stored directly in the binding. Verify the DDX binding's native handle mapping remains alive until all operation/object references retire; a removed the binding generation is never reused.
+129. Remove a DDX device binding while an operation or deferred object still references its native handle. Verify the binding and handle remain alive until all operation/object references retire, and a stale binding generation cannot resolve a replacement binding.
 
 130. Have one DDX module role register several PhysicalDevices with distinct native handles and per-device contexts. Verify each binding dispatches to its own handle/context while sharing only the module-role lifetime record and module lease.
 
-131. Race removed generic module-role context accessor against DDX backend finalization and module quiescence. Verify the accessor is callable only while an exact DDX backend reference is held, returns a borrowed pointer, and cannot extend or outlive DDX backend-context/module lifetime.
+131. Verify no generic module-role context accessor exists. Every device operation receives the exact binding context/native handle, while module-role APIs expose only generation-checked lifetime retain/release and quiescence.
 
 132. Deliver a completion with the correct native handle stored directly in the binding and PhysicalDevice generation but a stale or mismatched registry binding generation. Verify it is rejected and cannot affect a replacement binding for the same PhysicalDevice/DDX module-role generation.
 
