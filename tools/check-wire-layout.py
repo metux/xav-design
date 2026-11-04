@@ -3271,11 +3271,11 @@ def check_presentation_profile(c: Check) -> None:
                   f"presentation status/atomicity: missing normative contract: {contract}")
     conformance_precedence_contracts = (
         "Presentation error precedence is tested with mixed-failure requests",
-        "returns `DEVICE_LOST` rather than `SURFACE_LOST`",
+        "returns `DEVICE_LOST` before `DEVICE_UNAVAILABLE`, and `DEVICE_UNAVAILABLE` before `SURFACE_LOST`",
         "returns `DEVICE_LOST` before `DEVICE_UNAVAILABLE`, `DEVICE_UNAVAILABLE` before `SURFACE_LOST`, `SURFACE_LOST` before `OUT_OF_DATE`",
         "lifecycle outcomes precede timeout polling",
         "Zero token, duplicate wait XIDs, and accepted-token reuse are `BadValue`",
-        "Device loss beats Surface loss and accepted-token reuse",
+        "Device loss beats Device Unavailable, which beats Surface loss and accepted-token reuse",
         "unsupported queue presentation capability is `BadMatch` before token reuse",
         "accepted-token reuse returns `BadValue` before image-state and semaphore-eligibility checks",
         "Acceptance atomically reserves the token and all wait slots",
@@ -3289,7 +3289,7 @@ def check_presentation_profile(c: Check) -> None:
     capability_failure_contract = (
         "TEMPORARILY_NOT_PRESENTABLE means the window has zero extent; it must set "
         "present_supported to 0 and all extent/count/format/mode/usage/queue-family fields to zero. "
-        "SURFACE_LOST and DEVICE_LOST likewise return zero capability fields."
+        "SURFACE_LOST, DEVICE_LOST, and DEVICE_UNAVAILABLE likewise return zero capability fields."
     )
     c.require(capability_failure_contract in presentation,
               "GetSurfaceCapabilities: non-success statuses must define zeroed capability fields")
