@@ -552,6 +552,19 @@ typedef struct {
     uint64_t provider_generation;
 } GpuProviderDescriptor;
 
+/* Descriptor and callback lifetime contract:
+   - canonical_provider_key is borrowed for registration only; the registry
+     copies its canonical bytes before returning.
+   - ops, completion_sink, and completion_userdata remain valid and immutable
+     for this provider generation until release_provider has been called for
+     the final retained reference and all operation tokens are retired.
+   - provider_context is managed only through the provider retain/release
+     contract; the registry MUST NOT retain an unowned raw context pointer.
+   - All other pointer arguments to registry entry points are borrowed for the
+     duration of that call unless a specific operation explicitly transfers
+     ownership. Any data retained after return MUST be copied or separately
+     reference-counted before the call returns. */
+
 /* Server startup/shutdown; one registry per X server process. */
 GpuRegistry *GpuRegistryCreate(void);
 void GpuRegistryDestroy(GpuRegistry *registry);
