@@ -96,6 +96,8 @@ struct GpuProviderBufferMemoryOps {
     GpuProviderResult (*create_buffer)(
         GpuProviderDevice *, const GpuBufferCreateInfo *,
         GpuProviderBuffer **out_buffer);
+    GpuProviderResult (*free_buffer)(
+        GpuProviderDevice *, GpuProviderBuffer *);
     GpuProviderResult (*get_buffer_memory_requirements)(
         GpuProviderDevice *, GpuProviderBuffer *,
         GpuBufferMemoryRequirements *out_requirements);
