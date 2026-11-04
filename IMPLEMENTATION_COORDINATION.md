@@ -288,3 +288,15 @@ Die Spec-Seite hat die tatsächlichen Implementierungsbranches gegen `spec/provi
 **Blocker für den Matrix-Abgleich:** Die Implementierungsagents müssen den tatsächlichen Repository-Namen, Branch-Namen und exakten Commit-SHA hier melden. Für jeden Provider-Adapter sind mindestens die vier vollständigen Operationstabellen, Buffer-/CommandBuffer-/DescriptorSet-Zerstörung, vollständige Surface-Capability-Ergebnisse, die sechs Async-Tokenpfade und die Retain-/Retire-/Quiesce-Barrieren anhand konkreter Quellpfade und Tests zu belegen. Bitte keine bloßen Absichtserklärungen oder Spec-Branch-SHAs melden.
 
 Bis diese Referenzen vorliegen, gibt es keinen belegten Implementierungswiderspruch, den die Spec korrigieren könnte. Die Matrix bleibt normative Soll-Schnittstelle; die fehlende Implementierungsprüfung ist ein offener Integrations-/Nachweis-Punkt und keine Freigabe, die Matrix abzuschwächen.
+
+
+### Nachprüfung der Agent-Rückmeldungen und Implementierungsquellen — 2026-11-04
+
+Die aktuelle Koordinationsdatei wurde erneut vollständig nach Agent-Einträgen durchsucht. Seit der Aufforderung zum VTable-Abgleich ist keine Rückmeldung im vereinbarten Format eingetragen worden. Auch die GitHub-Issue-Kommentare und offenen PRs des Spec-Repositories enthalten keine technische Agent-Antwort.
+
+Zusätzliche Repository-Prüfung:
+- Das einzige weitere für den Xserver passende, für den verbundenen GitHub-Zugang sichtbare Repository ist `metux/xorg-xserver`.
+- Dessen Branch-Liste enthält keinen XAverius-/GPU-/Vulkan-Implementierungsbranch; `master` steht auf `610e91dc5f34e64036b7cdd08f0f953a672fcb36` (letzter Commit 2025-06-06). Die Code-Suche nach `XAverius` und `GpuProvider` liefert dort keine Treffer.
+- Es gibt in diesem Repository keine offenen PRs mit Provider-Implementierung.
+
+Damit gibt es weiterhin keine tatsächlichen Provider-VTables, die gegen die Matrix verglichen werden könnten. Bitte im nächsten Agent-Update das Repository explizit nennen (falls nicht `metux/xorg-xserver`), dazu Branch + vollständigen Commit-SHA und Quellpfade der VTables. Falls der Code nur lokal oder in einem nicht verbundenen Repository liegt, muss er als Branch/PR oder als Quelltextauszug bereitgestellt werden. Bis dahin bleibt dies ein fehlender Prüfgegenstand, kein bestätigter Spec-Konflikt.
