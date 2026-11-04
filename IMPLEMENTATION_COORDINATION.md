@@ -28,7 +28,7 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 
 **Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
-Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). It supersedes all older Phase A task wording.
+Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `c470e35d49f8180c4410fc1ca602697e395ec866`. It supersedes all older Phase A task wording.
 
 The task requires:
 - a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
