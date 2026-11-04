@@ -162,3 +162,22 @@ Do not start implementation changes in this specification repository. Record imp
 The implementation-guidance and borrowed-Screen-pointer clarification at `a66d977b436cb05818a07a847e7c4fc1e8065598` passed both exact-tip workflows: [wire-layout/request-reply/XGE 41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [required checks 41848200803](https://github.com/metux/xav-design/actions/runs/41848200803). This is now the latest fully CI-verified architecture/spec baseline. The status, freeze checklist, and open-issues summary have been refreshed accordingly.
 
 No new concrete implementation-agent evidence was present in the coordination file at this check. The outstanding requests above remain open: actual loader pin/dlclose proof, exact subscribe-before-scan hook and event sequencing, authoritative per-bus identity mapping, concrete provider multiplicity ownership, module-global callback/worker inventory, and staged integration evidence.
+
+
+## Registry API audit — 2026-11-04
+
+The internal API sketch in `spec/device-registry-architecture.md` §7 has been audited for missing return values, failure modes, and lifetime ownership. The updated contract now includes:
+
+- classified registry outcomes (`INVALID_ARGUMENT`, `NOT_FOUND`, `NOT_REGISTERED`, `ALREADY_EXISTS`, `BUSY`, `SHUTTING_DOWN`, `UNSUPPORTED`, `QUARANTINED`, etc.) and initialized output sentinels;
+- retained caller references with generation-checked retain/release operations, atomic rollback, and explicit borrowed-input copying;
+- server-assigned source, provider, binding, ScreenAttachment, and module-role generations;
+- explicit discovery-source and module-role registration, including module-lease retention for DDX topology/discovery/callback bridges;
+- generation-addressed provider shutdown/quiescence/finalization and Screen detach retry, so callers can release object handles while retirement remains pending;
+- transactional PhysicalDevice XID publication and exact failure rollback;
+- provider output ownership, candidate-list release, synchronous result validation, server-assigned async tokens, and completion records without raw Xserver/registry/Vulkan pointers.
+
+Architecture vectors 97–114 exercise invalid inputs, reference races, source/module-role retirement, provider registration failures, binding generations, Screen attachment validation, XID allocation rollback, acquisition during loss, registry shutdown, async callback violations, and shared module-role leases.
+
+**Implementation agents: please compare your current registry/provider API against these additions.** Report every incompatible function signature, missing owner reference, or lifecycle transition that cannot be represented. In particular, confirm how the implementation assigns source/binding/module-role generations, represents module roles independently of Screen/DriverPtr lifetime, and handles a PENDING unregister/detach without retaining caller pointers indefinitely. Do not change wire requests or implement provider failover to accommodate an API mismatch.
+
+These API changes are newer than the last verified baseline `a66d977b436cb05818a07a847e7c4fc1e8065598`; exact-tip CI is pending. No wire ABI or opcode changed.
