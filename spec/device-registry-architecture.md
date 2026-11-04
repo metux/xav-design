@@ -187,6 +187,35 @@ On Screen close or replacement, the DDX topology adapter MUST detach every Scree
 
 On DDX module unload, the module MUST first stop new adapter callbacks, withdraw its own observations and ScreenAttachments, and retire its provider registrations independently. Module code and callback userdata MUST remain pinned until all callbacks, operation tokens, and retained references that can reach them have retired. If quiescence cannot be proven, the module/provider state MUST be quarantined rather than unloaded. This is in addition to, not a replacement for, the BackendProvider lifetime contract.
 
+
+#### Screen-close and module-unload ownership boundary
+
+The Xserver Screen lifecycle MUST be treated as a topology lifetime only. In the current XLibre implementation, GPU-screen removal calls the Screen close path, removes the GPU Screen, and then deletes its `ScrnInfo`; `xf86DeleteScreen()` invokes the DDX `FreeScreen()` hook, releases the Screen's module reference, and decrements the driver's Screen reference count. These operations do not establish that asynchronous work previously submitted by the DDX/provider has stopped executing.
+
+Accordingly:
+
+- `CloseScreen`, `FreeScreen`, `RemoveGPUScreen`, `xf86DeleteScreen`, or a zero `DriverPtr.refCount` MUST NOT be treated as proof of provider-operation completion, callback quiescence, or permission to release provider userdata.
+- The DDX MUST detach the ScreenAttachment for the exact Screen generation before releasing Screen-private data. The ScreenAttachment MUST NOT own the provider context or provider module lease.
+- A Screen close MUST NOT unregister a shared BackendProvider merely because the provider was first discovered or opened through that Screen. Provider registration lifetime is independent of every ScreenAttachment lifetime. If a provider truly has per-Screen backend state, that state MUST be a separately retained child of the provider context and MUST retire only after its own Screen-generation work is quiescent.
+- A DDX module that supplies provider operation functions, completion callback functions, callback trampolines, or callback userdata MUST acquire a provider/module lease independent of Xorg's Screen-held module reference and driver Screen reference count. The lease MUST cover every function pointer and data object that can be reached by an accepted operation or a callback, including deferred cleanup and retirement paths.
+- A provider callback that has entered module code MUST hold a callback-execution reference until it has returned to the server-owned completion sink. The sink MUST copy/enqueue the immutable completion before returning; the provider callback MUST NOT retain server-owned transient payload pointers after that return.
+
+Provider/module shutdown is a two-phase operation, not an ordinary Screen cleanup:
+
+1. **Close admission.** Atomically mark the exact provider generation as QUIESCING. Reject new operations and new provider bindings for that generation. Stop new discovery callbacks from that module and unregister its callback/event sources. This does not cancel accepted operations or release any existing reference.
+2. **Withdraw topology and observations.** Detach every ScreenAttachment owned by the module for its exact Screen generations and withdraw its discovery observations. These operations do not imply physical removal and do not implicitly retire a provider owned by another module.
+3. **Drain accepted work.** Obtain exactly one terminal outcome for every accepted provider-operation token. Then retire each exact token. A token is retired only when the provider confirms both that no backend access can remain and that the token's completion callback has returned; a queued server-side immutable completion record may still be processed because it no longer references provider code or callback userdata.
+4. **Quiesce provider callbacks.** An explicit provider-wide quiescence operation (or equivalent contract) MUST confirm that no callback is executing, queued for invocation, or can begin for this provider generation, and that no new operation can be accepted. It MUST also confirm that every provider-owned worker/task capable of entering module code has stopped or no longer holds such a path. Merely observing zero outstanding tokens in the server is insufficient.
+5. **Release provider and module.** Only after all selected PhysicalDevice, logical-Device, route, provider-object, callback-execution, and operation-token references have retired MAY the final provider reference be released and the module lease dropped. Xorg may then unload the DDX module through its ordinary module-reference mechanism.
+
+The provider-wide quiescence hook MUST be idempotent and generation-scoped. It MAY report PENDING while workers or callbacks are draining. SUCCESS has the strong meaning in step 4; every other result, including timeout or backend failure, leaves the module pinned. If a callback/worker cannot be stopped or its reachability cannot be disproved, the provider context, module lease, callback code, and userdata MUST be quarantined until server shutdown or a later proven-safe retirement. The server MUST NOT block Xorg's Screen close indefinitely waiting for GPU progress: Screen topology can be detached while the independent provider/module lease remains retained.
+
+If one DDX module implements both the topology adapter and provider, it MUST still maintain these independent references. If the provider implementation is in a separate module/library, the DDX Screen may close and unload without affecting that provider, provided no callback path from the provider retains DDX Screen-private data. Any bridge callback crossing those module boundaries MUST retain both sides' exact-generation leases until the bridge callback has returned and its associated backend operation is retired.
+
+#### XLibre lifecycle mapping (source-level observation)
+
+At XLibre source commit `ee4bb3f96eec3b21c1961d54fe45cb33dc402d00`, `xf86platformRemoveDevice()` calls `dixScreenRaiseClose()`, then `RemoveGPUScreen()`, then `xf86DeleteScreen()`. `xf86DeleteScreen()` calls the DDX `FreeScreen()` hook before `UnloadModule(pScrn->module)` and decrementing `pScrn->drv->refCount`. This sequence is the Screen/DDX cleanup boundary; XAverius MUST complete ScreenAttachment detachment before Screen-private release, but provider/module quiescence is governed by the independent lease protocol above. Implementations MUST NOT assume that the Xorg module reference held by a particular `ScrnInfo` is sufficient for provider callbacks that outlive that Screen.
+
 #### Xlibre-specific conformance requirements
 
 An Xlibre/Xorg integration MUST demonstrate at least the following:
