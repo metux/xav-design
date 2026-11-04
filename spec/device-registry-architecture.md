@@ -519,7 +519,6 @@ typedef struct GpuProviderQueue GpuProviderQueue;
 typedef struct GpuProviderPhysicalDevice GpuProviderPhysicalDevice;
 typedef struct GpuProviderSurface GpuProviderSurface;
 typedef struct GpuProviderSwapchain GpuProviderSwapchain;
-typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 typedef struct GpuProviderBufferMemoryOps GpuProviderBufferMemoryOps;
 typedef struct GpuProviderShaderPipelineOps GpuProviderShaderPipelineOps;
 typedef struct GpuProviderCommandOps GpuProviderCommandOps;
@@ -601,7 +600,6 @@ typedef struct {
     uint64_t source_generation;
     uint64_t observation_id;
     uint64_t physical_device_generation;
-    uint32_t authority; /* private registry-defined evidence class */
 } GpuDeviceRemovalEvidence;
 
 typedef struct {
@@ -639,7 +637,8 @@ typedef enum {
 typedef enum {
     GPU_PROVIDER_STATUS_NOT_READY = 1,
     GPU_PROVIDER_STATUS_OUT_OF_DATE = 2,
-    GPU_PROVIDER_STATUS_SURFACE_LOST = 3
+    GPU_PROVIDER_STATUS_SURFACE_LOST = 3,
+    GPU_PROVIDER_STATUS_ALREADY_COMPLETED = 4
 } GpuProviderStatusCode;
 
 typedef struct {
@@ -656,11 +655,20 @@ typedef struct {
     uint64_t physical_device_generation;
 } GpuProviderResult;
 
+typedef enum {
+    GPU_PROVIDER_OP_WRITE_BUFFER = 1,
+    GPU_PROVIDER_OP_READ_BUFFER,
+    GPU_PROVIDER_OP_HOST_SIGNAL_SEMAPHORE,
+    GPU_PROVIDER_OP_QUEUE_SUBMIT,
+    GPU_PROVIDER_OP_ACQUIRE_NEXT_IMAGE,
+    GPU_PROVIDER_OP_QUEUE_PRESENT
+} GpuProviderOperationKind;
+
 typedef struct {
     uint64_t provider_generation;
     uint64_t operation_generation;
     uint64_t operation_token_id;
-    uint32_t operation_kind;
+    GpuProviderOperationKind operation_kind;
     uint64_t provider_local_binding_id;
     uint64_t physical_device_generation;
     uint64_t logical_device_id;         /* server-assigned; zero for non-Device operations */
@@ -863,19 +871,18 @@ GpuRegistryResult GpuRegistryRegisterProviderBinding(
     uint64_t device_generation, uint64_t provider_generation,
     uint64_t provider_local_binding_id, uint64_t *out_binding_generation);
 
-typedef enum {
-    GPU_PROVIDER_OP_WRITE_BUFFER = 1,
-    GPU_PROVIDER_OP_READ_BUFFER,
-    GPU_PROVIDER_OP_HOST_SIGNAL_SEMAPHORE,
-    GPU_PROVIDER_OP_QUEUE_SUBMIT,
-    GPU_PROVIDER_OP_ACQUIRE_NEXT_IMAGE,
-    GPU_PROVIDER_OP_QUEUE_PRESENT
-} GpuProviderOperationKind;
+enum {
+    GPU_PROVIDER_RESOURCE_ACCESS_READ = 1u << 0,
+    GPU_PROVIDER_RESOURCE_ACCESS_WRITE = 1u << 1,
+    GPU_PROVIDER_RESOURCE_ACCESS_EXECUTE = 1u << 2,
+    GPU_PROVIDER_RESOURCE_ACCESS_WAIT = 1u << 3,
+    GPU_PROVIDER_RESOURCE_ACCESS_SIGNAL = 1u << 4
+};
 
 typedef struct {
     uint64_t resource_id;
     uint64_t resource_generation;
-    uint32_t access_flags; /* private read/write/backend-retention flags */
+    uint32_t access_flags; /* GPU_PROVIDER_RESOURCE_ACCESS_* bitmask */
 } GpuProviderOperationResourceRef;
 
 /* Prepare a server-owned operation token before entering provider code.
@@ -885,8 +892,9 @@ typedef struct {
    and GpuProviderOperationTokenGetGeneration() for backend callback userdata.
    The server-owned token itself remains alive until successful retirement.
    On failure all outputs are zero. The complete resource set is copied and
-   retained by the registry before return. resources is non-NULL iff
-   resource_count is nonzero; duplicate (resource_id,generation) pairs,
+   retained by the registry before return. Each entry's access_flags MUST
+   contain only declared GPU_PROVIDER_RESOURCE_ACCESS_* bits and MUST be
+   nonzero. resources is non-NULL iff resource_count is nonzero; duplicate (resource_id,generation) pairs,
    zero IDs/generations, invalid access flags, and resources owned by another
    logical Device are INVALID_ARGUMENT/IDENTITY_CONFLICT. The server enforces
    a documented implementation maximum before copying the array. */
@@ -1021,7 +1029,7 @@ The declarations above define ownership and failure semantics, not merely illust
 - Input pointers and strings are borrowed only for the call unless explicitly transferred. Every retained key, identity field, role descriptor, and variable-length input MUST be copied or separately retained before return. Provider operation tables, callbacks, callback userdata, and provider context remain immutable and pinned until final provider release.
 - Mutations are atomic. Validation/allocation failure MUST roll back all partial entries, reference increments, module-lease retains, observations, bindings, XID/resource allocation, and callback registration. Only reserved non-reusable generations and explicitly retained `PENDING`/`AMBIGUOUS` observations survive a non-success return.
 - Repeated calls are idempotent only where specified. Same-generation/same-payload repetition MUST NOT duplicate objects or references; conflicting payload returns `ALREADY_EXISTS` or `IDENTITY_CONFLICT`. A stale generation is never idempotent success for a replacement.
-- `GpuRegistryBeginShutdown` closes admission for new module roles, sources, observations, providers, bindings, attachments, and acquisitions. It does not implicitly remove existing objects or skip provider quiescence. Module-role unregister and provider finalization remain explicit; shutdown MUST NOT drop a lease on behalf of an adapter or provider. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded provider code.
+- `GpuRegistryBeginShutdown` closes admission for new module roles, sources, observations, providers, bindings, attachments, execution-provider acquisitions, and operation-token preparation. It does not implicitly remove existing objects or skip provider quiescence. Module-role unregister and provider finalization remain explicit; shutdown MUST NOT drop a lease on behalf of an adapter or provider. `GpuRegistryDestroy` succeeds only after shutdown and full retirement; otherwise it returns `BUSY` and leaves the registry intact. Process exit may be the final reclamation boundary, but MUST NOT invoke unloaded provider code.
 
 Specific operation contracts:
 
@@ -1040,9 +1048,9 @@ Specific operation contracts:
 - `TryQuiesceProvider` initializes `out_quiescence` to PENDING. A successful hook returns registry SUCCESS/quiescence SUCCESS; an unmet precondition or hook PENDING returns registry PENDING/quiescence PENDING; hook FAILURE returns `GPU_REGISTRY_QUARANTINED`/quiescence FAILURE and permanently forbids finalization unless a separate server-controlled recovery proves safety. Stale/unknown provider generations return STALE_GENERATION without calling the hook.
 - `FinalizeProviderShutdown` returns PENDING while any caller reference, logical Device, provider-owned object, operation token, callback bridge, or adapter role still depends on the provider generation. The registration caller MUST release its caller-owned provider reference before expecting finalization to succeed; the finalization API uses only the server-assigned generation and the registry-owned record. It calls the final provider-context release exactly once while the module lease is held, then drops exactly that generation's lease reference. Repeated finalization after success returns NOT_FOUND and MUST NOT release either reference again.
 
-Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuProviderResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. The server MUST validate that result code and unavailable-scope fields form one of the documented combinations; `UNAVAILABLE` with `NONE`, or any non-UNAVAILABLE code with a non-NONE scope, is a provider-contract violation. For `PHYSICAL_DEVICE` scope, the binding ID and PhysicalDevice generation MUST identify one active binding of that provider generation. For `PROVIDER_CONTEXT` scope, both fields MUST be zero. Provider result validation requires `status_code == 0` unless code is STATUS, and `status_code` MUST be a value defined for that exact operation when STATUS is returned. `GPU_PROVIDER_STATUS_NOT_READY` is valid only for `acquire_next_image`; `GPU_PROVIDER_STATUS_OUT_OF_DATE` and `GPU_PROVIDER_STATUS_SURFACE_LOST` are valid only for presentation operations that define those outcomes. Unknown or operation-inapplicable status values are FATAL provider-contract violations. `native_result` is diagnostic only. `unavailable_scope == NONE` and zero binding/device fields are required unless code is UNAVAILABLE; PROVIDER_CONTEXT scope requires zero binding/device fields; PHYSICAL_DEVICE scope requires a nonzero registered provider-local binding ID and exact nonzero PhysicalDevice generation. Unknown enum values or inconsistent combinations are FATAL provider-contract violations. Plain query outputs (snapshot/support structures) contain no provider-owned pointers; variable candidate lists are released only through `release_candidate_list`. Successful create operations transfer one provider-owned object handle to the server, which MUST destroy it exactly once through the matching operation before provider quiescence. Queue handles returned by `get_queue` are borrowed from and bounded by their logical Device lifetime. For asynchronous functions, the server calls `GpuRegistryPrepareOperation` and registers the token before entering provider code. The token pointer is call-scoped and MUST NOT be retained, dereferenced after return, assigned, altered, or recycled. The provider copies its ID and generation through the two token accessors for later callback userdata. The asynchronous provider operations are exactly `write_buffer`, `read_buffer`, host `signal_semaphore`, `queue_submit`, `acquire_next_image`, and `queue_present`; each receives one prepared token and uses the matching `GpuProviderOperationKind`. The typed operation-table declarations MUST expose that token parameter for every listed operation. All other provider operations are synchronous unless a later version explicitly adds an operation kind and conformance coverage. If the provider entry point returns `GPU_PROVIDER_SUCCESS`, the server MUST call `CommitOperationSubmission`; callbacks arriving before commit are buffered until acceptance commits. If the provider returns non-success, the server MUST call `RejectOperationSubmission`; the provider contract guarantees no callback or backend access can follow. If a callback was already observed or backend access cannot be excluded, rejection returns QUARANTINED. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the provider generation. The registry calls `retire_operation` through `GpuRegistryRetireOperationToken` after terminalization and after the server completion sink has returned from the provider callback. The hook MUST be idempotent: PENDING may be retried, SUCCESS remains successful, and FAILURE is terminal quarantine. Registry results map one-to-one to `GPU_REGISTRY_PENDING`, `GPU_REGISTRY_SUCCESS`, and `GPU_REGISTRY_QUARANTINED`. PENDING keeps token, resource, logical-Device, binding, provider, and module references; FAILURE quarantines them and blocks provider quiescence; SUCCESS is permitted only after backend access is impossible and all callback frames for that token have returned, then releases the token's retained references exactly once. If provider code cannot guarantee the no-callback-after-failure rule, the attempted token is quarantined and the provider generation cannot be quiesced.
+Provider operation-table functions have a common rule: each synchronous function returns a classified `GpuProviderResult` and either commits its output object completely or leaves outputs NULL/zero with no externally visible partial object. The server MUST validate that result code and unavailable-scope fields form one of the documented combinations; `UNAVAILABLE` with `NONE`, or any non-UNAVAILABLE code with a non-NONE scope, is a provider-contract violation. For `PHYSICAL_DEVICE` scope, the binding ID and PhysicalDevice generation MUST identify one active binding of that provider generation. For `PROVIDER_CONTEXT` scope, both fields MUST be zero. Provider result validation requires `status_code == 0` unless code is STATUS, and `status_code` MUST be a value defined for that exact operation when STATUS is returned. `GPU_PROVIDER_STATUS_NOT_READY` is valid only for `acquire_next_image`; `GPU_PROVIDER_STATUS_OUT_OF_DATE` and `GPU_PROVIDER_STATUS_SURFACE_LOST` are valid only for presentation operations that define those outcomes; `GPU_PROVIDER_STATUS_ALREADY_COMPLETED` is valid only as the result of `cancel_acquire`. Unknown or operation-inapplicable status values are FATAL provider-contract violations. `native_result` is diagnostic only. `unavailable_scope == NONE` and zero binding/device fields are required unless code is UNAVAILABLE; PROVIDER_CONTEXT scope requires zero binding/device fields; PHYSICAL_DEVICE scope requires a nonzero registered provider-local binding ID and exact nonzero PhysicalDevice generation. Unknown enum values or inconsistent combinations are FATAL provider-contract violations. Plain query outputs (snapshot/support structures) contain no provider-owned pointers; variable candidate lists are released only through `release_candidate_list`. Successful create operations transfer one provider-owned object handle to the server, which MUST destroy it exactly once through the matching operation before provider quiescence. Queue handles returned by `get_queue` are borrowed from and bounded by their logical Device lifetime. For asynchronous functions, the server calls `GpuRegistryPrepareOperation` and registers the token before entering provider code. The token pointer is call-scoped and MUST NOT be retained, dereferenced after return, assigned, altered, or recycled. The provider copies its ID and generation through the two token accessors for later callback userdata. The asynchronous provider operations are exactly `write_buffer`, `read_buffer`, host `signal_semaphore`, `queue_submit`, `acquire_next_image`, and `queue_present`; each receives one prepared token and uses the matching `GpuProviderOperationKind`. The typed operation-table declarations MUST expose that token parameter for every listed operation. All other provider operations are synchronous unless a later version explicitly adds an operation kind and conformance coverage. If the provider entry point returns `GPU_PROVIDER_SUCCESS`, the server MUST call `CommitOperationSubmission`; callbacks arriving before commit are buffered until acceptance commits. If the provider returns non-success, the server MUST call `RejectOperationSubmission`; the provider contract guarantees no callback or backend access can follow. If a callback was already observed or backend access cannot be excluded, rejection returns QUARANTINED. Exactly one terminal completion is permitted for each accepted token. Token IDs and operation generations are server-assigned, non-reusable, and scoped to the provider generation. The registry calls `retire_operation` through `GpuRegistryRetireOperationToken` after terminalization and after the server completion sink has returned from the provider callback. The hook MUST be idempotent: PENDING may be retried, SUCCESS remains successful, and FAILURE is terminal quarantine. Registry results map one-to-one to `GPU_REGISTRY_PENDING`, `GPU_REGISTRY_SUCCESS`, and `GPU_REGISTRY_QUARANTINED`. PENDING keeps token, resource, logical-Device, binding, provider, and module references; FAILURE quarantines them and blocks provider quiescence; SUCCESS is permitted only after backend access is impossible and all callback frames for that token have returned, then releases the token's retained references exactly once. If provider code cannot guarantee the no-callback-after-failure rule, the attempted token is quarantined and the provider generation cannot be quiesced.
 
-The completion sink copies and validates each completion and its bounded payload into server-owned storage and enqueues it; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation kind, token, provider-local binding, PhysicalDevice generation, logical-Device ID/generation, and any operation-specific primary resource ID/generation. The complete resource-generation set is retained by the server-side token record; it is not reconstructed from the completion payload. For device-scoped results, the completion binding/device fields MUST exactly equal the embedded `GpuProviderResult` binding/device fields. Logical-Device and resource IDs/generations MUST each be zero-paired or nonzero-paired according to the operation kind. The completion record carries no raw registry, Xserver, or Vulkan object pointer; the server resolves the IDs through the retained operation token. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. A completion's operation kind and provider/token generations MUST exactly match the prepared token; primary resource fields MUST match the operation's declared primary resource, or be zero when the operation has no single primary resource. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
+The completion sink copies and validates each completion and its bounded payload into server-owned storage and enqueues it; payload MUST be NULL iff payload_size is zero, and payload_size MUST NOT exceed a server-defined hard maximum checked before allocation; it MUST NOT process protocol requests or invoke provider code inline. Completion identity includes exact provider, operation kind, token, provider-local binding, PhysicalDevice generation, logical-Device ID/generation, and any operation-specific primary resource ID/generation. The complete resource-generation set is retained by the server-side token record; it is not reconstructed from the completion payload. For device-scoped results, the completion binding/device fields MUST exactly equal the embedded `GpuProviderResult` binding/device fields. Logical-Device and resource IDs/generations MUST each be zero-paired or nonzero-paired according to the operation kind. The completion record carries no raw registry, Xserver, or Vulkan object pointer; the server resolves the IDs through the retained operation token. For a PHYSICAL_DEVICE-scoped unavailable result, binding ID and PhysicalDevice generation MUST match the registered binding; for other scopes, unavailable-scope-specific fields MUST be zero. A completion's operation kind and provider/token generations MUST exactly match the prepared token; primary resource fields MUST match the operation's declared primary resource, or be zero when the operation has no single primary resource. Stale/duplicate completions are discarded and diagnosed. Provider-owned completion payload is copied before callback return or held by a separately retained object whose release callback executes while the module lease remains pinned.
 
 Provider lifecycle APIs identify provider records by the registry-assigned provider generation, not by a caller-held provider pointer. This allows the registration caller to release its own provider reference before final quiescence/finalization; the registry-owned provider record remains addressable by generation until finalization completes.
 
@@ -1319,6 +1327,12 @@ The implementation test suite SHOULD include at least:
 123. Attempt to retain the opaque operation-token pointer in provider callback userdata and dereference it after the entry point returns. Verify the provider-facing contract forbids this; only copied token ID/generation may cross the asynchronous boundary, and stale IDs cannot resolve a replacement token.
 
 124. Return malformed completion records with mismatched operation kind, primary resource, provider/token generation, or oversized payload. Verify the sink rejects them without state mutation, copies bounded payloads before callback return, and preserves the token's complete server-owned resource set.
+
+125. Attempt to set removal-evidence authority from caller-controlled input. Verify no such field is accepted: the registry derives authority solely from the registered source capabilities, source generation, observation provenance, and server trust policy.
+
+126. Call BeginShutdown while PrepareOperation races new submissions. Verify shutdown serialization closes operation-token admission, while already prepared/accepted tokens remain pinned and drain under their provider generation.
+
+127. Return STATUS/ALREADY_COMPLETED from cancel_acquire after the backend image acquisition has already terminalized. Verify cancellation does not create a second completion or change the first terminal outcome; the server still performs late-image release/retention as required.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
