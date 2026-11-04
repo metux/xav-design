@@ -1346,7 +1346,7 @@ The implementation test suite SHOULD include at least:
 
 141. Replay a successful ObserveDevice call with the same source event sequence and payload while the caller still holds the previous PhysicalDevice reference. Verify the observation ID is unchanged, the source observation is not duplicated, and the repeated SUCCESS returns exactly one additional caller-owned reference that must be released independently.
 
-142. Quarantine a DDX module-role generation through GPU_BACKEND_FATAL, then call TryQuiesceModuleRole and FinalizeProviderShutdown. Verify both return QUARANTINED without entering DDX module code or dropping DDX backend/context/module/object references.
+142. Quarantine a DDX module-role generation through `GPU_BACKEND_FATAL`, then call `GpuRegistryTryQuiesceModuleRole` and `GpuRegistryFinalizeModuleRoleShutdown`. Verify both return QUARANTINED without entering DDX module code or dropping DDX binding/context/module/object references.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
