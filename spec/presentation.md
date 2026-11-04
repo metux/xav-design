@@ -367,8 +367,6 @@ Device ownership is inferred from the resource. Destruction is rejected while pe
 
 Total length: 32 bytes.
 
-The request portion defines no reserved field or bit. Any reserved field introduced by a future request extension MUST be zero unless that extension explicitly defines otherwise.
-
 - Offset 8: XID `device_xid`
 - Offset 12: XID `swapchain_xid`
 - Offset 16: CARD64 `timeout_ns`; all ones means infinite
