@@ -227,3 +227,13 @@ The DDX backend operation matrix now defines concrete typed operations for all f
 See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implementation-agent source review are pending.
 
 - [ ] Confirm `GpuModuleRoleGetContext()` is used only for shared DDX module-role state, never as an intermediate per-device dispatch lookup.
+
+### DDX binding API cleanup — 2026-11-04
+
+- [ ] Confirm the DDX enumerates and registers every PhysicalDevice it serves through `GpuRegistryRegisterDdxDevice`.
+- [ ] Confirm no registry-side Vulkan ICD candidate enumeration or provider-local numeric ID-to-native-handle map remains.
+- [ ] Confirm the PhysicalDevice binding is the direct dispatch target and the module role is lifetime/quiescence bookkeeping only.
+- [ ] Confirm no generic provider/module-role context accessor or provider-object acquisition API remains.
+- [ ] Confirm all callback, completion, error-scope, and Surface cache identities use exact binding and module-role generations.
+
+Exact-tip CI and implementation-agent source review are pending.
