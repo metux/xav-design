@@ -240,3 +240,10 @@ Please verify that your udev/provider adapters preserve event sequence at observ
 ### Complete async resource pin sets
 
 The current six asynchronous operation kinds all require an exact logical-Device generation and a nonempty resource set before provider entry. The spec now states the minimum set by operation: Buffer+Memory for Write/ReadBuffer; Semaphore for host SignalSemaphore; Queue plus the complete validated dependency graph for QueueSubmit; and exact Swapchain plus all backend-accessible image/synchronization/route objects for AcquireNextImage/QueuePresent. Resource IDs must be unique in a token, even across generations. Vector 138 tests missing dependencies and atomic rejection. Please compare the actual resource graph builder against this list; do not treat a primary-resource pointer as a substitute for the retained dependency set.
+
+
+### Fatal provider result handling
+
+Section 7.1 now defines GPU_PROVIDER_FATAL as immediate provider-generation quarantine: close operation/binding admission, mark only selected PhysicalDevices UNAVAILABLE (never REMOVED), retain provider context/module leases/dependent objects, and forbid normal finalization. GPU_PROVIDER_DEVICE_LOST is logical-Device/operation-scoped and must not mark the PhysicalDevice or provider context unavailable. GPU_PROVIDER_CANCELLED is valid only as the terminal completion of an already accepted cancellable operation. Vector 139 covers these distinctions.
+
+Please confirm the implementation has a quarantine state distinct from QUIESCING and DEVICE_LOST, and that a fatal provider result cannot fall through the ordinary destroy/unload path.
