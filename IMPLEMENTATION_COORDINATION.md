@@ -748,3 +748,15 @@ Implemented files:
 Transport rule: XCB's extension descriptor minor opcode is zero, leaving the X11 `data` byte zero; XAverius subopcode is encoded as the first body byte at absolute offset 4. The implementation uses XCB's client byte order for protocol scalars, copies fields into aligned host objects, and checks the 32-byte reply envelope and variable-tail bounds before exposing data. The X11 connection and event queue remain caller-owned.
 
 The current source implements XAV QueryVersion, Physical-Device enumeration and explicit XGE 1.0+ negotiation. It has **not yet been built against the full repository header or exercised against a live XAverius server**. Event dispatch, Atom interning, remaining device/property/resource requests, logical-device creation, Vulkan ICD and presentation support are not claimed. Call `xav_connection_negotiate_xge()` successfully before selecting XAverius XGE events or issuing `CreateDevice`.
+
+
+## Multi-Screen Physical-Device / Surface clarification — 2026-11-04
+
+A spec gap was identified during client/server implementation review: choosing the first X11 Screen with XAverius support can associate a Physical Device with the wrong Screen on multi-Screen servers. The normative contract is now explicit:
+- Physical-Device enumeration is server-wide, not Screen-scoped or ordered by Screen initialization.
+- A Surface retains the Screen identity of its exact X11 Window; the server derives it from the Window and never selects a default/first Screen.
+- Presentation support is queried for the exact logical Device / Surface pair, with per-queue-family support. The same Physical Device may present on several, some, or no Screens; no implicit device or Screen migration is permitted.
+- RandR outputs are not separate X11 Screens; monitor-specific routing is outside this profile.
+- Conformance cases cover two Screens/two GPUs, one GPU spanning Screens, a compute-only non-presenting GPU, enumeration-order independence, and the lack of a presentation guarantee from CreateDefaultDevice.
+
+The client event-dispatcher work is paused until this spec clarification is reviewed and the client/server selection code follows the Surface-scoped model.

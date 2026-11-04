@@ -230,6 +230,10 @@ Successful destruction does not mean that GPU work has completed or that the dev
 
 Physical-device XIDs are assigned by the server.
 
+The physical-device inventory is server-wide, not scoped to an X11 Screen. `EnumeratePhysicalDevices` MUST enumerate the Physical-Device objects made available by the XAverius server without selecting, filtering, or prioritizing them according to the first X11 Screen, a default Screen, or the order of Screen initialization. The order of returned records has no device-selection or presentation meaning. A server MUST NOT create a separate Physical-Device identity merely because the same underlying device is usable from more than one X11 Screen, and MUST NOT treat a Physical Device as belonging exclusively to the first Screen on which XAverius is initialized.
+
+A Physical Device's compute eligibility and its ability to present to a particular X11 Window are separate properties. `CreateDefaultDevice` selects for the compute-baseline requirements only; it makes no promise that the resulting logical Device can present to any Window or Screen. A client that requires presentation MUST explicitly select a Physical Device, create a logical Device from it, create a Surface for the target Window, and query that exact Device/Surface pair using `GetSurfaceCapabilities`.
+
 - Clients MUST NOT destroy physical-device XIDs.
 - An existing XID MUST never be assigned to a different physical-device object.
 - The identity remains stable if the device is removed or fails; its status changes.

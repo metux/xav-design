@@ -100,6 +100,32 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         self.assertIn("**DestroySurface versus underlying Window destruction:**", self.races)
         self.assertIn("DestroySurface may then succeed only if no live Swapchain references it", self.races)
 
+    def test_multiscreen_device_selection_is_surface_scoped(self) -> None:
+        devices = (ROOT / "spec" / "devices.md").read_text(encoding="utf-8")
+        screen = self.presentation.split(
+            "### X11 Screen identity and multi-Screen servers", 1
+        )[1].split("\\n### ", 1)[0]
+        for phrase in (
+            "server-wide, not scoped to an X11 Screen",
+            "first X11 Screen",
+            "order of returned records has no device-selection or presentation meaning",
+            "makes no promise",
+        ):
+            with self.subTest(device_rule=phrase):
+                self.assertIn(phrase, devices)
+        for phrase in (
+            "exact X11 Window identity",
+            "MUST derive and retain this Screen association",
+            "same Physical Device may be able to present to Windows on several X11 Screens",
+            "exact Window/Screen retained by that Surface",
+            "each result is independent",
+            "RandR outputs/monitors",
+        ):
+            with self.subTest(surface_rule=phrase):
+                self.assertIn(phrase, screen)
+        self.assertIn("Multi-Screen device selection MUST be tested", self.conformance)
+        self.assertIn("Reordering Screen initialization and Physical-Device enumeration MUST NOT change any result", self.conformance)
+
     def test_acquire_present_surface_destroy_is_blocked_by_live_swapchain(self) -> None:
         surface = self.presentation.split(
             "## 5.5 Serialization of presentation operations with Surface destruction", 1
