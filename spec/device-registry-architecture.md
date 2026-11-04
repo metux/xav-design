@@ -144,7 +144,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `SUCCESS` | Operation completed successfully | Commit the request's specified success transition. |
 | `STATUS` | A defined non-error operation outcome (for example out-of-date, surface-lost, suboptimal, or unsupported swapchain configuration) | Return the operation-specific status exactly as defined by its request chapter; do not convert it to a generic provider failure. |
 | `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject provider selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
-| `UNAVAILABLE` | Provider context or physical-device access is temporarily unavailable; no logical-Device-loss result has been established | Mark the selected PhysicalDevice UNAVAILABLE through the registry serialization domain. Any request that requires the unavailable provider fails through its request-defined `DEVICE_UNAVAILABLE` error/status channel. Existing logical Devices are not automatically declared lost solely by this result. |
+| `UNAVAILABLE` | Provider context or access to one specific physical-device binding is temporarily unavailable; no logical-Device-loss result has been established. The result MUST carry an explicit scope: `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE`. | For `PROVIDER_CONTEXT`, mark every PhysicalDevice for which this exact provider generation is the selected execution provider UNAVAILABLE. For `PHYSICAL_DEVICE`, mark only the named PhysicalDevice binding UNAVAILABLE. Do not affect devices merely discovered by or attached to the provider as a non-selected/correlation provider. Requests requiring an affected selected provider fail through their request-defined `DEVICE_UNAVAILABLE` channel. Existing logical Devices are not automatically declared lost solely by this result. |
 | `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Reply-pending requests use their request-defined final reply/status or X11 error; protocol-accepted operations use their defined terminal status/events. |
 | `OUT_OF_HOST_MEMORY` / `OUT_OF_DEVICE_MEMORY` | Backend allocation failed for lack of host/device memory | Map to `ALLOCATION_FAILED` where the request contract exposes a synchronous allocation error; otherwise use that operation's specified asynchronous failure result. |
 | `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for reply-bearing transfer requests such as WriteBuffer/ReadBuffer; operations whose protocol contract is event-terminal use their defined asynchronous failure path. |
@@ -155,6 +155,8 @@ Every provider operation MUST return a classified result. A provider MAY additio
 All provider operations that can fail, including backend destroy/retire operations, MUST return a classified `GpuProviderResult`. A destroy operation is best-effort with respect to an already committed public destroy: its failure MUST NOT resurrect an XID or create a delayed X11 error. The server retains/quarantines the backend object and provider context until safe retirement. The `retain_*`/`release_*` reference hooks are local lifetime primitives rather than backend operations; they MUST be infallible and MUST NOT invoke Vulkan or block. `retire_operation` MUST be idempotent, MUST return a classified result, and MUST release only the exact operation-token generation supplied to it. If retirement fails, the server MUST retain/quarantine the token and provider context rather than assuming quiescence.
 
 `retire_operation` has one normative success meaning: `SUCCESS` confirms that the exact accepted operation token has no remaining or possible backend access, that the provider will perform no further access through that token, and that the token's backend-side retirement is complete. Only this result authorizes the server to release the token's retained provider/device/resource references and retire the token record. Any non-`SUCCESS` result is not evidence of quiescence; the server MUST preserve the token record and quarantine all affected references. The server MAY retry retirement using the same exact token generation. Repeated retirement after `SUCCESS` MUST be an idempotent no-op returning `SUCCESS`; a stale token generation MUST NOT retire or release a newer token that reuses an internal slot. Retirement MUST NOT emit a second terminal outcome callback.
+
+The scope of `UNAVAILABLE` is mandatory provider-result metadata, not something the registry may guess from the provider pointer. `PROVIDER_CONTEXT` means that the provider context/generation cannot safely serve any of its PhysicalDevice bindings; it affects only PhysicalDevices whose selected execution provider is that exact provider generation. `PHYSICAL_DEVICE` means that the provider context remains usable but the named provider-local PhysicalDevice binding cannot be used; it affects only that canonical PhysicalDevice. An observation for a non-selected provider MUST NOT change the published PhysicalDevice status. A provider-context recovery MAY restore each affected PhysicalDevice to AVAILABLE only if that same provider generation and exact physical-device incarnation again satisfy the published immutable snapshot. A physical-device-scoped recovery restores only that binding. Recovery MUST NOT revive REMOVED identities or switch provider selection.
 
 The provider MUST NOT return X11 errors, XIDs, Atom errors, ownership errors, or request-validation errors. Those are server/protocol responsibilities and MUST be detected before invoking the provider. A provider MUST NOT map a malformed request to a Vulkan/backend error.
 
@@ -365,12 +367,24 @@ GpuPhysicalDevice *GpuRegistryRegisterProvider(
     const GpuProviderDescriptor *provider);
 
 /* Provider availability is distinct from physical removal. */
-void GpuRegistryProviderUnavailable(
+/* Context-wide failure/recovery affects all PhysicalDevices for which this
+   exact provider generation is the selected execution provider. */
+void GpuRegistryProviderContextUnavailable(
     GpuRegistry *registry, GpuBackendProvider *provider,
     uint64_t provider_generation);
-void GpuRegistryProviderRecovered(
+void GpuRegistryProviderContextRecovered(
     GpuRegistry *registry, GpuBackendProvider *provider,
     uint64_t provider_generation);
+
+/* Device-scoped failure/recovery affects only this canonical binding. */
+void GpuRegistryProviderDeviceUnavailable(
+    GpuRegistry *registry, GpuBackendProvider *provider,
+    uint64_t provider_generation, GpuPhysicalDevice *device,
+    uint64_t device_generation);
+void GpuRegistryProviderDeviceRecovered(
+    GpuRegistry *registry, GpuBackendProvider *provider,
+    uint64_t provider_generation, GpuPhysicalDevice *device,
+    uint64_t device_generation);
 void GpuRegistryConfirmDeviceRemoved(
     GpuRegistry *registry, GpuPhysicalDevice *device,
     uint64_t device_generation);
@@ -424,6 +438,8 @@ The implementation test suite SHOULD include at least:
 3. Two ICDs report the same GPU with different provider handles: one record, deterministic selected provider, one coherent metadata snapshot.
 4. Reordering Screen, DDX, provider, and ICD initialization does not change canonical identity, selected provider, or CreateDefaultDevice result under a fixed configuration.
 5. The selected provider becomes unavailable while hardware remains: status becomes UNAVAILABLE, not REMOVED; a different provider is not silently substituted.
+6. A provider context shared by two selected PhysicalDevices becomes unavailable: both affected PhysicalDevices become UNAVAILABLE; a third PhysicalDevice merely discovered by that provider but selected through another provider remains AVAILABLE. Recover the same provider generation and verify only its selected bindings recover, with unchanged XIDs and snapshots.
+7. A single provider-local PhysicalDevice binding becomes unavailable while the shared provider context remains usable: only that PhysicalDevice becomes UNAVAILABLE; another PhysicalDevice selected through the same provider remains AVAILABLE. Recover the exact binding and verify only it recovers. A stale provider/device generation MUST NOT change either status.
 6. The selected provider recovers for the same incarnation: the same XID and metadata snapshot become AVAILABLE again.
 7. A physical remove followed by re-add at the same BDF/path/node number creates a new PhysicalDevice and XID; the old record remains REMOVED.
 8. A Screen is destroyed and recreated while the same GPU remains: the attachment generation changes; the PhysicalDevice and XID do not.
