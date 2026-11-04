@@ -508,15 +508,6 @@ typedef struct GpuRegistry GpuRegistry;
 typedef struct GpuPhysicalDevice GpuPhysicalDevice;
 typedef struct GpuBackendProvider GpuBackendProvider;
 typedef struct GpuProviderModuleLease GpuProviderModuleLease;
-/* Server-owned loader pin shared by all roles in one loaded module.
-   Create binds it to the Xserver loader's module-owner reference; retain and
-   release never call code in the pinned module. */
-/* Creation acquires a real independent loader pin and returns one owned ref.
-   NULL means no lease/pin was acquired; retain/release never enter module code. */
-GpuProviderModuleLease *GpuProviderModuleLeaseCreate(
-    void *module_owner, GpuRegistryResult *out_result);
-GpuRegistryResult GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
-GpuRegistryResult GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
 typedef struct GpuScreenAttachment GpuScreenAttachment;
 typedef struct GpuProviderPresentationRoute GpuProviderPresentationRoute;
 
@@ -540,6 +531,14 @@ typedef enum {
     GPU_REGISTRY_UNSUPPORTED,
     GPU_REGISTRY_INTERNAL_ERROR
 } GpuRegistryResult;
+
+/* Server-owned loader pin shared by all roles in one loaded module.
+   Creation acquires a real independent loader pin and returns one owned ref.
+   NULL means no lease/pin was acquired; retain/release never enter module code. */
+GpuProviderModuleLease *GpuProviderModuleLeaseCreate(
+    void *module_owner, GpuRegistryResult *out_result);
+GpuRegistryResult GpuProviderModuleLeaseRetain(GpuProviderModuleLease *lease);
+GpuRegistryResult GpuProviderModuleLeaseRelease(GpuProviderModuleLease *lease);
 
 enum {
     GPU_SCREEN_ROLE_RENDER_ACCESS = 1u << 0,
@@ -754,6 +753,8 @@ GpuRegistryResult GpuRegistryObserveDevice(
     uint64_t source_generation, const GpuDeviceIdentity *identity,
     GpuPhysicalDevice **out_device, uint64_t *out_device_generation,
     uint64_t *out_observation_id);
+void GpuPhysicalDeviceRetain(GpuPhysicalDevice *device);
+void GpuPhysicalDeviceRelease(GpuPhysicalDevice *device);
 
 /* Provider execution binding is registered separately from observation.
    The provider-local handle remains private to this provider generation. */
@@ -859,6 +860,7 @@ GpuRegistryResult XaPhysicalDeviceGetXid(
 GpuRegistryResult GpuPhysicalDeviceAcquireExecutionProvider(
     GpuPhysicalDevice *device, uint64_t device_generation,
     GpuBackendProvider **out_provider, uint64_t *out_provider_generation);
+void GpuBackendProviderRetain(GpuBackendProvider *provider);
 GpuRegistryResult GpuBackendProviderRelease(
     GpuBackendProvider *provider, uint64_t provider_generation);
 ```
@@ -1115,6 +1117,26 @@ The implementation test suite SHOULD include at least:
 
 
 96. Reserve provider generations, fail registration after descriptor validation/allocation, and then register a replacement provider. Verify that the failed generation is never reused, stale completion records carrying it are rejected, and the replacement receives a distinct generation before any binding or operation is accepted.
+
+97. Call registry APIs with required pointers omitted, zero generations, unknown role bits, malformed keys, and inconsistent input/output pairs. Verify `INVALID_ARGUMENT`, initialized output sentinels, no mutation, and no leaked references.
+
+98. Obtain PhysicalDevice, BackendProvider, and ScreenAttachment references from successful APIs, then race release against detach, binding removal, provider shutdown, and registry shutdown. Verify each acquired reference is consumed exactly once and storage is not reclaimed while any reference or callback remains.
+
+99. Register and unregister a discovery source while observations and delayed callbacks exist. Verify source generations are server-assigned/non-reusable, unregister returns PENDING while callbacks remain, and late observations from the closed generation are rejected without affecting a replacement source.
+
+100. Register a provider with an incomplete operation table, invalid module lease, or failing descriptor validation. Verify no provider is installed and every acquired lease/context reference is unwound exactly once; successful registration returns exactly one caller-owned provider reference.
+
+101. Register a binding with a stale PhysicalDevice/provider generation, duplicate provider-local binding, or conflicting identity. Verify the registry assigns the binding generation, rejects invalid cases atomically, and never creates duplicate references or active bindings.
+
+102. Attach a Screen with stale device generation, zero Screen generation, unknown role bits, or a Screen already closing. Verify a classified failure and no retained Screen pointer; exact duplicate attachment returns the same attachment generation without duplicate registry state.
+
+103. Force XID allocation and DIX resource insertion to fail at each publication step. Verify no partial client-visible resource, no leaked provisional XID, and no published flag; retry succeeds with one stable XID. Repeated publication returns that same XID.
+
+104. Acquire the selected provider while the PhysicalDevice is pending, unavailable, removed, or its provider is shutting down. Verify no provider reference leaks and no stale provider generation is returned; success pins the exact selected provider until release.
+
+105. Call BeginShutdown while source unregister, provider quiescence, Screen detach, and publication are pending. Verify admission closes, Destroy returns BUSY without invalidating existing references, and final Destroy succeeds only after every object/callback/module lease is retired.
+
+106. Submit duplicate, late, malformed, and conflicting completion records, including a provider that returns synchronous failure and later calls back. Verify only accepted tokens terminalize once, payload is copied/retained safely, stale generations are ignored, and callback/token/module references are not released early.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
