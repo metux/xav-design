@@ -57,7 +57,7 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 The v0.1 protocol design was previously assessed as freeze-ready at an earlier candidate, but that assessment does **not** apply to the current branch tip. Subsequent provider-lifecycle, multi-device availability, and presentation status/error changes are normative changes and require exact-tip verification.
 
-At the current audit point, the spec is **not yet CI-verified and must not be declared frozen**. The owner-provided failing run 41821464018/job 126545373361 was corrected by explicit Physical-Device status and UUID wording. Later changes also added provider-unavailability scope and presentation `DEVICE_UNAVAILABLE` statuses. The most recent known branch tip must pass the complete wire-layout checker, Timeline regressions, and Python suite before a freeze decision is restored.
+At the current audit point, the spec is **not yet CI-verified and must not be declared frozen**. The owner-provided failing run 41821464018/job 126545373361 was corrected by explicit Physical-Device status and UUID wording. Later changes also added provider-unavailability scope and presentation `DEVICE_UNAVAILABLE` statuses. The current branch tip must pass the complete wire-layout checker, Timeline regressions, and Python suite before a freeze decision is restored.
 
 Remaining freeze gates:
 - [ ] Exact current-tip CI passes all required jobs (wire-layout/static consistency, C header/client prototype compilation, Timeline regressions, and full Python tests).

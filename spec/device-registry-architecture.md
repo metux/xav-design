@@ -144,7 +144,7 @@ Every provider operation MUST return a classified result. A provider MAY additio
 | `SUCCESS` | Operation completed successfully | Commit the request's specified success transition. |
 | `STATUS` | A defined non-error operation outcome (for example out-of-date, surface-lost, suboptimal, or unsupported swapchain configuration) | Return the operation-specific status exactly as defined by its request chapter; do not convert it to a generic provider failure. |
 | `UNSUPPORTED` | Operation/feature is genuinely unsupported by this provider | During initial capability discovery, omit the optional capability or reject provider selection. After publication, treat as a provider contract violation: fail the operation with `INTERNAL_SERVER_ERROR` and mark the provider unavailable pending diagnosis; do not silently alter the published snapshot. |
-| `UNAVAILABLE` | Provider context or access to one specific physical-device binding is temporarily unavailable; no logical-Device-loss result has been established. The result MUST carry an explicit scope: `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE`. | For `PROVIDER_CONTEXT`, mark every PhysicalDevice for which this exact provider generation is the selected execution provider UNAVAILABLE. For `PHYSICAL_DEVICE`, mark only the named PhysicalDevice binding UNAVAILABLE. Do not affect devices merely discovered by or attached to the provider as a non-selected/correlation provider. Requests requiring an affected selected provider fail through their request-defined `DEVICE_UNAVAILABLE` channel. Existing logical Devices are not automatically declared lost solely by this result. |
+| `UNAVAILABLE` | Provider context or access to one specific physical-device binding is temporarily unavailable; no logical-Device-loss result has been established. The result MUST carry an explicit scope: `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE`. | For `PROVIDER_CONTEXT`, mark every PhysicalDevice for which this exact provider generation is the selected execution provider UNAVAILABLE. For `PHYSICAL_DEVICE`, mark only the named PhysicalDevice binding UNAVAILABLE. Do not affect devices merely discovered by or attached to the provider as a non-selected/correlation provider. A request rejected before its protocol acceptance point uses its request-defined `DEVICE_UNAVAILABLE` error/reply status where defined. An already accepted asynchronous operation uses its operation-specific terminal channel (for example `EXECUTION_FAILED`, `TRANSFER_FAILED`, or `PRESENTATION_FAILED`), never a delayed X11 error. Existing logical Devices are not automatically declared lost solely by this result. |
 | `DEVICE_LOST` | The backend has positively reported loss of this exact logical Vulkan Device (for example, `VK_ERROR_DEVICE_LOST`) | Commit the logical Device's DEVICE_LOST transition exactly once. Reply-pending requests use their request-defined final reply/status or X11 error; protocol-accepted operations use their defined terminal status/events. |
 | `OUT_OF_HOST_MEMORY` / `OUT_OF_DEVICE_MEMORY` | Backend allocation failed for lack of host/device memory | Map to `ALLOCATION_FAILED` where the request contract exposes a synchronous allocation error; otherwise use that operation's specified asynchronous failure result. |
 | `TRANSFER_FAILURE` | A buffer upload/readback or other defined transfer operation failed without Device Loss | Map to `TRANSFER_FAILED` for reply-bearing transfer requests such as WriteBuffer/ReadBuffer; operations whose protocol contract is event-terminal use their defined asynchronous failure path. |
@@ -283,6 +283,10 @@ typedef struct {
     GpuProviderResultCode code;
     /* MUST be NONE except when code is UNAVAILABLE. */
     GpuProviderUnavailableScope unavailable_scope;
+    /* Required for PHYSICAL_DEVICE scope; identifies the exact provider-local
+       binding within this provider generation. Zero for other scopes. */
+    uint64_t physical_device_binding_id;
+    uint64_t physical_device_generation;
 } GpuProviderResult;
 
 typedef struct {
@@ -290,7 +294,8 @@ typedef struct {
     uint64_t operation_generation;
     uint64_t operation_token_id;
     GpuProviderResult result;
-    /* Required for PHYSICAL_DEVICE scope: exact device generation/reference.
+    /* Required for PHYSICAL_DEVICE scope: exact canonical PhysicalDevice
+       reference and generation corresponding to result's binding identity.
        Operation-specific immutable result payload follows. */
 } GpuProviderCompletion;
 
@@ -455,27 +460,27 @@ The implementation test suite SHOULD include at least:
 5. The selected provider becomes unavailable while hardware remains: status becomes UNAVAILABLE, not REMOVED; a different provider is not silently substituted.
 6. A provider context shared by two selected PhysicalDevices becomes unavailable: both affected PhysicalDevices become UNAVAILABLE; a third PhysicalDevice merely discovered by that provider but selected through another provider remains AVAILABLE. Recover the same provider generation and verify only its selected bindings recover, with unchanged XIDs and snapshots.
 7. A single provider-local PhysicalDevice binding becomes unavailable while the shared provider context remains usable: only that PhysicalDevice becomes UNAVAILABLE; another PhysicalDevice selected through the same provider remains AVAILABLE. Recover the exact binding and verify only it recovers. A stale provider/device generation MUST NOT change either status.
-6. The selected provider recovers for the same incarnation: the same XID and metadata snapshot become AVAILABLE again.
-7. A physical remove followed by re-add at the same BDF/path/node number creates a new PhysicalDevice and XID; the old record remains REMOVED.
-8. A Screen is destroyed and recreated while the same GPU remains: the attachment generation changes; the PhysicalDevice and XID do not.
-9. A Screen is attached to more than one GPU, and one GPU is attached to more than one Screen: no identities are created, merged, or destroyed by attachment changes.
-10. A late callback from an old provider, PhysicalDevice, or Screen generation cannot mutate a replacement object.
-11. CreateDefaultDevice selection does not depend on the first Screen with XAverius support and never combines GPUs.
-12. Provider module/context teardown is delayed until every logical Device, submission, callback, and backend operation referencing it has quiesced.
+8. The selected provider recovers for the same incarnation: the same XID and metadata snapshot become AVAILABLE again.
+9. A physical remove followed by re-add at the same BDF/path/node number creates a new PhysicalDevice and XID; the old record remains REMOVED.
+10. A Screen is destroyed and recreated while the same GPU remains: the attachment generation changes; the PhysicalDevice and XID do not.
+11. A Screen is attached to more than one GPU, and one GPU is attached to more than one Screen: no identities are created, merged, or destroyed by attachment changes.
+12. A late callback from an old provider, PhysicalDevice, or Screen generation cannot mutate a replacement object.
+13. CreateDefaultDevice selection does not depend on the first Screen with XAverius support and never combines GPUs.
+14. Provider module/context teardown is delayed until every logical Device, submission, callback, and backend operation referencing it has quiesced.
 
-13. A provider reports `DEVICE_LOST` while `create_logical_device` is running: no logical Device/XID is published, the PhysicalDevice becomes UNAVAILABLE, and the request returns DEVICE_UNAVAILABLE.
-14. A provider returns host/device allocation failure during logical-device creation: all partial objects are rolled back or quarantined, the target XID remains free, and ALLOCATION_FAILED is returned.
-15. A provider context becomes UNAVAILABLE while a logical Device exists: the PhysicalDevice status changes, but the logical Device is not declared DEVICE_LOST without a positive loss result for that exact VkDevice.
-16. A provider operation on an existing logical Device reports DEVICE_LOST concurrently with submission completion, wait satisfaction, timeout, or DestroyDevice: the first serialized terminal outcome wins exactly once.
-17. A provider reports UNSUPPORTED for a capability already included in the published snapshot: the request fails as a provider contract violation, the capability snapshot is not mutated, and no client BadMatch is fabricated.
-18. An asynchronous provider operation reports completion and then attempts a duplicate/late callback: only one terminal transition is committed and all retained references are released at most once.
-19. DestroyDevice or disconnect races with an in-flight provider call or accepted asynchronous operation: public invalidation occurs at its defined linearization point, but provider code/context and backend objects remain pinned until the provider proves no further access.
-20. A provider callback arrives after provider generation replacement or module-unload request: it is ignored for public state, cannot resolve a reused XID, and cannot execute unloaded provider code.
-21. A provider reports TRANSFER_FAILURE or EXECUTION_FAILURE after asynchronous acceptance: the operation uses its defined terminal status/event and never generates a delayed X11 request error.
-22. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the provider's exact Device/Surface result controls the outcome; attachment membership does not imply support.
+15. A provider reports `DEVICE_LOST` while `create_logical_device` is running: no logical Device/XID is published, the PhysicalDevice becomes UNAVAILABLE, and the request returns DEVICE_UNAVAILABLE.
+16. A provider returns host/device allocation failure during logical-device creation: all partial objects are rolled back or quarantined, the target XID remains free, and ALLOCATION_FAILED is returned.
+17. A provider context becomes UNAVAILABLE while a logical Device exists: the PhysicalDevice status changes, but the logical Device is not declared DEVICE_LOST without a positive loss result for that exact VkDevice.
+18. A provider operation on an existing logical Device reports DEVICE_LOST concurrently with submission completion, wait satisfaction, timeout, or DestroyDevice: the first serialized terminal outcome wins exactly once.
+19. A provider reports UNSUPPORTED for a capability already included in the published snapshot: the request fails as a provider contract violation, the capability snapshot is not mutated, and no client BadMatch is fabricated.
+20. An asynchronous provider operation reports completion and then attempts a duplicate/late callback: only one terminal transition is committed and all retained references are released at most once.
+21. DestroyDevice or disconnect races with an in-flight provider call or accepted asynchronous operation: public invalidation occurs at its defined linearization point, but provider code/context and backend objects remain pinned until the provider proves no further access.
+22. A provider callback arrives after provider generation replacement or module-unload request: it is ignored for public state, cannot resolve a reused XID, and cannot execute unloaded provider code.
+23. A provider reports TRANSFER_FAILURE or EXECUTION_FAILURE after asynchronous acceptance: the operation uses its defined terminal status/event and never generates a delayed X11 request error.
+24. A surface-support or presentation operation is attempted for a Device/Surface pair not supported by a ScreenAttachment: the provider's exact Device/Surface result controls the outcome; attachment membership does not imply support.
 
-23. The same XAverius Surface is queried with logical Devices from two different providers: each provider creates/owns its own provider-scoped WSI surface object, and no VkSurfaceKHR or WSI handle crosses provider instances.
-24. WaitSemaphores/WaitForFence completion races with the server timeout while the selected provider becomes UNAVAILABLE: provider unavailability alone MUST NOT terminalize either server-owned wait or produce DEVICE_UNAVAILABLE. The wait remains governed by its server-visible predicate, timeout, exact logical-Device Loss, DestroyDevice, and disconnect. If an underlying provider operation subsequently fails, only the synchronization state transition actually published by that operation may affect the wait; no provider wait blocks the X11 dispatcher.
-25. An accepted provider-operation token cannot establish successful completion or backend quiescence: require exactly one terminal outcome callback with a classified failure, but no quiescence/retirement confirmation. The server MUST preserve the terminal protocol outcome while quarantining the token, affected resources, and provider context; duplicate callbacks are ignored, and no provider module/context is unloaded while backend access remains possible.
+25. The same XAverius Surface is queried with logical Devices from two different providers: each provider creates/owns its own provider-scoped WSI surface object, and no VkSurfaceKHR or WSI handle crosses provider instances.
+26. WaitSemaphores/WaitForFence completion races with the server timeout while the selected provider becomes UNAVAILABLE: provider unavailability alone MUST NOT terminalize either server-owned wait or produce DEVICE_UNAVAILABLE. The wait remains governed by its server-visible predicate, timeout, exact logical-Device Loss, DestroyDevice, and disconnect. If an underlying provider operation subsequently fails, only the synchronization state transition actually published by that operation may affect the wait; no provider wait blocks the X11 dispatcher.
+27. An accepted provider-operation token cannot establish successful completion or backend quiescence: require exactly one terminal outcome callback with a classified failure, but no quiescence/retirement confirmation. The server MUST preserve the terminal protocol outcome while quarantining the token, affected resources, and provider context; duplicate callbacks are ignored, and no provider module/context is unloaded while backend access remains possible.
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
