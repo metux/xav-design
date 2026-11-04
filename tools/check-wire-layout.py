@@ -3081,13 +3081,13 @@ def check_presentation_profile(c: Check) -> None:
               "GetSurfaceCapabilities: queue-family support records must have a defined, complete, ordered layout")
     c.require("Every physical queue family has exactly one ordered support record." in read("spec/conformance.md"),
               "presentation conformance: queue-family capability records must cover every family exactly once")
-    c.require("Status values: 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST" in presentation,
+    c.require("GetSurfaceCapabilities status values are 0 SUCCESS; 1 TEMPORARILY_NOT_PRESENTABLE; 2 SURFACE_LOST; 3 DEVICE_LOST; 4 DEVICE_UNAVAILABLE" in presentation,
               "GetSurfaceCapabilities: reply status values must be explicit")
-    c.require("CreateSwapchain status values are 0 SUCCESS; 1 OUT_OF_DATE; 2 SURFACE_LOST; 3 DEVICE_LOST; 4 UNSUPPORTED_CONFIGURATION; 5 ALLOCATION_FAILED" in presentation,
+    c.require("CreateSwapchain status values are 0 SUCCESS; 1 OUT_OF_DATE; 2 SURFACE_LOST; 3 DEVICE_LOST; 4 UNSUPPORTED_CONFIGURATION; 5 ALLOCATION_FAILED; 6 DEVICE_UNAVAILABLE" in presentation,
               "CreateSwapchain: reply status values must be explicit")
-    c.require("Acquire status values are SUCCESS=0, TIMEOUT=1, NOT_READY=2, OUT_OF_DATE=3, SURFACE_LOST=4, DEVICE_LOST=5, and DEVICE_DESTROYED=6" in presentation,
+    c.require("Acquire status values are SUCCESS=0, TIMEOUT=1, NOT_READY=2, OUT_OF_DATE=3, SURFACE_LOST=4, DEVICE_LOST=5, DEVICE_DESTROYED=6, and DEVICE_UNAVAILABLE=7" in presentation,
               "AcquireNextImage: reply status values must be explicit")
-    c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, and 3 DEVICE_LOST" in presentation,
+    c.require("QueuePresent reply status values are 0 SUCCESS, 1 OUT_OF_DATE, 2 SURFACE_LOST, 3 DEVICE_LOST, and 4 DEVICE_UNAVAILABLE" in presentation,
               "QueuePresent: reply status values must be explicit and local to the reply field")
     c.require("ordinary X11 request limit of 262140 bytes" in presentation and
               "wait_semaphore_count` MUST NOT exceed 65525" in presentation and
