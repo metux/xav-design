@@ -737,13 +737,14 @@ The client prototype lives under `client/` on the authoritative specification br
 
 Implemented files:
 - `client/include/xaverius_client.h`: public opaque-connection API and host-order Physical-Device records.
-- `client/src/internal.h`: internal transport and wire-decoding interfaces.
-- `client/src/connection.c`: extension discovery, custom XCB request framing, QueryVersion and connection lifecycle.
+- `client/src/internal.h`: internal transport, connection state and wire-decoding interfaces.
+- `client/src/connection.c`: XAV extension discovery, custom XCB request framing, QueryVersion and connection lifecycle.
 - `client/src/devices.c`: EnumeratePhysicalDevices and bounded variable-record decoding.
+- `client/src/xge.c`: standard Generic Event Extension GEQueryVersion negotiation (1.0+).
 - `client/Makefile`: static-library build.
 - `client/README.md`: architecture, ownership, build and staged implementation plan.
+- `protocol/include/xaverius.h`: the single shared client/server wire header. The old `xaverius_proto.h` path was reconciled with the public protocol README and removed.
 
 Transport rule: XCB's extension descriptor minor opcode is zero, leaving the X11 `data` byte zero; XAverius subopcode is encoded as the first body byte at absolute offset 4. The implementation uses XCB's client byte order for protocol scalars, copies fields into aligned host objects, and checks the 32-byte reply envelope and variable-tail bounds before exposing data. The X11 connection and event queue remain caller-owned.
 
-The first slice is source-complete but has **not yet been compiled or exercised against a live XAverius server**. No XGE negotiation, logical-device/resource requests, Vulkan ICD, or presentation support is claimed. Before using `CreateDevice`, the runtime must add successful XGE 1.0+ negotiation and event dispatch.
-
+The current source implements XAV QueryVersion, Physical-Device enumeration and explicit XGE 1.0+ negotiation. It has **not yet been built against the full repository header or exercised against a live XAverius server**. Event dispatch, Atom interning, remaining device/property/resource requests, logical-device creation, Vulkan ICD and presentation support are not claimed. Call `xav_connection_negotiate_xge()` successfully before selecting XAverius XGE events or issuing `CreateDevice`.
