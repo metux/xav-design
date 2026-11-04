@@ -12,7 +12,7 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
-The current verified branch tip is `df2d09ac8992229934cb407506baed2865a0416d` on `docs/restructure-2026-10-21`. Exact-tip workflow [41836070379](https://github.com/metux/xav-design/actions/runs/41836070379) passed 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully. This includes the explicit PresentationRoute object, provider route create/retire operations, and route-generation lifecycle references.
+The latest exact-tip CI-verified branch tip is `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29` on `docs/restructure-2026-10-21`. Workflow [41840312155](https://github.com/metux/xav-design/actions/runs/41840312155) passed 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client prototype build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit. All 19 workflow steps completed successfully. This includes the exact logical-Device PresentationRoute binding, evidence-bearing physical-removal confirmation, classified registry API results, and architecture vectors 57–58.
 
 ### Render-GPU / scanout-GPU routing audit — 2026-11-04
 
@@ -71,7 +71,7 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 The render/scanout routing contract, explicit PresentationRoute object, route create/retire operations, and route-generation lifecycle are verified at `df2d09ac8992229934cb407506baed2865a0416d` by exact-tip [workflow 41836070379](https://github.com/metux/xav-design/actions/runs/41836070379): 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits.
 
-The normative design gates are assessed as complete. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
+The normative design gates are assessed as complete. The latest registry API contract refinements are covered by exact-tip CI at `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`; the subsequent provider-state-transition return-value clarification is a new architecture-only delta and requires its own exact-tip CI. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
 - [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
 - [ ] Validate live X11/XGE interoperability against an actual server and XAverius implementation.
 - [ ] Validate end-to-end compute execution and lifecycle behavior against a real Vulkan backend.
@@ -114,3 +114,8 @@ The provider-result audit found that `UNAVAILABLE` did not distinguish a provide
 The seven presentation requests were rechecked across presentation.md, errors.md, device-registry-architecture.md, and the conformance suite. The GetSurfaceCapabilities normal-status precedence is now complete (DEVICE_LOST > DEVICE_UNAVAILABLE > SURFACE_LOST > TEMPORARILY_NOT_PRESENTABLE > SUCCESS). Capability queries are non-committing probes; CreateSwapchain creates and pins the route generation; successful public destruction does not release provider route objects until swapchain destruction and exact operation-token retirement establish quiescence. Failed preparation unwinds provider Swapchain before its provisional route; unproven retirement requires quarantine. Dedicated vectors are in [presentation-route-conformance.md](presentation-route-conformance.md).
 
 No wire layouts, opcodes, status values, or event IDs changed. Exact-tip CI for this audit is pending; prior green CI does not cover these commits.
+
+
+### Registry API result and generation contract — 2026-11-04
+
+The registry API now requires provenance-bearing evidence to confirm physical removal, returns explicit classified outcomes for that transition, and returns classified outcomes for provider context/device unavailable and recovery transitions. Stale generations, unknown providers, and absent selected bindings are observable rejections and MUST NOT silently mutate state. The removal evidence source key is borrowed only for the call and resolved before return. This is an internal architecture/API contract; it changes no wire ABI or request assignment. The provider-state-transition return-value clarification is in `bbda0c5036306b0497cda41b825a074b6608460f`; exact-tip CI is pending.
