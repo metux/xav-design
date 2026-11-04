@@ -12,10 +12,10 @@
 
 ## Current verified baseline
 
-- Latest exact-tip CI-verified specification commit: `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`.
-- Exact-tip CI: [workflow 41843078578](https://github.com/metux/xav-design/actions/runs/41843078578) — SUCCESS. All 19 steps passed: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
-- This verifies the mandatory `quiesce_provider` hook, PENDING/SUCCESS/FAILURE semantics, callback-return condition on exact-token retirement, and the previously verified Screen-close/module-lease contract.
-- Newer source-mapping/vector commit `3a42c1a63e68016d952f91542b858fee3d35d300` documents `DuplicateModule()`/`dlclose()` behavior and adds vectors 76–77; its exact-tip wire-layout CI is still running. Later status/coordination edits are also pending exact-tip CI.
+- Latest exact-tip CI-verified specification commit: `ceac0d09dc7e9456e372ae52cea97d46007697fc`.
+- Exact-tip CI: [workflow 41843634177](https://github.com/metux/xav-design/actions/runs/41843634177) — SUCCESS. The required wire-layout, Timeline, Python, shared-header, XCB client, request/reply/XGE, backend-discovery/handler/callback, and required-check gates passed.
+- This verifies architecture vectors 76–78, the XLibre `DuplicateModule()`/`dlclose()` source mapping, provider-wide `quiesce_provider` semantics, callback-return retirement, and detached Screen callback state.
+- Newer multi-provider ownership commit `c88668e023ba31fa38293dba4aef5a827adedb64` adds provider/binding/module cardinality, generation-scoped provider shutdown, source-local observation withdrawal, and vectors 79–88. Exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) is pending; do not treat this newer candidate as verified until it completes.
 
 ## Architecture contracts implementation must follow
 
@@ -108,3 +108,16 @@ The XLibre Screen lifecycle is now explicitly topology-only: `dixScreenRaiseClos
 
 
 A final Screen-lifetime clarification is in `device-registry-architecture.md` §2.4: asynchronous provider callbacks MUST NOT retain raw `ScreenPtr`, `ScrnInfoPtr`, `pScreen`, `pScrn`, or `FreeScreen()`-owned pointers. Required values are copied or held in a detached, generation-checked ScreenAttachment context with no borrowed Xserver Screen pointers. Vector 78 covers callback completion after Screen deletion. Commit `6f01fcb00e9c6ac46cad72e0c52434494e814413` is newer than the current green baseline and pending exact-tip CI.
+
+
+## Latest specification update — multi-provider ownership and teardown — 2026-11-04
+
+The provider registry contract now explicitly supports multiple independent BackendProvider generations per canonical PhysicalDevice and multiple PhysicalDevice bindings per provider generation. Each (provider generation, PhysicalDevice incarnation) has at most one executable binding; providers must deduplicate multiple Vulkan aliases inside their own context before registration. A loaded DDX/provider module may own several independent provider generations and adapter roles, each with its own generation, admission state, quiescence, and module-lease reference.
+
+Discovery observations remain source-owned. Removing one provider binding or unloading one DDX source cannot withdraw another source's evidence, another provider's binding, or another DDX's ScreenAttachment. v0.1 still selects one provider and one immutable snapshot per published PhysicalDevice. Non-selected providers are not a failover pool and cannot contribute metadata/capabilities or take over after selected-provider loss; the selected PhysicalDevice becomes UNAVAILABLE if its binding is removed.
+
+Provider-generation shutdown now has an explicit generation-scoped BeginProviderShutdown admission barrier, followed by exact binding/observation/attachment withdrawal, accepted-operation drain, provider-wide quiescence, and release of that generation's module-lease reference. Quiescing one provider does not unload a shared module while another provider or adapter role remains live. Architecture vectors 79–88 cover the multiplicity and race cases.
+
+**Implementation feedback requested:** confirm whether the current provider/driver split can represent (a) multiple provider contexts exported by one DDX module, (b) two independent DDX modules observing the same DRM-backed PhysicalDevice, and (c) one provider context serving several PhysicalDevices. Report any source of shared module-global workers/callbacks that cannot be attributed to an exact provider generation. Do not implement provider failover or merge snapshots to work around ownership issues.
+
+Spec commit: `c88668e023ba31fa38293dba4aef5a827adedb64`. Exact-tip CI [41844488352](https://github.com/metux/xav-design/actions/runs/41844488352) pending.
