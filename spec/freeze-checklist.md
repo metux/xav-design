@@ -55,10 +55,20 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The v0.1 normative content is **freeze-ready** at exact branch tip `0b9c40e0907592f7f96687912d948abf221123d0`; [CI run 41476931362](https://github.com/metux/xav-design/actions/runs/41476931362) passed 4,836 wire-layout checks, 72 Timeline regressions, and all 692 Python tests, while [branch-tip monitor 41476931297](https://github.com/metux/xav-design/actions/runs/41476931297) passed. The post-merge audit delta is therefore CI-verified. Runtime X11/XGE and Vulkan acceptance gates remain open. The initial implementation target remains the compute-baseline profile; presentation remains a separately specified optional profile. Runtime X11/XGE and Vulkan acceptance gates remain open. Formal implementation coordination is still pending Phase 1 agent ship confirmations and a named shared integration-interface owner on the coordination board; that is an integration sign-off, not an unresolved protocol-design decision.
+The v0.1 protocol design was previously assessed as freeze-ready at an earlier candidate, but that assessment does **not** apply to the current branch tip. Subsequent provider-lifecycle, multi-device availability, and presentation status/error changes are normative changes and require exact-tip verification.
 
-The 2026-11-04 provider-operation audit found no remaining protocol design gap after the correction recorded above. The exact-tip verification statement above applies to the earlier content candidate only; the provider wording correction must be included in a fresh exact-tip CI result before the newer branch tip is called CI-verified. Runtime X11/XGE, Vulkan compute/runtime lifecycle, and optional presentation backend acceptance remain implementation gates.
+At the current audit point, the spec is **not yet CI-verified and must not be declared frozen**. The owner-provided failing run 41821464018/job 126545373361 was corrected by explicit Physical-Device status and UUID wording. Later changes also added provider-unavailability scope and presentation `DEVICE_UNAVAILABLE` statuses. The most recent known branch tip must pass the complete wire-layout checker, Timeline regressions, and Python suite before a freeze decision is restored.
 
+Remaining freeze gates:
+- [ ] Exact current-tip CI passes all required jobs (wire-layout/static consistency, C header/client prototype compilation, Timeline regressions, and full Python tests).
+- [ ] Provider operation inventory is confirmed against every request and advertised capability; server-owned waits remain excluded from provider tokens.
+- [ ] Provider result/error mappings are exhaustive for each request's synchronous, reply-pending, and accepted-asynchronous phase.
+- [ ] Multi-device provider context/device-scoped UNAVAILABLE and generation-safe recovery pass conformance.
+- [ ] Device Loss, provider unavailability, Surface loss, resize, DestroyDevice, timeout, and completion races preserve phase ordering and first-terminal-outcome rules.
+- [ ] Implementation coordination confirms shared registry/provider interfaces; this is an integration sign-off, not permission to change the normative wire contract without a spec update.
+- [ ] Runtime X11/XGE and Vulkan lifecycle tests remain implementation acceptance gates; they are not claimed by static spec CI.
+
+No implementation work is authorized by this checklist. The current work remains specification-only.
 
 ### Host-wait/provider-unavailability boundary — 2026-11-04
 
