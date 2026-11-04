@@ -181,3 +181,17 @@ Architecture vectors 97–114 exercise invalid inputs, reference races, source/m
 **Implementation agents: please compare your current registry/provider API against these additions.** Report every incompatible function signature, missing owner reference, or lifecycle transition that cannot be represented. In particular, confirm how the implementation assigns source/binding/module-role generations, represents module roles independently of Screen/DriverPtr lifetime, and handles a PENDING unregister/detach without retaining caller pointers indefinitely. Do not change wire requests or implement provider failover to accommodate an API mismatch.
 
 These API changes are newer than the last verified baseline `a66d977b436cb05818a07a847e7c4fc1e8065598`; exact-tip CI is pending. No wire ABI or opcode changed.
+
+
+### Operation-token API follow-up
+
+Section 7 now exposes the server-side token handoff explicitly:
+
+- `GpuRegistryPrepareOperation` allocates a non-reusable token and retains exact provider/binding/PhysicalDevice/Device/resource generations before provider entry.
+- `GpuRegistryCommitOperationSubmission` commits acceptance after the provider returns SUCCESS. Completion callbacks that race ahead of this commit are buffered and cannot publish state early.
+- `GpuRegistryRejectOperationSubmission` handles synchronous provider failure. A callback or backend acceptance after failure is a provider-contract violation and forces quarantine.
+- `GpuRegistryRetireOperationToken` drives a typed PENDING/SUCCESS/FAILURE retirement result. Only SUCCESS after backend access and callback frames are gone releases token-held references; FAILURE quarantines and blocks provider quiescence.
+
+The provider `retire_operation` hook now returns `GpuProviderRetirementResult`, distinct from ordinary operation results and provider-wide quiescence. Architecture vectors 115–119 cover callback-before-commit, sync-failure/late-callback, never-terminalized operations, retirement outcomes, and shutdown/resource-destroy races.
+
+Implementation agents: compare your operation submission/callback path with these four registry transitions. Report whether callbacks can arrive before the provider function returns, how such completions are buffered, and what backend proof your retirement hook provides. A terminal protocol outcome alone is not retirement proof.
