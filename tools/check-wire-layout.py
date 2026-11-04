@@ -3720,6 +3720,33 @@ def check_wait_semaphore_semantics(c: Check) -> None:
     )
 
 
+def check_provider_host_wait_ownership(c: Check) -> None:
+    """Keep server-owned host waits distinct from provider-backed deferred operations."""
+    architecture = read("spec/device-registry-architecture.md")
+    errors = read("spec/errors.md")
+    conformance = read("spec/conformance.md")
+    c.require(
+        "WaitSemaphores and WaitForFence are also reply-pending, but are entirely server-owned registrations and have no provider token." in architecture
+        and "do not create provider-operation tokens" in architecture,
+        "Host waits must remain server-owned and must not acquire provider operation tokens",
+    )
+    c.require(
+        "MUST NOT fail solely because the provider is UNAVAILABLE" in errors
+        and "failures of underlying provider operations affect it only through state transitions actually published by those operations" in errors,
+        "Provider UNAVAILABLE must not directly terminalize server-owned host waits",
+    )
+    c.require(
+        "provider unavailability alone neither terminalizes the wait nor returns DEVICE_UNAVAILABLE" in conformance
+        and "The wait registration has no provider operation token" in conformance,
+        "Host-wait conformance must cover provider unavailability without inventing a provider wait operation",
+    )
+    c.require(
+        "provider-token acceptance for reply-pending WriteBuffer, ReadBuffer, and AcquireNextImage" in conformance
+        and "WaitSemaphores and WaitForFence remain reply-pending but are server-owned registrations with no provider token" in conformance,
+        "Provider-token acceptance inventory must exclude server-owned WaitSemaphores/WaitForFence",
+    )
+
+
 def check_read_buffer_ordering_and_lifecycle(c: Check) -> None:
     """Keep the readback snapshot boundary ahead of every later writer and lifecycle transition."""
     memory = read("spec/memory-buffers.md")
@@ -3825,6 +3852,7 @@ def main() -> int:
     check_create_device_precedence(c)
     check_create_default_device_precedence(c)
     check_wait_semaphore_semantics(c)
+    check_provider_host_wait_ownership(c)
     check_read_buffer_ordering_and_lifecycle(c)
     check_shader_descriptor_pipeline_contract(c)
     check_request_specific_precedence_exceptions(c)
