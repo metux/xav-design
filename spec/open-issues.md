@@ -101,3 +101,6 @@ The registry API sketch has been strengthened in `device-registry-architecture.m
 
 
 The registry API audit also closed the server/provider operation-token handoff. Token preparation occurs before provider entry; provider return is committed or rejected explicitly; callbacks arriving before commit are buffered; and per-token retirement has PENDING/SUCCESS/FAILURE outcomes. Failure to prove retirement quarantines the token and blocks provider-wide quiescence. Vectors 115–119 exercise these races. Exact-tip CI is pending; this remains an internal implementation contract, not a wire-design gap.
+
+
+The second registry API pass closed candidate enumeration and provider-local handle lifetime, explicit asynchronous operation-kind coverage, complete resource pin sets, token pointer lifetime, status-code payloads, and bounded completion payloads. Vectors 120–131 and §8.3 implementation guidance were added. Remaining acceptance is implementation evidence: stable binding-ID mapping, correct token use by all six async operations, full QueueSubmit dependency pinning, callback pointer discipline, and exact status mapping. Exact-tip CI pending.
