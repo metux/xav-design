@@ -332,12 +332,12 @@ class PresentationReplyWireTests(unittest.TestCase):
             "SUCCESS": 0, "TEMPORARILY_NOT_PRESENTABLE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3, "DEVICE_UNAVAILABLE": 4,
         })
         self.assertEqual(expected["create_swapchain"], {
-            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3, "DEVICE_UNAVAILABLE": 4,
+            "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
             "UNSUPPORTED_CONFIGURATION": 4, "ALLOCATION_FAILED": 5, "DEVICE_UNAVAILABLE": 6,
         })
         self.assertEqual(expected["acquire"], {
             "SUCCESS": 0, "TIMEOUT": 1, "NOT_READY": 2, "OUT_OF_DATE": 3,
-            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6,
+            "SURFACE_LOST": 4, "DEVICE_LOST": 5, "DEVICE_DESTROYED": 6, "DEVICE_UNAVAILABLE": 7,
         })
         self.assertEqual(expected["queue_present"], {
             "SUCCESS": 0, "OUT_OF_DATE": 1, "SURFACE_LOST": 2, "DEVICE_LOST": 3,
