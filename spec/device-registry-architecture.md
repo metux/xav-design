@@ -362,7 +362,7 @@ After publication, request handlers MUST answer physical-device property and que
 
 ### 4.3 Logical-device creation and queue binding
 
-Before calling `create_logical_device`, the server MUST complete all XAverius wire, XID, ownership, queue, feature, extension, and physical-device-state validation in the normative order in `devices.md` and `errors.md`. The provider receives a fully validated immutable create description; it MUST NOT independently choose a different PhysicalDevice, queue family, queue count, feature set, or extension set.
+Before calling `create_logical_device`, the server MUST complete all XAverius wire, XID, ownership, queue, feature, extension, and physical-device-state validation in the normative order in `devices.md` and `errors.md`. The provider receives a fully validated immutable create description; it MUST include the exact provider-local binding ID and registry binding generation, and the provider MUST resolve that pair to the native physical-device handle retained for that binding. It MUST NOT independently choose a different PhysicalDevice, queue family, queue count, feature set, or extension set.
 
 The provider MUST create the logical device with the mandatory v0.1 `timelineSemaphore` feature enabled and exactly the validated queue requests and enabled optional features/extensions. It MUST return an opaque logical-device handle plus a queue handle for every requested (family,index) tuple, or fail atomically. Queue handles remain private to the provider and are reachable only through the logical-device context.
 
@@ -593,18 +593,18 @@ typedef struct {
 /* Candidate data is borrowed from the candidate list until its release hook.
    provider_local_binding_id is unique and non-reusable within one provider
    generation. Native handles remain private in the provider's ID-to-handle map. */
-typedef struct {
+struct GpuPhysicalDeviceCandidate {
     uint64_t provider_local_binding_id;
     GpuDeviceIdentity identity;
-} GpuPhysicalDeviceCandidate;
+};
 
 /* Provider-owned list storage, released exactly once with release_candidate_list
    after all candidate identities/snapshots have been copied or processed. */
-typedef struct {
+struct GpuPhysicalDeviceCandidateList {
     const GpuPhysicalDeviceCandidate *items;
     size_t count;
     void *provider_private;
-} GpuPhysicalDeviceCandidateList;
+};
 
 typedef struct {
     /* Provenance of the authoritative removal observation. source_key is
