@@ -84,27 +84,42 @@ Keep `XaveriusScreenInit()`, `ScreenInit`, and `ScreenFini` for Screen-local ini
 
 Property and queue-family requests are not discovery paths either. They MUST serialize the already-published immutable snapshot and MUST NOT re-query another DDX, refresh snapshot fields, or lazily initialize the registry.
 
-## 3. Xlibre/modesetting integration — mandatory investigation, no guessed hook
+## 3. Xlibre/modesetting integration — verified lifecycle and required seam
 
-The current target tree has distinct modesetting paths:
+The target tree was inspected at Xserver commit `89df8ba0bc41dbb4b291b2242b9945661bb47fad`. Its relevant startup order is:
 
-- `ms_pci_probe()` and `ms_platform_probe()`;
-- output checks such as `check_outputs()`;
-- `xf86AllocateScreen()`;
-- per-`ScrnInfoPtr` `PreInit()`;
-- per-`ScreenPtr` `ScreenInit()` and `FreeScreen()`.
+1. `InitOutput()` calls `config_pre_init()`; `config_udev_pre_init()` creates the udev monitor, installs the DRM filter when enabled, and calls `udev_monitor_enable_receiving()`.
+2. `xf86BusProbe()` runs next. The platform-bus path calls `config_odev_probe()` and populates `xf86_platform_devices`; the PCI scan also runs here. This is before configured DDX modules are loaded.
+3. DDX modules are then loaded and register `DriverRec` entries. `xf86BusConfig()` follows; its existing `xf86CallDriverProbe()` path invokes `platformProbe`, `PciProbe`, or `Probe`.
+4. Per-`ScrnInfoPtr` `PreInit()` and per-`ScreenPtr` `ScreenInit()`/`FreeScreen()` occur later.
+5. `InitInput()` runs later still. `config_udev_init()` performs its enumeration and only then installs `SetNotifyFd(..., socket_handler, ...)` for event-loop delivery.
 
-The last three are not DDX-wide discovery hooks. In particular:
+Two details matter:
 
-- Do NOT put the complete device scan only in `ScreenInit()`.
-- Do NOT gate XAverius registration on `check_outputs()`, connector count, `xf86AllocateScreen()`, GPU-Screen creation, or successful RandR initialization.
-- Do NOT treat `PreInit()` as DDX-wide merely because it opens a DRM fd; it is per-`ScrnInfo`.
-- Do NOT use `screenInfo.screens[0]`, the first platform device, the first Entity, or the first GPU Screen as the inventory source or default-device policy.
+- The monitor starts receiving before `xf86BusProbe()`; it is wrong to claim that observation starts only in `InitInput()`. However, normal `SetNotifyFd` dispatch is installed later, so events racing with the initial scan can remain queued. Enabling the monitor alone does not prove initial reconciliation is complete.
+- `config_udev_odev_probe()` matches DRM `card[0-9]*`, not render-node names. `xf86_platform_devices` is not a complete executable inventory; render-only and compute-only devices must still be found by DDX backend enumeration.
 
-Trace the real target call graph and select the narrowest DDX-owned lifecycle point where the backend can enumerate all devices it serves and has the exact backend handle/context needed for registration. If the modesetting driver's current ownership model cannot create a backend context for a render-only/no-Screen device, do not pretend that a Screen probe solves it. Either add a genuinely DDX-wide device-enumeration path with correct ownership, or report why modesetting is not yet an XAverius-capable DDX and identify the correct DDX adapter boundary. A blocker report is preferable to fake support.
+### 3.1 Required DDX callback window
 
-The normative §2.4 startup barrier is part of Phase A's required integration contract, not an optional later-phase dependency: the platform hotplug/identity observation path MUST be active before the corresponding initial DDX scan begins, and events racing with the scan MUST be reconciled by source generation and observation ordering before initial publication. The initial barrier closes only after every configured DDX pass and the platform identity/hotplug initial pass has reached a terminal COMPLETE or UNAVAILABLE/FAILED result, identity canonicalization and deterministic binding selection have been resolved for publishable candidates, and each published candidate has a complete snapshot. PENDING keeps the barrier closed. A terminal failure is accounted for; it does not imply physical removal and does not block already completed independent devices indefinitely. The barrier MUST NOT wait for Screen creation, RandR, a ScreenAttachment, or a window. Phase A need not implement the entire ongoing hotplug/reconciliation subsystem, but it MUST wire or preserve the startup observation-before-scan and initial-event-reconciliation path. If that minimum path does not exist, mark Phase A BLOCKED/NOT ACCEPTED and identify the exact missing adapter/API; merely listing it as a future dependency is insufficient.
+The narrowest suitable existing core window is the beginning of `xf86BusConfig()`: DDX modules and their `DriverRec` entries are available, the initial bus/platform scan has run, and the Screen-oriented `xf86CallDriverProbe()` path has not started.
 
+The current `DriverRec` has no DDX-wide PhysicalDevice discovery callback. Phase A therefore requires a small explicit core-to-DDX seam: preferably an optional driver-level callback associated with `DriverRec` (or an equivalent registered callback with identical ownership and ordering), invoked once per loaded DDX enumerator/module generation before any Screen-oriented probe. If extending `DriverRec`, append the member rather than inserting it among existing members; preserve existing field offsets and report module-ABI implications. Do not rename existing members or change `platformProbe`, `PciProbe`, or `Probe` semantics.
+
+The callback must have a once-per-generation guard; use a DDX-owned context independent of `ScrnInfoPtr` and `ScreenPtr`; enumerate every device served by that DDX, including render-only/no-Screen devices; register complete per-device bindings directly with the process-wide registry; return the classified pass result from §2.1; and have an explicit teardown path independent of `FreeScreen()`. The callback name and exact C signature are implementation-defined. A different mechanism is acceptable only if its call graph, ownership, generation handling, and ordering are equally explicit.
+
+Do not put discovery in `ms_pci_probe()`, `ms_platform_probe()`, `xf86CallDriverProbe()`, or a modesetting Screen callback as a substitute. Those are Screen-probing/configuration paths and can be retried or skipped according to Screen/output matching. The modesetting paths include `check_outputs()` and `xf86AllocateScreen()`; neither may gate registration. `PreInit()` is per-`ScrnInfo`, and its entity fd is not a DDX-wide inventory. Do not use the first Screen, platform device, Entity, or GPU Screen as inventory source or default-device policy, and do not reuse the first Screen's DRM fd/context for other PhysicalDevices.
+
+If modesetting cannot create a backend context for a render-only/no-Screen device, do not pretend that a Screen probe solves it. Add a genuinely DDX-wide backend path with correct ownership, or report why modesetting is not yet an XAverius-capable DDX and identify the correct adapter boundary. A precise blocker is preferable to fake support.
+
+### 3.2 Startup observation and event reconciliation
+
+The startup barrier is part of Phase A. The current tree enables udev reception early but installs normal event-loop delivery later in `InitInput()`. Before initial devices are published or the barrier opens, the implementation must establish the initial DRM identity/hotplug observation, account for events queued since `udev_monitor_enable_receiving()`, reconcile scan results and add/remove events using explicit source/device generations and observation ordering, and transfer ongoing delivery to the event loop without a gap or unordered duplicate transition.
+
+The later `config_udev_init()` scan and `SetNotifyFd()` registration do not satisfy this pre-publication requirement merely because the monitor socket was enabled earlier. If the current udev/config API cannot expose an ordered early snapshot and event drain, add the smallest targeted core/config adapter and report its exact API and ownership. Do not bypass the server serialization domain or treat an unprocessed queued event as reconciled. If a complete initial observation cannot be established, report terminal UNAVAILABLE/FAILED; do not fabricate removal or publish an ambiguous candidate.
+
+The initial barrier closes only after every configured DDX pass and the platform identity/hotplug initial pass is terminal COMPLETE or UNAVAILABLE/FAILED, identity canonicalization and deterministic binding selection are resolved for publishable candidates, and every published candidate has a complete snapshot. PENDING keeps the barrier closed. Terminal failure is accounted for; it does not imply physical removal or block independent completed devices indefinitely. The barrier must not wait for Screen creation, RandR, ScreenAttachment, or a window.
+
+Phase A need not implement all ongoing hotplug handling, but it must wire or preserve startup observation-before-scan and initial-event reconciliation. If that minimum path does not exist, mark Phase A BLOCKED/NOT ACCEPTED and identify the exact missing adapter/API; do not defer it silently.
 ## 4. Identity and multiplicity rules
 
 - Enumerate all devices served by one DDX instance, not just the device attached to one configured Screen.
