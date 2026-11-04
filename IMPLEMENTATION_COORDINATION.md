@@ -390,3 +390,12 @@ This is a source-level architecture review only; no implementation files were mo
 
 
 - **Additional wire-level gaps in this push:** enumeration omits UNAVAILABLE devices and REMOVED tombstones; queue-family queries reject UNAVAILABLE devices instead of returning the retained snapshot; property queries collapse non-AVAILABLE state into `BadMatch` rather than property-specific `NOT_AVAILABLE`/status behavior; XID lookup is a private-list scan rather than typed DIX resource validation. These need fixing independently of the binding redesign.
+
+
+## Staged Xserver migration plan — 2026-11-04
+
+A concrete, ordered migration plan has been added at `implementation-notes/xserver-wip-xaverius-migration.md`. It maps the current `X11Libre/xserver:wip/xaverius` source constructs to the normative direct DDX-binding architecture and divides the work into seven buildable phases: (A) DDX-wide discovery vs Screen setup; (B) snapshot vs typed binding and ModuleRole; (C) atomic duplicate-safe registration; (D) DIX resource ownership; (E) request-handler snapshot semantics; (F) ScreenAttachment; (G) hotplug/unload/shutdown.
+
+The plan explicitly records the current blockers: callback/snapshot alias, missing native handle/context/typed operations/generations, Screen-scoped discovery, last-writer-wins duplicate registration, simplistic identity matching, list-based XID lookup, incomplete status semantics, and missing shutdown integration. It also defines acceptance gates and forbids adding a second provider/candidate inventory.
+
+**Write-access limitation:** an attempt to create `Xext/xaverius/MIGRATION.md` directly in `X11Libre/xserver:wip/xaverius` was rejected by GitHub with HTTP 403 (integration lacks write access to that repository). No Xserver source or branch was changed. The complete migration plan is therefore committed in the authoritative spec repository for the Xserver agents to apply. This is not a claim that the source migration itself has been implemented.
