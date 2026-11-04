@@ -88,10 +88,10 @@ A selected provider MUST implement the following operation groups for every capa
 | Logical-device lifecycle | `create_logical_device`, `get_queue`, `destroy_logical_device` | Create the Vulkan logical device with the exact validated queues/features/extensions; obtain queues for the requested family/index; destroy the logical device after its dependent work is quiescent. |
 | Buffer and memory | `create_buffer`, `get_buffer_memory_requirements`, `allocate_memory`, `free_memory`, `bind_buffer_memory`, `write_buffer`, `read_buffer` | Implement the Buffer/Memory semantics, alignment and range rules, upload/readback snapshot barriers, and transfer completion contracts in `memory-buffers.md`. |
 | Shader, descriptor, and pipeline objects | create/destroy ShaderModule, DescriptorSetLayout, DescriptorPool, DescriptorSet, PipelineLayout, and ComputePipeline operations; descriptor updates | Implement the exact validated object descriptions and Vulkan dependency/lifetime ordering in `shaders-pipelines.md`. |
-| Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-buffers.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
+| Command recording | create/destroy/reset command pools and command buffers; begin/end recording; encode every v0.1 command opcode | Implement the validated command stream and command-buffer state machine in `command-recording.md`. The provider MUST NOT reinterpret or reorder XAverius request ordering. |
 | Synchronization | create/destroy semaphores and fences; host signal; host wait; queue signal/wait integration; fence status/wait/reset operations | Implement binary/timeline semaphore and fence behavior in `synchronization.md`, including the specified WAIT_ANY/WAIT_ALL and timeout semantics. |
 | Queue execution | `queue_submit` and any backend completion/retirement operation | Submit the already validated dependency graph to the exact queue. Accepted submissions complete asynchronously and report one terminal outcome through the server's serialized completion path. |
-| Presentation | surface support/capability query for an exact Device/Surface pair; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. ScreenAttachment MUST NOT substitute for the exact Device/Surface support query. |
+| Presentation | surface create/destroy; surface support/capability query for an exact Device/Surface pair; surface-format and present-mode query; swapchain create/destroy; image acquire; queue present | Implement the presentation profile only when enabled. ScreenAttachment MUST NOT substitute for the exact Device/Surface support query. |
 
 The names above describe semantic operations, not mandatory C symbol names. A provider MAY implement several rows through shared internal helpers, but it MUST preserve each operation's validation boundary, result classification, ordering, and lifetime semantics. All create operations MUST either return a complete provider object or fail without exposing a partially initialized object. If the backend partially creates objects before failure, the provider MUST roll them back or retain them privately until safe cleanup; the server MUST NOT publish the corresponding XAverius resource.
 
@@ -266,9 +266,26 @@ typedef struct GpuProviderOps {
     GpuProviderResult (*write_buffer)(
         GpuProviderDevice *, const GpuProviderWriteInfo *,
         GpuProviderOperationToken *);
+    GpuProviderResult (*wait_semaphores)(
+        GpuProviderDevice *, const GpuProviderWaitInfo *,
+        GpuProviderWaitResult *);
+    GpuProviderResult (*wait_for_fence)(
+        GpuProviderDevice *, GpuProviderFence *, uint64_t timeout_ns,
+        GpuProviderWaitResult *);
+    GpuProviderResult (*create_surface)(
+        GpuProviderDevice *, const GpuProviderSurfaceInfo *,
+        GpuProviderSurface **);
+    void (*destroy_surface)(GpuProviderSurface *);
     GpuProviderResult (*query_surface_support)(
         GpuProviderDevice *, GpuProviderSurface *,
         GpuProviderSurfaceSupport *);
+    GpuProviderResult (*create_swapchain)(
+        GpuProviderDevice *, GpuProviderSurface *,
+        const GpuProviderSwapchainInfo *, GpuProviderSwapchain **);
+    void (*destroy_swapchain)(GpuProviderSwapchain *);
+    GpuProviderResult (*acquire_next_image)(
+        GpuProviderDevice *, GpuProviderSwapchain *,
+        const GpuProviderAcquireInfo *, GpuProviderAcquireResult *);
     GpuProviderResult (*queue_present)(
         GpuProviderQueue *, const GpuProviderPresentInfo *,
         GpuProviderOperationToken *);
