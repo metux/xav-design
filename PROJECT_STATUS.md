@@ -2,16 +2,16 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Latest exact-tip CI-verified tip:** `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`  
+**Latest exact-tip CI-verified tip:** `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`  
 **Status:** Normative v0.1 specification work is substantially complete; the latest verified static CI baseline is green; later status-document refreshes are pending exact-tip CI. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). This file is the live summary; durable protocol rules belong in the normative specification, not here.
 
 ## Current verified baseline
 
-- Exact-tip CI: [workflow 41843046752](https://github.com/metux/xav-design/actions/runs/41843046752) — SUCCESS on `5e213d62a116fe2c785c9ba5513a8129f3a4eda0`.
-- The exact-tip run passed all required checks, including 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and the required-check audit. The Screen-close contract also passed workflow 41843032895.
-- This verifies the XLibre source mapping, DDX Screen-close/provider-module lease rules, and architecture vectors 67–75, in addition to the earlier provider/registry and presentation contracts. Newer commit `5d3c0f69e715a8a0e89b1217e6101c2b1500da21` adds an explicit provider-wide quiescence hook and stronger callback-return retirement semantics; its exact-tip CI is pending.
+- Exact-tip CI: [workflow 41843078578](https://github.com/metux/xav-design/actions/runs/41843078578) — SUCCESS on `5d3c0f69e715a8a0e89b1217e6101c2b1500da21`.
+- All 19 workflow steps passed: 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, backend-discovery/handler/callback audits, and required-check audit.
+- This verifies the XLibre source mapping, DDX Screen-close/provider-module lease rules, architecture vectors 67–75, mandatory provider-wide `quiesce_provider` hook, PENDING/SUCCESS/FAILURE semantics, and callback-return requirement on exact-token retirement. The newer source-mapping/vector commit `3a42c1a63e68016d952f91542b858fee3d35d300` adds vectors 76–77 about `DuplicateModule()` and final `dlclose()`; its exact-tip CI is still running.
 - These results establish static/specification consistency only. They do not establish live X11/XGE interoperability or runtime Vulkan backend conformance.
 
 ## Protocol and profile status
@@ -69,4 +69,4 @@ The Xlibre/Xorg integration profile now specifies platform-discovery, DDX-topolo
 The registry architecture now makes provider unload a two-phase quiescence operation: per-Screen close detaches only topology, accepted operation retirement includes callback return, and provider-wide quiescence must prove no callback/worker can enter module code before the final provider/module lease is released. An unquiesceable provider is quarantined. The normative hook `quiesce_provider` and its result type are in the provider operation-table sketch; exact-tip CI is pending at `5d3c0f69`.
 
 
-The source-level loader review adds one important implementation constraint: Xorg's duplicated `ModuleDesc` for a `ScrnInfo` shares the module handle and is not an independent provider pin; final `LoaderUnload()` calls `dlclose()`. Provider code therefore needs a separate loader/module lease beyond Screen references. Vectors 76–77 cover module unload while provider objects and callbacks remain live. This refinement is newer than the current green baseline and awaits exact-tip CI.
+The source-level loader review adds one important implementation constraint: Xorg's duplicated `ModuleDesc` for a `ScrnInfo` shares the module handle and is not an independent provider pin; final `LoaderUnload()` calls `dlclose()`. Provider code therefore needs a separate loader/module lease beyond Screen references. Vectors 76–77 cover module unload while provider objects and callbacks remain live. Commit `3a42c1a` adds this refinement and awaits exact-tip CI.
