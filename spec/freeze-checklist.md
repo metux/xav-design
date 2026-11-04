@@ -69,9 +69,9 @@ These remain open until an actual XAverius implementation exists and the evidenc
 
 ## Freeze decision
 
-The render/scanout routing contract, explicit PresentationRoute object, route create/retire operations, and route-generation lifecycle are verified at `df2d09ac8992229934cb407506baed2865a0416d` by exact-tip [workflow 41836070379](https://github.com/metux/xav-design/actions/runs/41836070379): 4,958 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits.
+The render/scanout routing contract, explicit PresentationRoute object, route create/retire operations, route-generation lifecycle, exact logical-Device route binding, evidence-bearing physical-removal API, and classified registry result enum are verified at `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29` by exact-tip [workflow 41840312155](https://github.com/metux/xav-design/actions/runs/41840312155): 4,963 wire-layout checks, 72 Timeline regressions, 693 Python tests, shared-header compilation, XCB client build, request/reply/XGE validation, and required audits.
 
-The normative design gates are assessed as complete. The latest registry API contract refinements are covered by exact-tip CI at `aaa93b0ffdea9edb1b7a82f1b7eaaaadc3ef6e29`; the subsequent provider-state-transition return-value clarification is a new architecture-only delta and requires its own exact-tip CI. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
+The normative design gates are assessed as complete. The latest registry API refinements covered by that verified tip include evidence-bearing physical removal and classified outcomes. Subsequent provider-state-transition return-value changes, authority validation against registered discovery-source trust, and status-document refreshes are newer deltas and require exact-tip CI. The remaining items below are integration coordination or implementation acceptance gates, not unresolved v0.1 wire-design decisions:
 - [ ] Obtain implementation-agent Phase 1 ship confirmations and name the shared registry/provider integration-interface owner.
 - [ ] Validate live X11/XGE interoperability against an actual server and XAverius implementation.
 - [ ] Validate end-to-end compute execution and lifecycle behavior against a real Vulkan backend.
@@ -119,3 +119,6 @@ No wire layouts, opcodes, status values, or event IDs changed. Exact-tip CI for 
 ### Registry API result and generation contract — 2026-11-04
 
 The registry API now requires provenance-bearing evidence to confirm physical removal, returns explicit classified outcomes for that transition, and returns classified outcomes for provider context/device unavailable and recovery transitions. Stale generations, unknown providers, and absent selected bindings are observable rejections and MUST NOT silently mutate state. The removal evidence source key is borrowed only for the call and resolved before return. This is an internal architecture/API contract; it changes no wire ABI or request assignment. The provider-state-transition return-value clarification is in `bbda0c5036306b0497cda41b825a074b6608460f`; exact-tip CI is pending.
+
+
+The registry removal authority rule is also explicit: a caller cannot elevate its source by setting the evidence authority field. The registry derives or verifies the allowed authority class from the registered source, validates the exact source/observation/device generations, and rejects insufficient or stale evidence without changing status. This clarification is in `3172dd2ef7579f621f3f468a6ede2028ffdf312b` and is pending exact-tip CI.
