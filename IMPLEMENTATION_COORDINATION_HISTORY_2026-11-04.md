@@ -1288,3 +1288,38 @@ Required corrective action for the next implementation commit:
   and exit statuses. Fix the build/link failures and rerun the exact target
   branch workflow before requesting review.
 
+
+
+### Follow-up Phase A / out-of-scope implementation audit — Xserver `4c35fcc`, `8f0266f`, `189eac7` — 2026-11-04
+
+Audited the implementation sequence on `X11Libre/xserver:wip/xaverius`:
+
+- `4c35fcce487f95b48252f8cf696504cbc8ca2feb` (parent `4cd8fc3...`): Phase A fixup.
+- `8f0266fd21bf6c0daf699c6fc4fbec06ad830fab` (parent `4c35fcc...`): DDX operation-table type declarations.
+- `189eac7532db7530f70a68f2e659216aa19df626` (parent `81ce9fc...`): Compute Memory handlers, subopcodes 16–24.
+
+**Disposition: Phase A remains NOT ACCEPTED. Phase B remains unauthorized.** The new call site is directionally correct, but the fixup has independent correctness and normative-contract failures:
+
+1. **DriverRec ABI guard is not safe.** `include/xf86str.h` appends `RegisterXaveriusDevices`; `xf86Bus.c` reads it with `if (drv && drv->RegisterXaveriusDevices)`. A NULL check does not establish that an older binary DDX allocated a `DriverRec` large enough to contain the new member. The task explicitly requires an enforced ABI bump or a versioned/size-tagged registration mechanism. The agent's claim “ABI-safe” is false.
+2. **No once-per-generation guard.** The loop in `xf86BusConfig()` calls the callback whenever that function is entered. No module-generation identity or once guard is implemented.
+3. **The startup-event claim is factually wrong.** The commit says `config_udev_init()` enumerates before `xf86BusConfig()`. In the inspected Xorg call order, `config_udev_init()` is called by later `InitInput()`, after `InitOutput()` and `xf86BusConfig()`. The early monitor receives events, but this commit neither drains nor reconciles them before PhysicalDevice publication. The startup barrier/A9 requirement remains wholly unimplemented.
+4. **Render-node path is wrong.** The modesetting callback loops `i = 0..31` and opens `/dev/dri/renderD%d` using the same index as `card%d`. Linux render nodes conventionally use minor-derived names beginning at `renderD128`; this loop will not discover the corresponding normal render nodes. It also does not use the target's authoritative DRM enumeration/correlation API.
+5. **Non-PCI identity still collapses.** `XaveriusDeviceIdentity` has no canonical sysfs path or stable non-PCI bus identity field. The comparator only tests whether PCI tuple fields are zero and then compares optional UUID. The modesetting callback supplies zero BDF and no UUID for non-PCI devices. Thus all such identities compare equal. The comments claiming fallback to devnode path plus `drmGetBusid` are not implemented.
+6. **DIX resource registration is broken.** `XaveriusRegisterDeviceDirect()` calls `AddResource(xid, XaveriusPhysicalDeviceType, dev)` before deep-copying the snapshot, then calls `AddResource` a second time with the same XID/type/pointer. The second registration conflicts with the already-added resource. Error paths after the first call free `dev` without removing the first resource, leaving a dangling resource value. Also `XaveriusExtensionInit()` does not call `xaverius_device_init()`, so `XaveriusPhysicalDeviceType` remains zero unless initialized elsewhere; no such call is present in the audited path. `XaveriusRegistryFini()` frees list records directly without coordinating DIX resource removal/destructors, risking stale resource references/double frees.
+7. **The entry point is still not exported.** In the inspected `xaverius.c`, `XaveriusExtensionInit()` is declared `static`, while `miinitext.c` references the external symbol `XaveriusExtensionInit`. The commit message claims it was restored as non-static, but the source does not match that claim. `xaverius_extension_init()` is a separate wrapper and does not satisfy the existing extension table.
+8. **Complete binding still missing.** The registry record stores an fd and a `void *context`, but the registration signature still accepts only identity + capability snapshot + fd + context. It does not accept or retain the immutable typed `GpuDeviceBackendOps`, per-device operation-table pointers, ModuleRole, callback admission/quiescence hooks, or a binding generation. The `8f0266f` commit only declares operation-table types in `xaverius_priv.h`; it does not connect them to the PhysicalDevice binding/registry or provide a dispatch path. This is not the direct binding required by the normative architecture.
+9. **Native-handle ownership and duplicate behavior are undefined/incorrect.** The modesetting callback does not check registration results or close/release fds on duplicate/failure paths. The registry returns TRUE for any matching identity without verifying that the exact binding is the same and without disposing of the newly supplied fd/context. On successful registration, shutdown does not close/release the retained fd/context. No ownership-transfer contract exists.
+10. **Phase-B implementation proceeded without authorization.** `189eac7` adds Compute Memory handlers (subopcodes 16–24) before Phase A acceptance. They do not dispatch through the newly declared DDX operation tables: memory requirements are hardcoded (`alignment = 256`, `memory_type_bits = 0xFFFFFFFF`), and WriteBuffer/ReadBuffer do not perform backend transfers but return success after validation. This is not a harmless stub: it reports successful operations without executing them and conflicts with the normative backend operation contract. Do not build further work on these handlers until the Phase A gate is accepted and Phase B is explicitly opened.
+11. **CI status is not yet proof of success.** The Xserver workflow for `189eac7`, run [41921533156](https://github.com/X11Libre/xserver/actions/runs/41921533156), was still in progress at audit time. Earlier workflows for `4c35fcc` and `8f0266f` were cancelled by subsequent pushes. The previous `4cd8fc3` run failed. No A1–A9 harness or structured report has been supplied.
+
+Required next actions (keep the diff narrowly scoped and preserve names/style):
+
+- Stop adding Phase B request handlers. Do not claim success from placeholder handlers.
+- Fix the `DriverRec` ABI contract without an unsafe trailing-field read; implement an explicit once-per-module-generation guard.
+- Correct the startup sequence: add the smallest early udev snapshot/event-drain/reconciliation adapter before publication, or mark the modesetting Phase A adapter blocked.
+- Use canonical DRM enumeration and `drmDevicesEqual`/sysfs identity evidence; correctly correlate primary and render nodes, including render minors starting at 128. Never infer non-PCI identity from all-zero BDF fields.
+- Make PhysicalDevice resource creation a single atomic transaction: initialize resource types first, deep-copy before publication, register exactly once, and define one owner/destructor path for both DIX and registry teardown.
+- Export the existing `XaveriusExtensionInit` symbol exactly as `miinitext.c` expects; do not rename the entry point.
+- Attach the immutable typed operation vectors and exact ModuleRole/binding generation to the PhysicalDevice binding. Until that exists, do not publish an executable/AVAILABLE PhysicalDevice from metadata plus an fd.
+- Define explicit fd/context ownership on success, duplicate, and failure; compare duplicate binding identity/generation rather than silently returning success.
+- Add the fake DDX A1–A9 harness and report every result with exact commands and exit statuses. Request review only after the exact branch tip builds successfully.
