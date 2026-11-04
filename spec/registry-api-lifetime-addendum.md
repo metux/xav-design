@@ -16,6 +16,10 @@ The function MUST initialize `*out_context = NULL` before validation. It returns
 
 Provider operation entry points MUST receive the provider/device/queue objects through their declared typed arguments; they MUST NOT use this accessor to bypass per-operation admission, token preparation, binding-generation validation, or resource pinning.
 
+## 1.1 Scope after DDX-direct dispatch clarification
+
+The `GpuBackendProvider` pointer and `GpuBackendProviderGetContext()` accessor refer only to the shared DDX module-role/control record described in `device-registry-architecture.md` §3.1. They MUST NOT be used as an intermediate per-request dispatch lookup. Per-device backend context and native physical-device handles belong to the exact PhysicalDevice binding and are passed to the typed operation entry point through its device/binding arguments. The shared role context, if any, is for module-wide resources and lifecycle coordination only. A DDX that needs no shared context may use an opaque role token solely for generation and lifetime accounting.
+
 ## 2. Provider operation-table storage
 
 The descriptor's `ops` pointer is not the only callback-bearing storage. Every non-NULL nested table (`buffer_memory`, `shader_pipeline`, `commands`, and `synchronization`) and every function pointer reachable through those tables MUST remain immutable and executable until the provider generation's final `release_provider` call has returned.
