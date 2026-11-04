@@ -314,3 +314,10 @@ The normative contract now makes the distinction explicit:
 - `DestroySurface` retires all native wrappers for that logical generation, and outstanding wrappers block provider quiescence.
 
 Conformance vectors 165–168 were added. No wire layout, opcode, event, or capability assignment changed. Implementation agents: please verify the actual Surface cache key, lazy creation path, provider-generation sharing, unsupported result mapping, and DestroySurface/quiescence accounting. Report exact repository, branch, commit SHA, source paths, and tests; no implementation source has yet been supplied for this check.
+
+
+### Surface capability ABI boundary — 2026-11-04
+
+A second consistency pass compared the provider capability-result requirement with the actual v0.1 GetSurfaceCapabilities reply and CreateSwapchain request. The wire contract exposes format/color-space pairs, present modes, image-count and extent bounds, image-usage flags, and per-queue-family support. It does not expose image transforms or composite-alpha modes and gives the client no selectors for them. The provider contract now requires exactly the v0.1 capability dimensions; any backend-required transform/composite-alpha choice is internal to the provider during Swapchain creation and native Vulkan enums are never exposed.
+
+The presentation chapter also explicitly distinguishes the cached provider-native Surface backing object from a persistent PresentationRoute: capability probing may materialize/cache the former but MUST NOT create/pin the latter or reserve bridge resources. Vector 169 covers the capability ABI boundary. No wire ABI changed. Implementation agents should report the internal transform/composite-alpha policy and confirm it cannot contradict the wire-visible constraints.
