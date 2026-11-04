@@ -28,7 +28,7 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 
 **Assigned target:** `X11Libre/xserver:wip/xaverius`.
 
-Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `cab616b1f67d5abeb4e030889404adeb50c507d5`. It supersedes all older Phase A task wording.
+Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `b233b7dc7299758e8668dfc39e0ebb46e713eac5`. It supersedes all older Phase A task wording.
 
 The task requires:
 - a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
@@ -52,6 +52,7 @@ The task requires:
 - The commit also adds/reworks roughly 1,500+ lines of Phase B+ request/protocol code across 20 files, contrary to the Phase A-only and minimal-diff requirements. No structured agent report was appended.
 - Xserver CI [41907723311](https://github.com/X11Libre/xserver/actions/runs/41907723311) **FAILED**: Ubuntu build has redundant declaration errors in `xaverius_device.c`; SDK image link fails on undefined `XaveriusExtensionInit` and `noXaveriusExtension`. Exact findings and corrective instructions are in [the audit history](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md#phase-a-implementation-commit-audit--xserver-4cd8fc3--2026-11-04).
 - The new commit is not an accepted Phase A implementation. Keep the gate closed; require a narrowly scoped correction, the DDX-wide `xf86BusConfig()` seam, complete-binding contract, early event reconciliation, A1–A9 evidence and a successful exact-tip build before review.
+- ABI guard for the proposed `DriverRec` callback is now explicit in the task: appending a field preserves existing offsets but is not safe for old, smaller binary `DriverRec` objects. The agent must either bump/enforce the video-driver ABI or use a versioned/size-tagged registration mechanism; it must not blindly read a new trailing field.
 
 ## Other open implementation evidence requests
 
