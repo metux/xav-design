@@ -104,7 +104,7 @@ class PresentationLifecycleContractTests(unittest.TestCase):
         devices = (ROOT / "spec" / "devices.md").read_text(encoding="utf-8")
         screen = self.presentation.split(
             "### X11 Screen identity and multi-Screen servers", 1
-        )[1].split("\\n### ", 1)[0]
+        )[1].split("\n### ", 1)[0]
         for phrase in (
             "server-wide, not scoped to an X11 Screen",
             "first X11 Screen",
