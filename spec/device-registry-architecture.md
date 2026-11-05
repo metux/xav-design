@@ -761,7 +761,8 @@ typedef struct GpuDeviceBackendOps {
 } GpuDeviceBackendOps;
 
 /* These DDX-supplied registration descriptors are independently versioned
-   because they cross the loadable-module boundary. */
+   because they cross the loadable-module boundary. v1 covers the descriptor
+   layout and all three ModuleRole hook signatures. */
 #define GPU_MODULE_ROLE_DESCRIPTOR_ABI_VERSION 1u
 typedef struct {
     uint32_t struct_size; /* MUST equal sizeof(GpuModuleRoleDescriptor) for v1. */
@@ -773,6 +774,8 @@ typedef struct {
     GpuModuleQuiescenceResult (*quiesce_module_role)(GpuModuleRole *);
 } GpuModuleRoleDescriptor;
 
+/* v1 covers this registration descriptor layout. The callback ABI supplied
+   through `ops` is governed independently by GPU_DEVICE_BACKEND_OPS_ABI_VERSION. */
 #define GPU_DEVICE_BACKEND_REGISTRATION_ABI_VERSION 1u
 typedef struct {
     uint32_t struct_size; /* MUST equal sizeof(GpuDeviceBackendRegistration) for v1. */
