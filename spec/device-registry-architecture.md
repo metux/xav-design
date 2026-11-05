@@ -450,7 +450,7 @@ The DDX binding's `query_surface_support` and capability operations MUST evaluat
 
 A successful `CreateSwapchain` binds the Swapchain to the exact presentation route generation selected for that Device/Surface pair. All images and accepted presentation operations for that Swapchain use that route. The route and its backend references remain pinned until the Swapchain and all in-flight presentation operations have safely retired. A later topology, bridge, or route-generation change MUST NOT silently reroute an existing Swapchain. It makes that Swapchain `OUT_OF_DATE` for new acquire/present operations; the client must query again and create a replacement Swapchain. A stale route callback MUST be rejected by its captured route, DDX backend, Surface, Screen, and Swapchain generations.
 
-The selected DDX binding is the route coordinator and MUST retain a non-reusable route generation plus references to the exact target Screen, scanout binding, and any bridge resources. A server-side DDX/display adapter MAY participate through an explicit private bridge interface (for example, import/export of an OS shared-resource handle and a defined synchronization handoff); it MUST NOT receive or dereference another DDX binding's Vulkan dispatchable handles. Any cross-device resource transfer MUST have explicit importability, format/modifier, ownership, cache-coherency, and completion guarantees. If those guarantees cannot be established, the route is unsupported. The route coordinator remains responsible for ensuring that QueuePresent acceptance and terminal/image-release milestones cover the complete bridge path, not merely completion of the render-GPU copy submission.
+The server presentation subsystem allocates a fresh nonzero, non-reusable route generation before invoking the selected DDX binding's route-creation operation. It passes that generation to the DDX binding, which MUST store it in the opaque route wrapper and use it to reject stale route callbacks. The selected DDX binding is the route coordinator and MUST retain references to the exact target Screen, scanout binding, and any bridge resources. A server-side DDX/display adapter MAY participate through an explicit private bridge interface (for example, import/export of an OS shared-resource handle and a defined synchronization handoff); it MUST NOT receive or dereference another DDX binding's Vulkan dispatchable handles. Any cross-device resource transfer MUST have explicit importability, format/modifier, ownership, cache-coherency, and completion guarantees. If those guarantees cannot be established, the route is unsupported. The route coordinator remains responsible for ensuring that QueuePresent acceptance and terminal/image-release milestones cover the complete bridge path, not merely completion of the render-GPU copy submission.
 
 A route that is temporarily unavailable is reported for the exact Device/Surface pair as `DEVICE_UNAVAILABLE`; this status does not by itself transition the render PhysicalDevice or logical Device to UNAVAILABLE/DEVICE_LOST. A route that is permanently unsupported returns `SUCCESS` with no present-capable queue from GetSurfaceCapabilities and `UNSUPPORTED_CONFIGURATION` from CreateSwapchain. If a pinned route generation changes, the associated live Swapchain becomes `OUT_OF_DATE`. If a route operation fails after QueuePresent acceptance without a more specific lifecycle cause, the accepted presentation terminates as `PRESENTATION_FAILED`. These mappings do not weaken the independent module-role/binding availability and exact logical-Device loss rules.
 
@@ -583,7 +583,6 @@ typedef struct {
 } GpuDeviceRemovalEvidence;
 
 typedef struct {
-    uint64_t route_generation;
     uint64_t screen_generation;
     uint64_t scanout_device_generation; /* zero when no separate scanout device is used */
     uint32_t route_kind; /* direct WSI or DDX backend-managed bridge; private enum */
@@ -722,6 +721,7 @@ typedef struct GpuDeviceBackendOps {
        this route until swapchain retirement. */
     GpuBackendResult (*create_presentation_route)(
         GpuBackendDevice *, GpuBackendSurface *,
+        uint64_t server_route_generation,
         GpuBackendPresentationRoute **,
         GpuBackendPresentationRouteInfo *);
     GpuBackendResult (*destroy_presentation_route)(
