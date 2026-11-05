@@ -145,7 +145,7 @@ The commit description/review must state: (1) its single topic and why it is ind
 Registration is one failure-atomic operation:
 
 1. Validate descriptor size/version, mandatory identity fields, native handle, context and ModuleRole generation.
-2. Acquire exact ModuleRole admission/reference and context reference. Reject if the role is QUIESCING/retired.
+2. Acquire the exact ModuleRole admission/reference. Reject if the role is QUIESCING/retired. The native handle and per-device context are borrowed DDX-owned values: the registry does not acquire context references, invoke context retain/release callbacks, or free either value; the DDX keeps both valid through exact binding removal and retirement of all dependent users.
 3. Copy the ops structure and each typed sub-table into server-owned immutable storage. Validate all required function pointers and all capability-to-operation consistency. No partial table is publishable.
 4. Canonicalize identity using authoritative bus/sysfs/DRM evidence, primary/render-node correlation, UUID corroboration and stable DDX-scoped instance identity as specified. Never derive BDF from vendor ID, device ID, API version or driver version.
 5. Resolve duplicate/ambiguous identity. Exact duplicate evidence may be idempotent only if it resolves to the same physical incarnation and compatible exact binding ownership. Conflicting contexts/handles/ops/snapshots are never merged and never treated as unconditional success. Ambiguous identity stays unpublished.
