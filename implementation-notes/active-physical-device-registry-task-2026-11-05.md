@@ -115,7 +115,7 @@ Do not add context ref callbacks: context lifetime is a DDX-side obligation prot
 - OpenBSD and Cygwin CI repair: separate low-priority fleet tasks continue. Do not spend registry time on them.
 - DDX-wide discovery, udev subscribe-before-scan, modesetting enumeration/call site, and ScreenAttachment integration: separate follow-up task after the registry core is reviewed. Do not invent a fake DDX discovery API to make a demo pass.
 - Protocol requests/replies, opcodes, XID enumeration/query handlers, Compute Memory handlers, Vulkan object/backend operations: later phases only. Do not revive the premature Compute Memory handler work from the discarded branch.
-- Do not cherry-pick registry/inventory implementation commits from `wip/xaverius_old_1` or any discarded branch. The old branch is forensic reference only.
+- Do not cherry-pick or merge any implementation from `wip/xaverius_old_1` or any legacy `rfc/xaverius*` branch (`rfc/xaverius-core-protocol`, `rfc/xaverius-devices`, `rfc/xaverius-compute-base`, `rfc/xaverius-compute-base-rebased`, `rfc/xaverius-compute-lifecycle`, `rfc/xaverius-presentation`, `rfc/xaverius-phase2-complete`). These are forensic/historical branches only. Do not resurrect their commits or use them as a source branch. The current live `wip/xaverius` tip is the only implementation base.
 
 ## 6. Small concrete reference example
 
