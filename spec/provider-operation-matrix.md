@@ -111,7 +111,7 @@ The following declarations are semantic C-interface guidance. Exact C type names
 
 All `*_INFO` inputs are immutable, fully validated server-owned descriptions. All returned backend objects are opaque DDX backend wrappers with exactly one owned reference transferred to the server on SUCCESS. The server MUST consume that reference exactly once through the corresponding typed destroy/free operation, or through the explicitly defined successful parent-pool cascade for a CommandBuffer or DescriptorSet.
 
-The four typed operation-table layouts below are subordinate to the top-level `GpuDeviceBackendOps` ABI version. `GPU_DEVICE_BACKEND_OPS_ABI_VERSION` governs all five descriptor layouts together; the nested tables do not carry independent version fields. The registry validates the top-level size/version before reading any nested callback field, then validates the required entries for the enabled v0.1 profile.
+The four typed operation-table layouts below are subordinate to the top-level `GpuDeviceBackendOps` ABI version. `GPU_DEVICE_BACKEND_OPS_ABI_VERSION` governs the top-level descriptor, all four nested table layouts, and every DDX-facing callback signature plus parameter/result structure they reference (including token/completion types); the nested tables do not carry independent version fields. The registry validates the top-level size/version before reading any nested callback field, then validates the required entries for the enabled v0.1 profile.
 
 ```c
 struct GpuBackendBufferMemoryOps {
