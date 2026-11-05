@@ -284,3 +284,13 @@ The four typed operation tables and top-level DDX operations have been cross-che
 ### Failed backend-destroy quarantine versus module unload — 2026-11-05
 
 A lifecycle cross-check found that architecture §4.6 item 6 could be read as allowing a DDX-owned quarantine to satisfy the module-unload gate even when the typed destroy/free operation had failed. This contradicted `provider-operation-matrix.md`, which requires a failed or uncertain destroy to retain the exact binding/module references and forbids retrying the same destroy hook in v0.1. Architecture §4.6 now states that such quarantine is not quiescence and blocks binding-removal completion, module-role quiescence/finalization, and module unload; architecture vector 143 covers the case and independent retirement of unrelated generations. Commit `b51c2ab9802efaa875e25c1cd801b1d31a136c99`. No wire ABI, opcode, request behavior, or operation-table signature changed. Exact-tip CI has not yet been verified.
+
+### Registry API summary and publication-boundary audit — 2026-11-05
+
+A cross-check of the registry overview, API declarations, and DDX operation matrix found three wording defects and corrected them without changing the wire ABI or C operation signatures:
+
+- The overview used the obsolete semantic name `GpuRegistryRemoveDeviceBackend`; it now names the actual `GpuRegistryRemoveDeviceBackendBinding` entry point and its exact generation arguments.
+- The DDX operation-matrix summary could be read as placing module-role quiescence in `GpuDeviceBackendOps`; it now states unambiguously that only `retire_operation` is in the per-device table and all module-role hooks belong to `GpuModuleRoleDescriptor`.
+- Two overview passages implied that a successful physical snapshot immediately publishes a PhysicalDevice/XID. They now distinguish atomic binding/snapshot installation from later publication, which requires resolved identity, selected eligible binding, and an open startup publication gate.
+
+Commits: `c1aad25cf2c366e41d7928d4d258e1a39bf647fa`, `973ebb498454b76dc58ac61ddb8449d9bda3a22c`, `54d0053a6c506926467860b2431b2e13ebe3f289`, `38bd488f78d0655e4d0f522d5711a64f69df4dcd`. No opcode, wire layout, or DDX operation signature changed. Exact-tip CI for these documentation deltas remains to be checked.
