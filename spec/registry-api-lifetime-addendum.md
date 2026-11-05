@@ -12,7 +12,7 @@ There is no independent Vulkan-ICD candidate inventory, no candidate-list callba
 
 A `GpuModuleRole` exists only to pin unloadable DDX code and shared module resources, coordinate callback admission, and establish module-wide quiescence. It is not an execution backend. There is no generic module-role context accessor. Per-device context and native handles are passed directly through the exact DeviceBackendBinding; module-role APIs expose only lifetime and quiescence operations.
 
-The role generation and binding generation are separate, non-reusable identities. A binding retains its role. Operation tokens carry both identities as needed to reject stale callbacks. Module-role shutdown closes admission and drains every binding owned by that role; binding removal affects only one PhysicalDevice. ScreenAttachment teardown remains independent.
+The role generation and binding generation are separate, non-reusable identities. A binding retains its role. Operation tokens carry both identities as needed to reject stale callbacks. Module-role shutdown closes admission and drains every binding owned by that role; binding removal affects only one PhysicalDevice. ScreenAttachment teardown remains independent. The DDX-supplied `GpuModuleRoleDescriptor` and `GpuDeviceBackendRegistration` are also size/versioned v1 descriptors; each API validates its descriptor header before reading later fields, acquiring a loader pin, invoking callbacks, or retaining registration resources. Their exact size/version constants and rejection results are defined in `device-registry-architecture.md`.
 
 ## Lifetime requirements
 
