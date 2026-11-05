@@ -9,6 +9,21 @@
 - This repository is the specification/coordination workspace. Do not implement Xserver source here.
 - Agents poll this file every five minutes. Treat the latest active assignment and its linked task file as instructions.
 
+## Immediate decision — discard current registry and rebuild from clean baseline
+
+**ACTIVE — rollback required before further Xserver implementation.**
+
+- Target: `X11Libre/xserver:wip/xaverius`.
+- Current audited branch tip before rollback: `deb0e445001389be031fa7e006e3e2e216616b50`.
+- Exact pre-inventory/pre-registry rollback target: `f6f3e87aa81724208496d539e40d2eee2c3d2641` (parent of first inventory commit `00fcd15955a0c2bd810034cc8b5b3bf1731d996a)).
+- Verified target tree contains only the original seven Xaverius files and no registry/inventory implementation.
+- **Rollback has NOT been executed:** GitHub rejected the force-with-lease ref update with HTTP 403 (integration lacks branch-write permission). A branch maintainer must execute the exact guarded command in [the rebuild plan](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md). Do not tell agents the rollback is complete until the remote ref is verified at `f6f3e87...`.
+- Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), commit `6c3965315b213eb428045bc08f7c061359a9ebf4`.
+
+**Mandatory design point:** every per-device registration MUST pass a versioned `XaveriusPhysicalDeviceOps` structure containing that device's callbacks, together with structured identity, exact native handle, per-device context and owning ModuleRole generation. The registry copies/validates the immutable typed operation tables, queries the snapshot through that exact binding, and publishes only after complete validation. The four typed operation tables and top-level callbacks follow `spec/provider-operation-matrix.md`; ModuleRole-wide quiescence remains a separate lifetime/control API, not a PhysicalDevice dispatch callback.
+
+Do not patch the broken registry in place, cherry-pick its implementation commits, or continue Phase B. Rebuild in the ordered phases and gates in the plan. Preserve existing names/formatting unless a narrowly justified type/API addition requires otherwise.
+
 ## Normative architecture — short form
 
 - One process-wide XAverius registry owns canonical PhysicalDevice identities, generations, publication and protocol XIDs.
