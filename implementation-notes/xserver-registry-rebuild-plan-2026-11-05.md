@@ -7,6 +7,8 @@
 **Normative authority:** `metux/xav-design:docs/restructure-2026-10-21`  
 **Status:** rollback complete and independently verified at the remote branch ref; implementation plan ready. The first ref-update attempt returned HTTP 403, but a subsequent independent read confirmed the branch now resolves exactly to the target SHA.
 
+**Current execution status (owner-approved 2026-11-05):** The clean rollback is complete and the local baseline build was reported successful. The full portability/SDK matrix has known OpenBSD/Cygwin failures and remaining maintenance work. Those CI repairs continue in separate branches at LOW priority; they are not a gate for starting registry implementation. The active HIGH-priority assignment authorizes implementation Stages 1–4 (types/API, ModuleRole substrate, registry/identity core, registration/snapshot and separate DIX publication): [active task](active-physical-device-registry-task-2026-11-05.md). This owner-approved assignment supersedes the Phase-0-only stop condition below. Do not start DDX discovery, ScreenAttachment, protocol handlers, or backend operations until Stages 1–4 are reviewed and accepted.
+
 ## 1. Decision and rollback boundary
 
 The current registry/inventory implementation is to be discarded as a unit. Do not repair it incrementally and do not cherry-pick its registry commits back.
@@ -172,7 +174,7 @@ Any failure before publication unwinds all provisional state and references. The
 - Build the untouched baseline in the existing CI matrix and save the baseline result.
 - Do not cherry-pick any registry/inventory implementation commits.
 
-**Gate:** exact branch SHA and clean baseline build recorded.
+**Gate (updated by owner 2026-11-05):** exact branch SHA and local clean baseline build are recorded. Complete matrix inventory and OpenBSD/Cygwin repair remain separate LOW-priority maintenance work; they do not block Stages 1–4 of the registry implementation. Record all baseline PASS/FAIL/BLOCKED results honestly.
 
 ### Phase 1 — freeze types and DDX-facing API (no registry implementation yet)
 - Add only the type/API declarations needed for identity, the snapshot member of PhysicalDevice, const PhysicalDeviceOps, binding, ModuleRole and registration descriptor. Keep one canonical PhysicalDevice representation; do not add a parallel DeviceCaps/PhysicalDeviceInfo object.
