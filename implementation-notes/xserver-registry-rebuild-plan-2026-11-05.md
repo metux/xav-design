@@ -58,112 +58,43 @@ It owns deep-copied server memory. It contains no callbacks, native handles, bac
 
 ### 2.3 Per-device binding
 
-One `XaveriusPhysicalDeviceBinding` (or equivalent) is the direct dispatch target for the exact PhysicalDevice. It contains:
+One `GpuDeviceBackendBinding` (or equivalent internal record) is the direct dispatch target for the exact PhysicalDevice. It contains:
 
 - exact DDX-native PhysicalDevice handle;
 - exact per-device backend context;
-- an immutable, server-owned copy of the supplied `XaveriusPhysicalDeviceOps` table and its typed sub-tables;
+- an immutable, server-owned copy of the supplied `GpuDeviceBackendOps` descriptor and its four typed sub-tables;
 - a non-reusable binding generation;
 - a retained reference to the owning `GpuModuleRole` generation;
 - binding state, call admission, in-flight synchronous-call count and async-token references.
 
-The PhysicalDevice holds exactly one selected binding in v0.1. No dispatch proxy, Provider layer, candidate ranking object, generic ModuleRole context accessor, or Screen-private dispatch route is permitted.
+The PhysicalDevice has one selected binding for v0.1 dispatch. Other complete eligible registrations may remain unselected while deterministic selection is unresolved; their operation tables, contexts and snapshots are never merged. No dispatch proxy, Provider layer, candidate-ranking object, generic ModuleRole context accessor, or Screen-private dispatch route is permitted.
 
-### 2.4 PhysicalDeviceOps — mandatory DDX registration input
+### 2.4 DDX operation descriptor — mandatory registration input
 
-The DDX MUST pass a matching `XaveriusPhysicalDeviceOps` structure for **each** registered PhysicalDevice. This is not optional and cannot be deferred to Phase B.
+The DDX MUST pass a matching `const GpuDeviceBackendOps *` through `GpuDeviceBackendRegistration` for **each** registered PhysicalDevice. This is not optional and cannot be deferred to a later phase. The authoritative descriptor and callback signatures are defined by `spec/device-registry-architecture.md` and the four typed tables in `spec/provider-operation-matrix.md`; this plan MUST NOT define a competing callback structure or signature sketch.
 
-The DDX supplies a pointer to a `const XaveriusPhysicalDeviceOps` structure for each registration. The structure is immutable for the duration of the call; the registry validates and copies it into server-owned immutable storage before publication. The structure is an implementation-facing C interface, not wire ABI. It MUST have an explicit `struct_size` and `abi_version` (or an equivalent validated versioned registration descriptor); never read optional trailing fields from an older, smaller structure without a size/version gate.
+The top-level descriptor begins with `struct_size` and `abi_version`. For v0.1, `struct_size` MUST equal `sizeof(GpuDeviceBackendOps)` and `abi_version` MUST equal `GPU_DEVICE_BACKEND_OPS_ABI_VERSION`. The ABI version governs the layouts of all four nested typed tables; they do not have independent version fields. The registry validates this header before reading any callback field, then validates and copies the complete top-level and nested descriptors by value into immutable binding-owned storage. A size mismatch is `INVALID_ARGUMENT`; an unknown ABI version is `UNSUPPORTED`. Neither failure may invoke a callback or retain the supplied handle, context, or module-role reference.
 
-Conceptual shape:
-
-```c
-typedef struct XaveriusPhysicalDeviceOps {
-    uint32_t struct_size;
-    uint32_t abi_version;
-
-    /* Queries the complete immutable snapshot for this exact device. */
-    GpuBackendResult (*query_physical_snapshot)(
-        XaveriusPhysicalDeviceBinding *,
-        XaveriusPhysicalDeviceSnapshot *);
-
-    /* Logical Device lifecycle and queue acquisition. */
-    GpuBackendResult (*create_logical_device)(
-        XaveriusPhysicalDeviceBinding *,
-        const GpuDeviceCreateInfo *, GpuBackendDevice **);
-    GpuBackendResult (*get_queue)(
-        GpuBackendDevice *, uint32_t family, uint32_t index,
-        GpuBackendQueue **);
-    GpuBackendResult (*destroy_logical_device)(GpuBackendDevice *);
-
-    /* Typed per-device operation tables; no generic opcode dispatcher. */
-    const GpuBackendBufferMemoryOps *buffer_memory;
-    const GpuBackendShaderPipelineOps *shader_pipeline;
-    const GpuBackendCommandOps *commands;
-    const GpuBackendSynchronizationOps *synchronization;
-
-    /* Queue submission and presentation operations for this binding. */
-    GpuBackendResult (*queue_submit)(
-        GpuBackendQueue *, const GpuBackendSubmitInfo *,
-        GpuBackendOperationToken *);
-    GpuBackendResult (*create_surface)(
-        XaveriusPhysicalDeviceBinding *, const GpuBackendSurfaceInfo *,
-        GpuBackendSurface **);
-    GpuBackendResult (*destroy_surface)(GpuBackendSurface *);
-    GpuBackendResult (*query_surface_support)(
-        XaveriusPhysicalDeviceBinding *, GpuBackendSurface *,
-        GpuBackendSurfaceSupport *);
-    GpuBackendResult (*create_presentation_route)(
-        XaveriusPhysicalDeviceBinding *,
-        const GpuBackendPresentationRouteInfo *,
-        GpuBackendPresentationRoute **);
-    GpuBackendResult (*destroy_presentation_route)(
-        GpuBackendPresentationRoute *);
-    GpuBackendResult (*create_swapchain)(
-        XaveriusPhysicalDeviceBinding *,
-        const GpuBackendSwapchainInfo *, GpuBackendSwapchain **);
-    GpuBackendResult (*destroy_swapchain)(GpuBackendSwapchain *);
-    GpuBackendResult (*acquire_next_image)(
-        GpuBackendSwapchain *, const GpuBackendAcquireInfo *,
-        GpuBackendOperationToken *);
-    GpuBackendResult (*queue_present)(
-        GpuBackendQueue *, const GpuBackendPresentInfo *,
-        GpuBackendOperationToken *);
-    GpuBackendResult (*cancel_acquire)(GpuBackendOperationToken *);
-    GpuBackendResult (*release_late_acquired_image)(
-        GpuBackendSwapchain *, uint32_t image_index);
-} XaveriusPhysicalDeviceOps;
-```
-
-This sketch mirrors the normative `GpuDeviceBackendOps` plus the four typed tables in `spec/provider-operation-matrix.md`. The implementation MUST use the current normative signatures and result types rather than copying this sketch mechanically. The table is copied/validated into server-owned immutable storage before publication; its function pointers remain callable only while the exact owning ModuleRole lease is pinned.
-
-Module-wide lifecycle callbacks are **not** per-device operations. They belong to a separate `XaveriusModuleRoleOps`/ModuleRole control record (registration, callback admission, `quiesce_module_role`, and lifetime release). Do not duplicate module-wide quiescence callbacks in every PhysicalDeviceOps table.
+Every callback target MUST remain executable while the exact owning ModuleRole lease is pinned. Module-wide lifecycle callbacks are not per-device operations: registration, callback admission, quiescence and module lifetime release belong to the separate `GpuModuleRoleDescriptor`/ModuleRole control record. Do not duplicate module-wide quiescence callbacks in `GpuDeviceBackendOps`.
 
 ### 2.5 Registration descriptor and ownership
 
-Conceptual API (the concrete name may follow existing XAverius naming):
+The normative entry point is:
 
 ```c
-XaveriusPhysicalDevice *
-XaveriusRegisterPhysicalDevice(
-    const XaveriusPhysicalDeviceRegistration *registration);
+GpuRegistryResult GpuRegistryRegisterDdxDevice(
+    GpuRegistry *registry,
+    const GpuDeviceBackendRegistration *registration,
+    GpuPhysicalDevice **out_device,
+    uint64_t *out_device_generation,
+    uint64_t *out_binding_generation);
 ```
 
-The return value is non-NULL only after successful publication; every failure, including duplicate/conflicting identity, returns NULL. A duplicate must never return the already-published device as if the new registration had succeeded. The returned pointer is opaque and is only a success/result reference for the immediate registration call: the DDX MUST NOT retain or later dereference a bare PhysicalDevice pointer. Later asynchronous or lifecycle work uses generation-checked server-issued references/tokens. The pointer exposes no XID and the DDX must not inspect the server-private PhysicalDevice layout. Detailed failure diagnostics belong in the server log/diagnostic path; callers must not infer a specific error from NULL.
+The registration descriptor contains structured `GpuDeviceIdentity` evidence, the exact native PhysicalDevice handle, the exact per-device context, the versioned `const GpuDeviceBackendOps *`, the owning `GpuModuleRole *`, and its exact generation. The registry canonicalizes identity, reserves a non-reusable provisional binding generation, validates the descriptor and operation tables, obtains the complete immutable snapshot through that exact binding, and installs the binding atomically.
 
-The registration descriptor contains:
+On `SUCCESS`, the API returns one caller-owned canonical PhysicalDevice reference and the exact PhysicalDevice/binding generations. This does **not** guarantee publication or an XID: publication is a separate `XaPhysicalDevicePublish` operation after identity resolution, eligible-binding selection and opening of the startup publication gate. The DDX MUST release the immediate caller-owned PhysicalDevice reference through `GpuPhysicalDeviceRelease` and MUST NOT retain or later dereference the bare pointer. Exact idempotent replay of the same live registration returns the same binding generation and one additional caller-owned PhysicalDevice reference; conflicting registration data returns a classified failure and never merges bindings or snapshots.
 
-- structured `XaveriusDeviceIdentity` evidence (not vendor/device IDs alone);
-- exact native PhysicalDevice handle;
-- exact per-device context;
-- pointer to the versioned `const XaveriusPhysicalDeviceOps`;
-- owning ModuleRole reference and exact ModuleRole generation;
-- explicit context retain/release ownership callbacks or a documented transfer-of-one-reference rule;
-- any DDX-local stable instance discriminator required for non-platform devices.
-
-The native handle is valid for the entire retained context/binding lifetime. It is not copied as an integer and is not inferred from a Screen or global singleton. If several bindings share a DDX context, each binding acquires/releases one context reference. Operation-table storage is copied by value; the module lease pins the code behind function pointers.
-
-**Ownership rule:** on SUCCESS the registry owns one binding/context/module-role reference; on any failure the caller retains ownership and the registry releases only references it explicitly acquired. This must be unambiguous for duplicate, conflict, retry, asynchronous completion, withdrawal, shutdown and quarantine paths.
+The native handle and per-device context are borrowed DDX-owned opaque values, not transferred or freed by the registry. The DDX MUST keep them valid and immutable until exact binding removal has completed and all dependent calls, logical Devices, backend objects, operation tokens and callbacks have retired. The registry retains the owning ModuleRole reference and its module lease according to the normative lifetime contract. There are no context retain/release callbacks in this API. On every failed registration, no binding or caller-owned PhysicalDevice reference is returned, no XID is published, and all references acquired by the registry are rolled back; explicitly reserved non-reusable generations remain consumed.
 
 ## 2.6 Source-tree discipline and atomic commit rules
 
@@ -272,11 +203,11 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** unit tests for PCI/non-PCI identity, primary/render aliases, multiple DDX observations, conflicting UUIDs, stable virtual identity, removal/re-add incarnation and stale generations.
 
 ### Phase 4 — complete registration and snapshot publication
-- Implement `XaveriusRegisterPhysicalDevice` with mandatory `const XaveriusPhysicalDeviceOps *` in the registration descriptor and an opaque `PhysicalDevice *` success / NULL failure result. Keep the XID entirely server-private.
-- Validate and copy all operation tables before publication.
-- Obtain snapshot only through the exact binding's `query_physical_snapshot`.
-- Publish via one DIX AddResource after every fallible preparation step; link registry only after AddResource success.
-- Destructor removes registry membership and releases snapshot, binding, context and role references exactly once.
+- Implement `GpuRegistryRegisterDdxDevice` with the mandatory versioned `const GpuDeviceBackendOps *` in `GpuDeviceBackendRegistration`; on SUCCESS return the immediate caller-owned PhysicalDevice reference and exact generations, but do not equate registration success with publication. Keep the XID entirely server-private.
+- Validate the top-level size/ABI version before reading callback fields, then validate and copy all operation tables before installing the binding.
+- Obtain the snapshot only through the exact binding's `query_physical_snapshot`; snapshot/binding installation is separate from publication.
+- After identity resolution, eligible-binding selection and opening the startup publication gate, publish through `XaPhysicalDevicePublish`: XID allocation and one DIX AddResource insertion are one transaction; expose no published state if insertion fails.
+- The DIX destructor retires public XID/resource membership; internal snapshot, binding, context and role references are released only after all dependent internal references have retired.
 - Shutdown removes published resources through the DIX path; never directly frees still-published records.
 - Register all devices in one transaction per device, including headless/render-only/compute-only/no-Screen devices.
 
@@ -288,7 +219,7 @@ Any failure before publication unwinds all provisional state and references. The
 - Subscribe to hotplug observation before initial DDX scans; reconcile queued events and generations before opening the initial discovery barrier.
 - Modesetting enumerates only devices actually served by its DDX context. Use canonical DRM/sysfs enumeration and primary/render correlation; never scan hard-coded `renderD0..31` or invent node numbers.
 - No registration from `PreInit`, `ScreenInit`, connector checks, first Screen, or first GPU. No global `/dev/dri` candidate scan as a substitute for DDX ownership.
-- The DDX calls RegisterPhysicalDevice once per candidate and passes the matching PhysicalDeviceOps, handle, context, identity and ModuleRole.
+- The DDX calls `GpuRegistryRegisterDdxDevice` once per served candidate and passes the matching `GpuDeviceBackendRegistration`, versioned `GpuDeviceBackendOps`, native handle, context, identity and ModuleRole.
 - If modesetting cannot produce a no-Screen executable binding, report UNAVAILABLE/BLOCKED and publish nothing; do not fake a binding or defer Phase-A registration to Phase B.
 
 **Gate:** tests for zero/one/multiple devices per DDX, two DDX modules, no Screen, headless, render-only, non-contiguous render node IDs, primary/render aliases, PENDING completion, hotplug race and once-only callback.
@@ -313,7 +244,7 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** multi-screen/multi-GPU tests, Screen close with live logical Device, DDX unload with callbacks pending, stale generation callbacks, module quarantine and server shutdown.
 
 ### Phase 8 — later backend operations (only after registry acceptance)
-- Implement the four typed operation tables and top-level PhysicalDeviceOps callbacks according to `spec/provider-operation-matrix.md`.
+- Implement the four typed operation tables and top-level `GpuDeviceBackendOps` callbacks according to `spec/provider-operation-matrix.md`.
 - Exactly six asynchronous operations use operation tokens: WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage and QueuePresent.
 - Every persistent backend object has matching typed destruction.
 - No handler may return SUCCESS without actual backend work.
@@ -327,11 +258,11 @@ Every phase report must include repository, branch, full commit and parent SHA; 
 
 Mandatory tests include:
 
-- versioned `const PhysicalDeviceOps` descriptor: old/small struct, wrong ABI, truncated typed table, NULL required callback; verify the DDX cannot access or allocate the PhysicalDevice XID;
-- const operation-table immutability after registration and module code pinning; verify returned PhysicalDevice pointer is opaque, non-retainable by DDX contract, and NULL for duplicate/conflicting identity;
+- versioned `const GpuDeviceBackendOps` descriptor: NULL pointer, undersized/oversized v1 structure, unknown ABI version, and NULL required callback; verify no callback is entered and no binding/reference/XID is published on failure;
+- operation-table immutability after registration and module code pinning; verify the returned PhysicalDevice pointer is opaque and only immediately caller-owned, exact idempotent registration replay returns one additional reference, and conflicting registration is rejected;
 - multiple devices sharing one ModuleRole but distinct native handles and contexts;
-- context retain/release balance for success, every failure, exact duplicate, conflict, withdrawal and shutdown;
-- snapshot query callback receives the exact binding; snapshot failure leaves no XID;
+- DDX-owned handle/context validity through exact binding removal and all dependent-reference retirement; verify the registry never frees those borrowed values;
+- snapshot query callback receives the exact provisional binding; failed registration leaves no binding or XID, and successful registration remains unpublished until the separate publication gate opens;
 - duplicate/ambiguous identity never merges operations/context/snapshot;
 - AddResource called once; injected failure leaves no list/resource/XID publication;
 - destructor and RegistryFini cannot double-free or leave stale list pointers;
