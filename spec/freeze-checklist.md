@@ -110,7 +110,7 @@ The failing `wire-layout` step ran 4,872 checks and failed only two documentatio
 
 ### Multi-device DDX backend unavailability scope — 2026-11-04
 
-The DDX backend-result audit found that `UNAVAILABLE` did not distinguish a DDX backend-context failure from loss of one DDX backend-local PhysicalDevice binding. Since one DDX backend may serve several canonical PhysicalDevices, the previous wording could be implemented as an overly broad status transition. The contract now requires explicit `PROVIDER_CONTEXT` or `PHYSICAL_DEVICE` scope, affects only PhysicalDevices selected through that exact DDX backend generation (and only the named binding for device-scoped failure), and excludes non-selected discovery providers. The abstract registry API and conformance vectors now cover both scopes and generation-safe recovery. No wire ABI change.
+Historical audit note (superseded by the direct DDX-binding model below): the earlier provider-object API used `PROVIDER_CONTEXT` and `PHYSICAL_DEVICE` scopes. Those names are not current enum values or API concepts. The current contract uses `MODULE_ROLE` for shared module-lifetime failures and `PHYSICAL_DEVICE` for one exact selected binding; the affected-device set is derived from the selected bindings that retain that module-role generation. The current conformance vector uses these scopes and does not model non-selected discovery providers. No wire ABI change.
 
 
 ### PresentationRoute/DDX backend result mapping audit — 2026-11-04
@@ -231,9 +231,9 @@ See `implementation-notes/ddx-device-registration.md`. Exact-tip CI and implemen
 ### DDX binding API cleanup — 2026-11-04
 
 - [ ] Confirm the DDX enumerates and registers every PhysicalDevice it serves through `GpuRegistryRegisterDdxDevice`.
-- [ ] Confirm no registry-side Vulkan ICD candidate enumeration or provider-local numeric ID-to-native-handle map remains.
+- [ ] Confirm no registry-side Vulkan ICD candidate enumeration or DDX-local numeric ID-to-native-handle map remains.
 - [ ] Confirm the PhysicalDevice binding is the direct dispatch target and the module role is lifetime/quiescence bookkeeping only.
-- [ ] Confirm no generic provider/module-role context accessor or provider-object acquisition API remains.
+- [ ] Confirm no generic module-role context accessor or provider-object acquisition API remains.
 - [ ] Confirm all callback, completion, error-scope, and Surface cache identities use exact binding and module-role generations.
 
 Exact-tip CI and implementation-agent source review are pending.
