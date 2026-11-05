@@ -156,7 +156,7 @@ The registration descriptor contains:
 - structured `XaveriusDeviceIdentity` evidence (not vendor/device IDs alone);
 - exact native PhysicalDevice handle;
 - exact per-device context;
-- pointer to the versioned `XaveriusPhysicalDeviceOps`;
+- pointer to the versioned `const XaveriusPhysicalDeviceOps`;
 - owning ModuleRole reference and exact ModuleRole generation;
 - explicit context retain/release ownership callbacks or a documented transfer-of-one-reference rule;
 - any DDX-local stable instance discriminator required for non-platform devices.
