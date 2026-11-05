@@ -16,7 +16,7 @@ For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemapho
 
 `GPU_BACKEND_UNSUPPORTED` is legal only for an operation/capability not advertised by the selected DDX binding. If a previously advertised operation returns UNSUPPORTED, this is a DDX backend-contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch.
 
-The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. DDX backend-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate exact exact binding generation whenever an operation resolves a PhysicalDevice binding.
+The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. DDX backend-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate the exact binding generation whenever an operation resolves a PhysicalDevice binding.
 
 ## 1.1 DDX binding is the direct dispatch target
 
@@ -226,7 +226,7 @@ The top-level `GpuDeviceBackendOps` retains the following operations in addition
 - `create_surface`, `destroy_surface`, `query_surface_support`;
 - `create_presentation_route`, `destroy_presentation_route`;
 - `create_swapchain`, `destroy_swapchain`, `acquire_next_image`, `queue_present`, `cancel_acquire`, `release_late_acquired_image`;
-- DDX backend/module lifetime hooks, operation retirement and DDX backend quiescence.
+- operation retirement and DDX module-role quiescence; module-role retain/release/quiescence hooks are supplied by the separate `GpuModuleRoleDescriptor`, not by the per-device operation table.
 
 Surface capability query MUST return one internally consistent immutable result containing every v0.1 capability exposed by the reply or used to validate the client-selected Swapchain fields: supported format/color-space pairs, present modes, image-count/range constraints, image-usage bits, extent constraints, and per-queue-family support. It MUST NOT return only a boolean support flag when the wire reply exposes these details. v0.1 has no wire fields or client selectors for image transforms or composite-alpha modes; these are not required fields of the DDX backend/server capability result. If the native backend requires them, the DDX binding MUST select compatible supported values internally during Swapchain creation and MUST NOT expose native enum values or invent client-visible capability fields. If no compatible internal choice exists, the exact Device/Surface pair is not presentable.
 
@@ -274,7 +274,8 @@ Every DDX backend-created persistent object has exactly one typed destruction op
 | Descriptor Set | `shader_pipeline.free_descriptor_sets` (pool-owned; no independent native destroy) |
 | Pipeline Layout | `shader_pipeline.destroy_pipeline_layout` |
 | Compute Pipeline | `shader_pipeline.destroy_compute_pipeline` |
-| Command Pool | `commands.destroy_command_pool` |\n| Command Buffer | `commands.free_command_buffer`; allocated by `commands.allocate_command_buffer` and owned by its pool |
+| Command Pool | `commands.destroy_command_pool` |
+| Command Buffer | `commands.free_command_buffer`; allocated by `commands.allocate_command_buffer` and owned by its pool |
 | Semaphore | `synchronization.destroy_semaphore` |
 | Fence | `synchronization.destroy_fence` |
 | DDX backend Surface | `destroy_surface` |
@@ -283,7 +284,7 @@ Every DDX backend-created persistent object has exactly one typed destruction op
 
 **Corrections required for the API sketch:** add `free_buffer` to `GpuBackendBufferMemoryOps`; the earlier sketch listed `create_buffer` but omitted matching destruction. Also add `allocate_command_buffer` and `free_command_buffer` to `GpuBackendCommandOps`: the first `CommandBufferData` chunk creates a command-buffer object in the server model, but the previous DDX backend table had no operation to allocate its native counterpart. `DestroyResource` for a Buffer MUST dispatch to `free_buffer`; it MUST NOT call memory-free or infer destruction from unbinding. Command-buffer native allocation MUST occur exactly once when the server allocates the logical command-buffer object, and native free MUST occur only after it is no longer pending and all backend references have retired.
 
-DDX backend object destruction is synchronous only with respect to the DDX binding's native destroy call. If native destruction cannot yet occur because accepted work or callbacks retain the object, the server MUST defer the call until those references retire. A destroy hook MUST NOT silently queue untracked destruction and return SUCCESS unless the backend object wrapper itself remains retained and the hook's contract explicitly reports the deferred state. For this v0.1 interface, typed destroy hooks return SUCCESS only after the native object is no longer usable; otherwise return BUSY/PENDING only where the request path supports retry/deferred retirement, and keep the wrapper/module references pinned.
+DDX backend object destruction is synchronous only with respect to the DDX binding's native destroy call. If native destruction cannot yet occur because accepted work or callbacks retain the object, the server MUST defer the call until those references retire. A destroy hook MUST NOT silently queue untracked destruction and return SUCCESS unless the backend object wrapper itself remains retained and the hook's contract explicitly reports the deferred state. For this v0.1 interface, the server MUST invoke a typed destroy hook only after all server-known dependencies and backend accesses have drained. The hook MUST perform the native destruction before returning SUCCESS. `GpuBackendResult` defines no generic BUSY or PENDING result for destroy hooks; if destruction fails or safe completion cannot be established, the server MUST quarantine the object and retain its binding/module-role references. It MUST NOT invent a retry status or release the wrapper/module references.
 
 ## 6. Errors and result mapping
 
@@ -292,7 +293,7 @@ DDX backend object destruction is synchronous only with respect to the DDX bindi
 | SUCCESS | Commit server state/output | On entry: accept token; on completion: publish terminal success |
 | UNSUPPORTED | Legal only if capability was not advertised; otherwise DDX backend contract violation | Same; after acceptance, cannot retroactively reject |
 | STATUS | Legal only for operations defining a status (for example acquire NOT_READY, present OUT_OF_DATE/SURFACE_LOST) | Completion status is terminal and mapped by that operation's chapter |
-| UNAVAILABLE | Map using exact DDX backend-context or binding scope and request-specific error/status | If before acceptance, reject; if accepted, terminal completion/state path |
+| UNAVAILABLE | Map using exact module-role-wide or PhysicalDevice-binding scope and request-specific error/status | If before acceptance, reject; if accepted, terminal completion/state path |
 | DEVICE_LOST | Request-specific DEVICE_LOST error/status; does not imply PhysicalDevice removal | Terminal completion marks exact logical Device lost per queue/presentation rules |
 | OUT_OF_HOST_MEMORY / OUT_OF_DEVICE_MEMORY | ALLOCATION_FAILED for allocation/create requests; otherwise INTERNAL_SERVER_ERROR unless chapter defines another mapping | Completion failure uses operation-specific terminal event/state |
 | TRANSFER_FAILURE | TRANSFER_FAILED where request defines synchronous transfer failure | Terminal transfer reply outcome |
