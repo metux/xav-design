@@ -142,14 +142,15 @@ Module-wide lifecycle callbacks are **not** per-device operations. They belong t
 
 ### 2.5 Registration descriptor and ownership
 
-Conceptual API:
+Conceptual API (the concrete name may follow existing XAverius naming):
 
 ```c
-GpuRegistryResult
+XaveriusPhysicalDevice *
 XaveriusRegisterPhysicalDevice(
-    const XaveriusPhysicalDeviceRegistration *registration,
-    XaveriusPhysicalDeviceRef **out_device);
+    const XaveriusPhysicalDeviceRegistration *registration);
 ```
+
+The return value is non-NULL only after successful publication; every failure, including duplicate/conflicting identity, returns NULL. A duplicate must never return the already-published device as if the new registration had succeeded. The returned pointer is opaque and is only a success/result reference for the immediate registration call: the DDX MUST NOT retain or later dereference a bare PhysicalDevice pointer. Later asynchronous or lifecycle work uses generation-checked server-issued references/tokens. The pointer exposes no XID. Detailed failure diagnostics belong in the server log/diagnostic path; callers must not infer a specific error from NULL.
 
 The registration descriptor contains:
 
@@ -177,7 +178,7 @@ Registration is one failure-atomic operation:
 6. Allocate a provisional binding generation and call `query_physical_snapshot` through this exact binding. Initialize outputs to failure sentinels; validate all returned fields, pointer/count pairs, ranges, UUID presence, queue/memory consistency and advertised features. Deep-copy into server-owned snapshot storage.
 7. Allocate a server-owned XID and prepare the DIX resource wrapper. No XID is visible to enumeration/request lookup yet.
 8. Call `AddResource()` exactly once. Only after success link/publish the PhysicalDevice in the registry and make its snapshot/binding visible atomically in the server serialization domain.
-9. Return a retained server reference and exact PhysicalDevice/binding generations.
+9. Return the opaque PhysicalDevice pointer as the non-NULL success result. Do not transfer a long-lived bare-pointer reference to the DDX.
 
 Any failure before publication unwinds all provisional state and references. There is no published object for a partially copied snapshot, missing operation, invalid identity, failed AddResource, or failed callback. The DIX resource destructor is the single canonical published-object destruction path and unlinks the registry entry itself.
 
@@ -200,7 +201,7 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** exact branch SHA and clean baseline build recorded.
 
 ### Phase 1 — freeze types and DDX-facing API (no registry implementation yet)
-- Add only the type/API declarations needed for identity, snapshot, PhysicalDeviceOps, binding, ModuleRole and registration descriptor.
+- Add only the type/API declarations needed for identity, the snapshot member of PhysicalDevice, const PhysicalDeviceOps, binding, ModuleRole and registration descriptor. Keep one canonical PhysicalDevice representation; do not add a parallel DeviceCaps/PhysicalDeviceInfo object.
 - Keep `XaveriusDDXOps` limited to Screen-local `ScreenInit/ScreenFini`; do not re-add physical-device enumeration/property callbacks there.
 - Define all forward declarations and ownership contracts in one canonical header. Avoid duplicate internal PhysicalDevice or info records.
 - Add ABI size/version checks and compile-time layout checks where appropriate.
@@ -228,7 +229,7 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** unit tests for PCI/non-PCI identity, primary/render aliases, multiple DDX observations, conflicting UUIDs, stable virtual identity, removal/re-add incarnation and stale generations.
 
 ### Phase 4 — complete registration and snapshot publication
-- Implement `XaveriusRegisterPhysicalDevice` with mandatory PhysicalDeviceOps argument.
+- Implement `XaveriusRegisterPhysicalDevice` with mandatory `const XaveriusPhysicalDeviceOps *` in the registration descriptor and an opaque `PhysicalDevice *` success / NULL failure result. Keep the XID entirely server-private.
 - Validate and copy all operation tables before publication.
 - Obtain snapshot only through the exact binding's `query_physical_snapshot`.
 - Publish via one DIX AddResource after every fallible preparation step; link registry only after AddResource success.
@@ -283,8 +284,8 @@ Every phase report must include repository, branch, full commit and parent SHA; 
 
 Mandatory tests include:
 
-- versioned PhysicalDeviceOps descriptor: old/small struct, wrong ABI, truncated typed table, NULL required callback;
-- table immutability after registration and module code pinning;
+- versioned `const PhysicalDeviceOps` descriptor: old/small struct, wrong ABI, truncated typed table, NULL required callback; verify the DDX cannot access or allocate the PhysicalDevice XID;
+- const operation-table immutability after registration and module code pinning; verify returned PhysicalDevice pointer is opaque, non-retainable by DDX contract, and NULL for duplicate/conflicting identity;
 - multiple devices sharing one ModuleRole but distinct native handles and contexts;
 - context retain/release balance for success, every failure, exact duplicate, conflict, withdrawal and shutdown;
 - snapshot query callback receives the exact binding; snapshot failure leaves no XID;
