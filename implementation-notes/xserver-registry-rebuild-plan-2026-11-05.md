@@ -165,6 +165,50 @@ The native handle is valid for the entire retained context/binding lifetime. It 
 
 **Ownership rule:** on SUCCESS the registry owns one binding/context/module-role reference; on any failure the caller retains ownership and the registry releases only references it explicitly acquired. This must be unambiguous for duplicate, conflict, retry, asynchronous completion, withdrawal, shutdown and quarantine paths.
 
+## 2.6 Source-tree discipline and atomic commit rules
+
+These rules apply to every implementation phase and are mandatory review criteria, not style suggestions.
+
+### Commit boundaries
+
+- Every commit MUST represent one coherent, independently reviewable change with one purpose. Keep commits small and atomic; do not mix unrelated subsystems or lifecycle topics.
+- PhysicalDevice type/API declaration, PhysicalDevice registration/publication, ScreenAttachment relationships, DDX discovery, modesetting integration, protocol request handlers, and backend operation implementations are separate topics and MUST be committed separately when they can be separated without breaking the build.
+- In particular, any change under `hw/xfree86/drivers/modesetting/` MUST be a separate commit from the generic Xaverius registry/core change. A modesetting commit must explain why the change is needed, its DDX-specific behavior, and its dependencies.
+- Changes to Xserver core lifecycle files (for example `xf86Bus.c`, `xf86Init.c`, config/udev, or public headers) require their own narrowly scoped commit with a concrete rationale and explicit ABI/lifecycle impact. Do not sneak such changes into a registry commit.
+- If a topic needs a prerequisite, commit the prerequisite separately first. Each commit must build and pass the relevant tests at its own boundary; if an intermediate state cannot build, explain why and keep the indivisible series as short as possible.
+- Do not squash unrelated work into a large “Phase 1/2 implementation” commit. Commit messages state the subsystem/topic and behavioral intent, not merely “fix”, “cleanup” or “implementation”.
+
+### Preserve existing source style and structure
+
+- Do not reformat untouched code. No gratuitous line wrapping, moving return types/function names onto separate lines, whitespace churn, header blank-line changes, or unrelated comment edits.
+- Preserve existing license headers exactly, including copyright/license text and placement. Every new source/header file must use the repository's correct license header and end with a newline.
+- Preserve the existing two header scopes and their include guards/contracts. Do not move declarations between the server-internal and extension-private headers merely for convenience; add declarations to the correct existing scope. Do not create extra headers unless a genuinely separate public/internal interface requires one and the need is documented.
+- Do not add an `xaverius_` prefix to extension-internal source filenames. Existing externally includable header names are the exception and must retain their established names.
+- Follow the naming convention already used in the relevant scope. Do not mix camel/Pascal case and underscore naming styles or rename existing symbols without a necessary API reason and a separate explanation.
+- Do not duplicate existing initialization, protocol definitions, request/reply structures, or dispatch registration. Extend the existing init path and existing protocol declarations. No new monolithic `xaverius.c` or equivalent aggregation file that duplicates `init.c` responsibilities.
+- Do not introduce X11 Proc/SProc handlers, protocol opcodes, or request/reply implementations before their assigned phase/request group. When request handlers are added, follow the current dispatch architecture: do not resurrect legacy per-request SProc/rpcbuf patterns; use the repository's current request/reply macros and byte-order handling.
+- Do not add speculative or convenience `#include` directives. Include only what the translation unit actually needs.
+
+### Include ordering and path rules
+
+For each source/header, preserve this order, with no unnecessary additions:
+1. `dix-config.h` first where required by the Xserver build;
+2. system headers;
+3. Xserver-wide headers, using canonical include paths (for example `include/resource.h`, not a shortened or accidental local path);
+4. the existing Xaverius extension headers.
+
+Keep groups sorted consistently with surrounding repository convention. Do not reorder unrelated includes.
+
+### Public SDK and ABI protection
+
+- Treat every header under `include/` as public SDK/driver ABI unless proven otherwise. Do not add fields to public structs, change layout, alter function signatures, or expose internal PhysicalDevice/XID details without an explicit ABI review.
+- Prefer extension-private declarations and opaque handles. If a public ABI change is unavoidable, isolate it in its own commit, document compatibility/versioning and loader behavior, and provide old-binary compatibility tests. Never append a callback to a public struct and read it from old binaries without a validated size/version gate.
+- No driver-visible declaration may expose the PhysicalDevice XID or DIX resource wrapper.
+
+### Review checklist for every commit
+
+The commit description/review must state: (1) its single topic and why it is independently scoped; (2) exact files/subsystems touched; (3) dependencies on earlier commits; (4) build/test commands and results; (5) any intentional ABI or lifecycle effect. Reject commits with unrelated formatting, speculative headers/includes, premature request handlers, duplicate init/protocol definitions, or unreviewed public SDK changes.
+
 ## 3. Registration transaction
 
 Registration is one failure-atomic operation:
