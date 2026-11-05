@@ -275,7 +275,7 @@ The registry result enum now has UNAVAILABLE distinct from BUSY. Acquire/publish
 
 Presentation route generation is now server-assigned, nonzero, and non-reusable; it is passed into route creation and stored by the DDX wrapper. The route metadata output no longer asks the DDX to allocate the generation. Token retirement after terminal success is idempotent SUCCESS, consistent across the API contract and conformance vector 140. The C sketch no longer contains an empty GpuDeviceIdentity struct.
 
-Latest reviewed commit: 43881a15e2b168fa723844ab285e8367f4f55025. Its combined commit-status and workflow-run queries returned no entries. Exact-tip CI remains unverified and this delta MUST NOT be described as green.
+Latest reviewed commit: 34757343da0f8dcc6104f2914ac4c2ed8febcf2d. Its combined commit-status and workflow-run queries returned no entries. Exact-tip CI remains unverified and this delta MUST NOT be described as green.
 
 ## DDX operation-table and registry API cross-check — 2026-11-05
 
