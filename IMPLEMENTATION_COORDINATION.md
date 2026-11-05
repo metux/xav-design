@@ -37,29 +37,29 @@ Do not patch the broken registry in place, cherry-pick its implementation commit
 
 Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `spec/registry-api-lifetime-addendum.md`, `spec/provider-operation-matrix.md`, and `implementation-notes/ddx-device-registration.md`.
 
-## Active assignment — Phase A DDX-wide discovery
+## Active assignment — Phase 0 clean baseline
 
-**ACTIVE — NOT ACCEPTED**
+**ACTIVE — Phase A/Phase B implementation work is paused.**
 
-**Assigned target:** `X11Libre/xserver:wip/xaverius`.
+The previous Phase-A assignment and its C1–C10 corrections are retained below as audit history only; they are NOT authorization to continue implementing against the discarded registry model. The Xserver branch was rolled back and the old implementation is preserved separately:
 
-Read and execute the complete task: [`implementation-notes/phase-a-ddx-discovery.md`](implementation-notes/phase-a-ddx-discovery.md). Latest task commit: `15485e3183e4c1c78ff3754983d50d9b80caa910`. Mandatory detailed corrections: [`implementation-notes/phase-a-ddx-corrections.md`](implementation-notes/phase-a-ddx-corrections.md), commit `61cf71817878ac48b0fd1d9c7a9848739b802ff8`. Both files are part of the active assignment.
+- Active clean branch: `X11Libre/xserver:wip/xaverius` at `f6f3e87aa81724208496d539e40d2eee2c3d2641`.
+- Preserved old branch: `X11Libre/xserver:wip/xaverius_old_1` at `deb0e445001389be031fa7e006e3e2e216616b50`.
+- Rebuild plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), updated through commit `52b09c217408cd65ddd842522d1c0a95ab7b1313` plus normative clarifications below.
 
-The task requires:
-- a real DDX-wide enumeration/registration pass independent of `ScreenPtr`, `ScrnInfoPtr`, and Screen creation;
-- registration of every DDX-served device, including no-Screen devices;
-- removal of the three PhysicalDevice callbacks from `XaveriusDDXOps`;
-- no lazy discovery from client requests;
-- initial hotplug/identity observation before the DDX scan, ordered event reconciliation, and a barrier that remains closed while any configured initial pass is PENDING; terminal adapter failure is accounted for without fabricating removal or blocking independent completed devices indefinitely;
-- concrete modesetting integration or a precise evidence-based blocker (no guessed `PreInit`/`ScreenInit` hook); the verified target-tree window is the beginning of `xf86BusConfig()`, after DDX modules/`DriverRec` registration and before Screen-oriented probes; the task requires a once-per-module-generation DDX callback or equivalent minimal seam;
-- startup-event detail verified against the target tree: `config_udev_pre_init()` enables monitor reception before `xf86BusProbe()`, but normal `SetNotifyFd()` delivery is installed only later in `config_udev_init()` during `InitInput()`; queued events therefore need explicit early reconciliation before initial publication. The existing platform DRM scan matches `card[0-9]*`, not render nodes, and is not the executable inventory;
-- minimal diffs only: preserve existing names, file layout, formatting and coding style; no cosmetic renames, broad reformatting or unrelated refactoring; justify every necessary rename or structural change;
-- reproducible A1–A9 tests, including the normative subscribe-before-scan/startup discovery barrier and event-race behavior, exact build/test commands and a structured agent report;
-- mandatory C1–C10 corrections in [`implementation-notes/phase-a-ddx-corrections.md`](implementation-notes/phase-a-ddx-corrections.md): safe callback ABI/version gate; classified pass result and per-module-generation once guard; DDX-owned modesetting enumeration with canonical DRM correlation (no global `/dev/dri` scan or `renderD0..31`); complete typed binding before publication; one failure-atomic DIX resource insertion and canonical destructor/shutdown path; explicit FD/context/reference ownership; exported extension/resource-type initialization; portability/SDK-link fixes; removal or fail-closed treatment of unauthorized Compute Memory handlers; targeted regression tests for each correction.
+**Current task: Phase 0 only.** Build the untouched `f6f3e87...` baseline using the existing full Xserver portability/SDK CI matrix. Do not modify source files. Report the exact commit, parent, commands/workflows, logs, and PASS/FAIL/BLOCKED result for every target. Do not start Phase 1 until this baseline is recorded and reviewed.
 
-**Forbidden:** first-Screen/first-GPU selection, output/connector-gated registration, per-Screen inventory, a Provider dispatch object, capability snapshots masquerading as operation vectors, last-writer-wins rebinding, fake identities/capabilities, or claiming tests without evidence.
+**Updated object contract (normative):**
 
-**Gate:** Phase B is not authorized until Phase A is independently audited and marked ACCEPTED here. If the complete-binding registry API is missing, report the exact gap and keep the adapter seam honest; do not invent a temporary competing API.
+- Exactly one internal `PhysicalDevice` object per canonical physical-device incarnation. It owns the immutable capability/property snapshot as a member/value; no separate DeviceCaps/PhysicalDeviceInfo registry object.
+- Each registration supplies the matching pointer to a versioned `const XaveriusPhysicalDeviceOps` structure. The registry validates and copies its typed operation vectors into immutable server-owned storage.
+- PhysicalDevice's DIX resource wrapper and XID are server-private. The DDX cannot allocate, inspect, store, free, or otherwise manage XIDs. The DDX-facing PhysicalDevice type, if visible at all, is opaque.
+- Registration may return an opaque non-NULL PhysicalDevice pointer on success and NULL on every failure, including duplicate/conflicting identity. The returned pointer is only an immediate result; the DDX must not retain/dereference it after the call. Later references are generation-checked server-owned references/tokens.
+- The XID never appears in PhysicalDeviceOps, the registration descriptor, or a DDX-visible structure.
+
+**Phase gates:** Phase 1 (type/API freeze) is not yet assigned. Do not add registry lists, DIX resources, request handlers, or modesetting enumeration during Phase 0. The old Phase-A task files are superseded for sequencing by the rebuild plan; their technical findings remain relevant only where the plan explicitly carries them forward.
+
+**Preservation rules:** agents work only on `X11Libre/xserver:wip/xaverius`; no Xserver source edits from this spec workspace. Minimal diffs, preserve names/layout/formatting, no cosmetic renames or broad refactors. Do not cherry-pick the discarded registry commits.
 
 ## Latest registry re-audit — 2026-11-05
 
