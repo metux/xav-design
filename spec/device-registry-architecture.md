@@ -1213,7 +1213,7 @@ The implementation test suite SHOULD include at least:
 
 
 
-79. Register two DDX backends from different modules against the same canonical PhysicalDevice. Verify that both bindings remain independently owned, exactly one is selected before publication, and the published snapshot comes wholly from that DDX backend. Removing or quiescing the non-selected DDX binding MUST NOT change PhysicalDevice status, XID, snapshot, or selected-DDX backend identity.
+79. Register two complete DDX bindings from different module roles against the same canonical PhysicalDevice. Configure the role owner-key preference in the opposite order from registration and verify that the first eligible configured key is selected before publication, with the complete snapshot and operation vectors taken wholly from that binding. Repeat with no matching preference and two eligible bindings: the PhysicalDevice MUST remain unpublished as ambiguous. Make the preferred binding ineligible through a failed mandatory snapshot query and verify that the next eligible configured binding is selected. Removing or quiescing the non-selected binding MUST NOT change PhysicalDevice status, XID, snapshot, or selected-binding identity. After publication, register a newly higher-preference binding and verify that it MUST NOT replace the selected binding or snapshot.
 
 80. Register one DDX module-role generation against several PhysicalDevices, then report a binding-scoped unavailable/removal transition for one device. Verify that only that exact binding/device is affected. A module-role-wide failure affects every PhysicalDevice selected through that exact DDX module-role generation, but does not affect devices for which it is only a non-selected discovery DDX backend.
 
