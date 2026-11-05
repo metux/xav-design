@@ -47,7 +47,7 @@ If several devices share one DDX/Vulkan instance context, each binding may hold 
 ## Enumeration and registration sequence
 
 1. The DDX enumerates every device it serves using its actual backend discovery path.
-2. For each candidate, it supplies authoritative identity evidence (bus/sysfs/DRM identity where available; Vulkan UUID only as corroboration), a stable DDX-local instance key where necessary, the native handle, operations, and context.
+2. For each served PhysicalDevice, it supplies authoritative identity evidence (bus/sysfs/DRM identity where available; Vulkan UUID only as corroboration), a stable DDX-local instance key where necessary, the native handle, operations, and context.
 3. The registry canonicalizes the identity. Ambiguous identities remain unpublished; vendor/device IDs or marketing names alone are insufficient.
 4. The registry validates the complete operation tables required by advertised capabilities and obtains one complete immutable physical snapshot through that exact binding.
 5. The registry publishes the canonical PhysicalDevice and allocates its XID only after all required state is complete.
