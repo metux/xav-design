@@ -98,7 +98,7 @@ The registry MUST apply these outcomes:
 - Matching valid `deviceUUID` without conflicting platform evidence MAY corroborate two DDX registrations as the same physical-device identity. If either registration later gains contradictory authoritative platform evidence, the registry MUST quarantine the conflicting observation/binding and MUST NOT merge the platform devices.
 - Equal UUIDs without enough evidence to distinguish two simultaneously present devices are ambiguous. The candidates remain unpublished until resolved; the registry MUST NOT collapse them solely to avoid duplicate enumeration.
 - Different UUIDs with no authoritative platform correlation do not establish either sameness or difference. The candidates remain distinct pending stronger evidence; the registry MUST NOT infer sameness from names or model IDs.
-- A DDX device candidate that cannot be correlated to a canonical platform identity MAY use the DDX backend-scoped fallback only for a device class whose identity contract guarantees stable per-instance uniqueness. Otherwise it remains unpublished and cannot be selected for execution.
+- A DDX registration that cannot be correlated to a canonical platform identity MAY use the DDX-registration-scoped fallback only for a device class whose identity contract guarantees stable per-instance uniqueness. Otherwise it remains unpublished and cannot be selected for execution.
 - Any conflict involving two already published identities MUST NOT be repaired by merging, changing an XID's referent, or silently rewriting the immutable snapshot. It is a registry consistency fault requiring controlled server recovery.
 
 Incarnation is separate from identity correlation. A confirmed remove event closes the current incarnation. An add event after that boundary creates a new incarnation even when the BDF, sysfs path, DRM identity fields, DDX backend-scoped key, and `deviceUUID` are unchanged. If removal is uncertain, the registry MUST prefer an UNAVAILABLE or unresolved state over either falsely declaring REMOVED or resurrecting a tombstone. Source generations and event ordering MUST be used to reject delayed remove events from an earlier incarnation.
@@ -167,7 +167,7 @@ The server MUST establish the platform hotplug observation path before beginning
 
 Before XAverius exposes its initial PhysicalDevice inventory, each configured DDX device-registration pass and the platform identity/hotplug pass MUST report complete or unavailable/failed. The barrier MUST NOT wait for Screen creation, RandR initialization, a DDX ScreenAttachment, or a window to exist. A DDX pass is complete only after it has reported every PhysicalDevice it serves, including devices not attached to a Screen.
 
-A failed or unavailable DDX registration pass is not evidence that a device was removed. The registry MUST NOT fabricate a backend binding or publish a PhysicalDevice without a complete snapshot from its registered DDX call vectors. A later successful DDX pass MAY register and publish a previously unavailable device through the ordinary canonicalize/snapshot/publish sequence.
+A failed or unavailable DDX registration pass is not evidence that a device was removed. The registry MUST NOT fabricate a backend binding or publish a PhysicalDevice without a complete snapshot from its registered DDX call vectors. A later successful DDX pass MAY register and publish a device that remained unpublished because no complete binding/snapshot was available. It MUST NOT replace an already published selected binding or recover a withdrawn binding through a different registration generation.
 
 An adapter registered after the initial barrier has closed MUST use the late-registration path. It MUST NOT reopen the barrier, reorder existing inventory, replace a selected DDX binding, or mutate an already published snapshot. A newly discovered physical-device incarnation follows the same per-device publication sequence without blocking unrelated existing devices.
 
@@ -234,7 +234,7 @@ An Xlibre/Xorg integration MUST demonstrate at least the following:
 5. A DDX that only supplies topology cannot become the selected DDX binding or publish a device; a DDX registered as a DDX backend must satisfy the full DDX backend contract.
 6. A failed or late discovery adapter does not block already completed devices, fabricate removal, reopen the startup barrier, or mutate published records.
 7. Hotplug add/remove events racing with initial enumeration cannot lose an event, resurrect a tombstone, or apply a stale removal to a replacement incarnation.
-8. DDX unload with pending callbacks/operations cannot unload reachable callback code or release userdata before DDX backend/operation retirement.
+8. DDX unload with pending callbacks/operations cannot unload reachable callback code or release userdata before DDX binding, module-role, and operation retirement.
 
 These requirements are server-integration conformance tests. They do not add wire requests, XIDs, properties, or status values.
 
@@ -464,15 +464,15 @@ All registry mutations that can affect PhysicalDevice status, publication, DDX-b
 
 The registry/presentation subsystem distinguishes at least these operations:
 
-- register a DDX backend observation for a candidate;
-- mark a DDX backend unavailable or recovered;
+- register or update a complete DDX device binding for a canonical PhysicalDevice;
+- mark the exact DDX binding or owning module role unavailable or recovered;
 - confirm physical-device removal;
 - attach or detach a Screen generation;
 - create, pin, invalidate, or retire a PresentationRoute generation;
 - publish a canonical PhysicalDevice to XAverius;
-- retire DDX backend and route references after backend quiescence.
+- retire DDX binding and route references after the required operation and module-role quiescence barriers.
 
-DDX backend loss and physical-device removal are different events. A lost ICD context, failed Vulkan instance, or DDX backend unload MUST NOT by itself mark hardware REMOVED. Conversely, a confirmed kernel/device removal MUST NOT be suppressed merely because an alternate DDX backend still has a stale Vulkan handle.
+DDX binding/module-role loss and physical-device removal are different events. A lost per-device context, failed Vulkan instance, or DDX module-role unload MUST NOT by itself mark hardware REMOVED. Conversely, a confirmed kernel/device removal MUST NOT be suppressed merely because another DDX registration still has a stale native handle.
 
 The existing PhysicalDevice status state machine remains authoritative: AVAILABLE and UNAVAILABLE may recover between each other; either may transition to terminal REMOVED. REMOVED records remain tombstones until server shutdown. Registry state transitions and the corresponding `XAverius.deviceStatus` value/event MUST have one serialization point.
 
