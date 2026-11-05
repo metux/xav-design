@@ -109,7 +109,7 @@ The backend operation matrix in [DDX backend operation matrix](provider-operatio
 
 The following declarations are semantic C-interface guidance. Exact C type names may be adapted, but every listed operation and its sync/async classification is mandatory. The currently forward-declared four table types MUST NOT remain opaque in an implementation-facing API specification.
 
-All `*_INFO` inputs are immutable, fully validated server-owned descriptions. All returned backend objects are opaque DDX backend wrappers with one owned reference transferred to the caller on SUCCESS. The server MUST release that reference through the corresponding typed destroy/release path exactly once.
+All `*_INFO` inputs are immutable, fully validated server-owned descriptions. All returned backend objects are opaque DDX backend wrappers with exactly one owned reference transferred to the server on SUCCESS. The server MUST consume that reference exactly once through the corresponding typed destroy/free operation, or through the explicitly defined successful parent-pool cascade for a CommandBuffer or DescriptorSet.
 
 ```c
 struct GpuBackendBufferMemoryOps {
