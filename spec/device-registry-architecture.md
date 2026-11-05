@@ -1316,7 +1316,7 @@ The implementation test suite SHOULD include at least:
 
 127. Return STATUS/ALREADY_COMPLETED from cancel_acquire after the backend image acquisition has already terminalized. Verify cancellation does not create a second completion or change the first terminal outcome; the server still performs late-image release/retention as required.
 
-128. Have a DDX enumerate zero, one, and multiple devices and call `GpuRegistryRegisterDdxDevice` once for each served device. Verify there is no candidate-list API, every native handle and per-device context is retained directly by its binding, and partial registration failure leaves no published XID or leaked reference.
+128. Have a DDX enumerate zero, one, and multiple devices and call `GpuRegistryRegisterDdxDevice` once for each served device. Verify there is no candidate-list API, every native handle and per-device context is stored as a borrowed opaque value in its binding and remains DDX-owned until binding removal, and partial registration failure leaves no published XID or leaked reference.
 
 129. Remove a DDX device binding while an operation or deferred object still references its native handle. Verify the binding and handle remain alive until all operation/object references retire, and a stale binding generation cannot resolve a replacement binding.
 
