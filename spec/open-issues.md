@@ -146,3 +146,13 @@ The current normative design supersedes the historical provider-generation/candi
 ### Residual candidate-ranking language removed — 2026-11-04
 
 A final consistency pass corrected the non-normative §8.2 selection guidance and the related conformance vectors. The current design has no registry-side DDX candidate list, stable backend-key ranking API, or intermediate provider-object acquisition. Each DDX registers each served PhysicalDevice directly; the registry validates complete bindings and selects before publication using an explicit server-configured ordered preference over stable module-role owner_key values. Unconfigured multiple eligible bindings remain ambiguous; published bindings never fail over. The shared module role is lifetime/quiescence state only. This is an internal architecture/API clarification, not a wire-protocol change. Exact-tip CI and implementation-agent conformance evidence remain pending.
+### Closed normative audit — registry API versus typed DDX operation tables — 2026-11-05
+
+A cross-check of the registry API and all four typed DDX operation tables closed several server-contract ambiguities without changing the client wire ABI:
+
+- A route-only temporary outage now has an explicit backend STATUS/DEVICE_UNAVAILABLE result. It maps to the exact Device/Surface request status and does not mark the PhysicalDevice or module role unavailable. An accepted QueuePresent still uses its terminal presentation failure channel.
+- A registration attempt reserves its non-reusable provisional binding generation before query_physical_snapshot; a PHYSICAL_DEVICE-scoped snapshot failure identifies that provisional generation, rejects only the attempt, and cannot mutate an existing selected binding.
+- query_surface_support receives the exact logical GpuBackendDevice and returns one aggregate for all queue families in one call. It cannot assemble a capability snapshot from per-family calls or another logical Device.
+- All four typed tables now have explicit output initialization, caller-owned array capacity, batch atomicity, object-reference transfer/consumption, borrowed queue-handle, and CommandPool/DescriptorPool cascade rules.
+
+The corresponding conformance additions are vectors 172–176 in [the DDX backend operation matrix](provider-operation-matrix.md). No request, reply, event, opcode, or Vulkan capability changed. These are normative specification checks only; exact-tip CI and live implementation conformance remain separate gates.
