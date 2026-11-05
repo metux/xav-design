@@ -247,7 +247,7 @@ Exactly these six operations use the asynchronous operation-token protocol:
 
 All other backend operations in this document are synchronous from the request handler's perspective. A synchronous operation MUST NOT retain its input description or output pointer after return, except for ownership explicitly transferred by a successful create operation. A synchronous operation MUST NOT emit a completion callback.
 
-For asynchronous operations, the prepared token pins the exact DDX module-role generation, binding generation, PhysicalDevice incarnation, logical Device generation, and complete resource-generation set. The DDX backend copies only token ID and generation into asynchronous callback userdata; it MUST NOT retain the temporary token pointer. The DDX binding MUST invoke the completion sink exactly once after accepted work reaches a terminal backend outcome. The server completion sink copies payload before returning and serializes state publication.
+For asynchronous operations, the prepared token pins the exact DDX module-role generation, binding generation, PhysicalDevice incarnation, logical Device generation, and complete resource-generation set. The DDX backend copies only token ID and generation into its own asynchronous callback state; it MUST NOT retain the temporary token pointer. The DDX binding MUST call the server-exported `GpuBackendCompletionDispatch` exactly once after accepted work reaches a terminal backend outcome. Dispatch copies the payload into the per-token capacity reserved during preparation before returning and serializes state publication through the server queue.
 
 The token resource sets are minimum requirements:
 
