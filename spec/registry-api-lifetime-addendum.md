@@ -1,6 +1,6 @@
 # Registry API lifetime addendum
 
-This addendum is superseded where it refers to the former `GpuBackendProvider`, DDX backend-generation, DDX backend-local binding-ID, or DDX backend-context accessor API. The current normative model is in [device-registry-architecture.md](device-registry-architecture.md) §§2.4, 3, 3.1, and 7.
+This normative addendum supplements [device-registry-architecture.md](device-registry-architecture.md) §§2.4, 3, 3.1, and 7. It states the ownership and lifetime requirements for the current direct per-PhysicalDevice DDX binding and shared `GpuModuleRole` control record. The DDX binding is the direct dispatch target; the module role provides only shared code/module lifetime and quiescence control.
 
 ## Direct DDX binding
 
