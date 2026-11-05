@@ -40,20 +40,19 @@ There must be exactly one internal representation for each responsibility. Do no
 
 ### 2.1 PhysicalDevice
 
-One server-owned, process-wide registry record per canonical physical-device incarnation. It contains only:
+One server-owned, process-wide registry record per canonical physical-device incarnation. This is the single internal PhysicalDevice object; do not introduce a second DeviceCaps or PhysicalDeviceInfo object for the same device. It contains:
 
 - canonical identity and incarnation evidence;
-- server-assigned PhysicalDevice XID/resource and non-reusable PhysicalDevice generation;
-- lifecycle/status and publication state;
-- one immutable capability/property snapshot;
+- one immutable capability/property snapshot as a member of this object;
 - one reference to the selected exact per-device backend binding;
-- reference/lifetime bookkeeping.
+- server-private DIX resource/XID state and non-reusable PhysicalDevice generation;
+- lifecycle/status, publication and reference/lifetime bookkeeping.
 
-It does **not** contain duplicated copies of capability fields, Screen pointers, DRM file descriptors masquerading as identity, or a second provider object.
+The snapshot is a subordinate value owned by PhysicalDevice, not a separately registered or independently identified device object. The server-private XID/resource fields MUST NOT be present in the DDX-facing ABI or exposed through a driver-visible structure. If common PhysicalDevice declarations are visible to DDX code, the server object remains opaque/incomplete there; the DDX cannot inspect or manipulate its XID. Do not add duplicated capability fields, Screen pointers, DRM file descriptors masquerading as identity, or a second provider object.
 
 ### 2.2 Snapshot
 
-One immutable snapshot type (suggested name `XaveriusPhysicalDeviceSnapshot`) contains queried metadata only: device properties, UUIDs, queue-family properties, memory types/heaps, and every other server-published PhysicalDevice property.
+One immutable snapshot value (suggested type name `XaveriusPhysicalDeviceSnapshot`) is owned directly by PhysicalDevice; it is not a separate registry object or X11 resource. It contains queried metadata only: device properties, UUIDs, queue-family properties, memory types/heaps, and every other server-published PhysicalDevice property.
 
 It owns deep-copied server memory. It contains no callbacks, native handles, backend context, ModuleRole pointer, Provider pointer, or ownership hooks. Pointer/count pairs are validated before copying. A successful snapshot is complete for the advertised capability profile.
 
@@ -74,7 +73,7 @@ The PhysicalDevice holds exactly one selected binding in v0.1. No dispatch proxy
 
 The DDX MUST pass a matching `XaveriusPhysicalDeviceOps` structure for **each** registered PhysicalDevice. This is not optional and cannot be deferred to Phase B.
 
-The structure is an implementation-facing C interface, not wire ABI. It MUST have an explicit `struct_size` and `abi_version` (or an equivalent validated versioned registration descriptor); never read optional trailing fields from an older, smaller structure without a size/version gate.
+The DDX supplies a pointer to a `const XaveriusPhysicalDeviceOps` structure for each registration. The structure is immutable for the duration of the call; the registry validates and copies it into server-owned immutable storage before publication. The structure is an implementation-facing C interface, not wire ABI. It MUST have an explicit `struct_size` and `abi_version` (or an equivalent validated versioned registration descriptor); never read optional trailing fields from an older, smaller structure without a size/version gate.
 
 Conceptual shape:
 
@@ -150,7 +149,7 @@ XaveriusRegisterPhysicalDevice(
     const XaveriusPhysicalDeviceRegistration *registration);
 ```
 
-The return value is non-NULL only after successful publication; every failure, including duplicate/conflicting identity, returns NULL. A duplicate must never return the already-published device as if the new registration had succeeded. The returned pointer is opaque and is only a success/result reference for the immediate registration call: the DDX MUST NOT retain or later dereference a bare PhysicalDevice pointer. Later asynchronous or lifecycle work uses generation-checked server-issued references/tokens. The pointer exposes no XID. Detailed failure diagnostics belong in the server log/diagnostic path; callers must not infer a specific error from NULL.
+The return value is non-NULL only after successful publication; every failure, including duplicate/conflicting identity, returns NULL. A duplicate must never return the already-published device as if the new registration had succeeded. The returned pointer is opaque and is only a success/result reference for the immediate registration call: the DDX MUST NOT retain or later dereference a bare PhysicalDevice pointer. Later asynchronous or lifecycle work uses generation-checked server-issued references/tokens. The pointer exposes no XID and the DDX must not inspect the server-private PhysicalDevice layout. Detailed failure diagnostics belong in the server log/diagnostic path; callers must not infer a specific error from NULL.
 
 The registration descriptor contains:
 
