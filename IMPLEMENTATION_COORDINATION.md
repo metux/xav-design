@@ -45,7 +45,7 @@ The previous Phase-A assignment and its C1–C10 corrections are retained below 
 
 - Active clean branch: `X11Libre/xserver:wip/xaverius` at `f6f3e87aa81724208496d539e40d2eee2c3d2641`.
 - Preserved old branch: `X11Libre/xserver:wip/xaverius_old_1` at `deb0e445001389be031fa7e006e3e2e216616b50`.
-- Rebuild plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), updated through commit `52b09c217408cd65ddd842522d1c0a95ab7b1313` plus normative clarifications below.
+- Rebuild plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), updated through commit `49d761a651a0ac1ac76fb6be8d8eed5385ff45f3`; normative clarifications are in `spec/device-registry-architecture.md` (latest change `f34c97b99d30cbdf963c550f13740d4a59adf2e3`) and `spec/registry-api-lifetime-addendum.md` (`0f3277c6c25ca80cc88bd5b19a02f9417cce834f`).
 
 **Current task: Phase 0 only.** Build the untouched `f6f3e87...` baseline using the existing full Xserver portability/SDK CI matrix. Do not modify source files. Report the exact commit, parent, commands/workflows, logs, and PASS/FAIL/BLOCKED result for every target. Do not start Phase 1 until this baseline is recorded and reviewed.
 
