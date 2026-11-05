@@ -411,7 +411,7 @@ DDX backend unload/context destruction is permitted only after all of the follow
 3. Every DDX backend call currently executing has returned.
 4. Every accepted asynchronous operation has reached a terminal state and the DDX backend has guaranteed no further access to its objects.
 5. Every completion callback and deferred cleanup item carrying the DDX module-role generation has retired.
-6. All DDX-owned logical Devices, queues, resources, and loader/dispatch references have been destroyed or placed in a DDX-owned quarantine that no longer requires executable DDX backend code.
+6. All DDX-owned logical Devices, queues, resources, and loader/dispatch references have been destroyed successfully, or any object whose destruction failed or whose safe retirement is uncertain remains quarantined with its exact binding and module-role references retained. Such quarantine is not evidence of backend quiescence and MUST block binding removal completion, module-role quiescence/finalization, and module unload. A quarantined object MUST NOT be retried through the same destroy hook in v0.1.
 
 A DDX binding MUST NOT wait indefinitely for a lost or wedged GPU as the only teardown strategy. It MAY retain/quarantine backend objects and the DDX module/context until the server exits or a backend-specific safe retirement condition is met. If quiescence cannot be proven, leaking/quarantining is required over use-after-free, stale callback execution, or unloading code still reachable by a callback.
 
@@ -1358,6 +1358,8 @@ The implementation test suite SHOULD include at least:
 141. Replay a successful ObserveDevice call with the same source event sequence and payload while the caller still holds the previous PhysicalDevice reference. Verify the observation ID is unchanged, the source observation is not duplicated, and the repeated SUCCESS returns exactly one additional caller-owned reference that must be released independently.
 
 142. Quarantine a DDX module-role generation through `GPU_BACKEND_FATAL`, then call `GpuRegistryTryQuiesceModuleRole` and `GpuRegistryFinalizeModuleRoleShutdown`. Verify both return QUARANTINED without entering DDX module code or dropping DDX binding/context/module/object references.
+
+143. Make a typed backend destroy/free operation fail or return an uncertain result after public resource invalidation. Verify the object is quarantined, its exact binding and module-role references remain retained, the same destroy hook is not retried, binding removal cannot complete, and module-role quiescence/finalization and module unload remain blocked. Verify unrelated already-destroyed objects and other binding generations can retire independently.
 
 
 These tests validate the server architecture; they do not replace the wire-level conformance vectors in `conformance.md`.
