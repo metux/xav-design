@@ -564,10 +564,10 @@ enum {
     GPU_SCREEN_ROLE_DISCOVERY_ONLY = 1u << 3
 };
 
-typedef struct {
-    /* Structured bus/sysfs/DRM identity, optional valid deviceUUID,
-       virtual-instance discriminator, and incarnation evidence. */
-} GpuDeviceIdentity;
+/* Opaque internal identity descriptor, not a wire structure. Its concrete
+   versioned definition is implementation-private but MUST represent the
+   evidence classes and provenance rules in Sections 2.2 and 2.3. */
+typedef struct GpuDeviceIdentity GpuDeviceIdentity;
 
 
 typedef struct {
