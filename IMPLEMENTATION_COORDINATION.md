@@ -20,9 +20,25 @@
 - **ROLLBACK COMPLETE.** A subsequent independent read of the remote ref verified `refs/heads/wip/xaverius = f6f3e87aa81724208496d539e40d2eee2c3d2641`. The initial ref-update attempt returned HTTP 403, but the exact target is now live. Do not repeat the reset/push. The seven-file Xaverius tree was verified at this commit.
 - Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md); use the current active plan revision referenced in the Phase 0 section below.
 
-**Mandatory design point:** every per-device registration MUST pass a versioned `XaveriusPhysicalDeviceOps` structure containing that device's callbacks, together with structured identity, exact native handle, per-device context and owning ModuleRole generation. The registry copies/validates the immutable typed operation tables, queries the snapshot through that exact binding, and publishes only after complete validation. The four typed operation tables and top-level callbacks follow `spec/provider-operation-matrix.md`; ModuleRole-wide quiescence remains a separate lifetime/control API, not a PhysicalDevice dispatch callback.
+**Current API authority:** every per-device registration uses a versioned `const GpuDeviceBackendOps *` inside `GpuDeviceBackendRegistration`, plus structured identity evidence, exact borrowed native handle/context, and the exact owning `GpuModuleRole` generation. The registry copies immutable typed operation tables, queries the snapshot through that exact binding, and publishes separately through `XaPhysicalDevicePublish`. Use only the current API names and contracts in the normative references below; old `XaveriusPhysicalDeviceOps` and capabilities-only registration sketches are obsolete.
 
-Do not patch the broken registry in place, cherry-pick its implementation commits, or continue Phase B. Rebuild in the ordered phases and gates in the plan. Preserve existing names/formatting unless a narrowly justified type/API addition requires otherwise.
+Do not patch the discarded registry in place or cherry-pick its implementation commits. Rebuild from the clean rollback baseline. Preserve names/formatting unless a narrowly justified type/API addition is required.
+
+## Active assignment — PhysicalDevice registry implementation
+
+**ACTIVE — HIGH PRIORITY.** The owner has authorized actual registry implementation. This replaces the old “Phase 0 only / Phase A-B paused” gate. The OpenBSD/Cygwin CI tasks continue independently at LOW priority and do not block this work.
+
+- Target: `X11Libre/xserver:wip/xaverius`.
+- Starting point: clean rollback baseline `f6f3e87aa81724208496d539e40d2eee2c3d2641`; verify the live remote ref before editing. The old implementation remains forensic-only at `wip/xaverius_old_1`.
+- Detailed active assignment: [active-physical-device-registry-task-2026-11-05.md](implementation-notes/active-physical-device-registry-task-2026-11-05.md), added in commit `03552114193bcd6b6ea1fbece035fa147a5df8a5`.
+- Fleet hand-off: [W0-20261105-003](https://github.com/metux/wormhole-0/blob/master/inbox/2026-11-05T1700Z--W0-20261105-003--physical-device-registry.md), commit `559308759a31c21fbc7ec9fef75e7df78b1031bd`.
+- Authorized scope: Stages 1–4 — canonical types/API, ModuleRole lifetime substrate, registry/identity core, failure-atomic registration and snapshot, and separate DIX publication. Implement incrementally with synthetic/mock DDX tests.
+- Not authorized yet: DDX-wide discovery/modesetting, ScreenAttachment integration, protocol handlers, Compute Memory handlers, or backend operation implementations. Those follow only after registry Stages 1–4 are reviewed and accepted.
+- Mandatory hygiene: one independently reviewable topic per commit; no cosmetic renames/reformatting, no broad refactors, no duplicate init/fini paths, no unnecessary headers/includes, no unreviewed public SDK ABI changes. Any future modesetting change is a separate commit.
+- API/lifetime caution: native handle and per-device context are borrowed DDX-owned values; registry must not free them and must not invent context retain/release callbacks. The DDX keeps them valid until binding removal and all dependent users retire.
+- Reports must include full commit and parent SHAs, exact files/symbols/call sites, ownership/refcount table, exact test commands/results, and remaining blockers.
+
+**CI priority:** continue the separate OpenBSD/Cygwin repairs in parallel at LOW priority. Do not wait for them or the full baseline matrix before starting registry implementation. Record CI outcomes honestly; a CI failure is not a reason to stop unrelated registry work, and a passing spec CI is not evidence that Xserver code works.
 
 ## Normative architecture — short form
 
@@ -36,46 +52,6 @@ Do not patch the broken registry in place, cherry-pick its implementation commit
 - Async operations require exact generation/resource pins, token prepare/commit-or-reject/complete/retire, callback-return proof, and quarantine when quiescence is uncertain.
 
 Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `spec/registry-api-lifetime-addendum.md`, `spec/provider-operation-matrix.md`, and `implementation-notes/ddx-device-registration.md`.
-
-## Active assignment — Phase 0 clean baseline
-
-**ACTIVE — Phase A/Phase B implementation work is paused.**
-
-The previous Phase-A assignment and its C1–C10 corrections are retained below as audit history only; they are NOT authorization to continue implementing against the discarded registry model. The Xserver branch was rolled back and the old implementation is preserved separately:
-
-- Active clean branch: `X11Libre/xserver:wip/xaverius` at `f6f3e87aa81724208496d539e40d2eee2c3d2641`.
-- Preserved old branch: `X11Libre/xserver:wip/xaverius_old_1` at `deb0e445001389be031fa7e006e3e2e216616b50`.
-- Rebuild plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), updated through commit `49d761a651a0ac1ac76fb6be8d8eed5385ff45f3`; normative clarifications are in `spec/device-registry-architecture.md` (latest change `f34c97b99d30cbdf963c550f13740d4a59adf2e3`) and `spec/registry-api-lifetime-addendum.md` (`0f3277c6c25ca80cc88bd5b19a02f9417cce834f`).
-
-**Mandatory commit/source hygiene (all phases):** see §2.6 of the rebuild plan (latest plan commit `1aa136395768b99ce0e95d17dc4a75d149a7227b`). Every commit is one atomic, independently reviewable topic. PhysicalDevice registration, ScreenAttachment, DDX discovery, modesetting, request handlers and backend operations are separate commits. Any `hw/xfree86/drivers/modesetting/` change is a separate DDX-specific commit; core lifecycle/public-header changes (e.g. `xf86Bus.c`, `include/*`) also require separate narrowly scoped commits and explicit rationale/ABI review.
-
-Preserve existing formatting, license headers, EOF newlines, header scopes, names and init/protocol structure. No gratuitous whitespace/comment churn, no extra headers or monolithic duplicate `xaverius.c`, no premature Proc/SProc/request handlers, no legacy SProc/rpcbuf patterns. Do not add unnecessary includes; order them as `dix-config.h` (where required), system, Xserver-wide (canonical paths such as `include/resource.h`), then extension-internal. Do not prefix extension-internal source filenames with `xaverius_`. Treat all `include/*` headers as public SDK/driver ABI and do not change layout/signatures without a separate ABI-reviewed commit and compatibility tests. Reject mixed-purpose commits.
-
-**Current task: Phase 0 only.** Build the untouched `f6f3e87...` baseline using the existing full Xserver portability/SDK CI matrix. Do not modify source files. Report the exact commit, parent, commands/workflows, logs, and PASS/FAIL/BLOCKED result for every target. Do not start Phase 1 until this baseline is recorded and reviewed.
-
-**Phase 0 progress (2026-11-05):**
-- User-confirmed local state: worktree at `f6f3e87aa81724208496d539e40d2eee2c3d2641`, `git clean` run, local build successful. Exact local build command/configuration has not yet been recorded; do not ask the user to repeat the build unless needed to reproduce it.
-- Remote `wip/xaverius` independently resolves to the exact target SHA; preserved `wip/xaverius_old_1` resolves to `deb0e445001389be031fa7e006e3e2e216616b50`.
-- Full existing workflow: [Build X servers, run 42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759), commit `f6f3e87...`. At the latest inspection it was still in progress.
-- Completed PASS jobs include Ubuntu (normal, debug, no-GBM), macOS, FreeBSD, NetBSD, DragonFlyBSD, RHEL 9/10, Alpine, Solaris, Arch, Gentoo, GNU/Hurd, MinGW cross-build, Ubuntu SDK image and completed Ubuntu driver builds.
-- FAIL: OpenBSD after three attempts. Compiler log shows repeated redefinition of `xav_static_assert___LINE__` from `Xext/xaverius/xaverius_proto.h` (the fallback `XAV_STATIC_ASSERT` macro token-pastes `__LINE__` without an expansion layer). This is a baseline finding; do not patch it during Phase 0.
-- FAIL: Cygwin build. `hw/xwin/glx/gen_gl_wrappers.py` cannot import `lxml.etree` from the Cygwin Python environment while generating WGL/GL shim files. This is a baseline CI/environment finding; do not patch it during Phase 0.
-  - Important refinement: `python312-lxml` is already explicitly requested and is shown as installed in the job log; `libxml2_2` and `libxslt` are also installed. Therefore, merely adding the lxml package is not a fix. The `ImportError: No such file or directory` at `from lxml import etree` is consistent with failure to load the compiled Cygwin extension or one of its DLL dependencies. Before changing packages, add a diagnostic/preflight in a separate CI-fix commit: run `/usr/bin/python3.12.exe -c 'from lxml import etree; print(etree.LXML_VERSION)'` immediately after PATH setup; on failure print the installed lxml extension path and run `cygcheck` on its `etree*.dll` to identify the exact missing DLL. Then add/fix only the missing runtime package or DLL search path. Do not replace the Khronos registry parser or switch Python versions without evidence.
-- PENDING at latest inspection: Ubuntu Valgrind job and remaining matrix jobs.
-- Combined status API returned no status contexts; the Actions run is the authoritative matrix evidence. Recheck run completion and record final job inventory before closing Phase 0.
-- Gate interpretation: record all baseline outcomes, including pre-existing failures; do not silently repair baseline issues or treat the matrix as green. Phase 1 remains blocked until the run completes and failures are classified/documented.
-
-**Updated object contract (normative):**
-
-- Exactly one internal `PhysicalDevice` object per canonical physical-device incarnation. It owns the immutable capability/property snapshot as a member/value; no separate DeviceCaps/PhysicalDeviceInfo registry object.
-- Each registration supplies the matching pointer to a versioned `const XaveriusPhysicalDeviceOps` structure. The registry validates and copies its typed operation vectors into immutable server-owned storage.
-- PhysicalDevice's DIX resource wrapper and XID are server-private. The DDX cannot allocate, inspect, store, free, or otherwise manage XIDs. The DDX-facing PhysicalDevice type, if visible at all, is opaque.
-- Registration may return an opaque non-NULL PhysicalDevice pointer on success and NULL on every failure, including duplicate/conflicting identity. The returned pointer is only an immediate result; the DDX must not retain/dereference it after the call. Later references are generation-checked server-owned references/tokens.
-- The XID never appears in PhysicalDeviceOps, the registration descriptor, or a DDX-visible structure.
-
-**Phase gates:** Phase 1 (type/API freeze) is not yet assigned. Do not add registry lists, DIX resources, request handlers, or modesetting enumeration during Phase 0. The old Phase-A task files are superseded for sequencing by the rebuild plan; their technical findings remain relevant only where the plan explicitly carries them forward.
-
-**Preservation rules:** agents work only on `X11Libre/xserver:wip/xaverius`; no Xserver source edits from this spec workspace. Minimal diffs, preserve names/layout/formatting, no cosmetic renames or broad refactors. Do not cherry-pick the discarded registry commits.
 
 ## Latest registry re-audit — 2026-11-05
 
@@ -136,22 +112,15 @@ Latest fully CI-verified architecture baseline recorded: `a66d977b436cb05818a07a
 
 ## Parallel CI repair assignments — 2026-11-05
 
-**ACTIVE — three independent fleet tasks.** These are maintenance tasks for the Phase 0 baseline failures only. They do not authorize Phase 1 or any XAverius registry implementation.
+**ACTIVE — LOW PRIORITY, independent of the registry implementation.** These tasks continue in separate branches/worktrees and must not block the HIGH-priority PhysicalDevice registry task.
 
 1. **OpenBSD patch:** [ci-openbsd-static-assert-fix.md](implementation-notes/ci-openbsd-static-assert-fix.md), task commit `2159b5e719a786e70b99ded3994292ab8e98cd41`.
-   - One minimal patch to `Xext/xaverius/xaverius_proto.h`, fixing fallback C99 static-assert identifier expansion with two-stage token concatenation.
-   - Keep C++/C11 paths, wire ABI and all unrelated files unchanged.
 2. **Cygwin independent attribution:** [ci-cygwin-baseline-attribution.md](implementation-notes/ci-cygwin-baseline-attribution.md), task commit `7f93fe80e8a87a6ae693c7fa0534d6d603701dd4`.
-   - Investigation only; compare `wip/xaverius@f6f3e87...` against exact current `master` SHA and its CI. No edits.
 3. **Cygwin repair:** [ci-cygwin-repair.md](implementation-notes/ci-cygwin-repair.md), task commit `f9d9820590ee8c3bd046de2b61287f471c316e24`.
-   - Separate minimal patch; prove the lxml/DLL/runtime cause before editing. Coordinate with attribution agent.
-   - If failure exists on unchanged master, target a standalone general Xserver PR based on master. If introduced by XAverius branch, target a separate XAverius patch. If inconclusive, do not open a PR or guess.
 
-**Fleet coordination:** flagship should create three separately tracked tasks and assign separate ships. The attribution ship must message its evidence to the repair ship and flagship before the repair ship chooses the PR destination. No shared working tree or shared feature branch between OpenBSD and Cygwin work. Use separate worktrees/branches and serialized commit/push operations per starfleetctl conventions. Each ship reports exact base/head SHAs, changed paths, commands, CI run/job URLs and PASS/FAIL/BLOCKED outcomes. Do not merge these patches together.
+Keep these tasks on their separate branches/worktrees. No shared working tree with registry implementation. The attribution ship must provide evidence to the repair ship before it chooses a PR destination. Do not merge unrelated CI patches into registry commits.
 
-**Common base/evidence:** Xserver clean baseline `wip/xaverius@f6f3e87aa81724208496d539e40d2eee2c3d2641`; failing full matrix run [42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759). Cygwin already installs `python312-lxml`, `libxml2_2`, and `libxslt`; adding them again is not a valid fix. OpenBSD failure is the fallback macro's direct token-paste of `__LINE__`.
-
-**Phase gate:** Phase 0 baseline failures are being repaired/classified in separate maintenance work. Do not start Phase 1 until the original baseline matrix is fully inventoried and these independent patches have been reviewed and their CI effects recorded.
+**Baseline evidence:** Xserver clean baseline `wip/xaverius@f6f3e87aa81724208496d539e40d2eee2c3d2641`; full matrix run [42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759). OpenBSD failure is the fallback static-assert macro's token-paste expansion issue. Cygwin already installs `python312-lxml`, `libxml2_2`, and `libxslt`; adding them again is not a valid fix. These are tracked maintenance findings, not registry gates.
 
 ## Communication-channel migration — 2026-11-05
 
