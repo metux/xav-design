@@ -280,7 +280,7 @@ A green spec CI is not evidence that Xserver code compiles or works. Run the ful
 
 - No Provider object, Provider candidate list, Provider ranking or Provider callback alias.
 - No capabilities-only registration API.
-- No PhysicalDeviceOps omitted from registration or deferred to Phase B.
+- No `GpuDeviceBackendOps` omitted from registration or deferred to a later phase.
 - No identity synthesized from vendor/device/API/driver versions.
 - No Screen/ScrnInfo/Entity as registry ownership root.
 - No first-Screen/first-GPU selection or output/connector-gated inventory.
@@ -289,7 +289,7 @@ A green spec CI is not evidence that Xserver code compiles or works. Run the ful
 - No unchecked DriverRec tail-member access.
 - No second AddResource, pre-publication DIX visibility, or direct free of published resources.
 - No direct ModuleRole context getter or ModuleRole dispatch proxy.
-- No Phase-B handler that returns success without a real typed backend operation.
+- No request/backend handler that returns success without a real typed backend operation.
 - No cosmetic renames, broad reformatting or unrelated source cleanup.
 
 ## 8. Normative references
