@@ -34,7 +34,7 @@ Implement in the following independently reviewable stages. Keep each commit ato
 
 ### Stage 1 — canonical types and API declarations
 
-- Inspect the seven-file clean Xaverius baseline and the existing init/meson/header structure before adding anything.
+- Inspect the current Xaverius source tree at the verified live branch tip and its existing init/meson/header structure before adding anything. Do not assume an earlier rollback SHA or historical file inventory is the current baseline.
 - Establish one canonical internal `GpuPhysicalDevice` representation. Its immutable physical-property snapshot is a member/value of that object. Do not add parallel DeviceCaps/PhysicalDeviceInfo objects.
 - Establish one direct `GpuDeviceBackendBinding` per exact DDX registration, containing the borrowed native handle/context, immutable server-owned copy of the versioned `const GpuDeviceBackendOps` tables, exact binding generation, and retained owning ModuleRole generation.
 - Keep the PhysicalDevice XID and DIX resource wrapper entirely server-private. No DDX-visible declaration may expose either.
