@@ -18,6 +18,7 @@ The role generation and binding generation are separate, non-reusable identities
 
 - The DDX binding retains its native handle and device context until all logical Devices, backend objects, synchronous calls, accepted operation tokens, and callbacks that can access them have retired.
 - The module role retains its loader lease until all bindings, callbacks, shared contexts, and module-owned workers have quiesced.
+- `GpuModuleLeaseCreate` returns one owner-owned reference for the loaded module instance. Each unloadable ModuleRole retains one additional role-owned reference; role finalization releases only that role's reference. The module owner prevents further role registrations and releases its original reference only after every role for that module instance has finalized. A failed final unpin is retried using the same owner reference.
 - A completion callback identifies a server-owned operation token by token ID and generation, plus the exact binding/module-role generations. It never resolves a raw module-role or binding pointer or client XID.
 - A terminal callback does not prove backend quiescence. If later backend access cannot be excluded, retain or quarantine the binding and module lease.
 - A Screen close detaches only that Screen generation. It does not unregister a shared DDX device binding.
