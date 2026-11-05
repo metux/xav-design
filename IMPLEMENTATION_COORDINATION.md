@@ -46,6 +46,17 @@ The task requires:
 
 **Gate:** Phase B is not authorized until Phase A is independently audited and marked ACCEPTED here. If the complete-binding registry API is missing, report the exact gap and keep the adapter seam honest; do not invent a temporary competing API.
 
+## Latest registry re-audit — 2026-11-05
+
+- Latest inspected Xserver tip: `deb0e445001389be031fa7e006e3e2e216616b50` (parent `98ce6f6f281a8b8001d967bafd3debe8ea4db4fa`). Full source/history audit: [phase-a-registry-audit-2026-11-05.md](implementation-notes/phase-a-registry-audit-2026-11-05.md), audit commit `931005ab36c864d6947a0465226c03f68f336b91`.
+- **Registry model is NOT ACCEPTED and currently unusable.** `XaveriusRegisterDevice()` regressed to a capabilities-only argument; identity, native handle, per-device context, typed ops and ModuleRole/binding generation are absent. Identity is fabricated from vendor/device/API/driver version fields.
+- `registry.c` still calls `AddResource()` twice for one XID, publishes before deep-copy completion, and can free an object still referenced by DIX. The commit claiming to remove the duplicate did not remove either call.
+- `xaverius_device_init()` has no call site, so the PhysicalDevice resource type is not initialized. RegistryFini and DevicesFini have contradictory ownership/order and can double-free or traverse stale list entries. `init.c` and `xaverius.c` contain competing extension init/fini implementations.
+- The internal model has overlapping `XaveriusDeviceRec`, `XaveriusDeviceCapabilities`, unused `XaveriusPhysicalDeviceRec`, and unused `PhysicalDeviceInfoRec` types. `provider_handle` remains as an unowned Provider remnant.
+- No current DDX call site invokes `XaveriusRegisterDevice()`; modesetting constructs identity/capability locals and discards them, explicitly deferring registration to Phase B. This violates Phase A.
+- History shows the critical regression at `6dffb09bf00e807c90395348ba4c65e4b80ef976`, which dropped identity/native handle/context and disabled modesetting registration. The subsequent `98ce...` and `deb0...` commits did not restore the contract or initialize the resource type.
+- **Required:** agents must stop Phase B, repair the single type/binding model and lifecycle per R1–R9 in the audit, then satisfy existing C1–C10/A1–A9. Preserve names/formatting unless a type consolidation is required and justified. Do not edit Xserver source from this spec workspace.
+
 ## Current implementation review
 
 - Latest inspected Xserver tip: `189eac7532db7530f70a68f2e659216aa19df626` (sequence: `4c35fcce487f95b48252f8cf696504cbc8ca2feb` Phase-A fixup, `8f0266fd21bf6c0daf699c6fc4fbec06ad830fab` operation-table declarations, `189eac7532db7530f70a68f2e659216aa19df626` Compute Memory handlers).
