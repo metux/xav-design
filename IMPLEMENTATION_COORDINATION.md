@@ -9,16 +9,16 @@
 - This repository is the specification/coordination workspace. Do not implement Xserver source here.
 - Agents poll this file every five minutes. Treat the latest active assignment and its linked task file as instructions.
 
-## Immediate decision — discard current registry and rebuild from clean baseline
+## Rollback record — completed
 
-**ACTIVE — rollback required before further Xserver implementation.**
+**COMPLETE — no further rollback action is authorized or required.**
 
 - Target: `X11Libre/xserver:wip/xaverius`.
 - Current audited branch tip before rollback: `deb0e445001389be031fa7e006e3e2e216616b50`.
 - Exact pre-inventory/pre-registry rollback target: `f6f3e87aa81724208496d539e40d2eee2c3d2641` (parent of first inventory commit `00fcd15955a0c2bd810034cc8b5b3bf1731d996a)).
 - Verified target tree contains only the original seven Xaverius files and no registry/inventory implementation.
 - **ROLLBACK COMPLETE.** A subsequent independent read of the remote ref verified `refs/heads/wip/xaverius = f6f3e87aa81724208496d539e40d2eee2c3d2641`. The initial ref-update attempt returned HTTP 403, but the exact target is now live. Do not repeat the reset/push. The seven-file Xaverius tree was verified at this commit.
-- Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md), commit `6c3965315b213eb428045bc08f7c061359a9ebf4`.
+- Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md); use the current active plan revision referenced in the Phase 0 section below.
 
 **Mandatory design point:** every per-device registration MUST pass a versioned `XaveriusPhysicalDeviceOps` structure containing that device's callbacks, together with structured identity, exact native handle, per-device context and owning ModuleRole generation. The registry copies/validates the immutable typed operation tables, queries the snapshot through that exact binding, and publishes only after complete validation. The four typed operation tables and top-level callbacks follow `spec/provider-operation-matrix.md`; ModuleRole-wide quiescence remains a separate lifetime/control API, not a PhysicalDevice dispatch callback.
 
@@ -52,6 +52,17 @@ The previous Phase-A assignment and its C1–C10 corrections are retained below 
 Preserve existing formatting, license headers, EOF newlines, header scopes, names and init/protocol structure. No gratuitous whitespace/comment churn, no extra headers or monolithic duplicate `xaverius.c`, no premature Proc/SProc/request handlers, no legacy SProc/rpcbuf patterns. Do not add unnecessary includes; order them as `dix-config.h` (where required), system, Xserver-wide (canonical paths such as `include/resource.h`), then extension-internal. Do not prefix extension-internal source filenames with `xaverius_`. Treat all `include/*` headers as public SDK/driver ABI and do not change layout/signatures without a separate ABI-reviewed commit and compatibility tests. Reject mixed-purpose commits.
 
 **Current task: Phase 0 only.** Build the untouched `f6f3e87...` baseline using the existing full Xserver portability/SDK CI matrix. Do not modify source files. Report the exact commit, parent, commands/workflows, logs, and PASS/FAIL/BLOCKED result for every target. Do not start Phase 1 until this baseline is recorded and reviewed.
+
+**Phase 0 progress (2026-11-05):**
+- User-confirmed local state: worktree at `f6f3e87aa81724208496d539e40d2eee2c3d2641`, `git clean` run, local build successful. Exact local build command/configuration has not yet been recorded; do not ask the user to repeat the build unless needed to reproduce it.
+- Remote `wip/xaverius` independently resolves to the exact target SHA; preserved `wip/xaverius_old_1` resolves to `deb0e445001389be031fa7e006e3e2e216616b50`.
+- Full existing workflow: [Build X servers, run 42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759), commit `f6f3e87...`. At the latest inspection it was still in progress.
+- Completed PASS jobs include Ubuntu (normal, debug, no-GBM), macOS, FreeBSD, NetBSD, DragonFlyBSD, RHEL 9/10, Alpine, Solaris, Arch, Gentoo, GNU/Hurd, MinGW cross-build, Ubuntu SDK image and completed Ubuntu driver builds.
+- FAIL: OpenBSD after three attempts. Compiler log shows repeated redefinition of `xav_static_assert___LINE__` from `Xext/xaverius/xaverius_proto.h` (the fallback `XAV_STATIC_ASSERT` macro token-pastes `__LINE__` without an expansion layer). This is a baseline finding; do not patch it during Phase 0.
+- FAIL: Cygwin build. `hw/xwin/glx/gen_gl_wrappers.py` cannot import `lxml.etree` from the Cygwin Python environment while generating WGL/GL shim files. This is a baseline CI/environment finding; do not patch it during Phase 0.
+- PENDING at latest inspection: Ubuntu Valgrind job and remaining matrix jobs.
+- Combined status API returned no status contexts; the Actions run is the authoritative matrix evidence. Recheck run completion and record final job inventory before closing Phase 0.
+- Gate interpretation: record all baseline outcomes, including pre-existing failures; do not silently repair baseline issues or treat the matrix as green. Phase 1 remains blocked until the run completes and failures are classified/documented.
 
 **Updated object contract (normative):**
 
