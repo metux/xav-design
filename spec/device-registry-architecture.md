@@ -920,13 +920,15 @@ GpuRegistryResult GpuRegistryBeginModuleRoleShutdown(
     GpuRegistry *registry, uint64_t module_role_generation);
 
 /* Drives module-role-wide quiescence after the registry has verified the
-   shutdown/drain preconditions. PENDING/FAILURE retain the module lease. */
+   shutdown/drain preconditions. PENDING/FAILURE retain any role-owned lease
+   reference when one exists; permanent roles have no module lease. */
 GpuRegistryResult GpuRegistryTryQuiesceModuleRole(
     GpuRegistry *registry, uint64_t module_role_generation,
     GpuModuleQuiescenceResult *out_quiescence);
 
-/* Final module-role release hook followed by exactly one module-lease
-   release. Returns PENDING until all non-registry DDX backend references retire. */
+/* Final module-role release hook followed by release of the role-owned
+   module-lease reference when the role is unloadable. Permanent roles skip
+   lease release. Returns PENDING while dependencies remain. */
 GpuRegistryResult GpuRegistryFinalizeModuleRoleShutdown(
     GpuRegistry *registry, uint64_t module_role_generation);
 
