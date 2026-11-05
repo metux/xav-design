@@ -62,7 +62,7 @@ If two DDX registrations claim the same canonical hardware, the registry dedupli
 - ScreenAttachment lifetime is independent of device-binding lifetime. Closing a GPU Screen detaches topology; it does not automatically unregister a shared device backend or remove the PhysicalDevice.
 - DDX unload closes registration admission, detaches its ScreenAttachments, withdraws its observations/device bindings, drains accepted asynchronous tokens, waits for callback quiescence, and only then releases contexts and the module lease.
 - Xorg Screen references and DriverPtr.refCount are not sufficient pins for asynchronous callbacks or operation vectors.
-- Every callback path that can enter DDX code retains the module-role lease and callback-execution reference until it has returned to the server-owned completion sink.
+- Every callback path that can enter DDX code retains the module-role lease and callback-execution reference until `GpuBackendCompletionDispatch` has copied/enqueued the completion and returned.
 - A DDX backend/module control record may be shared across several PhysicalDevices, so module-wide shutdown drains all bindings owned by that role. A binding-local device loss affects only that PhysicalDevice.
 - If quiescence cannot be proven, retain/quarantine the binding context and module; never unload reachable callback or operation code.
 
