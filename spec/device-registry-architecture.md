@@ -685,8 +685,10 @@ typedef enum {
     GPU_BACKEND_RETIREMENT_FAILURE
 } GpuBackendRetirementResult;
 
-/* Version 1 covers this top-level descriptor and all four nested typed
-   operation-table layouts. A future layout change requires a new ABI version. */
+/* Version 1 covers this descriptor, all four nested typed operation tables,
+   and every DDX-facing callback signature and parameter/result structure they
+   reference (including operation-token/completion types). Any incompatible
+   layout or signature change requires a new ABI version. */
 #define GPU_DEVICE_BACKEND_OPS_ABI_VERSION 1u
 
 typedef struct GpuDeviceBackendOps {
