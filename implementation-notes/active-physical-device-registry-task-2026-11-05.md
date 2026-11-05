@@ -2,9 +2,11 @@
 
 **Priority:** HIGH — primary XAverius implementation work  
 **Target:** `X11Libre/xserver:wip/xaverius`  
-**Starting point:** clean rollback commit `f6f3e87aa81724208496d539e40d2eee2c3d2641` (verify the live remote ref before editing)  
+**Starting point:** the verified live remote tip of `X11Libre/xserver:wip/xaverius`; at the 2026-11-05 audit it was `5f018603755f0c6b2342ea175d0826a9b8f912f7`. Do not reset to `f6f3e87aa81724208496d539e40d2eee2c3d2641`.  
 **Specification authority:** `metux/xav-design:docs/restructure-2026-10-21`  
 **Status:** ACTIVE — replaces the old “Phase 0 only / Phase A-B paused” instruction. CI repair tasks continue independently at LOW priority and do not gate registry implementation.
+
+**Branch safety correction (2026-11-05):** `f6f3e87aa81724208496d539e40d2eee2c3d2641` is not a clean-slate rollback boundary: it is a normal commit whose parent is `ce7f5eed79af22106f6d202f2bae8aa11274e214`. The current observed tip `5f018603755f0c6b2342ea175d0826a9b8f912f7` is four commits beyond it. Do not reset, force-push, or merge historical branches. Fetch and inspect the live remote tip; preserve valid non-registry commits already on the branch. If ancestry diverges or unexpected registry code appears, stop and report exact SHAs before writing. Only the owner may authorize an exact reset target.
 
 This task authorizes actual PhysicalDevice registry implementation. It does NOT authorize protocol request handlers, backend operation implementations, or premature modesetting/discovery integration.
 
@@ -146,7 +148,7 @@ Publication is a distinct server-internal action after the startup barrier and d
 
 ## 7. Commit and source hygiene
 
-- Work only on `X11Libre/xserver:wip/xaverius`; verify remote tip before each work session. Do not edit Xserver source in this spec repository.
+- Work only on `X11Libre/xserver:wip/xaverius`; verify remote tip before each work session. Never use blind `git pull`, `git reset --hard`, `git clean -fdx`, force-push, or merge from `master`/`wip/xaverius_old_1`. Fetch and inspect ancestry first; only fast-forward when the local branch is strictly behind and has no unique commits. If divergent, stop and report. Do not edit Xserver source in this spec repository.
 - Use intermediate commits. One topic per commit: type/API, ModuleRole substrate, identity/registry core, registration/snapshot, DIX publication, shutdown integration.
 - Any `hw/xfree86/drivers/modesetting/` changes are a separate later commit and are not part of this task.
 - Any `include/*` public SDK ABI change requires a separate commit, explicit ABI rationale, size/version or compatibility strategy, and old-binary tests. Prefer private headers.
