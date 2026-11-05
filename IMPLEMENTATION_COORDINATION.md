@@ -18,7 +18,7 @@
 - Exact pre-inventory/pre-registry rollback target: `f6f3e87aa81724208496d539e40d2eee2c3d2641` (parent of first inventory commit `00fcd15955a0c2bd810034cc8b5b3bf1731d996a)).
 - Verified target tree contains only the original seven Xaverius files and no registry/inventory implementation.
 - **ROLLBACK COMPLETE.** A subsequent independent read of the remote ref verified `refs/heads/wip/xaverius = f6f3e87aa81724208496d539e40d2eee2c3d2641`. The initial ref-update attempt returned HTTP 403, but the exact target is now live. Do not repeat the reset/push. The seven-file Xaverius tree was verified at this commit.
-- Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md); use the current active plan revision referenced in the Phase 0 section below.
+- Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md); use the current active plan revision linked in the PhysicalDevice registry assignment above.
 
 **Current API authority:** every per-device registration uses a versioned `const GpuDeviceBackendOps *` inside `GpuDeviceBackendRegistration`, plus structured identity evidence, exact borrowed native handle/context, and the exact owning `GpuModuleRole` generation. The registry copies immutable typed operation tables, queries the snapshot through that exact binding, and publishes separately through `XaPhysicalDevicePublish`. Use only the current API names and contracts in the normative references below; old `XaveriusPhysicalDeviceOps` and capabilities-only registration sketches are obsolete.
 
@@ -53,7 +53,9 @@ Do not patch the discarded registry in place or cherry-pick its implementation c
 
 Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `spec/registry-api-lifetime-addendum.md`, `spec/provider-operation-matrix.md`, and `implementation-notes/ddx-device-registration.md`.
 
-## Latest registry re-audit — 2026-11-05
+## Historical registry re-audit — discarded implementation (2026-11-05)
+
+**Forensic reference only.** This audit describes the discarded pre-rollback implementation, not the current clean branch. Its findings explain why the registry is being rebuilt; the active task and current normative API supersede its old sequencing/API wording.
 
 - Latest inspected Xserver tip: `deb0e445001389be031fa7e006e3e2e216616b50` (parent `98ce6f6f281a8b8001d967bafd3debe8ea4db4fa`). Full source/history audit: [phase-a-registry-audit-2026-11-05.md](implementation-notes/phase-a-registry-audit-2026-11-05.md), audit commit `931005ab36c864d6947a0465226c03f68f336b91`.
 - **Registry model is NOT ACCEPTED and currently unusable.** `XaveriusRegisterDevice()` regressed to a capabilities-only argument; identity, native handle, per-device context, typed ops and ModuleRole/binding generation are absent. Identity is fabricated from vendor/device/API/driver version fields.
@@ -64,7 +66,9 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 - History shows the critical regression at `6dffb09bf00e807c90395348ba4c65e4b80ef976`, which dropped identity/native handle/context and disabled modesetting registration. The subsequent `98ce...` and `deb0...` commits did not restore the contract or initialize the resource type.
 - **Required:** agents must stop Phase B, repair the single type/binding model and lifecycle per R1–R9 in the audit, then satisfy existing C1–C10/A1–A9. Preserve names/formatting unless a type consolidation is required and justified. Do not edit Xserver source from this spec workspace.
 
-## Current implementation review
+## Historical Phase-A implementation review — discarded branch
+
+**Forensic reference only.** The following source findings apply to the discarded implementation history, not to the clean rollback baseline. Do not treat the old Phase-A/Phase-B gate as active; follow the new Stages 1–4 assignment above.
 
 - Latest inspected Xserver tip: `189eac7532db7530f70a68f2e659216aa19df626` (sequence: `4c35fcce487f95b48252f8cf696504cbc8ca2feb` Phase-A fixup, `8f0266fd21bf6c0daf699c6fc4fbec06ad830fab` operation-table declarations, `189eac7532db7530f70a68f2e659216aa19df626` Compute Memory handlers).
 - **Phase A audit: NOT ACCEPTED; Phase B remains unauthorized.** The callback moved to the beginning of `xf86BusConfig()`, but the implementation still fails critical requirements. The detailed repair contract is C1–C10 in `implementation-notes/phase-a-ddx-corrections.md`:
@@ -80,9 +84,9 @@ Normative detail: `spec/devices.md`, `spec/device-registry-architecture.md`, `sp
 - Xserver workflow [41921533156](https://github.com/X11Libre/xserver/actions/runs/41921533156) for `189eac7` failed: Ubuntu/DragonFlyBSD/RHEL registry builds reported redundant `strlcpy`/`strlcat`/`strndup` declarations under `-Werror` (plus DragonFly/RHEL `timingsafe_memcmp`/`CSRG_BASED` issues); the SDK image failed linking `XaveriusExtensionInit`; macOS failed because extension sources pulled in `pciaccess.h` through `xf86.h`. The overall workflow was not green. No A1–A9 harness or structured agent report was present in that audit.
 - Full findings and precise corrective instructions are in [the follow-up audit history](IMPLEMENTATION_COORDINATION_HISTORY_2026-11-04.md). Keep the gate closed until the DDX callback ABI/once guard, early udev reconciliation, canonical identity, atomic DIX publication, exported init symbol, complete binding/lifetime contract, A1–A9 tests, and exact-tip build are all independently verified.
 
-## Other open implementation evidence requests
+## Later implementation evidence requests
 
-Do not let these distract from Phase A, but preserve them for subsequent phases:
+Preserve these for the discovery/ScreenAttachment follow-up after registry Stages 1–4 are accepted; they are not blockers for the current registry-core task:
 
 1. Exact Xorg loader object/call chain that provides an independent module pin preventing final `dlclose()`; include an unload test or state whether permanent residency is the initial policy.
 2. Actual subscribe-before-scan hotplug hook and event sequencing in the target Xserver revision.
@@ -124,14 +128,14 @@ Keep these tasks on their separate branches/worktrees. No shared working tree wi
 
 ## Communication-channel migration — 2026-11-05
 
-**TRANSITION ACTIVE — continue all existing work without interruption.**
+**TRANSITION ACTIVE — continue all existing work without interruption.** The owner-approved priority change in [W0-20261105-003](https://github.com/metux/wormhole-0/blob/master/inbox/2026-11-05T1700Z--W0-20261105-003--physical-device-registry.md) activates registry implementation now; this supersedes the former Phase-0-only gate. The three CI maintenance assignments remain active at LOW priority.
 
 The shared cross-system message channel is moving to **`metux/wormhole-0`, branch `master`**. The fleet's local clone is available at `_WORK_/wormhole-0`.
 
 - New cross-system requests, questions, acknowledgements, replies, hand-offs, and durable coordination decisions belong in `metux/wormhole-0`, following its `COLLABORATION.md`.
 - The first migration request is `W0-20261105-002`: [fleet-channel-migration](https://github.com/metux/wormhole-0/blob/master/inbox/2026-11-05T1645Z--W0-20261105-002--fleet-channel-migration.md).
 - Flagship must notify all ships, switch their communication polling/write path, and collect acknowledgements in the new repository's `outbox/`.
-- **Do not pause, cancel, reassign, or reset existing tasks.** All active work continues under its existing instructions, ownership, branches, worktrees, and phase gates. In particular, the Phase 0 OpenBSD/Cygwin baseline work remains active and unchanged.
+- **Do not pause, cancel, reassign, or reset existing tasks.** All active work continues under its existing instructions, ownership, branches, worktrees, and phase gates. In particular, the OpenBSD/Cygwin CI maintenance work remains active and unchanged, but no longer gates registry implementation.
 - The XAverius spec remains authoritative at `metux/xav-design@docs/restructure-2026-10-21`; Xserver implementation remains `X11Libre/xserver@wip/xaverius`. This migration changes only the communication channel.
 - Keep this file and its active technical assignments intact during transition. Treat this section as the pointer for agents still polling the old channel. Do not add new general discussion here; reply and coordinate in wormhole-0.
 - Do not perform unrelated Starfleetctl refactoring. Make only the minimum configuration/SOP changes required for the new channel, using existing task/worktree discipline.
