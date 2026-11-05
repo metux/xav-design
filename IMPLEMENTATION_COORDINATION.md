@@ -132,3 +132,23 @@ Do not report a spec CI pass as evidence that the Xserver implementation builds 
 ## Specification CI status
 
 Latest fully CI-verified architecture baseline recorded: `a66d977b436cb05818a07a847e7c4fc1e8065598`, workflows [41848200892](https://github.com/metux/xav-design/actions/runs/41848200892) and [41848200803](https://github.com/metux/xav-design/actions/runs/41848200803), both successful. Newer registry API lifetime and operation-matrix refinements were pending exact-tip CI at the last recorded check. Documentation-only coordination commits do not validate Xserver source.
+
+
+## Parallel CI repair assignments — 2026-11-05
+
+**ACTIVE — three independent fleet tasks.** These are maintenance tasks for the Phase 0 baseline failures only. They do not authorize Phase 1 or any XAverius registry implementation.
+
+1. **OpenBSD patch:** [ci-openbsd-static-assert-fix.md](implementation-notes/ci-openbsd-static-assert-fix.md), task commit `2159b5e719a786e70b99ded3994292ab8e98cd41`.
+   - One minimal patch to `Xext/xaverius/xaverius_proto.h`, fixing fallback C99 static-assert identifier expansion with two-stage token concatenation.
+   - Keep C++/C11 paths, wire ABI and all unrelated files unchanged.
+2. **Cygwin independent attribution:** [ci-cygwin-baseline-attribution.md](implementation-notes/ci-cygwin-baseline-attribution.md), task commit `7f93fe80e8a87a6ae693c7fa0534d6d603701dd4`.
+   - Investigation only; compare `wip/xaverius@f6f3e87...` against exact current `master` SHA and its CI. No edits.
+3. **Cygwin repair:** [ci-cygwin-repair.md](implementation-notes/ci-cygwin-repair.md), task commit `f9d9820590ee8c3bd046de2b61287f471c316e24`.
+   - Separate minimal patch; prove the lxml/DLL/runtime cause before editing. Coordinate with attribution agent.
+   - If failure exists on unchanged master, target a standalone general Xserver PR based on master. If introduced by XAverius branch, target a separate XAverius patch. If inconclusive, do not open a PR or guess.
+
+**Fleet coordination:** flagship should create three separately tracked tasks and assign separate ships. The attribution ship must message its evidence to the repair ship and flagship before the repair ship chooses the PR destination. No shared working tree or shared feature branch between OpenBSD and Cygwin work. Use separate worktrees/branches and serialized commit/push operations per starfleetctl conventions. Each ship reports exact base/head SHAs, changed paths, commands, CI run/job URLs and PASS/FAIL/BLOCKED outcomes. Do not merge these patches together.
+
+**Common base/evidence:** Xserver clean baseline `wip/xaverius@f6f3e87aa81724208496d539e40d2eee2c3d2641`; failing full matrix run [42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759). Cygwin already installs `python312-lxml`, `libxml2_2`, and `libxslt`; adding them again is not a valid fix. OpenBSD failure is the fallback macro's direct token-paste of `__LINE__`.
+
+**Phase gate:** Phase 0 baseline failures are being repaired/classified in separate maintenance work. Do not start Phase 1 until the original baseline matrix is fully inventoried and these independent patches have been reviewed and their CI effects recorded.
