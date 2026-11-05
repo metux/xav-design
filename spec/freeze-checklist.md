@@ -241,7 +241,7 @@ Exact-tip CI and implementation-agent source review are pending.
 
 ### Follow-up DDX binding consistency audit — 2026-11-04
 
-The second pass removed residual candidate-list/backend-key ranking assumptions from §8.2 and updated conformance vectors 42–44 and 88–90 to exercise direct per-device registration and module-role shutdown. The API contract now names `GpuPhysicalDeviceAcquireBackendBinding` as the exact binding acquisition operation. Historical provider-object vectors and status entries remain only as superseded audit history; they are not current API requirements. Exact-tip CI and implementation-agent source review remain pending.
+The second pass removed residual registry-side candidate-list/backend-key ranking APIs from §8.2 and updated conformance vectors 42–44 and 88–90 to exercise direct per-device registration and module-role shutdown. The final deterministic selection rule is now an explicit server-configured ordered preference over stable DDX device-registration module-role owner_key values; no DDX-provided priority or separate provider object is introduced. With no matching preference, one eligible binding may be selected; multiple eligible unlisted bindings remain unpublished as ambiguous. The API contract names `GpuPhysicalDeviceAcquireBackendBinding` as the exact binding acquisition operation. Historical provider-object vectors and status entries remain only as superseded audit history; they are not current API requirements. Exact-tip CI and implementation-agent source review remain pending.
 
 ### DDX registration/discovery boundary correction — 2026-11-05
 
