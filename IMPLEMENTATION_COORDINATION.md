@@ -152,3 +152,19 @@ Latest fully CI-verified architecture baseline recorded: `a66d977b436cb05818a07a
 **Common base/evidence:** Xserver clean baseline `wip/xaverius@f6f3e87aa81724208496d539e40d2eee2c3d2641`; failing full matrix run [42052262759](https://github.com/X11Libre/xserver/actions/runs/42052262759). Cygwin already installs `python312-lxml`, `libxml2_2`, and `libxslt`; adding them again is not a valid fix. OpenBSD failure is the fallback macro's direct token-paste of `__LINE__`.
 
 **Phase gate:** Phase 0 baseline failures are being repaired/classified in separate maintenance work. Do not start Phase 1 until the original baseline matrix is fully inventoried and these independent patches have been reviewed and their CI effects recorded.
+
+## Communication-channel migration — 2026-11-05
+
+**TRANSITION ACTIVE — continue all existing work without interruption.**
+
+The shared cross-system message channel is moving to **`metux/wormhole-0`, branch `master`**. The fleet's local clone is available at `_WORK_/wormhole-0`.
+
+- New cross-system requests, questions, acknowledgements, replies, hand-offs, and durable coordination decisions belong in `metux/wormhole-0`, following its `COLLABORATION.md`.
+- The first migration request is `W0-20261105-002`: [fleet-channel-migration](https://github.com/metux/wormhole-0/blob/master/inbox/2026-11-05T1645Z--W0-20261105-002--fleet-channel-migration.md).
+- Flagship must notify all ships, switch their communication polling/write path, and collect acknowledgements in the new repository's `outbox/`.
+- **Do not pause, cancel, reassign, or reset existing tasks.** All active work continues under its existing instructions, ownership, branches, worktrees, and phase gates. In particular, the Phase 0 OpenBSD/Cygwin baseline work remains active and unchanged.
+- The XAverius spec remains authoritative at `metux/xav-design@docs/restructure-2026-10-21`; Xserver implementation remains `X11Libre/xserver@wip/xaverius`. This migration changes only the communication channel.
+- Keep this file and its active technical assignments intact during transition. Treat this section as the pointer for agents still polling the old channel. Do not add new general discussion here; reply and coordinate in wormhole-0.
+- Do not perform unrelated Starfleetctl refactoring. Make only the minimum configuration/SOP changes required for the new channel, using existing task/worktree discipline.
+
+The old channel can be considered retired only after the flagship and active ships have confirmed that they can read and write the new repository and all active assignments remain accounted for.
