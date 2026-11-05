@@ -5,7 +5,7 @@
 **Required rollback target:** `f6f3e87aa81724208496d539e40d2eee2c3d2641`  
 **Current audited tip before rollback:** `deb0e445001389be031fa7e006e3e2e216616b50`  
 **Normative authority:** `metux/xav-design:docs/restructure-2026-10-21`  
-**Status:** plan ready; branch ref rollback could not be performed by this GitHub integration (HTTP 403 / Resource not accessible by integration). No Xserver source or branch ref was changed by this plan commit.
+**Status:** rollback complete and independently verified at the remote branch ref; implementation plan ready. The first ref-update attempt returned HTTP 403, but a subsequent independent read confirmed the branch now resolves exactly to the target SHA.
 
 ## 1. Decision and rollback boundary
 
@@ -22,7 +22,7 @@ The target `f6f3e87` is therefore the clean pre-inventory/pre-registry point. It
 
 ### Rollback command for the branch maintainer
 
-The GitHub integration refused the force-with-lease update with HTTP 403. A maintainer with branch-write access must perform and verify:
+The initial force-with-lease update attempt returned HTTP 403. A subsequent independent read of the remote ref confirmed that the rollback has since been completed. Current verified `refs/heads/wip/xaverius` is exactly `f6f3e87aa81724208496d539e40d2eee2c3d2641`. Do not repeat the reset/push. The command below is retained only as an auditable recovery procedure if the branch is moved again:
 
 ```sh
 git fetch origin
