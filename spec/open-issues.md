@@ -155,4 +155,4 @@ A cross-check of the registry API and all four typed DDX operation tables closed
 - query_surface_support receives the exact logical GpuBackendDevice and returns one aggregate for all queue families in one call. It cannot assemble a capability snapshot from per-family calls or another logical Device.
 - All four typed tables now have explicit output initialization, caller-owned array capacity, batch atomicity, object-reference transfer/consumption, borrowed queue-handle, and CommandPool/DescriptorPool cascade rules.
 
-The corresponding conformance additions are vectors 172–176 in [the DDX backend operation matrix](provider-operation-matrix.md). No request, reply, event, opcode, or Vulkan capability changed. These are normative specification checks only; exact-tip CI and live implementation conformance remain separate gates.
+The corresponding conformance additions are vectors 172–177 in [the DDX backend operation matrix](provider-operation-matrix.md). No request, reply, event, opcode, or Vulkan capability changed. These are normative specification checks only; exact-tip CI and live implementation conformance remain separate gates.
