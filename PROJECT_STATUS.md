@@ -2,7 +2,7 @@
 
 **Project:** XAverius — network-transparent Vulkan access over X11  
 **Specification branch:** `docs/restructure-2026-10-21`  
-**Current status:** Normative v0.1 protocol work is substantially complete. The DDX-owned PhysicalDevice registration, direct-binding cleanup, and removal of residual candidate-ranking assumptions are the latest unverified specification delta. Exact-tip CI and implementation-agent conformance review are pending. Runtime implementation acceptance remains open.
+**Current status:** Normative v0.1 protocol work is substantially complete. The DDX-owned PhysicalDevice registration and direct-binding architecture remain the normative model. The latest focused consistency correction is `efd2c8be5056da52cc31be2090985cd2ef2cb7cd`; it removes the remaining discovery-source/candidate-attachment ambiguity in the registry architecture. Exact-tip CI and implementation-agent conformance review are pending. Runtime implementation acceptance remains open.
 
 The previous chronological work log is preserved in [project-status-history-2026-11-04.md](PROJECT_STATUS_HISTORY_2026-11-04.md). Older provider terminology and provider-object APIs in historical entries describe superseded designs; the current normative model is the DDX binding architecture below and in the specification.
 
