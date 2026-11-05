@@ -58,7 +58,7 @@ The registration paths are:
 
 1. **Observe platform identity.** Platform/udev sources may submit identity and hotplug evidence. The registry canonicalizes it but does not publish an executable device from this evidence alone.
 2. **Register each served PhysicalDevice.** The responsible DDX submits the canonical identity evidence, DDX-local device handle, per-device backend context where needed, and the call-vector binding. It MUST enumerate/register all devices it serves, not just the GPU associated with the first Screen.
-3. **Validate and snapshot.** The registry validates the registration and obtains the complete immutable snapshot through that device's bound operations. It then publishes the canonical PhysicalDevice and allocates its server-owned XID. No Screen initialization order participates.
+3. **Validate and install the binding.** The registry validates the registration and obtains the complete immutable snapshot through that device's exact bound operations. Successful registration installs the complete binding and snapshot; it does not by itself publish the PhysicalDevice or allocate an XID. Publication is a separate operation and occurs only after identity is resolved, an eligible binding is selected, and the startup publication gate is open. No Screen initialization order participates.
 4. **Attach Screen topology.** A DDX/Screen path separately attaches the live Screen generation to one or more registered PhysicalDevices with explicit roles. This does not create a second PhysicalDevice or change its selected call vectors.
 5. **Report lifecycle observations.** The DDX and platform sources report binding/device loss, recovery, Screen detach, and confirmed physical removal as distinct generation-checked events.
 
