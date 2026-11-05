@@ -717,8 +717,8 @@ typedef struct GpuDeviceBackendOps {
         GpuBackendSurface **);
     GpuBackendResult (*destroy_surface)(GpuDeviceBackendBinding *, GpuBackendSurface *);
     GpuBackendResult (*query_surface_support)(
-        GpuDeviceBackendBinding *, uint32_t queue_family,
-        GpuBackendSurface *, GpuBackendSurfaceSupport *);
+        GpuBackendDevice *, GpuBackendSurface *,
+        GpuBackendSurfaceSupport *);
     /* Create/release an exact route for this logical Device generation and
        Surface/Window/Screen generation after physical-device capability
        probing. The route MUST be distinct per logical Device, even when two
