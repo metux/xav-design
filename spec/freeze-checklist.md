@@ -8,7 +8,7 @@ This checklist defines the evidence required before calling the XAverius v0.1 pr
 - The presentation-capable profile is specified separately. Its assigned requests and events do not imply support from a compute-only server.
 - Wire assignments are stable for a frozen release; any later incompatible change requires an explicit protocol-version decision, not a silent edit.
 
-## Current audit assessment — 2026-11-04
+## Current audit assessment — 2026-11-05
 
 The normative request inventory, request/reply/event layouts, resource lifecycle rules, asynchronous outcomes, numeric registries, request error precedence, and cross-document conformance relationships have been audited against the current chapters, registries, request audit, reference models, and static assertions. These are content gates: they concern whether the protocol is implementable without contradictory or missing rules. Editorial consistency, including the language used in prose, is not a protocol-freeze gate unless it makes a rule ambiguous.
 
@@ -242,3 +242,9 @@ Exact-tip CI and implementation-agent source review are pending.
 ### Follow-up DDX binding consistency audit — 2026-11-04
 
 The second pass removed residual candidate-list/backend-key ranking assumptions from §8.2 and updated conformance vectors 42–44 and 88–90 to exercise direct per-device registration and module-role shutdown. The API contract now names `GpuPhysicalDeviceAcquireBackendBinding` as the exact binding acquisition operation. Historical provider-object vectors and status entries remain only as superseded audit history; they are not current API requirements. Exact-tip CI and implementation-agent source review remain pending.
+
+### DDX registration/discovery boundary correction — 2026-11-05
+
+A focused review of the registry architecture found residual wording that could be read as permitting Vulkan-loader enumeration to act as an independent discovery/registration source, and an obsolete split between candidate discovery and DDX backend attachment. The architecture now states the single boundary consistently: platform sources contribute identity/hotplug observations; each DDX enumerates and submits complete per-device registrations containing identity, native handle, per-device context, and typed operation vectors; the registry stages these complete registrations until the publication barrier and selects/publishes one complete binding. It does not expose a candidate-list or second attachment/dispatch API. The same pass clarified that a later DDX pass may publish a device that was never published, but cannot recover a withdrawn binding through a different registration generation.
+
+Architecture commits: `e267463711141aef86ec7fd0dc0913afa66f3660` and `efd2c8be5056da52cc31be2090985cd2ef2cb7cd`. No wire ABI, request assignment, event ID, or client-visible behavior changed. Exact-tip CI has not yet been verified; do not treat this delta as green until the required workflows complete. This is a normative server-architecture consistency correction, not authorization to begin Xserver implementation or to change the Phase 0 gate.
