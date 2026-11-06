@@ -25,7 +25,7 @@ xav_client_status xav_enumerate_physical_devices(xav_connection *c,
     *devices = NULL;
     *device_count = 0;
     if (error_out) *error_out = NULL;
-    status = xav_send_reply_request(c, XAV_REQ_ENUMERATE_PHYSICAL_DEVICES,
+    status = xav_send_reply_request(c, XAVERIUS_REQ_ENUMERATE_PHYSICAL_DEVICES,
                                     &reply, error_out);
     if (status != XAV_CLIENT_SUCCESS) return status;
     if (!xav_reply_envelope_valid(c, reply, &total) ||

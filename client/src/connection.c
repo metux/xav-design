@@ -81,7 +81,7 @@ xav_client_status xav_connection_create(xcb_connection_t *xcb, xav_connection **
     c->xcb = xcb;
     c->extension = ext;
     c->major_opcode = ext->major_opcode;
-    status = xav_send_reply_request(c, XAV_REQ_QUERY_VERSION, &reply, error_out);
+    status = xav_send_reply_request(c, XAVERIUS_REQ_QUERY_VERSION, &reply, error_out);
     if (status != XAV_CLIENT_SUCCESS) { free(c); return status; }
     if (!xav_reply_envelope_valid(c, reply, &total) || total != 32 ||
         reply->response_type != 1 || xav_get_u32(c, (uint8_t *)reply + 4) != 0) {

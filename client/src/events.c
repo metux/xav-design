@@ -19,15 +19,15 @@ static int zero_bytes(const uint8_t *p, size_t length)
 static int expected_payload_words(uint16_t type, uint32_t *words)
 {
     switch (type) {
-    case XAV_EVENT_ASYNC_ERROR: *words = 7; return 1;
-    case XAV_EVENT_DEVICE_LOST: *words = 4; return 1;
-    case XAV_EVENT_DEVICE_STATUS_CHANGED: *words = 4; return 1;
-    case XAV_EVENT_DEVICE_MEMORY_PRESSURE: *words = 4; return 1;
-    case XAV_EVENT_DEVICE_IDLE: *words = 4; return 1;
-    case XAV_EVENT_SUBMISSION_COMPLETE: *words = 6; return 1;
-    case XAV_EVENT_SUBMISSION_FAILED: *words = 6; return 1;
-    case XAV_EVENT_IMAGE_RELEASED: *words = 8; return 1;
-    case XAV_EVENT_PRESENTATION_COMPLETE: *words = 8; return 1;
+    case XAVERIUS_EVENT_ASYNC_ERROR: *words = 7; return 1;
+    case XAVERIUS_EVENT_DEVICE_LOST: *words = 4; return 1;
+    case XAVERIUS_EVENT_DEVICE_STATUS_CHANGED: *words = 4; return 1;
+    case XAVERIUS_EVENT_DEVICE_MEMORY_PRESSURE: *words = 4; return 1;
+    case XAVERIUS_EVENT_DEVICE_IDLE: *words = 4; return 1;
+    case XAVERIUS_EVENT_SUBMISSION_COMPLETE: *words = 6; return 1;
+    case XAVERIUS_EVENT_SUBMISSION_FAILED: *words = 6; return 1;
+    case XAVERIUS_EVENT_IMAGE_RELEASED: *words = 8; return 1;
+    case XAVERIUS_EVENT_PRESENTATION_COMPLETE: *words = 8; return 1;
     default: return 0;
     }
 }
@@ -67,7 +67,7 @@ xav_event_decode(const xav_connection *c, const xcb_generic_event_t *generic,
     payload = bytes + sizeof(*ge);
 #define U32(off) xav_get_u32(c, payload + (off))
     switch (ge->event_type) {
-    case XAV_EVENT_ASYNC_ERROR:
+    case XAVERIUS_EVENT_ASYNC_ERROR:
         if (U32(24) != 0) return XAV_EVENT_DECODE_ERROR;
         decoded.data.async_error.device_xid = U32(0);
         decoded.data.async_error.error_code = U32(4);
@@ -75,43 +75,43 @@ xav_event_decode(const xav_connection *c, const xcb_generic_event_t *generic,
         decoded.data.async_error.submission_token = get_u64(payload + 12);
         decoded.data.async_error.resource_xid = U32(20);
         break;
-    case XAV_EVENT_DEVICE_LOST:
+    case XAVERIUS_EVENT_DEVICE_LOST:
         decoded.data.device_lost.device_xid = U32(0);
         decoded.data.device_lost.reason_code = U32(4);
         decoded.data.device_lost.device_generation = get_u64(payload + 8);
         break;
-    case XAV_EVENT_DEVICE_STATUS_CHANGED:
+    case XAVERIUS_EVENT_DEVICE_STATUS_CHANGED:
         if (U32(12) != 0) return XAV_EVENT_DECODE_ERROR;
         decoded.data.device_status_changed.physical_device_xid = U32(0);
         decoded.data.device_status_changed.new_status = U32(4);
         decoded.data.device_status_changed.reason_code = U32(8);
         break;
-    case XAV_EVENT_DEVICE_MEMORY_PRESSURE:
+    case XAVERIUS_EVENT_DEVICE_MEMORY_PRESSURE:
         if (U32(12) != 0) return XAV_EVENT_DECODE_ERROR;
         decoded.data.device_memory_pressure.device_xid = U32(0);
         decoded.data.device_memory_pressure.heap_index = U32(4);
         decoded.data.device_memory_pressure.pressure_level = U32(8);
         break;
-    case XAV_EVENT_DEVICE_IDLE:
+    case XAVERIUS_EVENT_DEVICE_IDLE:
         decoded.data.device_idle.device_xid = U32(0);
         decoded.data.device_idle.idle_reason = U32(4);
         decoded.data.device_idle.device_generation = get_u64(payload + 8);
         break;
-    case XAV_EVENT_SUBMISSION_COMPLETE:
+    case XAVERIUS_EVENT_SUBMISSION_COMPLETE:
         if (U32(12) != 0) return XAV_EVENT_DECODE_ERROR;
         decoded.data.submission_complete.device_xid = U32(0);
         decoded.data.submission_complete.queue_family_index = U32(4);
         decoded.data.submission_complete.queue_index = U32(8);
         decoded.data.submission_complete.submission_token = get_u64(payload + 16);
         break;
-    case XAV_EVENT_SUBMISSION_FAILED:
+    case XAVERIUS_EVENT_SUBMISSION_FAILED:
         decoded.data.submission_failed.device_xid = U32(0);
         decoded.data.submission_failed.queue_family_index = U32(4);
         decoded.data.submission_failed.queue_index = U32(8);
         decoded.data.submission_failed.failure_class = U32(12);
         decoded.data.submission_failed.submission_token = get_u64(payload + 16);
         break;
-    case XAV_EVENT_IMAGE_RELEASED:
+    case XAVERIUS_EVENT_IMAGE_RELEASED:
         if (U32(20) != 0) return XAV_EVENT_DECODE_ERROR;
         decoded.data.image_released.device_xid = U32(0);
         decoded.data.image_released.queue_family_index = U32(4);
@@ -120,7 +120,7 @@ xav_event_decode(const xav_connection *c, const xcb_generic_event_t *generic,
         decoded.data.image_released.image_index = U32(16);
         decoded.data.image_released.presentation_token = get_u64(payload + 24);
         break;
-    case XAV_EVENT_PRESENTATION_COMPLETE:
+    case XAVERIUS_EVENT_PRESENTATION_COMPLETE:
         decoded.data.presentation_complete.device_xid = U32(0);
         decoded.data.presentation_complete.queue_family_index = U32(4);
         decoded.data.presentation_complete.queue_index = U32(8);
@@ -142,7 +142,7 @@ xav_connection_select_events(xav_connection *c, xav_event_scope scope,
                              xcb_generic_error_t **error_out)
 {
     static const xcb_protocol_request_t request = { 2, &xav_extension, 0, 1 };
-    uint8_t body[28] = { XAV_REQ_SELECT_EVENTS, 0, 0, 0 };
+    uint8_t body[28] = { XAVERIUS_REQ_SELECT_EVENTS, 0, 0, 0 };
     uint32_t fields[6];
     struct iovec parts[4];
     unsigned int sequence;

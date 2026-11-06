@@ -20,7 +20,7 @@ int main(void)
     ge->extension = connection.major_opcode;
     ge->sequence = 0x1234;
     ge->length = 7;
-    ge->event_type = XAV_EVENT_ASYNC_ERROR;
+    ge->event_type = XAVERIUS_EVENT_ASYNC_ERROR;
     ge->full_sequence = 0x12345678;
     put32(payload + 0, 0x100);
     put32(payload + 4, 3);
@@ -28,7 +28,7 @@ int main(void)
     put64(payload + 12, UINT64_C(0x1122334455667788));
     put32(payload + 20, 0x200);
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
-    assert(event.type == XAV_EVENT_ASYNC_ERROR);
+    assert(event.type == XAV_CLIENT_EVENT_ASYNC_ERROR);
     assert(event.sequence == 0x1234);
     assert(event.full_sequence == 0x12345678);
     assert(event.data.async_error.device_xid == 0x100);
@@ -43,7 +43,7 @@ int main(void)
     ge->length = 1;
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_UNKNOWN);
     assert(event.type == 99 && event.unknown_payload == payload && event.unknown_payload_size == 4);
-    ge->event_type = XAV_EVENT_ASYNC_ERROR;
+    ge->event_type = XAVERIUS_EVENT_ASYNC_ERROR;
     ge->length = 6;
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_ERROR);
     ge->length = 7;
@@ -56,7 +56,7 @@ int main(void)
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC;
     ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_DEVICE_LOST;
+    ge->event_type = XAVERIUS_EVENT_DEVICE_LOST;
     ge->length = 4;
     put32(payload + 0, 0x101);
     put32(payload + 4, 5);
@@ -66,21 +66,21 @@ int main(void)
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_DEVICE_STATUS_CHANGED; ge->length = 4;
+    ge->event_type = XAVERIUS_EVENT_DEVICE_STATUS_CHANGED; ge->length = 4;
     put32(payload + 0, 0x102); put32(payload + 4, 2); put32(payload + 8, 7);
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
     assert(event.data.device_status_changed.physical_device_xid == 0x102);
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_DEVICE_MEMORY_PRESSURE; ge->length = 4;
+    ge->event_type = XAVERIUS_EVENT_DEVICE_MEMORY_PRESSURE; ge->length = 4;
     put32(payload + 0, 0x103); put32(payload + 4, 1); put32(payload + 8, 2);
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
     assert(event.data.device_memory_pressure.pressure_level == 2);
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_DEVICE_IDLE; ge->length = 4;
+    ge->event_type = XAVERIUS_EVENT_DEVICE_IDLE; ge->length = 4;
     put32(payload + 0, 0x104); put32(payload + 4, 3);
     put64(payload + 8, UINT64_C(0x1112131415161718));
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
@@ -88,7 +88,7 @@ int main(void)
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_SUBMISSION_COMPLETE; ge->length = 6;
+    ge->event_type = XAVERIUS_EVENT_SUBMISSION_COMPLETE; ge->length = 6;
     put32(payload + 0, 0x105); put32(payload + 4, 2); put32(payload + 8, 1);
     put64(payload + 16, UINT64_C(0x2122232425262728));
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
@@ -96,7 +96,7 @@ int main(void)
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_SUBMISSION_FAILED; ge->length = 6;
+    ge->event_type = XAVERIUS_EVENT_SUBMISSION_FAILED; ge->length = 6;
     put32(payload + 0, 0x106); put32(payload + 4, 2); put32(payload + 8, 1);
     put32(payload + 12, 1); put64(payload + 16, UINT64_C(0x3132333435363738));
     assert(xav_event_decode(&connection, (xcb_generic_event_t *)ge, &event) == XAV_EVENT_DECODE_OK);
@@ -104,7 +104,7 @@ int main(void)
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_IMAGE_RELEASED; ge->length = 8;
+    ge->event_type = XAVERIUS_EVENT_IMAGE_RELEASED; ge->length = 8;
     put32(payload + 0, 0x107); put32(payload + 4, 2); put32(payload + 8, 1);
     put32(payload + 12, 0x300); put32(payload + 16, 4);
     put64(payload + 24, UINT64_C(0x4142434445464748));
@@ -113,7 +113,7 @@ int main(void)
 
     memset(storage, 0, sizeof(storage));
     ge->response_type = XCB_GE_GENERIC; ge->extension = connection.major_opcode;
-    ge->event_type = XAV_EVENT_PRESENTATION_COMPLETE; ge->length = 8;
+    ge->event_type = XAVERIUS_EVENT_PRESENTATION_COMPLETE; ge->length = 8;
     put32(payload + 0, 0x108); put32(payload + 4, 2); put32(payload + 8, 1);
     put32(payload + 12, 0x301); put32(payload + 16, 5); put32(payload + 20, 4);
     put64(payload + 24, UINT64_C(0x5152535455565758));
