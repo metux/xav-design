@@ -24,7 +24,7 @@ Implement only the discovery/registration lifecycle seam and its concrete Xlibre
 
 1. A DDX-wide registration entry point that is independent of `ScreenPtr`, `ScrnInfoPtr`, `XaveriusScreenPtr`, and Screen creation.
 2. A DDX-owned enumeration pass that visits all PhysicalDevices served by that DDX instance.
-3. A direct per-device registration call into the canonical XAverius registry, using the current normative complete-binding registration contract (semantic equivalent of `GpuRegistryRegisterDdxDevice`).
+3. A direct per-device registration call into the canonical XAverius registry, using the current normative complete-binding registration contract (semantic equivalent of `XaveriusRegistryRegisterDdxDevice`).
 4. A real call site in the selected XAverius-capable DDX path, invoked after the exact native device handle/context and operation vectors are valid, but without requiring a Screen.
 5. Removal of PhysicalDevice enumeration/property/queue-family callbacks from `XaveriusDDXOps`.
 6. Removal of all lazy device discovery from client request handlers.
@@ -169,7 +169,7 @@ The implementation task is not permission to rename or reformat unrelated code.
 
 - Preserve existing public/internal symbol names, type names, file names, directory layout, comment style, formatting, and local coding conventions unless a specific item conflicts with a normative requirement or prevents the required lifecycle separation.
 - Do not perform cosmetic renames, broad formatting, whitespace-only cleanup, include sorting, file splitting/merging, generalized refactoring, or unrelated cleanup as part of Phase A.
-- Do not rename existing APIs merely to make them resemble names used in the specification. Specification names such as `GpuRegistryRegisterDdxDevice` describe semantic contracts unless the normative spec explicitly declares an ABI symbol name.
+- Use the current normative `Xaverius*` API names consistently in implementation-facing declarations and documentation. Do not preserve or introduce obsolete `Gpu*` aliases. This naming correction does not authorize unrelated API redesign, ABI changes, or formatting churn.
 - Prefer the smallest additive or targeted change that establishes the required DDX-wide lifecycle and removes the explicitly forbidden Screen-level device callbacks.
 - If a rename, file move, formatting change, or broader refactor is genuinely required, explain the concrete technical/normative reason in the commit report and keep it limited to the affected code.
 - Keep unrelated hunks out of the commit. Review the final diff for accidental formatting churn and report its scope.
