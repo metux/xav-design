@@ -33,7 +33,7 @@ Before editing, sync and read these exact files from the authoritative spec bran
 - `implementation-notes/phase-a-ddx-corrections.md`
 - `implementation-notes/ddx-device-registration.md`
 
-The current spec API names are `GpuRegistryRegisterDdxDevice`, `GpuDeviceBackendRegistration`, `GpuDeviceBackendOps`, `GpuPhysicalDevice`, `GpuDeviceBackendBinding`, and `GpuModuleRole`. Older `XaveriusRegisterDevice`, `XaveriusPhysicalDeviceOps`, `provider_handle`, capabilities-only registration, and earlier rollback-era API sketches are not authority. Do not revive them.
+The current spec API names are `XaveriusRegistryRegisterDdxDevice`, `XaveriusDeviceBackendRegistration`, `XaveriusDeviceBackendOps`, `XaveriusPhysicalDevice`, `XaveriusDeviceBackendBinding`, and `XaveriusModuleRole`. Older `XaveriusRegisterDevice`, `XaveriusPhysicalDeviceOps`, `provider_handle`, capabilities-only registration, and earlier rollback-era API sketches are not authority. Do not revive them.
 
 If two normative sources disagree, STOP at that point, record the exact conflicting passages in the coordination board, and ask for resolution. Do not silently choose a convenient interpretation. In particular, the registration descriptor says native handle and per-device context are borrowed DDX-owned values: the registry must not free them and there are no context retain/release callbacks. The DDX keeps them valid through exact binding removal and retirement of all dependent users. Do not implement a contradictory registry-owned context refcount.
 
@@ -46,12 +46,12 @@ Implement in the following independently reviewable stages. Keep each commit ato
 ### Stage 1 — canonical types and API declarations
 
 - Inspect the current Xaverius source tree at the verified live branch tip and its existing init/meson/header structure before adding anything. Do not assume an earlier rollback SHA or historical file inventory is the current baseline.
-- Establish one canonical internal `GpuPhysicalDevice` representation. Its immutable physical-property snapshot is a member/value of that object. Do not add parallel DeviceCaps/PhysicalDeviceInfo objects.
-- Establish one direct `GpuDeviceBackendBinding` per exact DDX registration, containing the borrowed native handle/context, immutable server-owned copy of the versioned `const GpuDeviceBackendOps` tables, exact binding generation, and retained owning ModuleRole generation.
+- Establish one canonical internal `XaveriusPhysicalDevice` representation. Its immutable physical-property snapshot is a member/value of that object. Do not add parallel DeviceCaps/PhysicalDeviceInfo objects.
+- Establish one direct `XaveriusDeviceBackendBinding` per exact DDX registration, containing the borrowed native handle/context, immutable server-owned copy of the versioned `const XaveriusDeviceBackendOps` tables, exact binding generation, and retained owning ModuleRole generation.
 - Keep the PhysicalDevice XID and DIX resource wrapper entirely server-private. No DDX-visible declaration may expose either.
-- Declare the normative registration API and its exact result/out-parameter contract. On SUCCESS return one immediate caller-owned opaque PhysicalDevice reference and exact device/binding generations; caller releases it with `GpuPhysicalDeviceRelease`. The caller must not retain/dereference the bare pointer later.
+- Declare the normative registration API and its exact result/out-parameter contract. On SUCCESS return one immediate caller-owned opaque PhysicalDevice reference and exact device/binding generations; caller releases it with `XaveriusPhysicalDeviceRelease`. The caller must not retain/dereference the bare pointer later.
 - Preserve exactly the three agreed headers with distinct responsibilities: `xaverius_proto.h` (wire protocol only), `xaverius_priv.h` (DDX-facing API/types), and `xaverius_intern.h` (extension-internal declarations). Put declarations in the correct existing header; add no convenience/duplicate headers without explicit owner approval and a demonstrated interface need.
-- Keep the top-level ops, registration descriptor, and ModuleRole descriptor size/version validation exactly as specified. Validate each of the three versioned descriptor headers (GpuDeviceBackendOps, GpuDeviceBackendRegistration, and GpuModuleRoleDescriptor) before reading later fields, retaining anything, or invoking any hook. For each descriptor test NULL, undersized v1, oversized v1, and unknown ABI version; size mismatch returns INVALID_ARGUMENT, unknown version returns UNSUPPORTED, and invalid descriptors invoke no callback and acquire no lease/reference. The top-level GpuDeviceBackendOps ABI version governs all four nested operation tables and every callback signature/parameter/result/token type; nested tables do not have independent ABI versions.
+- Keep the top-level ops, registration descriptor, and ModuleRole descriptor size/version validation exactly as specified. Validate each of the three versioned descriptor headers (XaveriusDeviceBackendOps, XaveriusDeviceBackendRegistration, and XaveriusModuleRoleDescriptor) before reading later fields, retaining anything, or invoking any hook. For each descriptor test NULL, undersized v1, oversized v1, and unknown ABI version; size mismatch returns INVALID_ARGUMENT, unknown version returns UNSUPPORTED, and invalid descriptors invoke no callback and acquire no lease/reference. The top-level XaveriusDeviceBackendOps ABI version governs all four nested operation tables and every callback signature/parameter/result/token type; nested tables do not have independent ABI versions.
 - Do not add registry lists, DIX resources, request handlers, or DDX discovery in this stage.
 
 **Stage 1 tests:** compile-time type/layout checks where appropriate; separately exercise all three descriptor headers for NULL, undersized/oversized v1, and unknown version; verify exact result mapping and that no callback, retain hook, or registration-resource acquisition occurs on invalid descriptors. Verify the top-level ops ABI controls all nested tables and callback/token structures. Document the ownership table in comments or the implementation note, not by inventing extra fields.
@@ -71,9 +71,9 @@ Implement in the following independently reviewable stages. Keep each commit ato
 
 - Implement one process-wide registry service with serialized mutations in the server event/main-thread domain.
 - Implement canonical identity and incarnation handling from the complete normative identity-evidence hierarchy, retaining each evidence item's provenance, source key/generation, observation ID/event sequence, and the PhysicalDevice generation it refers to. Do not synthesize identity from vendor/device/API/driver versions. Platform/udev observations are evidence only; they are not executable registrations and cannot publish a device.
-- Implement the registry-side observation contract (GpuRegistryObserveDevice, GpuRegistryRemoveObservation, and GpuRegistryConfirmDeviceRemoved) with generation-checked source/observation records and classified outcomes. This is registry core, not platform/udev adapter integration: do not add scanning, subscriptions, kernel enumeration, or a second executable inventory. Derive removal authority only from the registered source's server-side trust/capability configuration; GpuDeviceRemovalEvidence MUST NOT let the caller select/elevate authority. Validate exact source generation, observation ID, event sequence, and current PhysicalDevice generation before changing status. Withdrawal of one observation MUST NOT mark REMOVED while other authoritative evidence still establishes the incarnation. Ambiguous or contradictory evidence remains unpublished/quarantined and never merges records.
+- Implement the registry-side observation contract (XaveriusRegistryObserveDevice, XaveriusRegistryRemoveObservation, and XaveriusRegistryConfirmDeviceRemoved) with generation-checked source/observation records and classified outcomes. This is registry core, not platform/udev adapter integration: do not add scanning, subscriptions, kernel enumeration, or a second executable inventory. Derive removal authority only from the registered source's server-side trust/capability configuration; XaveriusDeviceRemovalEvidence MUST NOT let the caller select/elevate authority. Validate exact source generation, observation ID, event sequence, and current PhysicalDevice generation before changing status. Withdrawal of one observation MUST NOT mark REMOVED while other authoritative evidence still establishes the incarnation. Ambiguous or contradictory evidence remains unpublished/quarantined and never merges records.
 - Distinguish same-incarnation duplicate observations, exact idempotent registration replay, conflicting DDX bindings, ambiguous identity, observation withdrawal, authoritative physical removal, and remove/re-add incarnation. Never merge snapshots, operation tables, native handles, or contexts. Exact registration replay means the same live registration ownership and exact binding generation—not merely equal hardware identity, UUID, owner key, or pointer values. A conflicting or stale replay returns a classified failure and no caller reference.
-- v0.1 has one selected executable binding per published PhysicalDevice. Selection follows the ordered server-configured preference over stable, non-empty, case-sensitive GpuModuleRoleDescriptor.owner_key values for roles of kind GPU_MODULE_ROLE_DDX_BACKEND. Reject duplicate preference keys as configuration errors. Selection is resolved only before first publication of an incarnation; later higher-preference registrations MUST NOT replace a published binding. Never use registration order, Screen order, pointer value, DRM node number, or module load order. No transparent failover.
+- v0.1 has one selected executable binding per published PhysicalDevice. Selection follows the ordered server-configured preference over stable, non-empty, case-sensitive XaveriusModuleRoleDescriptor.owner_key values for roles of kind XAVERIUS_MODULE_ROLE_DDX_BACKEND. Reject duplicate preference keys as configuration errors. Selection is resolved only before first publication of an incarnation; later higher-preference registrations MUST NOT replace a published binding. Never use registration order, Screen order, pointer value, DRM node number, or module load order. No transparent failover.
 - Implement the canonical ordering key from architecture §2.3 as one typed, normalized tuple and one bytewise lexicographic comparator. It MUST use the canonical identity record, fixed normalized numeric encodings and length-delimited strings; it MUST exclude pointer values, XIDs, DRM minors, node path alone, Screen order, registration/enumeration order, module load order, and mutable descriptive metadata. Reject collisions/ambiguities before publication. Use this same key for deterministic fallback ordering.
 - Keep ScreenAttachment out of PhysicalDevice ownership. No Screen, ScrnInfo, Entity, RandR output, connector, or first-GPU pointer may own the registry.
 - Do not implement a second platform inventory or global `/dev/dri` scan.
@@ -135,19 +135,19 @@ Do not add context ref callbacks: context lifetime is a DDX-side obligation prot
 This is semantic pseudocode, not a competing public declaration. Adapt names only where the current normative headers require it:
 
 ```c
-GpuPhysicalDevice *device = NULL;
+XaveriusPhysicalDevice *device = NULL;
 uint64_t device_generation = 0;
 uint64_t binding_generation = 0;
 
-GpuRegistryResult result =
-    GpuRegistryRegisterDdxDevice(registry, &registration,
+XaveriusRegistryResult result =
+    XaveriusRegistryRegisterDdxDevice(registry, &registration,
                                  &device,
                                  &device_generation,
                                  &binding_generation);
 
-if (result == GPU_REGISTRY_SUCCESS) {
+if (result == XAVERIUS_REGISTRY_SUCCESS) {
     /* Immediate reference only; registration does not promise an XID. */
-    GpuPhysicalDeviceRelease(device);
+    XaveriusPhysicalDeviceRelease(device);
     device = NULL;
 } else {
     /* No device reference, binding, or XID was returned/published. */
@@ -155,7 +155,7 @@ if (result == GPU_REGISTRY_SUCCESS) {
 }
 ```
 
-Registration descriptor construction must pass the exact per-device context/handle, structured identity, live ModuleRole generation, and `const GpuDeviceBackendOps *`. Do not pass only capabilities or a vendor/device tuple.
+Registration descriptor construction must pass the exact per-device context/handle, structured identity, live ModuleRole generation, and `const XaveriusDeviceBackendOps *`. Do not pass only capabilities or a vendor/device tuple.
 
 Publication is a distinct server-internal action after the startup barrier and deterministic binding selection; it is not performed by the DDX caller and is not implied by the successful registration result.
 
@@ -191,7 +191,7 @@ This section resolves ambiguities found in a full review against the normative r
 
 3. **Identity and ordering are normative, not heuristics.** Implement the full evidence hierarchy and provenance rules in architecture §2.2, including DRM primary/render equivalence, valid UUID corroboration/conflict, derived-device instance identity, DDX-scoped fallback isolation, and the rule that descriptive metadata cannot establish identity. Implement the canonical ordering tuple/comparator in §2.3. No pointer, XID, DRM minor, Screen index/order, node path alone, registration order, module load order, or mutable metadata may influence identity or ordering.
 
-4. **Binding preference is configuration, not registration behavior.** GpuModuleRoleDescriptor.owner_key for GPU_MODULE_ROLE_DDX_BACKEND is stable, non-empty, copied at registration, and case-sensitive. The server's ordered preference list rejects duplicate keys. Resolve selection before publication only; never replace a published binding or fail over transparently. Exact idempotent replay is the same live registration/binding ownership and generation, not merely matching identity.
+4. **Binding preference is configuration, not registration behavior.** XaveriusModuleRoleDescriptor.owner_key for XAVERIUS_MODULE_ROLE_DDX_BACKEND is stable, non-empty, copied at registration, and case-sensitive. The server's ordered preference list rejects duplicate keys. Resolve selection before publication only; never replace a published binding or fail over transparently. Exact idempotent replay is the same live registration/binding ownership and generation, not merely matching identity.
 
 5. **Snapshot and operation completeness.** Validate all three versioned descriptor headers before touching later fields or calling hooks. The top-level ops ABI version covers all four nested operation tables and callback/token structures. query_physical_snapshot is mandatory; all other entries are mandatory exactly for advertised capabilities/profile. Validate the full mandatory v0.1 snapshot, including timelineSemaphore = 1, and distinguish unsupported optional properties from failed mandatory queries. Never publish a partial or cross-binding-composed snapshot.
 
