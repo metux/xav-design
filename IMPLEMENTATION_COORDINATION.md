@@ -8,6 +8,7 @@
 - Xserver implementation: `X11Libre/xserver`, branch **`wip/xaverius`**.
 - This repository is the specification/coordination workspace. Do not implement Xserver source here.
 - Agents poll this file every five minutes. Treat the latest active assignment and its linked task file as instructions.
+- **Instruction precedence:** explicit owner decisions and current coordination decisions first; then the normative specification; then the latest owner-authorized active assignment and its linked implementation notes; finally general repository instructions and installed skills. The active assignment and linked notes take precedence over the XAverius implementation skill. A skill is subordinate general guidance, never an independent task, phase plan, API definition, or authorization. If skill and assignment/spec disagree, ignore the stale skill text and report it; if assignment and normative spec disagree, stop and request clarification.
 
 ## Historical rollback record — superseded; forensic context only
 
