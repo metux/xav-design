@@ -8,21 +8,21 @@ If a summary table in Section 4.1 differs from this matrix, this document govern
 
 Every backend operation MUST be reached only after the server has completed the request-specific validation required by the normative request chapter. DDX backend functions MUST NOT parse XAverius wire data, resolve client XIDs, select a PhysicalDevice, choose a queue family, or make client-visible state transitions.
 
-Every synchronous backend operation returns a fully initialized `GpuBackendResult`. Every output parameter MUST be initialized to its failure sentinel before any backend call. On any non-success result, object outputs are NULL, scalar outputs are zero, and output arrays are empty unless that operation explicitly defines a non-error STATUS result. The DDX binding MUST NOT expose a partially created object. It MUST roll back partial backend creation or retain it privately for safe cleanup.
+Every synchronous backend operation returns a fully initialized `XaveriusBackendResult`. Every output parameter MUST be initialized to its failure sentinel before any backend call. On any non-success result, object outputs are NULL, scalar outputs are zero, and output arrays are empty unless that operation explicitly defines a non-error STATUS result. The DDX binding MUST NOT expose a partially created object. It MUST roll back partial backend creation or retain it privately for safe cleanup.
 
-For synchronous operations, `GPU_BACKEND_SUCCESS` means the requested backend action completed sufficiently for the request handler to commit its server-side state transition. It does not mean that unrelated queued GPU work completed.
+For synchronous operations, `XAVERIUS_BACKEND_SUCCESS` means the requested backend action completed sufficiently for the request handler to commit its server-side state transition. It does not mean that unrelated queued GPU work completed.
 
-For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, QueuePresent), `GPU_BACKEND_SUCCESS` means **accepted** and requires exactly one eventual completion for the prepared token. It does not mean completion. Any other immediate result means not accepted and requires the matching token rejection path; the DDX binding MUST NOT later access resources or emit a completion for it. A DDX backend that has performed backend access or emitted a completion and then returns non-success violates the contract and is quarantined.
+For the six asynchronous operations (WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage, QueuePresent), `XAVERIUS_BACKEND_SUCCESS` means **accepted** and requires exactly one eventual completion for the prepared token. It does not mean completion. Any other immediate result means not accepted and requires the matching token rejection path; the DDX binding MUST NOT later access resources or emit a completion for it. A DDX backend that has performed backend access or emitted a completion and then returns non-success violates the contract and is quarantined.
 
-`GPU_BACKEND_UNSUPPORTED` is legal only for an operation/profile capability not advertised by the selected DDX binding, or for the pair-specific absence of a DDX-native WSI path reported by `create_surface`/`create_presentation_route` before support has been advertised for the unchanged Device/Surface/binding/Window generations. That pair-specific result is cached and mapped through the presentation request contract; it does not mark the PhysicalDevice unavailable. If `query_surface_support` has already reported support for that unchanged pair, a later `UNSUPPORTED` from route/swapchain creation is a DDX contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch. An `UNSUPPORTED` result for any other previously advertised capability is likewise FATAL.
+`XAVERIUS_BACKEND_UNSUPPORTED` is legal only for an operation/profile capability not advertised by the selected DDX binding, or for the pair-specific absence of a DDX-native WSI path reported by `create_surface`/`create_presentation_route` before support has been advertised for the unchanged Device/Surface/binding/Window generations. That pair-specific result is cached and mapped through the presentation request contract; it does not mark the PhysicalDevice unavailable. If `query_surface_support` has already reported support for that unchanged pair, a later `UNSUPPORTED` from route/swapchain creation is a DDX contract violation and is handled as FATAL/INTERNAL_SERVER_ERROR, not client BadMatch. An `UNSUPPORTED` result for any other previously advertised capability is likewise FATAL.
 
 The registry owns all resource validation, generation checks, dependency pinning, operation-token allocation, public XID state, and request ordering. DDX backend-local handles MUST remain private behind typed opaque wrappers. The DDX binding MUST validate the exact binding generation whenever an operation resolves a PhysicalDevice binding.
 
 ## 1.1 DDX binding is the direct dispatch target
 
-In the Xlibre/Xorg integration profile, the DDX registers each PhysicalDevice it serves and binds the applicable immutable operation tables, per-device context, and native physical-device handle to that device's registry binding. The selected PhysicalDevice binding is the direct dispatch target for every operation in this matrix. The server MUST NOT perform an additional GpuModuleRole-object lookup between resolving the PhysicalDevice/logical Device and invoking the typed operation.
+In the Xlibre/Xorg integration profile, the DDX registers each PhysicalDevice it serves and binds the applicable immutable operation tables, per-device context, and native physical-device handle to that device's registry binding. The selected PhysicalDevice binding is the direct dispatch target for every operation in this matrix. The server MUST NOT perform an additional XaveriusModuleRole-object lookup between resolving the PhysicalDevice/logical Device and invoking the typed operation.
 
-The former DDX backend-generation terminology in earlier API drafts is superseded by the per-PhysicalDevice DDX binding and shared `GpuModuleRole` lifetime record described in the current architecture. A module role is not a per-device backend instance or dispatch proxy. Operation arguments MUST identify the exact device binding and binding generation; the DDX backend/module-role generation is additional lifetime provenance only. Per-device native handles and context remain on the binding. See [ddx-device-registration.md](../implementation-notes/ddx-device-registration.md).
+The former DDX backend-generation terminology in earlier API drafts is superseded by the per-PhysicalDevice DDX binding and shared `XaveriusModuleRole` lifetime record described in the current architecture. A module role is not a per-device backend instance or dispatch proxy. Operation arguments MUST identify the exact device binding and binding generation; the DDX backend/module-role generation is additional lifetime provenance only. Per-device native handles and context remain on the binding. See [ddx-device-registration.md](../implementation-notes/ddx-device-registration.md).
 
 ## 2. Complete request-to-DDX backend mapping
 
@@ -111,108 +111,108 @@ The following declarations are semantic C-interface guidance. Exact C type names
 
 All `*_INFO` inputs are immutable, fully validated server-owned descriptions. All returned backend objects are opaque DDX backend wrappers with exactly one owned reference transferred to the server on SUCCESS. The server MUST consume that reference exactly once through the corresponding typed destroy/free operation, or through the explicitly defined successful parent-pool cascade for a CommandBuffer or DescriptorSet.
 
-The four typed operation-table layouts below are subordinate to the top-level `GpuDeviceBackendOps` ABI version. `GPU_DEVICE_BACKEND_OPS_ABI_VERSION` governs the top-level descriptor, all four nested table layouts, and every DDX-facing callback signature plus parameter/result structure they reference (including token/completion types); the nested tables do not carry independent version fields. The registry validates the top-level size/version before reading any nested callback field, then validates the required entries for the enabled v0.1 profile.
+The four typed operation-table layouts below are subordinate to the top-level `XaveriusDeviceBackendOps` ABI version. `XAVERIUS_DEVICE_BACKEND_OPS_ABI_VERSION` governs the top-level descriptor, all four nested table layouts, and every DDX-facing callback signature plus parameter/result structure they reference (including token/completion types); the nested tables do not carry independent version fields. The registry validates the top-level size/version before reading any nested callback field, then validates the required entries for the enabled v0.1 profile.
 
 ```c
-struct GpuBackendBufferMemoryOps {
-    GpuBackendResult (*create_buffer)(
-        GpuBackendDevice *, const GpuBufferCreateInfo *,
-        GpuBackendBuffer **out_buffer);
-    GpuBackendResult (*free_buffer)(
-        GpuBackendDevice *, GpuBackendBuffer *);
-    GpuBackendResult (*get_buffer_memory_requirements)(
-        GpuBackendDevice *, GpuBackendBuffer *,
-        GpuBufferMemoryRequirements *out_requirements);
-    GpuBackendResult (*allocate_memory)(
-        GpuBackendDevice *, const GpuMemoryAllocateInfo *,
-        GpuBackendMemory **out_memory);
-    GpuBackendResult (*free_memory)(
-        GpuBackendDevice *, GpuBackendMemory *);
-    GpuBackendResult (*bind_buffer_memory)(
-        GpuBackendDevice *, GpuBackendBuffer *,
-        GpuBackendMemory *, uint64_t offset);
-    GpuBackendResult (*write_buffer)(
-        GpuBackendDevice *, GpuBackendBuffer *, GpuBackendMemory *,
-        const GpuBufferTransferInfo *, GpuBackendOperationToken *);
-    GpuBackendResult (*read_buffer)(
-        GpuBackendDevice *, GpuBackendBuffer *, GpuBackendMemory *,
-        const GpuBufferTransferInfo *, GpuBackendOperationToken *);
+struct XaveriusBackendBufferMemoryOps {
+    XaveriusBackendResult (*create_buffer)(
+        XaveriusBackendDevice *, const XaveriusBufferCreateInfo *,
+        XaveriusBackendBuffer **out_buffer);
+    XaveriusBackendResult (*free_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendBuffer *);
+    XaveriusBackendResult (*get_buffer_memory_requirements)(
+        XaveriusBackendDevice *, XaveriusBackendBuffer *,
+        XaveriusBufferMemoryRequirements *out_requirements);
+    XaveriusBackendResult (*allocate_memory)(
+        XaveriusBackendDevice *, const XaveriusMemoryAllocateInfo *,
+        XaveriusBackendMemory **out_memory);
+    XaveriusBackendResult (*free_memory)(
+        XaveriusBackendDevice *, XaveriusBackendMemory *);
+    XaveriusBackendResult (*bind_buffer_memory)(
+        XaveriusBackendDevice *, XaveriusBackendBuffer *,
+        XaveriusBackendMemory *, uint64_t offset);
+    XaveriusBackendResult (*write_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendBuffer *, XaveriusBackendMemory *,
+        const XaveriusBufferTransferInfo *, XaveriusBackendOperationToken *);
+    XaveriusBackendResult (*read_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendBuffer *, XaveriusBackendMemory *,
+        const XaveriusBufferTransferInfo *, XaveriusBackendOperationToken *);
 };
 
-struct GpuBackendShaderPipelineOps {
-    GpuBackendResult (*create_shader_module)(
-        GpuBackendDevice *, const GpuShaderModuleCreateInfo *,
-        GpuBackendShaderModule **out_shader);
-    GpuBackendResult (*create_descriptor_set_layout)(
-        GpuBackendDevice *, const GpuDescriptorSetLayoutCreateInfo *,
-        GpuBackendDescriptorSetLayout **out_layout);
-    GpuBackendResult (*create_descriptor_pool)(
-        GpuBackendDevice *, const GpuDescriptorPoolCreateInfo *,
-        GpuBackendDescriptorPool **out_pool);
-    GpuBackendResult (*allocate_descriptor_sets)(
-        GpuBackendDevice *, GpuBackendDescriptorPool *,
-        const GpuDescriptorSetAllocateInfo *, uint32_t set_count,
-        GpuBackendDescriptorSet **out_sets);
-    GpuBackendResult (*update_descriptor_sets)(
-        GpuBackendDevice *, const GpuDescriptorUpdateInfo *,
+struct XaveriusBackendShaderPipelineOps {
+    XaveriusBackendResult (*create_shader_module)(
+        XaveriusBackendDevice *, const XaveriusShaderModuleCreateInfo *,
+        XaveriusBackendShaderModule **out_shader);
+    XaveriusBackendResult (*create_descriptor_set_layout)(
+        XaveriusBackendDevice *, const XaveriusDescriptorSetLayoutCreateInfo *,
+        XaveriusBackendDescriptorSetLayout **out_layout);
+    XaveriusBackendResult (*create_descriptor_pool)(
+        XaveriusBackendDevice *, const XaveriusDescriptorPoolCreateInfo *,
+        XaveriusBackendDescriptorPool **out_pool);
+    XaveriusBackendResult (*allocate_descriptor_sets)(
+        XaveriusBackendDevice *, XaveriusBackendDescriptorPool *,
+        const XaveriusDescriptorSetAllocateInfo *, uint32_t set_count,
+        XaveriusBackendDescriptorSet **out_sets);
+    XaveriusBackendResult (*update_descriptor_sets)(
+        XaveriusBackendDevice *, const XaveriusDescriptorUpdateInfo *,
         uint32_t update_count);
-    GpuBackendResult (*free_descriptor_sets)(
-        GpuBackendDevice *, GpuBackendDescriptorPool *,
-        GpuBackendDescriptorSet *const *sets, uint32_t set_count);
-    GpuBackendResult (*create_pipeline_layout)(
-        GpuBackendDevice *, const GpuPipelineLayoutCreateInfo *,
-        GpuBackendPipelineLayout **out_layout);
-    GpuBackendResult (*create_compute_pipeline)(
-        GpuBackendDevice *, const GpuComputePipelineCreateInfo *,
-        GpuBackendPipeline **out_pipeline);
-    GpuBackendResult (*destroy_shader_module)(GpuBackendDevice *, GpuBackendShaderModule *);
-    GpuBackendResult (*destroy_descriptor_set_layout)(GpuBackendDevice *, GpuBackendDescriptorSetLayout *);
-    GpuBackendResult (*destroy_descriptor_pool)(GpuBackendDevice *, GpuBackendDescriptorPool *);
-    GpuBackendResult (*destroy_pipeline_layout)(GpuBackendDevice *, GpuBackendPipelineLayout *);
-    GpuBackendResult (*destroy_compute_pipeline)(GpuBackendDevice *, GpuBackendPipeline *);
+    XaveriusBackendResult (*free_descriptor_sets)(
+        XaveriusBackendDevice *, XaveriusBackendDescriptorPool *,
+        XaveriusBackendDescriptorSet *const *sets, uint32_t set_count);
+    XaveriusBackendResult (*create_pipeline_layout)(
+        XaveriusBackendDevice *, const XaveriusPipelineLayoutCreateInfo *,
+        XaveriusBackendPipelineLayout **out_layout);
+    XaveriusBackendResult (*create_compute_pipeline)(
+        XaveriusBackendDevice *, const XaveriusComputePipelineCreateInfo *,
+        XaveriusBackendPipeline **out_pipeline);
+    XaveriusBackendResult (*destroy_shader_module)(XaveriusBackendDevice *, XaveriusBackendShaderModule *);
+    XaveriusBackendResult (*destroy_descriptor_set_layout)(XaveriusBackendDevice *, XaveriusBackendDescriptorSetLayout *);
+    XaveriusBackendResult (*destroy_descriptor_pool)(XaveriusBackendDevice *, XaveriusBackendDescriptorPool *);
+    XaveriusBackendResult (*destroy_pipeline_layout)(XaveriusBackendDevice *, XaveriusBackendPipelineLayout *);
+    XaveriusBackendResult (*destroy_compute_pipeline)(XaveriusBackendDevice *, XaveriusBackendPipeline *);
 };
 
-struct GpuBackendCommandOps {
-    GpuBackendResult (*create_command_pool)(
-        GpuBackendDevice *, const GpuCommandPoolCreateInfo *,
-        GpuBackendCommandPool **out_pool);
-    GpuBackendResult (*destroy_command_pool)(
-        GpuBackendDevice *, GpuBackendCommandPool *);
-    GpuBackendResult (*allocate_command_buffer)(
-        GpuBackendDevice *, GpuBackendCommandPool *,
-        const GpuCommandBufferAllocateInfo *,
-        GpuBackendCommandBuffer **out_command_buffer);
-    GpuBackendResult (*free_command_buffer)(
-        GpuBackendDevice *, GpuBackendCommandPool *,
-        GpuBackendCommandBuffer *);
-    GpuBackendResult (*reset_command_buffer)(
-        GpuBackendDevice *, GpuBackendCommandBuffer *);
-    GpuBackendResult (*begin_command_buffer)(
-        GpuBackendDevice *, GpuBackendCommandBuffer *,
-        const GpuCommandBufferBeginInfo *);
-    GpuBackendResult (*record_commands)(
-        GpuBackendDevice *, GpuBackendCommandBuffer *,
-        const GpuValidatedCommand *, uint32_t command_count);
-    GpuBackendResult (*end_command_buffer)(
-        GpuBackendDevice *, GpuBackendCommandBuffer *);
+struct XaveriusBackendCommandOps {
+    XaveriusBackendResult (*create_command_pool)(
+        XaveriusBackendDevice *, const XaveriusCommandPoolCreateInfo *,
+        XaveriusBackendCommandPool **out_pool);
+    XaveriusBackendResult (*destroy_command_pool)(
+        XaveriusBackendDevice *, XaveriusBackendCommandPool *);
+    XaveriusBackendResult (*allocate_command_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendCommandPool *,
+        const XaveriusCommandBufferAllocateInfo *,
+        XaveriusBackendCommandBuffer **out_command_buffer);
+    XaveriusBackendResult (*free_command_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendCommandPool *,
+        XaveriusBackendCommandBuffer *);
+    XaveriusBackendResult (*reset_command_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendCommandBuffer *);
+    XaveriusBackendResult (*begin_command_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendCommandBuffer *,
+        const XaveriusCommandBufferBeginInfo *);
+    XaveriusBackendResult (*record_commands)(
+        XaveriusBackendDevice *, XaveriusBackendCommandBuffer *,
+        const XaveriusValidatedCommand *, uint32_t command_count);
+    XaveriusBackendResult (*end_command_buffer)(
+        XaveriusBackendDevice *, XaveriusBackendCommandBuffer *);
 };
 
-struct GpuBackendSynchronizationOps {
-    GpuBackendResult (*create_semaphore)(
-        GpuBackendDevice *, const GpuSemaphoreCreateInfo *,
-        GpuBackendSemaphore **out_semaphore);
-    GpuBackendResult (*host_signal_semaphore)(
-        GpuBackendDevice *, GpuBackendSemaphore *, uint64_t value,
-        GpuBackendOperationToken *);
-    GpuBackendResult (*destroy_semaphore)(
-        GpuBackendDevice *, GpuBackendSemaphore *);
-    GpuBackendResult (*create_fence)(
-        GpuBackendDevice *, const GpuFenceCreateInfo *,
-        GpuBackendFence **out_fence);
-    GpuBackendResult (*reset_fence)(
-        GpuBackendDevice *, GpuBackendFence *);
-    GpuBackendResult (*destroy_fence)(
-        GpuBackendDevice *, GpuBackendFence *);
+struct XaveriusBackendSynchronizationOps {
+    XaveriusBackendResult (*create_semaphore)(
+        XaveriusBackendDevice *, const XaveriusSemaphoreCreateInfo *,
+        XaveriusBackendSemaphore **out_semaphore);
+    XaveriusBackendResult (*host_signal_semaphore)(
+        XaveriusBackendDevice *, XaveriusBackendSemaphore *, uint64_t value,
+        XaveriusBackendOperationToken *);
+    XaveriusBackendResult (*destroy_semaphore)(
+        XaveriusBackendDevice *, XaveriusBackendSemaphore *);
+    XaveriusBackendResult (*create_fence)(
+        XaveriusBackendDevice *, const XaveriusFenceCreateInfo *,
+        XaveriusBackendFence **out_fence);
+    XaveriusBackendResult (*reset_fence)(
+        XaveriusBackendDevice *, XaveriusBackendFence *);
+    XaveriusBackendResult (*destroy_fence)(
+        XaveriusBackendDevice *, XaveriusBackendFence *);
 };
 ```
 
@@ -220,7 +220,7 @@ The types shown above are opaque server/DDX backend boundary types. Their payloa
 
 ### 3.1 Top-level operation table completion
 
-The top-level `GpuDeviceBackendOps` retains the following operations in addition to the four typed tables:
+The top-level `XaveriusDeviceBackendOps` retains the following operations in addition to the four typed tables:
 
 - `query_physical_snapshot`;
 - `create_logical_device`, `get_queue`, `destroy_logical_device`;
@@ -228,13 +228,13 @@ The top-level `GpuDeviceBackendOps` retains the following operations in addition
 - `create_surface`, `destroy_surface`, `query_surface_support`;
 - `create_presentation_route`, `destroy_presentation_route`;
 - `create_swapchain`, `destroy_swapchain`, `acquire_next_image`, `queue_present`, `cancel_acquire`, `release_late_acquired_image`;
-- operation retirement (`retire_operation`); DDX module-role retain/release/quiescence hooks are supplied only by the separate `GpuModuleRoleDescriptor`, not by the per-device operation table.
+- operation retirement (`retire_operation`); DDX module-role retain/release/quiescence hooks are supplied only by the separate `XaveriusModuleRoleDescriptor`, not by the per-device operation table.
 
-Surface capability query MUST be one call for the exact logical Device and DDX-native Surface and MUST return one internally consistent immutable result containing every v0.1 capability exposed by the reply or used to validate the client-selected Swapchain fields: supported format/color-space pairs, present modes, image-count/range constraints, image-usage bits, extent constraints, and one support entry for every queue family in that logical Device's PhysicalDevice snapshot. The operation therefore receives GpuBackendDevice, not merely GpuDeviceBackendBinding, and MUST NOT be called once per queue family to assemble a potentially inconsistent aggregate. GpuBackendSurfaceSupport is a server-owned output value: any variable-length list storage and queue-family array are allocated/provided by the server with explicit capacities; the DDX fills the values and counts in one call and MUST NOT return or retain pointers to DDX-owned storage. A count exceeding a supplied capacity is a FATAL DDX contract violation. It MUST NOT return only a boolean support flag when the wire reply exposes these details. v0.1 has no wire fields or client selectors for image transforms or composite-alpha modes; these are not required fields of the DDX backend/server capability result. If the native backend requires them, the DDX binding MUST select compatible supported values internally during Swapchain creation and MUST NOT expose native enum values or invent client-visible capability fields. If no compatible internal choice exists, the exact Device/Surface pair is not presentable.
+Surface capability query MUST be one call for the exact logical Device and DDX-native Surface and MUST return one internally consistent immutable result containing every v0.1 capability exposed by the reply or used to validate the client-selected Swapchain fields: supported format/color-space pairs, present modes, image-count/range constraints, image-usage bits, extent constraints, and one support entry for every queue family in that logical Device's PhysicalDevice snapshot. The operation therefore receives XaveriusBackendDevice, not merely XaveriusDeviceBackendBinding, and MUST NOT be called once per queue family to assemble a potentially inconsistent aggregate. XaveriusBackendSurfaceSupport is a server-owned output value: any variable-length list storage and queue-family array are allocated/provided by the server with explicit capacities; the DDX fills the values and counts in one call and MUST NOT return or retain pointers to DDX-owned storage. A count exceeding a supplied capacity is a FATAL DDX contract violation. It MUST NOT return only a boolean support flag when the wire reply exposes these details. v0.1 has no wire fields or client selectors for image transforms or composite-alpha modes; these are not required fields of the DDX backend/server capability result. If the native backend requires them, the DDX binding MUST select compatible supported values internally during Swapchain creation and MUST NOT expose native enum values or invent client-visible capability fields. If no compatible internal choice exists, the exact Device/Surface pair is not presentable.
 
 Presentation route create/destroy and swapchain create/destroy are separate operations. A route is keyed by exact logical Device, Surface, Window and Screen generations. A swapchain retains its route; destroying the route while a swapchain or accepted acquire/present operation references it is BUSY. A DDX backend may use one internal helper for route and swapchain construction, but it MUST preserve the separate ownership and rollback boundaries.
 
-Before calling `create_presentation_route`, the server presentation subsystem reserves a fresh nonzero route generation that is never reused, including when route creation later fails. The server passes that generation as `server_route_generation`; the DDX MUST store it in the returned opaque route wrapper and MUST NOT allocate, replace, or recycle it. The route metadata output contains the exact retained Screen generation, selected scanout-device generation (zero when none), and private route kind; it does not assign route identity. A successful `create_presentation_route` binds the returned route wrapper to the exact `GpuBackendDevice`, server-assigned route generation, and binding generation passed/resolved for that call. The route wrapper MUST retain one `GpuBackendDevice` wrapper reference using `retain_device` until `destroy_presentation_route` has completed native route destruction; it MUST release that reference exactly once afterward. `destroy_presentation_route(binding, route)` MUST use only the owner Device stored in that route wrapper and MUST reject/quarantine any binding-generation mismatch; it MUST NOT accept a route created for another logical Device. The server MUST keep the exact logical Device and binding alive until route destruction completes. A successful `create_swapchain` similarly binds the returned swapchain wrapper to its exact Device and route; the wrapper MUST retain whatever Device/route references are required for `destroy_swapchain` to complete safely, and release them exactly once after native swapchain destruction. `destroy_swapchain` MUST complete before `destroy_presentation_route` is invoked. A failed create rolls back only objects/references created by that attempt, in reverse dependency order.
+Before calling `create_presentation_route`, the server presentation subsystem reserves a fresh nonzero route generation that is never reused, including when route creation later fails. The server passes that generation as `server_route_generation`; the DDX MUST store it in the returned opaque route wrapper and MUST NOT allocate, replace, or recycle it. The route metadata output contains the exact retained Screen generation, selected scanout-device generation (zero when none), and private route kind; it does not assign route identity. A successful `create_presentation_route` binds the returned route wrapper to the exact `XaveriusBackendDevice`, server-assigned route generation, and binding generation passed/resolved for that call. The route wrapper MUST retain one `XaveriusBackendDevice` wrapper reference using `retain_device` until `destroy_presentation_route` has completed native route destruction; it MUST release that reference exactly once afterward. `destroy_presentation_route(binding, route)` MUST use only the owner Device stored in that route wrapper and MUST reject/quarantine any binding-generation mismatch; it MUST NOT accept a route created for another logical Device. The server MUST keep the exact logical Device and binding alive until route destruction completes. A successful `create_swapchain` similarly binds the returned swapchain wrapper to its exact Device and route; the wrapper MUST retain whatever Device/route references are required for `destroy_swapchain` to complete safely, and release them exactly once after native swapchain destruction. `destroy_swapchain` MUST complete before `destroy_presentation_route` is invoked. A failed create rolls back only objects/references created by that attempt, in reverse dependency order.
 
 ### 3.2 Input, output, and object-reference rules
 
@@ -263,7 +263,7 @@ Exactly these six operations use the asynchronous operation-token protocol:
 
 All other backend operations in this document are synchronous from the request handler's perspective. A synchronous operation MUST NOT retain its input description or output pointer after return, except for ownership explicitly transferred by a successful create operation. A synchronous operation MUST NOT emit a completion callback.
 
-For asynchronous operations, the prepared token pins the exact DDX module-role generation, binding generation, PhysicalDevice incarnation, logical Device generation, and complete resource-generation set. The DDX backend copies only token ID and generation into its own asynchronous callback state; it MUST NOT retain the temporary token pointer. The DDX binding MUST call the server-exported `GpuBackendCompletionDispatch` exactly once after accepted work reaches a terminal backend outcome. Dispatch copies the payload into the per-token capacity reserved during preparation before returning and serializes state publication through the server queue. For v0.1, `READ_BUFFER` has a completion payload capacity exactly equal to the validated requested byte count, and `ACQUIRE_NEXT_IMAGE` has a fixed four-byte CARD32 image-index payload capacity. A successful completion MUST return exactly the corresponding payload; the acquired image index MUST be within the Swapchain's image_count. The other four asynchronous operation kinds have zero payload capacity and MUST return NULL/zero payload. Any non-success completion MUST have NULL/zero payload. A size/pointer/capacity mismatch is a FATAL DDX contract violation; dispatch MUST NOT partially copy the payload.
+For asynchronous operations, the prepared token pins the exact DDX module-role generation, binding generation, PhysicalDevice incarnation, logical Device generation, and complete resource-generation set. The DDX backend copies only token ID and generation into its own asynchronous callback state; it MUST NOT retain the temporary token pointer. The DDX binding MUST call the server-exported `XaveriusBackendCompletionDispatch` exactly once after accepted work reaches a terminal backend outcome. Dispatch copies the payload into the per-token capacity reserved during preparation before returning and serializes state publication through the server queue. For v0.1, `READ_BUFFER` has a completion payload capacity exactly equal to the validated requested byte count, and `ACQUIRE_NEXT_IMAGE` has a fixed four-byte CARD32 image-index payload capacity. A successful completion MUST return exactly the corresponding payload; the acquired image index MUST be within the Swapchain's image_count. The other four asynchronous operation kinds have zero payload capacity and MUST return NULL/zero payload. Any non-success completion MUST have NULL/zero payload. A size/pointer/capacity mismatch is a FATAL DDX contract violation; dispatch MUST NOT partially copy the payload.
 
 The token resource sets are minimum requirements:
 
@@ -300,9 +300,9 @@ Every DDX backend-created persistent object has exactly one typed destruction op
 | Presentation Route | `destroy_presentation_route` |
 | Swapchain | `destroy_swapchain` |
 
-**Corrections required for the API sketch:** add `free_buffer` to `GpuBackendBufferMemoryOps`; the earlier sketch listed `create_buffer` but omitted matching destruction. Also add `allocate_command_buffer` and `free_command_buffer` to `GpuBackendCommandOps`: the first `CommandBufferData` chunk creates a command-buffer object in the server model, but the previous DDX backend table had no operation to allocate its native counterpart. `DestroyResource` for a Buffer MUST dispatch to `free_buffer`; it MUST NOT call memory-free or infer destruction from unbinding. Command-buffer native allocation MUST occur exactly once when the server allocates the logical command-buffer object, and native free MUST occur only after it is no longer pending and all backend references have retired.
+**Corrections required for the API sketch:** add `free_buffer` to `XaveriusBackendBufferMemoryOps`; the earlier sketch listed `create_buffer` but omitted matching destruction. Also add `allocate_command_buffer` and `free_command_buffer` to `XaveriusBackendCommandOps`: the first `CommandBufferData` chunk creates a command-buffer object in the server model, but the previous DDX backend table had no operation to allocate its native counterpart. `DestroyResource` for a Buffer MUST dispatch to `free_buffer`; it MUST NOT call memory-free or infer destruction from unbinding. Command-buffer native allocation MUST occur exactly once when the server allocates the logical command-buffer object, and native free MUST occur only after it is no longer pending and all backend references have retired.
 
-DDX backend object destruction is synchronous only with respect to the DDX binding's native destroy call. If native destruction cannot yet occur because accepted work or callbacks retain the object, the server MUST defer the call until those references retire. A destroy hook MUST NOT silently queue untracked destruction and return SUCCESS. For this v0.1 interface, the server MUST invoke a typed destroy hook only after all server-known dependencies and backend accesses have drained. The hook MUST perform the native destruction before returning SUCCESS. `GpuBackendResult` defines no generic BUSY or PENDING result for destroy hooks; if destruction fails or safe completion cannot be established, the server MUST quarantine the object and retain its binding/module-role references. It MUST NOT invent a retry status or release the wrapper/module references.
+DDX backend object destruction is synchronous only with respect to the DDX binding's native destroy call. If native destruction cannot yet occur because accepted work or callbacks retain the object, the server MUST defer the call until those references retire. A destroy hook MUST NOT silently queue untracked destruction and return SUCCESS. For this v0.1 interface, the server MUST invoke a typed destroy hook only after all server-known dependencies and backend accesses have drained. The hook MUST perform the native destruction before returning SUCCESS. `XaveriusBackendResult` defines no generic BUSY or PENDING result for destroy hooks; if destruction fails or safe completion cannot be established, the server MUST quarantine the object and retain its binding/module-role references. It MUST NOT invent a retry status or release the wrapper/module references.
 
 ## 6. Errors and result mapping
 
@@ -349,8 +349,8 @@ The architecture conformance suite MUST cover:
 
 - **171 — Presentation wrapper parent lifetime:** create a route for logical Device A and a Surface, then create a Swapchain from it. Verify the server allocates and passes a fresh non-reusable route generation, the DDX stores but does not choose that generation, and the route retains the exact backend Device wrapper and binding generation until route destruction, the Swapchain retains its exact route/Device dependencies until swapchain destruction, and destruction order is Swapchain before route before logical Device. Attempt to destroy the route while a Swapchain or accepted acquire/present token still references it and require BUSY at the server lifecycle layer without invoking native route destruction. Attempt cross-Device or cross-binding route destruction and require rejection without releasing the original references.
 - **172 — Route-scoped temporary unavailability:** Make the exact Device/Surface route temporarily unavailable during create_surface, query_surface_support, create_presentation_route, create_swapchain, and pre-acceptance acquire/present. The DDX returns STATUS/DEVICE_UNAVAILABLE; the server maps the request status without changing the PhysicalDevice or module-role availability. Then make an already accepted QueuePresent lose its route and verify it terminalizes through the accepted presentation failure channel, not a retroactive request status or a PhysicalDevice-unavailable transition.
-- **173 — Provisional registration snapshot failure scope:** During GpuRegistryRegisterDdxDevice, make query_physical_snapshot return UNAVAILABLE/PHYSICAL_DEVICE for the exact provisional binding generation. Verify that generation was reserved before the query, the registration fails without installing a binding or publishing an XID, and no existing selected binding/PhysicalDevice status changes. Separately return UNAVAILABLE/MODULE_ROLE and verify that only already-selected bindings retaining that exact role generation transition to UNAVAILABLE.
+- **173 — Provisional registration snapshot failure scope:** During XaveriusRegistryRegisterDdxDevice, make query_physical_snapshot return UNAVAILABLE/PHYSICAL_DEVICE for the exact provisional binding generation. Verify that generation was reserved before the query, the registration fails without installing a binding or publishing an XID, and no existing selected binding/PhysicalDevice status changes. Separately return UNAVAILABLE/MODULE_ROLE and verify that only already-selected bindings retaining that exact role generation transition to UNAVAILABLE.
 - **174 — Four-table output and ownership contract:** Exercise every object-producing table operation with success and injected failure. Verify pointer/scalar/value outputs are initialized, descriptor-set arrays are all-or-nothing, queue handles are borrowed from the logical Device, every successful create transfers exactly one wrapper reference, and every successful typed destroy/free consumes it exactly once. Inject partial native batch failure and require rollback or module-role quarantine without partial publication.
 - **175 — Pool cascade ownership:** Create multiple native CommandBuffers and DescriptorSets under their exact pools, free a subset individually, then destroy each pool. Verify the parent destroy consumes the pool and every remaining child wrapper exactly once, the server invalidates all corresponding child XIDs atomically, already-freed children are not freed twice, and a pending/recording dependency rejects the destroy before backend entry. Inject uncertain partial native pool destruction and require quarantine of the entire affected family.
-- **176 — Exact logical-Device surface query:** Create two logical Devices through the same selected PhysicalDevice binding, with different logical queue selections. For each GetSurfaceCapabilities call, verify exactly one query_surface_support invocation receives that request's exact GpuBackendDevice wrapper and returns a single coherent result covering every queue family. No per-family repeated query may assemble the result, and no route or support result from the other logical Device may be reused.
+- **176 — Exact logical-Device surface query:** Create two logical Devices through the same selected PhysicalDevice binding, with different logical queue selections. For each GetSurfaceCapabilities call, verify exactly one query_surface_support invocation receives that request's exact XaveriusBackendDevice wrapper and returns a single coherent result covering every queue family. No per-family repeated query may assemble the result, and no route or support result from the other logical Device may be reused.
 - **177 — Operation-specific status applicability:** For every top-level presentation operation, inject each defined STATUS code and verify only the documented operation/status pairs are accepted: NOT_READY only for acquire; OUT_OF_DATE only for route/swapchain creation, acquire, and present; SURFACE_LOST only for surface creation/query, route/swapchain creation, acquire, and present; DEVICE_UNAVAILABLE only for route/surface operations and pre-acceptance acquire/present; ALREADY_COMPLETED only for cancel_acquire. Every operation-inapplicable status is FATAL and quarantines the owning module role.
