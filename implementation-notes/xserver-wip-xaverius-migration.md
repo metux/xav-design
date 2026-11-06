@@ -47,7 +47,7 @@ Files: `xaverius_priv.h`, `xaverius_intern.h`, registry implementation.
 
 Files: `xaverius_registry.h`, `xaverius_registry.c`, `xaverius_intern.h`.
 
-Replace `XaveriusRegisterDevice(identity, callbacks)` with a complete registration semantic equivalent to `GpuRegistryRegisterDdxDevice`. Input: structured identity evidence, exact native handle, per-device context, immutable typed operations, and owning ModuleRole generation.
+Replace `XaveriusRegisterDevice(identity, callbacks)` with a complete registration semantic equivalent to `XaveriusRegistryRegisterDdxDevice`. Input: structured identity evidence, exact native handle, per-device context, immutable typed operations, and owning ModuleRole generation.
 
 Transaction order:
 1. validate arguments and retain context/module/table lifetime;
