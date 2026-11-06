@@ -139,3 +139,8 @@ A successful wire-layout CI run in xav-design does not validate this Xserver imp
 ## Out of scope
 
 Do not add an independent Vulkan-ICD candidate inventory, provider ranking layer, per-Screen PhysicalDevice inventory, first-Screen default selection, or weaken operation-token/module-lease requirements. Do not change wire ABI as part of this internal migration without a separate spec review.
+
+
+## Wire protocol declaration identifiers — current canonical spelling
+
+The shared wire declarations are defined by `protocol/include/xaverius.h` on this branch and consumed by the implementation through the agreed `xaverius_proto.h` header. Use the current canonical C identifiers exactly: protocol constants use the `XAVERIUS_` prefix (for example `XAVERIUS_REQ_QUERY_VERSION`); wire types use the `Xaverius` prefix (for example `XaveriusReqHeader`, `XaveriusCreateDeviceReq`, and `XaveriusAsyncErrorEvent`); fixed-size declaration macros use the matching `sz_Xaverius...` spelling. The former `XAV_`, `xav...`, and `sz_xav...` spellings are obsolete and MUST NOT be copied into new code, notes, tests, or generated declarations. This is an identifier-only correction: preserve every numeric assignment, field name, field order, width, packing rule, offset, and wire size. Do not infer or introduce any wire-layout change from the rename.
