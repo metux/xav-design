@@ -9,9 +9,9 @@
 - This repository is the specification/coordination workspace. Do not implement Xserver source here.
 - Agents poll this file every five minutes. Treat the latest active assignment and its linked task file as instructions.
 
-## Rollback record — completed
+## Historical rollback record — superseded; forensic context only
 
-**COMPLETE — no further rollback action is authorized or required.**
+**HISTORICAL RECORD ONLY. Its statement that f6f3e87 is the live branch tip is stale and must not be used as current branch state.** The active assignment below records the later verified implementation baseline and explicitly forbids resetting to f6f3e87. This section is retained only to explain the earlier rollback attempt; it does not authorize any rollback or branch mutation.
 
 - Target: `X11Libre/xserver:wip/xaverius`.
 - Current audited branch tip before rollback: `deb0e445001389be031fa7e006e3e2e216616b50`.
