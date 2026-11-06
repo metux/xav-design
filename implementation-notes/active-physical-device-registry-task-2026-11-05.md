@@ -10,6 +10,17 @@
 
 This task authorizes actual PhysicalDevice registry implementation. It does NOT authorize protocol request handlers, backend operation implementations, or premature modesetting/discovery integration.
 
+## Instruction precedence — mandatory
+
+Apply this order; lower-level guidance never overrides higher-level authority:
+
+1. Explicit owner decisions and current coordination decisions.
+2. The normative XAverius specification on `docs/restructure-2026-10-21`.
+3. This active owner-authorized assignment and the implementation notes explicitly listed below.
+4. General repository instructions and installed skills.
+
+**This active implementation assignment and its linked instructions take precedence over the XAverius implementation skill.** The skill is subordinate general guidance, not an independent task, phase plan, API definition, or authorization. If the skill conflicts with this assignment or the normative spec, ignore the conflicting skill text and report it. If this assignment conflicts with the normative spec, stop and request clarification. Old tasks, branches, reports, examples, and remembered plans are historical unless explicitly reactivated.
+
 ## 1. Read first; resolve authority
 
 Before editing, sync and read these exact files from the authoritative spec branch:
@@ -39,7 +50,7 @@ Implement in the following independently reviewable stages. Keep each commit ato
 - Establish one direct `GpuDeviceBackendBinding` per exact DDX registration, containing the borrowed native handle/context, immutable server-owned copy of the versioned `const GpuDeviceBackendOps` tables, exact binding generation, and retained owning ModuleRole generation.
 - Keep the PhysicalDevice XID and DIX resource wrapper entirely server-private. No DDX-visible declaration may expose either.
 - Declare the normative registration API and its exact result/out-parameter contract. On SUCCESS return one immediate caller-owned opaque PhysicalDevice reference and exact device/binding generations; caller releases it with `GpuPhysicalDeviceRelease`. The caller must not retain/dereference the bare pointer later.
-- Preserve the established two header scopes. Put declarations in the correct existing header; add no convenience/duplicate headers without a demonstrated interface need.
+- Preserve exactly the three agreed headers with distinct responsibilities: `xaverius_proto.h` (wire protocol only), `xaverius_priv.h` (DDX-facing API/types), and `xaverius_intern.h` (extension-internal declarations). Put declarations in the correct existing header; add no convenience/duplicate headers without explicit owner approval and a demonstrated interface need.
 - Keep the top-level ops, registration descriptor, and ModuleRole descriptor size/version validation exactly as specified. Validate headers before reading later fields or retaining anything.
 - Do not add registry lists, DIX resources, request handlers, or DDX discovery in this stage.
 
