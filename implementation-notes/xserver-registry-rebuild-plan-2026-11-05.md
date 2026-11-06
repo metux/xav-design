@@ -60,41 +60,41 @@ It owns deep-copied server memory. It contains no callbacks, native handles, bac
 
 ### 2.3 Per-device binding
 
-One `GpuDeviceBackendBinding` (or equivalent internal record) is the direct dispatch target for the exact PhysicalDevice. It contains:
+One `XaveriusDeviceBackendBinding` (or equivalent internal record) is the direct dispatch target for the exact PhysicalDevice. It contains:
 
 - exact DDX-native PhysicalDevice handle;
 - exact per-device backend context;
-- an immutable, server-owned copy of the supplied `GpuDeviceBackendOps` descriptor and its four typed sub-tables;
+- an immutable, server-owned copy of the supplied `XaveriusDeviceBackendOps` descriptor and its four typed sub-tables;
 - a non-reusable binding generation;
-- a retained reference to the owning `GpuModuleRole` generation;
+- a retained reference to the owning `XaveriusModuleRole` generation;
 - binding state, call admission, in-flight synchronous-call count and async-token references.
 
 The PhysicalDevice has one selected binding for v0.1 dispatch. Other complete eligible registrations may remain unselected while deterministic selection is unresolved; their operation tables, contexts and snapshots are never merged. No dispatch proxy, Provider layer, candidate-ranking object, generic ModuleRole context accessor, or Screen-private dispatch route is permitted.
 
 ### 2.4 DDX operation descriptor — mandatory registration input
 
-The DDX MUST pass a matching `const GpuDeviceBackendOps *` through `GpuDeviceBackendRegistration` for **each** registered PhysicalDevice. This is not optional and cannot be deferred to a later phase. The authoritative descriptor and callback signatures are defined by `spec/device-registry-architecture.md` and the four typed tables in `spec/provider-operation-matrix.md`; this plan MUST NOT define a competing callback structure or signature sketch.
+The DDX MUST pass a matching `const XaveriusDeviceBackendOps *` through `XaveriusDeviceBackendRegistration` for **each** registered PhysicalDevice. This is not optional and cannot be deferred to a later phase. The authoritative descriptor and callback signatures are defined by `spec/device-registry-architecture.md` and the four typed tables in `spec/provider-operation-matrix.md`; this plan MUST NOT define a competing callback structure or signature sketch.
 
-The top-level descriptor begins with `struct_size` and `abi_version`. For v0.1, `struct_size` MUST equal `sizeof(GpuDeviceBackendOps)` and `abi_version` MUST equal `GPU_DEVICE_BACKEND_OPS_ABI_VERSION`. The ABI version governs the layouts of all four nested typed tables and all DDX-facing callback signatures and parameter/result structures; the nested tables do not have independent version fields. The registry validates this header before reading any callback field, then validates and copies the complete top-level and nested descriptors by value into immutable binding-owned storage. A size mismatch is `INVALID_ARGUMENT`; an unknown ABI version is `UNSUPPORTED`. Neither failure may invoke a callback or retain the supplied handle, context, or module-role reference.
+The top-level descriptor begins with `struct_size` and `abi_version`. For v0.1, `struct_size` MUST equal `sizeof(XaveriusDeviceBackendOps)` and `abi_version` MUST equal `XAVERIUS_DEVICE_BACKEND_OPS_ABI_VERSION`. The ABI version governs the layouts of all four nested typed tables and all DDX-facing callback signatures and parameter/result structures; the nested tables do not have independent version fields. The registry validates this header before reading any callback field, then validates and copies the complete top-level and nested descriptors by value into immutable binding-owned storage. A size mismatch is `INVALID_ARGUMENT`; an unknown ABI version is `UNSUPPORTED`. Neither failure may invoke a callback or retain the supplied handle, context, or module-role reference.
 
-Every callback target MUST remain executable while the exact owning ModuleRole lease is pinned, or permanently resident for a permanent role. Every role supplies non-NULL retain/release/quiesce hooks. Successful registration calls `retain_module_role` exactly once after fallible validation/allocation; failed registration calls no role hook. After successful quiescence, finalization calls `release_module_role` exactly once. Both are infallible/non-blocking lifetime primitives, and release does not initiate quiescence. A permanent role has no lease, stays active during normal server operation, and is shut down/quiesced/finalized only after `GpuRegistryBeginShutdown`; its role hooks run while code remains resident and finalization skips lease release. Module-wide lifecycle callbacks are not per-device operations: registration, callback admission, quiescence and module lifetime release belong to the separate `GpuModuleRoleDescriptor`/ModuleRole control record. Do not duplicate module-wide quiescence callbacks in `GpuDeviceBackendOps`.
+Every callback target MUST remain executable while the exact owning ModuleRole lease is pinned, or permanently resident for a permanent role. Every role supplies non-NULL retain/release/quiesce hooks. Successful registration calls `retain_module_role` exactly once after fallible validation/allocation; failed registration calls no role hook. After successful quiescence, finalization calls `release_module_role` exactly once. Both are infallible/non-blocking lifetime primitives, and release does not initiate quiescence. A permanent role has no lease, stays active during normal server operation, and is shut down/quiesced/finalized only after `XaveriusRegistryBeginShutdown`; its role hooks run while code remains resident and finalization skips lease release. Module-wide lifecycle callbacks are not per-device operations: registration, callback admission, quiescence and module lifetime release belong to the separate `XaveriusModuleRoleDescriptor`/ModuleRole control record. Do not duplicate module-wide quiescence callbacks in `XaveriusDeviceBackendOps`.
 
 ### 2.5 Registration descriptor and ownership
 
 The normative entry point is:
 
 ```c
-GpuRegistryResult GpuRegistryRegisterDdxDevice(
-    GpuRegistry *registry,
-    const GpuDeviceBackendRegistration *registration,
-    GpuPhysicalDevice **out_device,
+XaveriusRegistryResult XaveriusRegistryRegisterDdxDevice(
+    XaveriusRegistry *registry,
+    const XaveriusDeviceBackendRegistration *registration,
+    XaveriusPhysicalDevice **out_device,
     uint64_t *out_device_generation,
     uint64_t *out_binding_generation);
 ```
 
-The v1 `GpuDeviceBackendRegistration` begins with exact `struct_size` and `abi_version` fields, followed by structured `GpuDeviceIdentity` evidence, the exact native PhysicalDevice handle, the exact per-device context, the versioned `const GpuDeviceBackendOps *`, the owning `GpuModuleRole *`, and its exact generation. The `GpuModuleRoleDescriptor` passed during role registration is independently size/version checked before the registry retains the supplied module-lease reference. The registry canonicalizes identity, reserves a non-reusable provisional binding generation, validates the descriptor and operation tables, obtains the complete immutable snapshot through that exact binding, and installs the binding atomically.
+The v1 `XaveriusDeviceBackendRegistration` begins with exact `struct_size` and `abi_version` fields, followed by structured `XaveriusDeviceIdentity` evidence, the exact native PhysicalDevice handle, the exact per-device context, the versioned `const XaveriusDeviceBackendOps *`, the owning `XaveriusModuleRole *`, and its exact generation. The `XaveriusModuleRoleDescriptor` passed during role registration is independently size/version checked before the registry retains the supplied module-lease reference. The registry canonicalizes identity, reserves a non-reusable provisional binding generation, validates the descriptor and operation tables, obtains the complete immutable snapshot through that exact binding, and installs the binding atomically.
 
-On `SUCCESS`, the API returns one caller-owned canonical PhysicalDevice reference and the exact PhysicalDevice/binding generations. This does **not** guarantee publication or an XID: publication is a separate `XaPhysicalDevicePublish` operation after identity resolution, eligible-binding selection and opening of the startup publication gate. The DDX MUST release the immediate caller-owned PhysicalDevice reference through `GpuPhysicalDeviceRelease` and MUST NOT retain or later dereference the bare pointer. Exact idempotent replay of the same live registration returns the same binding generation and one additional caller-owned PhysicalDevice reference; conflicting registration data returns a classified failure and never merges bindings or snapshots.
+On `SUCCESS`, the API returns one caller-owned canonical PhysicalDevice reference and the exact PhysicalDevice/binding generations. This does **not** guarantee publication or an XID: publication is a separate `XaPhysicalDevicePublish` operation after identity resolution, eligible-binding selection and opening of the startup publication gate. The DDX MUST release the immediate caller-owned PhysicalDevice reference through `XaveriusPhysicalDeviceRelease` and MUST NOT retain or later dereference the bare pointer. Exact idempotent replay of the same live registration returns the same binding generation and one additional caller-owned PhysicalDevice reference; conflicting registration data returns a classified failure and never merges bindings or snapshots.
 
 The native handle and per-device context are borrowed DDX-owned opaque values, not transferred or freed by the registry. The DDX MUST keep them valid and immutable until exact binding removal has completed and all dependent calls, logical Devices, backend objects, operation tokens and callbacks have retired. The registry retains the owning ModuleRole reference and its module lease according to the normative lifetime contract. There are no context retain/release callbacks in this API. On every failed registration, no binding or caller-owned PhysicalDevice reference is returned, no XID is published, and all references acquired by the registry are rolled back; explicitly reserved non-reusable generations remain consumed.
 
@@ -160,7 +160,7 @@ Any failure before publication unwinds all provisional state and references. The
 
 ## 4. ModuleRole and ScreenAttachment are separate
 
-- `GpuModuleRole`/ModuleRole is a shared lifetime/admission/quiescence control record only. It pins module code and shared module resources. It is not a per-device context or dispatch proxy.
+- `XaveriusModuleRole`/ModuleRole is a shared lifetime/admission/quiescence control record only. It pins module code and shared module resources. It is not a per-device context or dispatch proxy.
 - A ModuleRole may be shared by many PhysicalDevice bindings. Each binding separately stores its native handle and per-device context.
 - A `ScreenAttachment` is a separate, non-owning, generation-checked relation between an Xorg Screen generation and a PhysicalDevice generation.
 - Screen close detaches only its exact ScreenAttachment. It MUST NOT unregister or destroy a PhysicalDevice binding merely because the binding was discovered through that Screen.
@@ -205,7 +205,7 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** unit tests for PCI/non-PCI identity, primary/render aliases, multiple DDX observations, conflicting UUIDs, stable virtual identity, removal/re-add incarnation and stale generations.
 
 ### Phase 4 — complete registration and snapshot publication
-- Implement `GpuRegistryRegisterDdxDevice` with the mandatory versioned `const GpuDeviceBackendOps *` in `GpuDeviceBackendRegistration`; on SUCCESS return the immediate caller-owned PhysicalDevice reference and exact generations, but do not equate registration success with publication. Keep the XID entirely server-private.
+- Implement `XaveriusRegistryRegisterDdxDevice` with the mandatory versioned `const XaveriusDeviceBackendOps *` in `XaveriusDeviceBackendRegistration`; on SUCCESS return the immediate caller-owned PhysicalDevice reference and exact generations, but do not equate registration success with publication. Keep the XID entirely server-private.
 - Validate the top-level size/ABI version before reading callback fields, then validate and copy all operation tables before installing the binding.
 - Obtain the snapshot only through the exact binding's `query_physical_snapshot`; snapshot/binding installation is separate from publication.
 - After identity resolution, eligible-binding selection and opening the startup publication gate, publish through `XaPhysicalDevicePublish`: XID allocation and one DIX AddResource insertion are one transaction; expose no published state if insertion fails.
@@ -221,7 +221,7 @@ Any failure before publication unwinds all provisional state and references. The
 - Subscribe to hotplug observation before initial DDX scans; reconcile queued events and generations before opening the initial discovery barrier.
 - Modesetting enumerates only devices actually served by its DDX context. Use canonical DRM/sysfs enumeration and primary/render correlation; never scan hard-coded `renderD0..31` or invent node numbers.
 - No registration from `PreInit`, `ScreenInit`, connector checks, first Screen, or first GPU. No global `/dev/dri` candidate scan as a substitute for DDX ownership.
-- The DDX calls `GpuRegistryRegisterDdxDevice` once per served candidate and passes the matching `GpuDeviceBackendRegistration`, versioned `GpuDeviceBackendOps`, native handle, context, identity and ModuleRole.
+- The DDX calls `XaveriusRegistryRegisterDdxDevice` once per served candidate and passes the matching `XaveriusDeviceBackendRegistration`, versioned `XaveriusDeviceBackendOps`, native handle, context, identity and ModuleRole.
 - If modesetting cannot produce a no-Screen executable binding, report UNAVAILABLE/BLOCKED and publish nothing; do not fake a binding or defer Phase-A registration to Phase B.
 
 **Gate:** tests for zero/one/multiple devices per DDX, two DDX modules, no Screen, headless, render-only, non-contiguous render node IDs, primary/render aliases, PENDING completion, hotplug race and once-only callback.
@@ -246,7 +246,7 @@ Any failure before publication unwinds all provisional state and references. The
 **Gate:** multi-screen/multi-GPU tests, Screen close with live logical Device, DDX unload with callbacks pending, stale generation callbacks, module quarantine and server shutdown.
 
 ### Phase 8 — later backend operations (only after registry acceptance)
-- Implement the four typed operation tables and top-level `GpuDeviceBackendOps` callbacks according to `spec/provider-operation-matrix.md`.
+- Implement the four typed operation tables and top-level `XaveriusDeviceBackendOps` callbacks according to `spec/provider-operation-matrix.md`.
 - Exactly six asynchronous operations use operation tokens: WriteBuffer, ReadBuffer, host SignalSemaphore, QueueSubmit, AcquireNextImage and QueuePresent.
 - Every persistent backend object has matching typed destruction.
 - No handler may return SUCCESS without actual backend work.
@@ -260,7 +260,7 @@ Every phase report must include repository, branch, full commit and parent SHA; 
 
 Mandatory tests include:
 
-- versioned `const GpuDeviceBackendOps` descriptor: NULL pointer, undersized/oversized v1 structure, unknown ABI version, and NULL required callback; verify no callback is entered and no binding/reference/XID is published on failure;
+- versioned `const XaveriusDeviceBackendOps` descriptor: NULL pointer, undersized/oversized v1 structure, unknown ABI version, and NULL required callback; verify no callback is entered and no binding/reference/XID is published on failure;
 - operation-table immutability after registration and module code pinning; verify the returned PhysicalDevice pointer is opaque and only immediately caller-owned, exact idempotent registration replay returns one additional reference, and conflicting registration is rejected;
 - multiple devices sharing one ModuleRole but distinct native handles and contexts;
 - DDX-owned handle/context validity through exact binding removal and all dependent-reference retirement; verify the registry never frees those borrowed values;
@@ -282,7 +282,7 @@ A green spec CI is not evidence that Xserver code compiles or works. Run the ful
 
 - No Provider object, Provider candidate list, Provider ranking or Provider callback alias.
 - No capabilities-only registration API.
-- No `GpuDeviceBackendOps` omitted from registration or deferred to a later phase.
+- No `XaveriusDeviceBackendOps` omitted from registration or deferred to a later phase.
 - No identity synthesized from vendor/device/API/driver versions.
 - No Screen/ScrnInfo/Entity as registry ownership root.
 - No first-Screen/first-GPU selection or output/connector-gated inventory.
