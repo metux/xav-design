@@ -365,94 +365,94 @@ typedef struct { XaveriusReplyHeader header; CARD32 status; } XaveriusQueuePrese
 
 #pragma pack(pop)
 
-#define sz_xavReqHeader 8
-#define sz_xavReplyHeader 32
-#define sz_xavXGEHeader 32
-#define sz_xavQueryVersionReq 8
-#define sz_xavEnumeratePhysicalDevicesReq 8
-#define sz_xavGetPhysicalDevicePropertyReq 16
-#define sz_xavGetPhysicalDeviceQueueFamilyPropertiesReq 12
-#define sz_xavCreateDeviceReq 24
-#define sz_xavCreateDefaultDeviceReq 16
-#define sz_xavDestroyDeviceReq 12
-#define sz_xavGetPhysicalDeviceMemoryPropertiesReq 12
-#define sz_xavCreateBufferReq 32
-#define sz_xavGetBufferMemoryRequirementsReq 16
-#define sz_xavAllocateMemoryReq 32
-#define sz_xavFreeMemoryReq 16
-#define sz_xavBindBufferMemoryReq 28
-#define sz_xavWriteBufferReq 28
-#define sz_xavReadBufferReq 28
-#define sz_xavShaderModuleDataReq 20
-#define sz_xavCreateDescriptorSetLayoutReq 24
-#define sz_xavCreateDescriptorPoolReq 24
-#define sz_xavDestroyDescriptorPoolReq 16
-#define sz_xavAllocateDescriptorSetsReq 20
-#define sz_xavUpdateDescriptorSetsReq 20
-#define sz_xavFreeDescriptorSetsReq 20
-#define sz_xavCreatePipelineLayoutReq 20
-#define sz_xavCreateComputePipelineReq 28
-#define sz_xavCreateCommandPoolReq 24
-#define sz_xavDestroyCommandPoolReq 16
-#define sz_xavResetCommandBufferReq 16
-#define sz_xavCommandBufferDataReq 16
-#define sz_xavQueueSubmitReq 40
-#define sz_xavCreateSemaphoreReq 28
-#define sz_xavGetSemaphoreCounterValueReq 16
-#define sz_xavWaitSemaphoresReq 28
-#define sz_xavSignalSemaphoreReq 24
-#define sz_xavDestroySemaphoreReq 16
-#define sz_xavCreateFenceReq 24
-#define sz_xavGetFenceStatusReq 16
-#define sz_xavWaitForFenceReq 24
-#define sz_xavResetFenceReq 16
-#define sz_xavDestroyFenceReq 16
-#define sz_xavDestroyResourceReq 16
-#define sz_xavSelectEventsReq 32
-#define sz_xavCreateSurfaceReq 16
-#define sz_xavDestroySurfaceReq 12
-#define sz_xavGetSurfaceCapabilitiesReq 16
-#define sz_xavCreateSwapchainReq 48
-#define sz_xavDestroySwapchainReq 12
-#define sz_xavAcquireNextImageReq 32
-#define sz_xavQueuePresentReq 40
-#define sz_xavErrorPacket 32
-#define sz_xavQueryVersionReply 32
-#define sz_xavEnumeratePhysicalDevicesReply 32
-#define sz_xavGetPhysicalDevicePropertyReply 32
-#define sz_xavGetPhysicalDeviceQueueFamilyPropertiesReply 32
-#define sz_xavGetPhysicalDeviceMemoryPropertiesReply 32
-#define sz_xavGetBufferMemoryRequirementsReply 32
-#define sz_xavReadBufferReply 32
-#define sz_xavGetSemaphoreCounterValueReply 32
-#define sz_xavWaitSemaphoresReply 32
-#define sz_xavGetFenceStatusReply 32
-#define sz_xavWaitForFenceReply 32
-#define sz_xavGetSurfaceCapabilitiesReply 64
-#define sz_xavCreateSwapchainReply 40
-#define sz_xavAcquireNextImageReply 44
-#define sz_xavQueuePresentReply 36
-#define sz_xavPhysicalDeviceInfo 32
-#define sz_xavQueueFamilyInfo 12
-#define sz_xavMemoryTypeInfo 8
-#define sz_xavMemoryHeapInfo 16
-#define sz_xavDescriptorSetLayoutBinding 16
-#define sz_xavDescriptorPoolSize 8
-#define sz_xavDescriptorSetAllocation 8
-#define sz_xavDescriptorWrite 36
-#define sz_xavPushConstantRange 12
-#define sz_xavQueueSubmitWait 16
-#define sz_xavQueueSubmitSignal 12
-#define sz_xavWaitSemaphoreEntry 12
-#define sz_xavAsyncErrorEvent 60
-#define sz_xavDeviceLostEvent 48
-#define sz_xavDeviceStatusChangedEvent 48
-#define sz_xavDeviceMemoryPressureEvent 48
-#define sz_xavDeviceIdleEvent 48
-#define sz_xavSubmissionCompleteEvent 56
-#define sz_xavSubmissionFailedEvent 56
-#define sz_xavImageReleasedEvent 64
-#define sz_xavPresentationCompleteEvent 64
+#define sz_XaveriusReqHeader 8
+#define sz_XaveriusReplyHeader 32
+#define sz_XaveriusXGEHeader 32
+#define sz_XaveriusQueryVersionReq 8
+#define sz_XaveriusEnumeratePhysicalDevicesReq 8
+#define sz_XaveriusGetPhysicalDevicePropertyReq 16
+#define sz_XaveriusGetPhysicalDeviceQueueFamilyPropertiesReq 12
+#define sz_XaveriusCreateDeviceReq 24
+#define sz_XaveriusCreateDefaultDeviceReq 16
+#define sz_XaveriusDestroyDeviceReq 12
+#define sz_XaveriusGetPhysicalDeviceMemoryPropertiesReq 12
+#define sz_XaveriusCreateBufferReq 32
+#define sz_XaveriusGetBufferMemoryRequirementsReq 16
+#define sz_XaveriusAllocateMemoryReq 32
+#define sz_XaveriusFreeMemoryReq 16
+#define sz_XaveriusBindBufferMemoryReq 28
+#define sz_XaveriusWriteBufferReq 28
+#define sz_XaveriusReadBufferReq 28
+#define sz_XaveriusShaderModuleDataReq 20
+#define sz_XaveriusCreateDescriptorSetLayoutReq 24
+#define sz_XaveriusCreateDescriptorPoolReq 24
+#define sz_XaveriusDestroyDescriptorPoolReq 16
+#define sz_XaveriusAllocateDescriptorSetsReq 20
+#define sz_XaveriusUpdateDescriptorSetsReq 20
+#define sz_XaveriusFreeDescriptorSetsReq 20
+#define sz_XaveriusCreatePipelineLayoutReq 20
+#define sz_XaveriusCreateComputePipelineReq 28
+#define sz_XaveriusCreateCommandPoolReq 24
+#define sz_XaveriusDestroyCommandPoolReq 16
+#define sz_XaveriusResetCommandBufferReq 16
+#define sz_XaveriusCommandBufferDataReq 16
+#define sz_XaveriusQueueSubmitReq 40
+#define sz_XaveriusCreateSemaphoreReq 28
+#define sz_XaveriusGetSemaphoreCounterValueReq 16
+#define sz_XaveriusWaitSemaphoresReq 28
+#define sz_XaveriusSignalSemaphoreReq 24
+#define sz_XaveriusDestroySemaphoreReq 16
+#define sz_XaveriusCreateFenceReq 24
+#define sz_XaveriusGetFenceStatusReq 16
+#define sz_XaveriusWaitForFenceReq 24
+#define sz_XaveriusResetFenceReq 16
+#define sz_XaveriusDestroyFenceReq 16
+#define sz_XaveriusDestroyResourceReq 16
+#define sz_XaveriusSelectEventsReq 32
+#define sz_XaveriusCreateSurfaceReq 16
+#define sz_XaveriusDestroySurfaceReq 12
+#define sz_XaveriusGetSurfaceCapabilitiesReq 16
+#define sz_XaveriusCreateSwapchainReq 48
+#define sz_XaveriusDestroySwapchainReq 12
+#define sz_XaveriusAcquireNextImageReq 32
+#define sz_XaveriusQueuePresentReq 40
+#define sz_XaveriusErrorPacket 32
+#define sz_XaveriusQueryVersionReply 32
+#define sz_XaveriusEnumeratePhysicalDevicesReply 32
+#define sz_XaveriusGetPhysicalDevicePropertyReply 32
+#define sz_XaveriusGetPhysicalDeviceQueueFamilyPropertiesReply 32
+#define sz_XaveriusGetPhysicalDeviceMemoryPropertiesReply 32
+#define sz_XaveriusGetBufferMemoryRequirementsReply 32
+#define sz_XaveriusReadBufferReply 32
+#define sz_XaveriusGetSemaphoreCounterValueReply 32
+#define sz_XaveriusWaitSemaphoresReply 32
+#define sz_XaveriusGetFenceStatusReply 32
+#define sz_XaveriusWaitForFenceReply 32
+#define sz_XaveriusGetSurfaceCapabilitiesReply 64
+#define sz_XaveriusCreateSwapchainReply 40
+#define sz_XaveriusAcquireNextImageReply 44
+#define sz_XaveriusQueuePresentReply 36
+#define sz_XaveriusPhysicalDeviceInfo 32
+#define sz_XaveriusQueueFamilyInfo 12
+#define sz_XaveriusMemoryTypeInfo 8
+#define sz_XaveriusMemoryHeapInfo 16
+#define sz_XaveriusDescriptorSetLayoutBinding 16
+#define sz_XaveriusDescriptorPoolSize 8
+#define sz_XaveriusDescriptorSetAllocation 8
+#define sz_XaveriusDescriptorWrite 36
+#define sz_XaveriusPushConstantRange 12
+#define sz_XaveriusQueueSubmitWait 16
+#define sz_XaveriusQueueSubmitSignal 12
+#define sz_XaveriusWaitSemaphoreEntry 12
+#define sz_XaveriusAsyncErrorEvent 60
+#define sz_XaveriusDeviceLostEvent 48
+#define sz_XaveriusDeviceStatusChangedEvent 48
+#define sz_XaveriusDeviceMemoryPressureEvent 48
+#define sz_XaveriusDeviceIdleEvent 48
+#define sz_XaveriusSubmissionCompleteEvent 56
+#define sz_XaveriusSubmissionFailedEvent 56
+#define sz_XaveriusImageReleasedEvent 64
+#define sz_XaveriusPresentationCompleteEvent 64
 
 #if defined(__cplusplus)
 # define XAVERIUS_STATIC_ASSERT(c, m) static_assert((c), m)
@@ -550,24 +550,24 @@ XAVERIUS_STATIC_ASSERT(offsetof(XaveriusReadBufferReply, data) == 32, "ReadBuffe
 XAVERIUS_STATIC_ASSERT(offsetof(XaveriusGetSurfaceCapabilitiesReply, records) == 64, "surface-capability payload offset");
 
 /* Every fixed-size reply and every XGE event must have its specified size. */
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusQueryVersionReply) == sz_xavQueryVersionReply, "QueryVersion reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetBufferMemoryRequirementsReply) == sz_xavGetBufferMemoryRequirementsReply, "buffer requirements reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetSemaphoreCounterValueReply) == sz_xavGetSemaphoreCounterValueReply, "semaphore counter reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusWaitSemaphoresReply) == sz_xavWaitSemaphoresReply, "WaitSemaphores reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetFenceStatusReply) == sz_xavGetFenceStatusReply, "GetFenceStatus reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusWaitForFenceReply) == sz_xavWaitForFenceReply, "WaitForFence reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusCreateSwapchainReply) == sz_xavCreateSwapchainReply, "CreateSwapchain reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusAcquireNextImageReply) == sz_xavAcquireNextImageReply, "AcquireNextImage reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusQueuePresentReply) == sz_xavQueuePresentReply, "QueuePresent reply size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusAsyncErrorEvent) == sz_xavAsyncErrorEvent, "ASYNC_ERROR event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceLostEvent) == sz_xavDeviceLostEvent, "DEVICE_LOST event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceStatusChangedEvent) == sz_xavDeviceStatusChangedEvent, "DEVICE_STATUS_CHANGED event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceMemoryPressureEvent) == sz_xavDeviceMemoryPressureEvent, "DEVICE_MEMORY_PRESSURE event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceIdleEvent) == sz_xavDeviceIdleEvent, "DEVICE_IDLE event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusSubmissionCompleteEvent) == sz_xavSubmissionCompleteEvent, "SUBMISSION_COMPLETE event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusSubmissionFailedEvent) == sz_xavSubmissionFailedEvent, "SUBMISSION_FAILED event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusImageReleasedEvent) == sz_xavImageReleasedEvent, "IMAGE_RELEASED event size");
-XAVERIUS_STATIC_ASSERT(sizeof(XaveriusPresentationCompleteEvent) == sz_xavPresentationCompleteEvent, "PRESENTATION_COMPLETE event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusQueryVersionReply) == sz_XaveriusQueryVersionReply, "QueryVersion reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetBufferMemoryRequirementsReply) == sz_XaveriusGetBufferMemoryRequirementsReply, "buffer requirements reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetSemaphoreCounterValueReply) == sz_XaveriusGetSemaphoreCounterValueReply, "semaphore counter reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusWaitSemaphoresReply) == sz_XaveriusWaitSemaphoresReply, "WaitSemaphores reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusGetFenceStatusReply) == sz_XaveriusGetFenceStatusReply, "GetFenceStatus reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusWaitForFenceReply) == sz_XaveriusWaitForFenceReply, "WaitForFence reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusCreateSwapchainReply) == sz_XaveriusCreateSwapchainReply, "CreateSwapchain reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusAcquireNextImageReply) == sz_XaveriusAcquireNextImageReply, "AcquireNextImage reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusQueuePresentReply) == sz_XaveriusQueuePresentReply, "QueuePresent reply size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusAsyncErrorEvent) == sz_XaveriusAsyncErrorEvent, "ASYNC_ERROR event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceLostEvent) == sz_XaveriusDeviceLostEvent, "DEVICE_LOST event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceStatusChangedEvent) == sz_XaveriusDeviceStatusChangedEvent, "DEVICE_STATUS_CHANGED event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceMemoryPressureEvent) == sz_XaveriusDeviceMemoryPressureEvent, "DEVICE_MEMORY_PRESSURE event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusDeviceIdleEvent) == sz_XaveriusDeviceIdleEvent, "DEVICE_IDLE event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusSubmissionCompleteEvent) == sz_XaveriusSubmissionCompleteEvent, "SUBMISSION_COMPLETE event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusSubmissionFailedEvent) == sz_XaveriusSubmissionFailedEvent, "SUBMISSION_FAILED event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusImageReleasedEvent) == sz_XaveriusImageReleasedEvent, "IMAGE_RELEASED event size");
+XAVERIUS_STATIC_ASSERT(sizeof(XaveriusPresentationCompleteEvent) == sz_XaveriusPresentationCompleteEvent, "PRESENTATION_COMPLETE event size");
 
 #undef XAVERIUS_ASSERT_REQ_SIZE
 #undef XAVERIUS_ASSERT_REQ_PREFIX
