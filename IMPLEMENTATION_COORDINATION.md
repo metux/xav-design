@@ -21,7 +21,7 @@
 - **ROLLBACK COMPLETE.** A subsequent independent read of the remote ref verified `refs/heads/wip/xaverius = f6f3e87aa81724208496d539e40d2eee2c3d2641`. The initial ref-update attempt returned HTTP 403, but the exact target is now live. Do not repeat the reset/push. The seven-file Xaverius tree was verified at this commit.
 - Full implementation plan: [xserver-registry-rebuild-plan-2026-11-05.md](implementation-notes/xserver-registry-rebuild-plan-2026-11-05.md); use the current active plan revision linked in the PhysicalDevice registry assignment above.
 
-**Current API authority:** every per-device registration uses a versioned `const GpuDeviceBackendOps *` inside `GpuDeviceBackendRegistration`, plus structured identity evidence, exact borrowed native handle/context, and the exact owning `GpuModuleRole` generation. The registry copies immutable typed operation tables, queries the snapshot through that exact binding, and publishes separately through `XaPhysicalDevicePublish`. Use only the current API names and contracts in the normative references below; old `XaveriusPhysicalDeviceOps` and capabilities-only registration sketches are obsolete.
+**Current API authority:** every per-device registration uses a versioned `const XaveriusDeviceBackendOps *` inside `XaveriusDeviceBackendRegistration`, plus structured identity evidence, exact borrowed native handle/context, and the exact owning `XaveriusModuleRole` generation. The registry copies immutable typed operation tables, queries the snapshot through that exact binding, and publishes separately through `XaPhysicalDevicePublish`. Use only the current API names and contracts in the normative references below; old `XaveriusPhysicalDeviceOps` and capabilities-only registration sketches are obsolete.
 
 Do not patch the discarded registry in place or cherry-pick its implementation commits. Rebuild from the clean rollback baseline. Preserve names/formatting unless a narrowly justified type/API addition is required.
 
@@ -46,7 +46,7 @@ Do not patch the discarded registry in place or cherry-pick its implementation c
 - One process-wide XAverius registry owns canonical PhysicalDevice identities, generations, publication and protocol XIDs.
 - Every DDX registers every executable PhysicalDevice it serves, including headless/render-only/compute-only and Screen-unattached devices. Platform/udev supplies identity/hotplug evidence, not a second executable inventory.
 - The exact PhysicalDevice binding owns/references its native handle, per-device context and immutable typed operation vectors. Request dispatch uses that binding directly.
-- A shared `GpuModuleRole` is lifetime/admission/quiescence control only; it is not a per-device Provider or dispatch proxy.
+- A shared `XaveriusModuleRole` is lifetime/admission/quiescence control only; it is not a per-device Provider or dispatch proxy.
 - ScreenAttachment is separate, non-owning, and generation-checked. Screen close detaches topology only; it never unregisters a shared PhysicalDevice.
 - Identity ambiguity/conflict remains unpublished. Never merge snapshots, operation vectors, handles or contexts. No transparent binding failover in v0.1.
 - Startup hotplug observation precedes initial scan; reconcile ordered events. Initial inventory publication does not wait for Screen creation, RandR, or a window.
