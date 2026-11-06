@@ -146,8 +146,13 @@ The old channel can be considered retired only after the flagship and active shi
 
 ## Active registry assignment — normative audit amendment (2026-11-06)
 
-The active PhysicalDevice registry assignment was tightened after a full normative review. The current authoritative revision is [active-physical-device-registry-task-2026-11-05.md](implementation-notes/active-physical-device-registry-task-2026-11-05.md), commit `c0d755c13e611103d46e6ebbaa568b599a457c3c`.
+The active PhysicalDevice registry assignment was tightened after a full normative review. The current authoritative revision is [active-physical-device-registry-task-2026-11-05.md](implementation-notes/active-physical-device-registry-task-2026-11-05.md), commit `03910a2b4106a42f5a6cc47ec80725b50a7dcdfb`.
 
 The amendment clarifies PhysicalDevice tombstone/XID lifetime versus DIX wrapper destruction; brings registry-side source/observation bookkeeping and authoritative removal-evidence validation into Stages 1–4 while keeping platform/udev adapter integration out of scope; makes canonical identity evidence, ordering key, and configured DDX binding preference explicit; and tightens descriptor ABI, operation-table, snapshot, timelineSemaphore, and generation tests. It does not authorize discovery/modesetting, ScreenAttachment integration, protocol handlers, Compute Memory, backend operation implementations, or any wire/header reorganization.
 
 The fleet must sync this exact assignment revision before continuing. Defiant remains the sole Xserver writer; Enterprise remains read-only reviewer.
+
+
+## Wire declaration identifier correction — 2026-11-06
+
+The normative shared declaration header `protocol/include/xaverius.h` now uses the agreed canonical C identifier spellings: `XAVERIUS_*` constants, `Xaverius*` wire types, and `sz_Xaverius*` size macros. This is a spelling-only correction; wire values and layouts are unchanged. The active registry assignment and migration note repeat this rule. See the exact header update commit `2e64e8f3808189f8c508dbc207322a2f1541f11e` and active-task update commit `03910a2b4106a42f5a6cc47ec80725b50a7dcdfb`.
