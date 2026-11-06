@@ -142,3 +142,12 @@ The shared cross-system message channel is moving to **`metux/wormhole-0`, branc
 - Do not perform unrelated Starfleetctl refactoring. Make only the minimum configuration/SOP changes required for the new channel, using existing task/worktree discipline.
 
 The old channel can be considered retired only after the flagship and active ships have confirmed that they can read and write the new repository and all active assignments remain accounted for.
+
+
+## Active registry assignment — normative audit amendment (2026-11-06)
+
+The active PhysicalDevice registry assignment was tightened after a full normative review. The current authoritative revision is [active-physical-device-registry-task-2026-11-05.md](implementation-notes/active-physical-device-registry-task-2026-11-05.md), commit `c0d755c13e611103d46e6ebbaa568b599a457c3c`.
+
+The amendment clarifies PhysicalDevice tombstone/XID lifetime versus DIX wrapper destruction; brings registry-side source/observation bookkeeping and authoritative removal-evidence validation into Stages 1–4 while keeping platform/udev adapter integration out of scope; makes canonical identity evidence, ordering key, and configured DDX binding preference explicit; and tightens descriptor ABI, operation-table, snapshot, timelineSemaphore, and generation tests. It does not authorize discovery/modesetting, ScreenAttachment integration, protocol handlers, Compute Memory, backend operation implementations, or any wire/header reorganization.
+
+The fleet must sync this exact assignment revision before continuing. Defiant remains the sole Xserver writer; Enterprise remains read-only reviewer.
