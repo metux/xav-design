@@ -156,3 +156,22 @@ The fleet must sync this exact assignment revision before continuing. Defiant re
 ## Wire declaration identifier correction — 2026-11-06
 
 The normative shared declaration header `protocol/include/xaverius.h` now uses the agreed canonical C identifier spellings: `XAVERIUS_*` constants, `Xaverius*` wire types, and `sz_Xaverius*` size macros. This is a spelling-only correction; wire values and layouts are unchanged. The active registry assignment and migration note repeat this rule. See the exact header identifier update commit `2e64e8f3808189f8c508dbc207322a2f1541f11e` plus fixed-size macro correction `0bc17f5bda0b8aa4e576a7ef368a0083240cdbbf` and active-task update commit `03910a2b4106a42f5a6cc47ec80725b50a7dcdfb`.
+
+
+## Owner audit refresh — 2026-11-07 13:15Z
+
+**Current remote Xserver tip:** `wip/xaverius@e15e2331eda42ac975cfe7c47cda423dd65aef77` (commit `xaverius: W0-029 registry fixes A-G`). Spec authority remains `docs/restructure-2026-10-21@dff0d69ef45ff55cceebb744a7458109ff3b1dc2`.
+
+The W0-029 claims are not accepted. Direct source inspection of `Xext/xaverius/registry.c` and `xaverius_intern.h` at the exact tip still shows blocking defects:
+- `XaveriusRegistryRegisterDdxDevice` contains a duplicated nested `if (existing != NULL)`; its replay branch reads `binding->binding_generation` before `binding` is allocated. The translation unit is syntactically/semantically broken.
+- Binding allocation/registration copies `registration->owner_key` and `owner_key_size`, but those fields are absent from the declared registration and binding structs. Normative ownership puts the stable owner key on `XaveriusModuleRoleDescriptor` / the server-owned ModuleRole record. Do not add it to the DDX registration descriptor.
+- The registration path does not install `dev->binding = binding` before linking/returning the device; binding storage and its role reference are consequently not owned/released correctly.
+- The snapshot callback receives only `&dev->snapshot`; `snapshot_size` is never populated before the zero-size rejection/deep-copy. The callback ABI/size ownership must be reconciled with the normative snapshot type, not papered over.
+- Some post-retain failure paths free provisional allocations without releasing the ModuleRole reference.
+- `XaveriusPhysicalDeviceDIXDestroy` unlinks the canonical device and frees identity/snapshot storage, contrary to the normative server-lifetime registry/tombstone rule; the comments contradict the actual frees.
+- `XaveriusRegistryFini` dereferences discovery/observation types before their definitions; init reinitializes global lists/counters without a guarded one-time lifecycle.
+- The Stage 4 publication helper still needs a real failure-atomic registry/XID/resource transaction consistent with the distinct DIX-wrapper and registry-membership references.
+
+The latest Xserver Actions listing contains no workflow for `e15e233`; the latest visible build run on this branch was for older `e5aa972` and failed. A green-build claim in a commit message is not current evidence.
+
+**Required next action for Defiant:** stop adding features; make one narrowly scoped, buildable commit that restores a syntactically/type-correct registry translation unit and fixes the descriptor/API mismatches above. Then run the exact Ubuntu + SDK `-Werror` builds and report actual run IDs/logs. Only after that continue through the lifetime/snapshot/publication defects in separate commits. No DDX discovery, ScreenAttachment, protocol handlers, or broad refactor.
