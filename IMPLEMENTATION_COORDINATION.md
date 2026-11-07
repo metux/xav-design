@@ -221,3 +221,20 @@ Published [xaverius-progress-nudge-2026-11-08-3.md](implementation-notes/xaveriu
 
 Published [xaverius-progress-nudge-2026-11-08-4.md](implementation-notes/xaverius-progress-nudge-2026-11-08-4.md), commit `08fb359ec10a71e830be1d3ed73a5a0a549cee35`. It references the existing exact-tip build-repair assignment. At this check, `X11Libre/xserver:wip/xaverius` remained at `79e59e48b903655586e50bd93617dede382e6aa6`; comparison against that SHA was identical. Run `42409419430` remains the known failed exact-tip CI evidence, with no newer branch-tip run found. The checkpoint requests exact disposition of the nine diagnostics, focused tests, pushed SHA, and exact-head source-build evidence.
 
+
+
+## Defiant exact-tip repair commit — 2026-11-08 (W0-100)
+
+Defiant has now pushed source commit `X11Libre/xserver:wip/xaverius@27bbfe10efe752d5d503e42bdfdbdab215426e48` (parent `79e59e48b903655586e50bd93617dede382e6aa6`). The commit adds the seven reported forward declarations in `Xext/xaverius/registry.c`, removes the unused `dev` local from `XaveriusPhysicalDeviceDIXDestroy`, and closes the malformed nested comment. It also adds the comparator test to `test/meson.build`. The source branch is one commit ahead of the prior exact tip, zero behind.
+
+Exact-head Actions run [42426714335](https://github.com/X11Libre/xserver/actions/runs/42426714335) targets this commit and completed with overall conclusion **failure**. The core source-build jobs `xserver-build-ubuntu`, `xserver-build-ubuntu-debug`, and `xserver-build-ubuntu-no-gbm` passed; multiple other platform jobs (FreeBSD, OpenBSD, macOS, Solaris) and Ubuntu Valgrind failed. The SDK image build job passed, but this run contains no separate SDK source-build job, so it does not independently establish an SDK `-Werror` source build. Do not report the whole workflow as green or treat the commit-message claim as CI evidence. The repair appears to have cleared the previously identified compile blockers on the Ubuntu source-build jobs; the overall platform/Valgrind failures still need classification against their logs. Defiant's next checkpoint should identify exact failure causes and whether they are regressions or environment/platform issues, without broadening the registry task.
+
+## LaForge nested YAML validation review — 2026-11-08 (W0-115)
+
+LaForge checkpoint W0-114 reports source commit `mpbt-hq/starfleetctl@75719fdabca3ceb04975e778e9402fb830dd4518`, parent `7ecc112`, on `work/wormhole-manager-w0-017`. The branch comparison confirms 6 commits ahead and 0 behind master, merge-base `0765d18a3c17acc34fbf10b045edfbc7f26d8a3b`. W0-114 reports 43 passing `internal/wormhole` tests and successful `go build ./...`; the GitHub commit is present. Source review confirms the RunLoop now returns sync and ingestion errors rather than logging and discarding them.
+
+A remaining nested-schema gap was found: `validateYAMLKeys` falls back to a global known-key allowlist for mapping paths not explicitly listed. The nested `incoming.messages`, `incoming.decisions`, and `outgoing` maps therefore are not fully context-restricted. Immutable follow-up W0-115 was published at `inbox/W0-20261108-115-laforge-nested-schema-review.md`, commit `53da6a2cb663ca504f9face5571831f79a68870b`, blob `71fab19f917442523e5cd4cd6f7fc6baab5c6148`. It requests explicit allowed keys for every nested mapping, fail-closed behavior, wrong-context regression tests, and preservation of RunLoop propagation.
+
+## Enterprise Comms receipt follow-up — 2026-11-08 (W0-116)
+
+No new Enterprise outbox report or durable correlated Comms receipt was present at this check. Delivery of W0-096/W0-113 to canonical recipient `LaForge` therefore remains **unconfirmed**. Immutable follow-up W0-116 was published at `inbox/W0-20261108-116-enterprise-comms-receipt-followup.md`, commit `a7192c1019dcde16a2ec9b47a2973a33840c78f3`, blob `8c0ce0d2472747f65540dc982fadb0afa3df0960`. It requests the actual Comms Message-ID and durable receipt, plus observed session/Ask status; GitHub publication alone is not delivery evidence.
