@@ -205,7 +205,7 @@ This section resolves ambiguities found in a full review against the normative r
 The shared wire declarations are defined by `protocol/include/xaverius.h` on this branch and consumed by the implementation through the agreed `xaverius_proto.h` header. Use the current canonical C identifiers exactly: protocol constants use the `XAVERIUS_` prefix (for example `XAVERIUS_REQ_QUERY_VERSION`); wire types use the `Xaverius` prefix (for example `XaveriusReqHeader`, `XaveriusCreateDeviceReq`, and `XaveriusAsyncErrorEvent`); fixed-size declaration macros use the matching `sz_Xaverius...` spelling. The former `XAV_`, `xav...`, and `sz_xav...` spellings are obsolete and MUST NOT be copied into new code, notes, tests, or generated declarations. This is an identifier-only correction: preserve every numeric assignment, field name, field order, width, packing rule, offset, and wire size. Do not infer or introduce any wire-layout change from the rename.
 
 
-## Owner source audit refresh — 2026-11-07 13:15Z
+## Owner source audit refresh — 2026-11-07
 
 Exact inspected Xserver branch tip: `wip/xaverius@e15e2331eda42ac975cfe7c47cda423dd65aef77`. This commit's W0-029 summary is not accepted as proof of correctness.
 
