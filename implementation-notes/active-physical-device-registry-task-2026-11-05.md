@@ -233,3 +233,17 @@ Observed logs:
 - SDK log additionally shows `XaveriusPhysicalDevicePublish` parsed as a nested function inside registration.
 
 This is exact-tip evidence, not an inference from the commit message. Keep the immediate repair commit limited to compile/control-flow/type/API and declaration-order corrections. Do not combine it with snapshot, ModuleRole lifetime, tombstone, or publication redesign.
+
+
+## Continuous execution and checkpoint requirement — owner clarification, 2026-11-07
+
+This task is not a one-shot instruction to make one attempt and then wait silently. Continue through the assigned work until it is complete or a concrete blocker requires owner input.
+
+- After each meaningful substep, leave a concise durable checkpoint: current HEAD, files/areas changed, exact command/test result, and the next concrete action.
+- If a substep succeeds, proceed to the next required substep without waiting for another manual nudge.
+- If blocked, report the exact blocker and, for an interactive `question`/ask, preserve the exact prompt/request ID and its text. Do not invent an answer, approve protected actions, or silently abandon the task.
+- Distinguish a genuine blocker from slow work. If work is still progressing, report the latest checkpoint and continue.
+- Do not restart, relaunch, detach, duplicate, or replace an existing console-attached ship/session. Resume only the existing instance through the established coordination path.
+- A status message or Git push is not proof of delivery. For cross-ship instructions, require the correlated durable delivery receipt defined by the Wormhole protocol; otherwise report delivery as unconfirmed.
+
+This requirement applies to Laforge and Defiant alike. It does not change task ownership, technical scope, branch/worktree boundaries, or approval gates.
