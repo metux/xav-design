@@ -205,3 +205,8 @@ A new immutable progress nudge, [W0-20261107-102](implementation-notes/xaverius-
 ## Defiant progress nudge — 2026-11-08
 
 A new immutable checkpoint request is published at [xaverius-progress-nudge-2026-11-08.md](implementation-notes/xaverius-progress-nudge-2026-11-08.md), commit `6bcf3ef9be2d90903ccabfcf2574f6779982e815`. It references the existing exact-tip build-repair assignment; it does not create a new implementation task. The latest remote Xserver branch check still showed `wip/xaverius@79e59e48b903655586e50bd93617dede382e6aa6`, with no newer source commit. The later scheduled Actions run `42423486674` targets `master@ee4bb3f96eec3b21c1961d54fe45cb33dc402d00` and is not Xaverius exact-tip evidence. Defiant is asked for a concrete pre-edit checkpoint, exact disposition of the nine diagnostics, focused tests, pushed SHA and exact-tip source-build CI.
+
+
+## Defiant progress checkpoint — 2026-11-08 (W0-105)
+
+A new immutable checkpoint request is published at [xaverius-progress-nudge-2026-11-08-2.md](implementation-notes/xaverius-progress-nudge-2026-11-08-2.md). It references the existing exact-tip build-repair assignment; it does not create a new implementation task. At publication, `X11Libre/xserver:wip/xaverius` remained at `79e59e48b903655586e50bd93617dede382e6aa6`, and exact-tip run `42409419430` remained failed. Defiant is asked for the pre-edit checkpoint, the exact disposition of all nine compiler diagnostics, focused test results, pushed SHA/parent, and new exact-head source-build evidence.
