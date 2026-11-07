@@ -247,3 +247,23 @@ This task is not a one-shot instruction to make one attempt and then wait silent
 - A status message or Git push is not proof of delivery. For cross-ship instructions, require the correlated durable delivery receipt defined by the Wormhole protocol; otherwise report delivery as unconfirmed.
 
 This requirement applies to Laforge and Defiant alike. It does not change task ownership, technical scope, branch/worktree boundaries, or approval gates.
+
+
+## Exact-tip source and CI audit refresh — 2026-11-07 19:15Z
+
+Inspected the current remote X11Libre/xserver:wip/xaverius tip 80b411f6032c6176303039d94dcf2615520087e9, including Xext/xaverius/registry.c lines 390–780 and the current normative registry-api-lifetime-addendum.md. The previous immediate repair has not landed; the W0-016 patch is still syntactically malformed.
+
+Newly confirmed source blockers at this exact tip:
+
+1. XaveriusRegistryRegisterDdxDevice() is split by a duplicate file-scope xaverius_compare_ordering_key() definition. The registration parameter list resumes after that second definition. This is a translation-unit syntax/control-flow blocker.
+2. The exact-replay path reads binding->binding_generation before binding is allocated. Replay must compare the existing live registration against immutable supplied ownership data and must allocate nothing on replay.
+3. xaverius_create_ordering_key() returns one mutable static key_buf[128]; every registration overwrites the prior key. It also silently truncates keys longer than 127 bytes. Store a separately owned normalized key with the relevant server-owned record/role, and reject invalid/oversized keys according to the normative configuration contract rather than truncating.
+4. The new-registration path allocates a provisional binding and queries through it, but the shown success path appends/returns dev without assigning dev->binding = binding. The PhysicalDevice therefore does not retain the direct DDX dispatch binding.
+5. The snapshot callback call is query_physical_snapshot(binding, &dev->snapshot), while the following code checks dev->snapshot_size and copies that many bytes. This call does not populate a size output. Reconcile the callback and immutable snapshot representation with the normative ABI before copying; never copy an unknown-size object.
+6. The post-XaveriusModuleRoleRetain(role) failure paths do not consistently pair the retain with exactly one release. In particular, identity-evidence allocation failure frees provisional objects and returns without releasing the role reference. Consolidate cleanup and test every failure edge.
+7. XaveriusPhysicalDeviceDIXDestroy() still unlinks the canonical registry record and frees identity/snapshot fields, contrary to the normative separation between DIX wrapper lifetime and server-lifetime PhysicalDevice/tombstone membership.
+8. XaveriusRegistryFini() resets/frees canonical lists but the inspected function does not visibly drain the tombstone list. Verify the complete ordered shutdown and no double-free paths before finalizing.
+
+The current exact-tip workflow [42390719664](https://github.com/X11Libre/xserver/actions/runs/42390719664) has completed with FAILURE for HEAD 80b411f6032c6176303039d94dcf2615520087e9. The job collection reports failed Ubuntu debug/standard/Valgrind, NetBSD, DragonFlyBSD, Alpine, FreeBSD, Cygwin, MinGW32, RHEL, Gentoo, OpenBSD, and SDK-image build jobs; conformance jobs were skipped after build failures. The commit-status endpoint reports pending with zero status contexts, which is not a pass. Do not attribute the failure to a particular compiler diagnostic without inspecting the corresponding job log.
+
+Immediate repair sequence remains: restore valid function/control-flow structure and declarations; resolve owner_key from the ModuleRole-owned canonical data model; repair replay without pre-allocation dereference; then establish binding ownership and failure-atomic cleanup. Keep snapshot ABI, tombstone/DIX lifetime, and publication redesign in their own reviewable commits. No Stage 5, discovery, ScreenAttachment, modesetting, protocol handlers, or backend operation work is authorized by this audit.
