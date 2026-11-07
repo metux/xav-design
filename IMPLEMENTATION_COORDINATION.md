@@ -196,3 +196,7 @@ Current source re-fetch still shows the duplicate replay `if`, use of nonexisten
 Defiant's current bounded assignment is [xaverius-exact-tip-build-repair-2026-11-08.md](implementation-notes/xaverius-exact-tip-build-repair-2026-11-08.md). This is a source-level build repair only: inspect declarations/call sites, preserve tombstone/server-lifetime semantics and ModuleRole-owned `owner_key`, fix the exact diagnostics, commit/push one focused change, and obtain exact-tip CI evidence. No DDX discovery, modesetting, ScreenAttachment, protocol handlers, Compute Memory, broad refactor, reset, or force-push. Preserve all work and existing sessions.
 
 Do not treat the commit message's claim that builds passed as current CI evidence. The failed run above is authoritative for the current exact tip until a new tip has passing source-build jobs.
+
+## Defiant owner nudge — 2026-11-07
+
+A new immutable progress nudge, [W0-20261107-102](implementation-notes/xaverius-owner-nudge-2026-11-07.md), points Defiant back to the active exact-tip build-repair assignment. It requests a pre-edit branch/HEAD/dirty checkpoint, exact source corrections for the known diagnostics, and passing source-build CI evidence on the pushed tip. It does not expand or replace the existing task.
