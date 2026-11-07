@@ -203,3 +203,21 @@ This section resolves ambiguities found in a full review against the normative r
 ## Wire protocol declaration identifiers — current canonical spelling
 
 The shared wire declarations are defined by `protocol/include/xaverius.h` on this branch and consumed by the implementation through the agreed `xaverius_proto.h` header. Use the current canonical C identifiers exactly: protocol constants use the `XAVERIUS_` prefix (for example `XAVERIUS_REQ_QUERY_VERSION`); wire types use the `Xaverius` prefix (for example `XaveriusReqHeader`, `XaveriusCreateDeviceReq`, and `XaveriusAsyncErrorEvent`); fixed-size declaration macros use the matching `sz_Xaverius...` spelling. The former `XAV_`, `xav...`, and `sz_xav...` spellings are obsolete and MUST NOT be copied into new code, notes, tests, or generated declarations. This is an identifier-only correction: preserve every numeric assignment, field name, field order, width, packing rule, offset, and wire size. Do not infer or introduce any wire-layout change from the rename.
+
+
+## Owner source audit refresh — 2026-11-07 13:15Z
+
+Exact inspected Xserver branch tip: `wip/xaverius@e15e2331eda42ac975cfe7c47cda423dd65aef77`. This commit's W0-029 summary is not accepted as proof of correctness.
+
+Before any further Stage 4 work, fix these concrete blockers in small commits:
+
+1. The replay block has a duplicate nested `if (existing != NULL)`; the replay comparison dereferences `binding->binding_generation` before `binding` is allocated. Restore a balanced, valid control-flow block and do not compare against an unallocated provisional binding. Exact replay must compare immutable registration ownership fields and the existing live binding; allocate nothing on the replay path.
+2. `xaverius_binding_alloc()` and registration refer to `registration->owner_key` / `owner_key_size`, which are not fields in the declared registration type. Per the normative spec, stable `owner_key` is owned by the ModuleRole descriptor and copied into the server-owned ModuleRole record. Resolve preference through that retained role; do not add owner_key to the registration or binding ABI.
+3. On the new-registration success path, explicitly install the complete binding into the PhysicalDevice before registry membership/publication; the inspected code currently appends/returns `dev` without assigning `dev->binding`.
+4. Snapshot callback contract is incomplete: callback is passed `&dev->snapshot`, but `snapshot_size` is never populated before the zero-size check and deep copy. Reconcile callback declaration and snapshot value/size with the normative snapshot type. Do not infer a size or deep-copy an unknown layout.
+5. Audit every path after `XaveriusModuleRoleRetain(role)`; all failures must release exactly the acquired role reference and free only provisional binding/snapshot allocations. The identity-evidence allocation failure path currently misses the role release.
+6. DIX destructor currently unlinks the canonical registry record and frees its identity/snapshot. This violates the normative tombstone/server-lifetime membership rule. It must release only the distinct DIX wrapper/resource reference.
+7. `RegistryFini` uses discovery/observation record fields before those structs are defined; fix declaration ordering. Guard RegistryInit against repeated list/counter reinitialization and implement the ordered shutdown contract before freeing any canonical record.
+8. Publication remains incomplete: make XID reservation, one AddResource call, registry publication, and wrapper/membership references failure-atomic. Do not free published objects directly outside the canonical DIX/shutdown path.
+
+**Immediate commit boundary:** first fix only the translation-unit/control-flow/type/API blockers (items 1–3 and declaration ordering), keep the tree buildable, and run Ubuntu + SDK `-Werror` builds. Do not mix the lifetime, snapshot, or publication redesign into that syntax/API repair commit. No discovery, ScreenAttachment, protocol handlers, or broad cleanup.
