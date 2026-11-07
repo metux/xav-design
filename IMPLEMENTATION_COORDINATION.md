@@ -215,3 +215,9 @@ A new immutable checkpoint request is published at [xaverius-progress-nudge-2026
 ## Defiant progress checkpoint — W0-108 (2026-11-08)
 
 Published [xaverius-progress-nudge-2026-11-08-3.md](implementation-notes/xaverius-progress-nudge-2026-11-08-3.md), referencing the existing exact-tip build-repair assignment. At this check, the Xserver branch remained at `79e59e48b903655586e50bd93617dede382e6aa6` and run `42409419430` remained failed; no new Xserver source commit or workflow run was visible. The nudge requests the precise diagnostic disposition and exact-head build evidence.
+
+
+## Defiant progress checkpoint — W0-110 (2026-11-08)
+
+Published [xaverius-progress-nudge-2026-11-08-4.md](implementation-notes/xaverius-progress-nudge-2026-11-08-4.md), commit `08fb359ec10a71e830be1d3ed73a5a0a549cee35`. It references the existing exact-tip build-repair assignment. At this check, `X11Libre/xserver:wip/xaverius` remained at `79e59e48b903655586e50bd93617dede382e6aa6`; comparison against that SHA was identical. Run `42409419430` remains the known failed exact-tip CI evidence, with no newer branch-tip run found. The checkpoint requests exact disposition of the nine diagnostics, focused tests, pushed SHA, and exact-head source-build evidence.
+
