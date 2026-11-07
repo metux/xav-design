@@ -172,7 +172,7 @@ The W0-029 claims are not accepted. Direct source inspection of `Xext/xaverius/r
 - `XaveriusRegistryFini` dereferences discovery/observation types before their definitions; init reinitializes global lists/counters without a guarded one-time lifecycle.
 - The Stage 4 publication helper still needs a real failure-atomic registry/XID/resource transaction consistent with the distinct DIX-wrapper and registry-membership references.
 
-The latest Xserver Actions listing contains no workflow for `e15e233`; the latest visible build run on this branch was for older `e5aa972` and failed. A green-build claim in a commit message is not current evidence.
+At the time of the first audit, no workflow for `e15e233` had yet been identified. The later exact-tip Actions run `42368226505` (2026-11-07 11:27:04Z) supersedes that observation and failed; see the CI evidence refresh below. A green-build claim in a commit message is not current evidence.
 
 **Required next action for Defiant:** stop adding features; make one narrowly scoped, buildable commit that restores a syntactically/type-correct registry translation unit and fixes the descriptor/API mismatches above. Then run the exact Ubuntu + SDK `-Werror` builds and report actual run IDs/logs. Only after that continue through the lifetime/snapshot/publication defects in separate commits. No DDX discovery, ScreenAttachment, protocol handlers, or broad refactor.
 
