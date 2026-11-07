@@ -158,7 +158,7 @@ The fleet must sync this exact assignment revision before continuing. Defiant re
 The normative shared declaration header `protocol/include/xaverius.h` now uses the agreed canonical C identifier spellings: `XAVERIUS_*` constants, `Xaverius*` wire types, and `sz_Xaverius*` size macros. This is a spelling-only correction; wire values and layouts are unchanged. The active registry assignment and migration note repeat this rule. See the exact header identifier update commit `2e64e8f3808189f8c508dbc207322a2f1541f11e` plus fixed-size macro correction `0bc17f5bda0b8aa4e576a7ef368a0083240cdbbf` and active-task update commit `03910a2b4106a42f5a6cc47ec80725b50a7dcdfb`.
 
 
-## Owner audit refresh — 2026-11-07 13:15Z
+## Owner audit refresh — 2026-11-07
 
 **Current remote Xserver tip:** `wip/xaverius@e15e2331eda42ac975cfe7c47cda423dd65aef77` (commit `xaverius: W0-029 registry fixes A-G`). Spec authority remains `docs/restructure-2026-10-21@dff0d69ef45ff55cceebb744a7458109ff3b1dc2`.
 
