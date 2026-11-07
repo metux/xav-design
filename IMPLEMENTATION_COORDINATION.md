@@ -238,3 +238,10 @@ A remaining nested-schema gap was found: `validateYAMLKeys` falls back to a glob
 ## Enterprise Comms receipt follow-up — 2026-11-08 (W0-116)
 
 No new Enterprise outbox report or durable correlated Comms receipt was present at this check. Delivery of W0-096/W0-113 to canonical recipient `LaForge` therefore remains **unconfirmed**. Immutable follow-up W0-116 was published at `inbox/W0-20261108-116-enterprise-comms-receipt-followup.md`, commit `a7192c1019dcde16a2ec9b47a2973a33840c78f3`, blob `8c0ce0d2472747f65540dc982fadb0afa3df0960`. It requests the actual Comms Message-ID and durable receipt, plus observed session/Ask status; GitHub publication alone is not delivery evidence.
+
+
+## Defiant CI regression analysis — W0-117 (2026-11-08)
+
+Further log inspection of exact-head run `42426714335` found that several failures are directly caused by the new comparator-test Meson entry, not unrelated platform issues. Ubuntu Valgrind (`-Dxorg=false`), OpenBSD, macOS, and Solaris all stop at `test/meson.build:268` with `Unknown variable name "xorg_inc"`. The new `test/xaverius-registry-test.c` also locally reimplements the comparator as `strcmp` and does not call the production `xaverius_compare_ordering_key`, so it is not meaningful regression coverage; its target unnecessarily links server libraries while the source only uses standard C headers.
+
+Immutable follow-up W0-117 is published at [xaverius-ci-followup-2026-11-08-w0-117.md](implementation-notes/xaverius-ci-followup-2026-11-08-w0-117.md), commit `9900fee06c5a39173a87ee058bc5450e91a7d44c`. It asks Defiant to correct the non-Xorg Meson configuration and either test the actual production comparator or remove the synthetic test, then rerun the affected configurations. The original registry compile repair remains useful: Ubuntu normal, debug, and no-GBM source-build jobs pass on `27bbfe10efe752d5d503e42bdfdbdab215426e48`. Overall run remains failed until the Meson regression is corrected and exact-tip CI is rerun.
