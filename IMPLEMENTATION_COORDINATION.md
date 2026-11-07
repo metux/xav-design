@@ -187,3 +187,12 @@ Fetched logs confirm:
 - The same SDK log also confirms `XaveriusPhysicalDevicePublish` is parsed as nested inside `XaveriusRegistryRegisterDdxDevice`, so this is a structural parse failure, not merely a missing declaration.
 
 Current source re-fetch still shows the duplicate replay `if`, use of nonexistent `registration->owner_key` / `owner_key_size`, and missing binding assignment. The W0-029 build claim is contradicted by exact-tip CI. Defiant's next commit must remain narrowly scoped to compile/control-flow/type/API repair; no lifetime/publication redesign in that commit.
+
+
+## Exact-tip Xserver build repair — 2026-11-08
+
+**ACTIVE — narrow CI build repair.** The current inspected implementation tip is `X11Libre/xserver:wip/xaverius@79e59e48b903655586e50bd93617dede382e6aa6`. GitHub Actions run [42409419430](https://github.com/X11Libre/xserver/actions/runs/42409419430) for this exact SHA completed with **failure**. Ubuntu `-Werror` job `128514104736` confirms seven missing prototypes in `Xext/xaverius/registry.c`, one unused local in `XaveriusPhysicalDeviceDIXDestroy`, and a nested-comment error at line 731; Valgrind and Ubuntu no-GBM jobs reproduce the registry compile failure. SDK-image success is not a source-build pass.
+
+Defiant's current bounded assignment is [xaverius-exact-tip-build-repair-2026-11-08.md](implementation-notes/xaverius-exact-tip-build-repair-2026-11-08.md). This is a source-level build repair only: inspect declarations/call sites, preserve tombstone/server-lifetime semantics and ModuleRole-owned `owner_key`, fix the exact diagnostics, commit/push one focused change, and obtain exact-tip CI evidence. No DDX discovery, modesetting, ScreenAttachment, protocol handlers, Compute Memory, broad refactor, reset, or force-push. Preserve all work and existing sessions.
+
+Do not treat the commit message's claim that builds passed as current CI evidence. The failed run above is authoritative for the current exact tip until a new tip has passing source-build jobs.
