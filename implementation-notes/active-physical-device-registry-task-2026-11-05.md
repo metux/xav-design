@@ -221,3 +221,15 @@ Before any further Stage 4 work, fix these concrete blockers in small commits:
 8. Publication remains incomplete: make XID reservation, one AddResource call, registry publication, and wrapper/membership references failure-atomic. Do not free published objects directly outside the canonical DIX/shutdown path.
 
 **Immediate commit boundary:** first fix only the translation-unit/control-flow/type/API blockers (items 1–3 and declaration ordering), keep the tree buildable, and run Ubuntu + SDK `-Werror` builds. Do not mix the lifetime, snapshot, or publication redesign into that syntax/API repair commit. No discovery, ScreenAttachment, protocol handlers, or broad cleanup.
+
+
+## Exact-tip CI failure evidence — 2026-11-07
+
+The current `wip/xaverius` tip `e15e2331eda42ac975cfe7c47cda423dd65aef77` has Actions run [42368226505](https://github.com/X11Libre/xserver/actions/runs/42368226505), conclusion **failure**.
+
+Observed logs:
+- Ubuntu no-GBM job `128390736580`: duplicate declarations in `xaverius_intern.h` fail under `-Werror=redundant-decls` (`XaveriusFindDeviceByBindingGeneration`, `XaveriusFirstDevice`, `XaveriusNextDevice`, `XaveriusDeviceCount`).
+- SDK image job `128390795796`: invalid use of incomplete `XaveriusObservation` in `XaveriusRegistryFini` and `XaveriusRegistryConfirmDeviceRemoved`; malformed nested registration function produces `-Wshadow` diagnostics and terminates with `expected declaration or statement at end of input` and non-void fallthrough.
+- SDK log additionally shows `XaveriusPhysicalDevicePublish` parsed as a nested function inside registration.
+
+This is exact-tip evidence, not an inference from the commit message. Keep the immediate repair commit limited to compile/control-flow/type/API and declaration-order corrections. Do not combine it with snapshot, ModuleRole lifetime, tombstone, or publication redesign.
