@@ -175,3 +175,15 @@ The W0-029 claims are not accepted. Direct source inspection of `Xext/xaverius/r
 The latest Xserver Actions listing contains no workflow for `e15e233`; the latest visible build run on this branch was for older `e5aa972` and failed. A green-build claim in a commit message is not current evidence.
 
 **Required next action for Defiant:** stop adding features; make one narrowly scoped, buildable commit that restores a syntactically/type-correct registry translation unit and fixes the descriptor/API mismatches above. Then run the exact Ubuntu + SDK `-Werror` builds and report actual run IDs/logs. Only after that continue through the lifetime/snapshot/publication defects in separate commits. No DDX discovery, ScreenAttachment, protocol handlers, or broad refactor.
+
+
+## Xserver CI evidence refresh — 2026-11-07
+
+The latest Actions run for the exact current branch tip `e15e2331eda42ac975cfe7c47cda423dd65aef77` is run [42368226505](https://github.com/X11Libre/xserver/actions/runs/42368226505), created 2026-11-07 11:27:04Z, conclusion **failure**. This supersedes the earlier note that no run existed for this tip.
+
+Fetched logs confirm:
+- Ubuntu no-GBM job `128390736580`: `-Werror=redundant-decls` failures in `xaverius_intern.h` for duplicate declarations of `XaveriusFindDeviceByBindingGeneration`, `XaveriusFirstDevice`, `XaveriusNextDevice`, and `XaveriusDeviceCount`.
+- SDK image job `128390795796`: `registry.c` compile failures from incomplete `XaveriusObservation` use in `XaveriusRegistryFini` and `XaveriusRegistryConfirmDeviceRemoved`; nested/malformed `XaveriusRegistryRegisterDdxDevice` causes shadowing diagnostics and ends with “expected declaration or statement at end of input” plus non-void fallthrough.
+- The same SDK log also confirms `XaveriusPhysicalDevicePublish` is parsed as nested inside `XaveriusRegistryRegisterDdxDevice`, so this is a structural parse failure, not merely a missing declaration.
+
+Current source re-fetch still shows the duplicate replay `if`, use of nonexistent `registration->owner_key` / `owner_key_size`, and missing binding assignment. The W0-029 build claim is contradicted by exact-tip CI. Defiant's next commit must remain narrowly scoped to compile/control-flow/type/API repair; no lifetime/publication redesign in that commit.
