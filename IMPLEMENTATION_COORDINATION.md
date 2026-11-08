@@ -245,3 +245,16 @@ No new Enterprise outbox report or durable correlated Comms receipt was present 
 Further log inspection of exact-head run `42426714335` found that several failures are directly caused by the new comparator-test Meson entry, not unrelated platform issues. Ubuntu Valgrind (`-Dxorg=false`), OpenBSD, macOS, and Solaris all stop at `test/meson.build:268` with `Unknown variable name "xorg_inc"`. The new `test/xaverius-registry-test.c` also locally reimplements the comparator as `strcmp` and does not call the production `xaverius_compare_ordering_key`, so it is not meaningful regression coverage; its target unnecessarily links server libraries while the source only uses standard C headers.
 
 Immutable follow-up W0-117 is published at [xaverius-ci-followup-2026-11-08-w0-117.md](implementation-notes/xaverius-ci-followup-2026-11-08-w0-117.md), commit `9900fee06c5a39173a87ee058bc5450e91a7d44c`. It asks Defiant to correct the non-Xorg Meson configuration and either test the actual production comparator or remove the synthetic test, then rerun the affected configurations. The original registry compile repair remains useful: Ubuntu normal, debug, and no-GBM source-build jobs pass on `27bbfe10efe752d5d503e42bdfdbdab215426e48`. Overall run remains failed until the Meson regression is corrected and exact-tip CI is rerun.
+
+
+## Fleet progress checkpoint requests — 2026-11-08 (W0-118–W0-120)
+
+No new implementation commit or agent checkpoint was present on any of the five authoritative branches at this inspection. The Xserver exact-tip Actions run `42426714335` remains failed; the manager source branch remains at `75719fdabca3ceb04975e778e9402fb830dd4518`; Wormhole outbox still has only LaForge W0-114 and no Enterprise receipt.
+
+Immutable progress requests were therefore appended without editing prior messages or creating replacement tasks:
+
+- Defiant W0-118: [xaverius-progress-checkpoint-2026-11-08-w0-118.md](implementation-notes/xaverius-progress-checkpoint-2026-11-08-w0-118.md), commit `6f94587d1158086621a59170b10e470dd8ca9438`.
+- LaForge W0-119: `metux/wormhole-0/inbox/W0-20261108-119-laforge-nested-schema-checkpoint.md`, commit `e9fe8b4fd2794a21bf341ba3ef2be798220d178d`.
+- Enterprise W0-120: `metux/wormhole-0/inbox/W0-20261108-120-enterprise-comms-receipt-checkpoint.md`, commit `a526b7800b090d86f0fd56d72f1326daea20c3c3`.
+
+The requests ask for observed branch/HEAD/merge-base/dirty status, exact source/test/CI evidence, and a durable Comms receipt. They do not authorize session restarts, Ask approval, destructive Git operations, or broad staging.
