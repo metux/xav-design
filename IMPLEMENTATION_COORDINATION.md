@@ -271,3 +271,14 @@ LaForge has pushed `mpbt-hq/starfleetctl@work/wormhole-manager-w0-017` commit `9
 ## Enterprise delivery status — W0-120 (2026-11-08)
 
 Wormhole outbox now contains Enterprise W0-087, but it was committed by LaForge at `metux/wormhole-0@8010577ccbe154f27d7fd4acfe6dd57b7a3a15f2` and its report is stale (it still describes Xserver HEAD `79e59e48` and manager HEAD `bb2c2e3`). It contains claims about historical Comms messages, not a durable correlated receipt for the current W0-096/W0-113 delivery to canonical recipient `LaForge`. No new Enterprise report or qualifying receipt is present. Delivery therefore remains **unconfirmed**; W0-120 remains the current immutable request.
+
+## Fleet 15-minute progress triggers — 2026-11-08 (W0-122–W0-124)
+
+At the latest inspection, no post-checkpoint response was visible for Defiant W0-121, LaForge W0-119, or Enterprise W0-120. The latest Xserver exact-tip CI remained failed (run `42427837938`); LaForge's nested-schema correction commit `9b62d697a076457eeefbd1aa490b26a95af77e13` was present but had no post-correction test checkpoint; Enterprise still had no qualifying durable Comms receipt for canonical recipient `LaForge`.
+
+After more than 15 minutes without newer verifiable progress, immutable triggers were appended:
+- Defiant W0-122: [xaverius-15m-trigger-2026-11-08-w0-122.md](implementation-notes/xaverius-15m-trigger-2026-11-08-w0-122.md), commit `a19a91feae77c8999cda4d209ed7017138171838`.
+- LaForge W0-123: `metux/wormhole-0/inbox/W0-20261108-123-laforge-15m-progress-trigger.md`, commit `d8ffe44a4adb878a460b4de42fd94bf93e712e10`.
+- Enterprise W0-124: `metux/wormhole-0/inbox/W0-20261108-124-enterprise-15m-progress-trigger.md`, commit `1d482bbcb312af3ef2e3d24bd033dfffea808056`.
+
+These are receipt/status triggers against existing tasks, not duplicate implementation assignments. Re-trigger no more often than once per 15 minutes per agent/task; reset the interval on substantive verifiable progress. The scheduled fleet automation runs daily; its scheduler does **not** provide 15-minute polling. The 15-minute threshold applies whenever an inspection occurs and determines when a new trigger is warranted.
