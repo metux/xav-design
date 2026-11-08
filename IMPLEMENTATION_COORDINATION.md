@@ -282,3 +282,10 @@ After more than 15 minutes without newer verifiable progress, immutable triggers
 - Enterprise W0-124: `metux/wormhole-0/inbox/W0-20261108-124-enterprise-15m-progress-trigger.md`, commit `1d482bbcb312af3ef2e3d24bd033dfffea808056`.
 
 These are receipt/status triggers against existing tasks, not duplicate implementation assignments. Re-trigger no more often than once per 15 minutes per agent/task; reset the interval on substantive verifiable progress. The scheduled fleet automation runs daily; its scheduler does **not** provide 15-minute polling. The 15-minute threshold applies whenever an inspection occurs and determines when a new trigger is warranted.
+
+
+## LaForge completion-claim correction — W0-125 (2026-11-08)
+
+LaForge reportedly acknowledged W0-123 and said the work was complete, but the repository evidence does not justify closing W0-096. Current manager tip remains `9b62d697a076457eeefbd1aa490b26a95af77e13`; no post-correction checkpoint or independently evidenced test/build rerun is visible. Commit W0-115 is a substantive nested-schema correction (explicit allowlists, fail-closed mapping paths, three wrong-context cases and one valid nested config test). Commit W0-111 previously added RunLoop error returns and a sync-failure test. However, W0-096 also requires duplicate-key, scalar-type, invalid nested-value and disabled-worker validation evidence, plus both sync and ingestion error propagation to the caller. The visible RunLoop test covers sync failure only; ingestion propagation is not demonstrated.
+
+Immutable owner correction W0-125 was published to Wormhole inbox at `inbox/W0-20261108-125-laforge-completion-claim-correction.md`, commit `94f8b6758680797fe66752223ff031549c3ee14b`. It explicitly keeps W0-096 open, asks LaForge to acknowledge the discrepancy, provide a current state checkpoint, rerun and report exact tests/build, fill or justify remaining coverage, and submit a criterion-to-evidence closure checklist. No completion claim will be accepted without verifiable evidence.
