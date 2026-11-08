@@ -258,3 +258,16 @@ Immutable progress requests were therefore appended without editing prior messag
 - Enterprise W0-120: `metux/wormhole-0/inbox/W0-20261108-120-enterprise-comms-receipt-checkpoint.md`, commit `a526b7800b090d86f0fd56d72f1326daea20c3c3`.
 
 The requests ask for observed branch/HEAD/merge-base/dirty status, exact source/test/CI evidence, and a durable Comms receipt. They do not authorize session restarts, Ask approval, destructive Git operations, or broad staging.
+
+
+## Defiant exact-tip CI checkpoint — W0-121 (2026-11-08)
+
+Defiant pushed `X11Libre/xserver:wip/xaverius@7acb77642e6bcbd13bed6767a452072fd52d6c3b` (parent `27bbfe10efe752d5d503e42bdfdbdab215426e48`). The focused source diff changes the `query_physical_snapshot` callback to return `snapshot_size` through a third argument and passes `&dev->snapshot_size` at registration. Exact-head Actions run [42427837938](https://github.com/X11Libre/xserver/actions/runs/42427837938) is **failed**. Ubuntu normal/debug/no-GBM pass, as do several other platform jobs, but Ubuntu Valgrind, OpenBSD, macOS and Solaris still fail at `test/meson.build:268` with undefined `xorg_inc`; FreeBSD fails later at link time with unresolved Xserver/DDX symbols. The W0-117 Meson/test-coverage correction is therefore still outstanding; the new commit did not touch the test target. Immutable follow-up [W0-121](implementation-notes/xaverius-exact-tip-ci-checkpoint-2026-11-08-w0-121.md), commit `bd5d992bc3fd2a4a161e8bcc70cc22752b992b4d`, asks for the same-branch focused correction, production-comparator test or removal of synthetic coverage, and exact-head reruns. It also asks Defiant to confirm the callback ABI against the normative spec.
+
+## LaForge nested-schema correction — W0-115 (2026-11-08)
+
+LaForge has pushed `mpbt-hq/starfleetctl@work/wormhole-manager-w0-017` commit `9b62d697a076457eeefbd1aa490b26a95af77e13` (parent `75719fdabca3ceb04975e778e9402fb830dd4518`). The branch is now 7 commits ahead of master and 0 behind, with merge-base `0765d18a3c17acc34fbf10b045edfbc7f26d8a3b`. The source diff adds explicit allowlists for `incoming`, `incoming.messages`, `incoming.decisions`, and `outgoing`; removes the global-key fallback; rejects unknown mapping paths; and exempts the dynamic `target_aliases` map from recursive schema validation. It adds wrong-context and valid-nested-config tests. Commit message reports 46 wormhole tests passing and `go build ./...` passing; these remain agent-reported rather than independently executed here. The prior RunLoop error propagation is preserved. Await a post-commit checkpoint and inspect any follow-up before marking the manager task complete.
+
+## Enterprise delivery status — W0-120 (2026-11-08)
+
+Wormhole outbox now contains Enterprise W0-087, but it was committed by LaForge at `metux/wormhole-0@8010577ccbe154f27d7fd4acfe6dd57b7a3a15f2` and its report is stale (it still describes Xserver HEAD `79e59e48` and manager HEAD `bb2c2e3`). It contains claims about historical Comms messages, not a durable correlated receipt for the current W0-096/W0-113 delivery to canonical recipient `LaForge`. No new Enterprise report or qualifying receipt is present. Delivery therefore remains **unconfirmed**; W0-120 remains the current immutable request.
