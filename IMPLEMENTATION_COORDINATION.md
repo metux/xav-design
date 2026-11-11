@@ -322,3 +322,8 @@ The W0-117 Meson regression is no longer present because the `xaverius-registry-
 - Current `XaveriusDeviceBackendOps` still exposes a flattened set of generic `void *` callback signatures. The normative spec defines typed callbacks and separate nested typed operation tables. The two-argument snapshot callback alone does not reconcile the rest of the ABI-v1 operation table.
 
 These are direct header/spec layout and signature mismatches, not a question about the now-correct snapshot callback. Do not claim full ABI-v1 conformance until the DDX descriptors and operation table are reconciled with the current normative spec, or an explicit owner-authorized new ABI/spec revision is made. W0-117/W0-121 remain the existing CI follow-up; this audit does not create a replacement implementation task.
+
+
+## Owner verification — current Defiant tip (2026-11-11)
+
+The current source/CI audit is recorded in [xaverius-owner-verification-2026-11-11.md](implementation-notes/xaverius-owner-verification-2026-11-11.md), commit `011ddb8d3fcaa085ce39b10e73d23b87f5f5ebee`. Current Xserver tip is `18499fad39d2084e2a1f14a846200432f978649d`; exact-head Actions run `42873000680` is green. The two-argument typed snapshot callback and the ModuleRole/registration descriptors now match the normative v1 contract. Remaining gaps: the top-level backend ops descriptor still has 64-bit size/version fields and generic callback signatures; the new production-helper test source is disabled by `if false` in Meson and therefore is not executed. The current Xserver tip is not descended from the previously recorded `6fc6471` tip; preserve both histories and report the ancestry transition. Defiant has made verifiable source/CI progress, so no duplicate progress nudge was issued.
