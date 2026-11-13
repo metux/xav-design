@@ -342,3 +342,14 @@ Follow-up inspection at 2026-11-13 09:47:49Z:
 - No second Defiant trigger was published: less than 15 minutes had elapsed since W0-145, and there was no newer verifiable Xserver source progress at this inspection.
 
 Do not infer local working-tree state or agent liveness from these remote facts. Preserve the existing task and histories.
+
+
+## Defiant progress trigger — W0-146 (2026-11-13)
+
+Immutable trigger [W0-146](implementation-notes/xaverius-progress-trigger-2026-11-13-w0-146.md) was published at commit `1f0b58e37922a1642e8c09971d638ecbfa01c531`. It continues the existing XAverius registry implementation and W0-117/W0-121 CI follow-up; it is not a new implementation task.
+
+At 2026-11-13 10:02:27Z, Xserver remained at `520cf5e7f33d0db7f43a0d816eb7d5b8f34db622` with no newer source checkpoint. Exact-head run [43045192949](https://github.com/X11Libre/xserver/actions/runs/43045192949) remains failed only in six package-install jobs because `security.ubuntu.com` cannot be resolved; Cygwin, FreeBSD, OpenBSD and the other completed platform/source jobs pass. The old Meson `xorg_inc` and FreeBSD synthetic-target link failures are resolved.
+
+The production comparator helper is tested directly but has no production call site in the current registry; top-level `XaveriusDeviceBackendOps` still differs from normative ABI v1 in size/version widths, generic callback signatures, and mutable nested table pointers. The two-argument typed snapshot callback is correct and must be preserved.
+
+Spec tip before this trigger was `fc75b98287c69117715b749167a26695c7d3665d`; its branch-tip check [43405496053](https://github.com/metux/xav-design/actions/runs/43405496053) passes and wire-layout run [43405495899](https://github.com/metux/xav-design/actions/runs/43405495899) was still in progress. The next check must use the post-W0-146 coordination branch tip and its own exact-head CI.
