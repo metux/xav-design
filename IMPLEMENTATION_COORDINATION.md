@@ -327,3 +327,18 @@ These are direct header/spec layout and signature mismatches, not a question abo
 ## Owner verification — current Defiant tip (2026-11-11)
 
 The current source/CI audit is recorded in [xaverius-owner-verification-2026-11-11.md](implementation-notes/xaverius-owner-verification-2026-11-11.md), commit `011ddb8d3fcaa085ce39b10e73d23b87f5f5ebee`. Current Xserver tip is `18499fad39d2084e2a1f14a846200432f978649d`; exact-head Actions run `42873000680` is green. The two-argument typed snapshot callback and the ModuleRole/registration descriptors now match the normative v1 contract. Remaining gaps: the top-level backend ops descriptor still has 64-bit size/version fields and generic callback signatures; the new production-helper test source is disabled by `if false` in Meson and therefore is not executed. The current Xserver tip is not descended from the previously recorded `6fc6471` tip; preserve both histories and report the ancestry transition. Defiant has made verifiable source/CI progress, so no duplicate progress nudge was issued.
+
+
+## Defiant progress trigger — W0-145 (2026-11-13)
+
+Immutable trigger [W0-145](implementation-notes/xaverius-progress-trigger-2026-11-13-w0-145.md) was published at spec commit `6cd9279a98f55a19594343f0296a01fcb7f52d60` (2026-11-13 09:38:31Z). It continues the existing registry implementation and W0-117/W0-121 CI follow-up; it is not a new implementation task.
+
+Follow-up inspection at 2026-11-13 09:47:49Z:
+
+- Xserver remains at `520cf5e7f33d0db7f43a0d816eb7d5b8f34db622`; no newer source commit or exact-head run is present.
+- Exact-head Xserver run [43045192949](https://github.com/X11Libre/xserver/actions/runs/43045192949) is still overall **failure**. Cygwin, FreeBSD, OpenBSD and the other completed source/platform jobs pass. Six jobs (Ubuntu normal, no-GBM, debug, Valgrind, MinGW-on-Ubuntu, and Hurd) fail during package installation because `security.ubuntu.com` cannot be resolved; the source build is not reached in those jobs.
+- The current spec tip is `6cd9279a98f55a19594343f0296a01fcb7f52d60`. Its branch-tip check [43403016685](https://github.com/metux/xav-design/actions/runs/43403016685) passes; exact-head wire-layout run [43403016817](https://github.com/metux/xav-design/actions/runs/43403016817) is still in progress. The older failure [42985291808](https://github.com/metux/xav-design/actions/runs/42985291808) belongs to the previous spec tip `201fb06c`, not the current one.
+- W0-145 records the remaining production-ordering-path question and top-level backend ABI-v1 mismatch. The typed two-argument `query_physical_snapshot` callback is correct and must remain unchanged.
+- No second Defiant trigger was published: less than 15 minutes had elapsed since W0-145, and there was no newer verifiable Xserver source progress at this inspection.
+
+Do not infer local working-tree state or agent liveness from these remote facts. Preserve the existing task and histories.
