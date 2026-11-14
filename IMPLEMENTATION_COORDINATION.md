@@ -353,3 +353,19 @@ At 2026-11-13 10:02:27Z, Xserver remained at `520cf5e7f33d0db7f43a0d816eb7d5b8f3
 The production comparator helper is tested directly but has no production call site in the current registry; top-level `XaveriusDeviceBackendOps` still differs from normative ABI v1 in size/version widths, generic callback signatures, and mutable nested table pointers. The two-argument typed snapshot callback is correct and must be preserved.
 
 Spec tip before this trigger was `fc75b98287c69117715b749167a26695c7d3665d`; its branch-tip check [43405496053](https://github.com/metux/xav-design/actions/runs/43405496053) passes and wire-layout run [43405495899](https://github.com/metux/xav-design/actions/runs/43405495899) was still in progress. The next check must use the post-W0-146 coordination branch tip and its own exact-head CI.
+
+
+## Defiant progress trigger — W0-147 (2026-11-14)
+
+Immutable trigger [W0-147](implementation-notes/xaverius-progress-trigger-2026-11-14-w0-147.md) was published at spec commit `07748c2736c12c0680c65828ff9b051a1272bd59`; the exact remote file was re-fetched and verified.
+
+Current inspection at 2026-11-14 08:56:47Z:
+
+- Xserver `wip/xaverius` is at `7410bcef02b7ca0b1baab08d270a0ee8a27fe1cc`, parent `520cf5e7f33d0db7f43a0d816eb7d5b8f34db622`. This commit adds only `Xext/xaverius/ACCEPTANCE_MATRIX.md`; the matrix identifies its source HEAD as `520cf5e7`, so no Xserver source changed after that tip.
+- Exact-head Xserver run [43426894862](https://github.com/X11Libre/xserver/actions/runs/43426894862) for `7410bcef` is now **successful**. Ubuntu build/test and Cygwin build/test pass; the returned platform jobs including FreeBSD, OpenBSD, Hurd, MinGW and RHEL also pass. This supersedes the older infrastructure failure in run 43045192949.
+- The new acceptance matrix's ABI-v1 “ACCEPTED” verdict is not supported by the current header: `XaveriusDeviceBackendOps` still uses 64-bit size/version fields, generic `void *` callbacks and mutable nested operation-table pointers, contrary to the normative `uint32_t`, typed-callback and `const`-table declarations.
+- `xaverius_compare_ordering_key` has only its definition in `registry.c`; `test/xaverius-registry.c` calls it directly, but no production binding-selection call site was found in the Xaverius source directory. The production ordering requirement remains open.
+- The current two-argument typed `query_physical_snapshot` callback matches the normative spec and must remain unchanged.
+- Spec HEAD remains `54ebdcf70a8c4fb4fa0d32b8326f0df02ed7a9f0`: branch-tip check [43406172082](https://github.com/metux/xav-design/actions/runs/43406172082) passes; wire-layout run [43406172154](https://github.com/metux/xav-design/actions/runs/43406172154) fails one of 5007 checks, specifically provider-token retirement/quiescence, failed-token preservation and generation-safe idempotency. Timeline and Python suites were skipped after that failure.
+
+W0-147 continues the existing registry implementation and W0-117/W0-121 CI follow-up; it is not a replacement task. Do not infer agent liveness from the Git publication or CI result.
