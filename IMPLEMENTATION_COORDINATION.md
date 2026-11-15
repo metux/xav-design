@@ -369,3 +369,20 @@ Current inspection at 2026-11-14 08:56:47Z:
 - Spec HEAD remains `54ebdcf70a8c4fb4fa0d32b8326f0df02ed7a9f0`: branch-tip check [43406172082](https://github.com/metux/xav-design/actions/runs/43406172082) passes; wire-layout run [43406172154](https://github.com/metux/xav-design/actions/runs/43406172154) fails one of 5007 checks, specifically provider-token retirement/quiescence, failed-token preservation and generation-safe idempotency. Timeline and Python suites were skipped after that failure.
 
 W0-147 continues the existing registry implementation and W0-117/W0-121 CI follow-up; it is not a replacement task. Do not infer agent liveness from the Git publication or CI result.
+
+
+## Defiant progress trigger — W0-148 (2026-11-15)
+
+Immutable trigger [W0-148](implementation-notes/xaverius-progress-trigger-2026-11-15-w0-148.md) was published and re-fetched at commit `b323c2d7c009ec496731be1f7a36a12c2ece39fc`. It continues the existing PhysicalDevice registry and W0-117/W0-121 follow-up; it is not a new implementation task.
+
+Current inspection:
+
+- Xserver `wip/xaverius` HEAD is `7337c7944d1e5b133d3026b789c643fd988d12b6`. The latest source-bearing commit is `58fe14b09758830b035aeb3ab46af555b349c2a7`; 21 later commits modify only `Xext/xaverius/ACCEPTANCE_MATRIX.md`.
+- Exact-head run [43658358816](https://github.com/X11Libre/xserver/actions/runs/43658358816) for `7337c794` succeeds across all returned platform jobs, including FreeBSD, OpenBSD and Cygwin. The old Meson `xorg_inc` and FreeBSD synthetic-target link failures are no longer current CI failures.
+- Production identity deduplication is implemented and tested through `XaveriusRegistryRegisterDdxDevice()`: same-role replay returns the canonical record; a different role currently returns `IDENTITY_CONFLICT`.
+- The missing normative behavior is ordered binding selection. The production path computes an ordering key but never calls `xaverius_compare_ordering_key()`; there is no `XaveriusRegistryCreateInfo` / `ddx_binding_preference_owner_keys` implementation. The registration test currently expects cross-role identity conflict instead of exercising a configured preference and actual selection.
+- The top-level `XaveriusDeviceBackendOps` still uses 64-bit size/version fields, generic callback signatures and mutable nested operation-table pointers, contrary to the current normative ABI-v1 descriptor. The two-argument typed `query_physical_snapshot` callback is correct and must remain unchanged.
+- The acceptance matrix's full ABI-v1 “ACCEPTED” verdict remains unsupported until the production preference path and complete top-level ops ABI match the normative spec.
+- Current spec HEAD is `83d8cbc466e7a3fba871bcf3c868e350483ce7e2`. Exact-head wire-layout run [43578633171](https://github.com/metux/xav-design/actions/runs/43578633171) fails one of 5008 checks: provider-token retirement must prove quiescence, preserve failed tokens, and be generation-safe/idempotent. The branch-tip monitor run [43578633174](https://github.com/metux/xav-design/actions/runs/43578633174) succeeds.
+
+Do not infer agent liveness from the Git publication or CI result. Preserve the existing task and histories.
