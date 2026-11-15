@@ -386,3 +386,18 @@ Current inspection:
 - Current spec HEAD is `83d8cbc466e7a3fba871bcf3c868e350483ce7e2`. Exact-head wire-layout run [43578633171](https://github.com/metux/xav-design/actions/runs/43578633171) fails one of 5008 checks: provider-token retirement must prove quiescence, preserve failed tokens, and be generation-safe/idempotent. The branch-tip monitor run [43578633174](https://github.com/metux/xav-design/actions/runs/43578633174) succeeds.
 
 Do not infer agent liveness from the Git publication or CI result. Preserve the existing task and histories.
+
+
+## Defiant progress trigger — W0-149 (2026-11-15)
+
+Immutable trigger [W0-149](implementation-notes/xaverius-progress-trigger-2026-11-15-w0-149.md) was published at spec commit `6cbd513e1f1142d6b9842e89c0b43111adc46afe`. It continues the existing PhysicalDevice registry implementation and W0-117/W0-121 follow-up; it is not a new implementation task.
+
+Current inspection at 2026-11-15 08:45:54Z:
+
+- Xserver `wip/xaverius` HEAD is `7337c7944d1e5b133d3026b789c643fd988d12b6`; source-bearing commit is `58fe14b09758830b035aeb3ab46af555b349c2a7`. Later commits change only `ACCEPTANCE_MATRIX.md`.
+- Exact-head Xserver run [43658358816](https://github.com/X11Libre/xserver/actions/runs/43658358816) succeeds across returned platform jobs. The old Meson `xorg_inc` and FreeBSD synthetic-target failures are resolved.
+- Production ordering selection remains missing: `xaverius_compare_ordering_key()` has only its definition in `registry.c`; no production call site or configured owner-key preference path exists. Cross-role candidates still conflict instead of selecting according to the normative preference.
+- The top-level `XaveriusDeviceBackendOps` remains non-conformant to ABI v1: 64-bit size/version fields, generic callback signatures and mutable nested operation-table pointers. The two-argument typed `query_physical_snapshot` callback is correct and must remain unchanged.
+- The current acceptance matrix still claims ABI-v1 acceptance despite these source mismatches.
+
+W0-149 requests the production selection path and test, complete ABI-v1 reconciliation, corrected matrix verdict, focused exact-source tests and a new exact-head CI run. Do not infer agent liveness from publication or CI.
