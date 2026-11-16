@@ -401,3 +401,11 @@ Current inspection at 2026-11-15 08:45:54Z:
 - The current acceptance matrix still claims ABI-v1 acceptance despite these source mismatches.
 
 W0-149 requests the production selection path and test, complete ABI-v1 reconciliation, corrected matrix verdict, focused exact-source tests and a new exact-head CI run. Do not infer agent liveness from publication or CI.
+
+
+## Latest owner follow-up — W0-151 (2026-11-16)
+
+- Continue the existing PhysicalDevice registry assignment and W0-149/W0-150; no new implementation task is created.
+- Latest trigger: [W0-151](implementation-notes/xaverius-progress-trigger-2026-11-16-w0-151.md).
+- Current verified Xserver tip: `7337c7944d1e5b133d3026b789c643fd988d12b6`; latest source-bearing commit: `58fe14b09758830b035aeb3ab46af555b349c2a7`. Later commits currently change only the acceptance matrix.
+- Exact-head Xserver Actions run [43658358816](https://github.com/X11Libre/xserver/actions/runs/43658358816) is successful. Production preference-based binding selection and ABI-v1 reconciliation remain unimplemented; the two-argument `query_physical_snapshot` signature is normative and must remain unchanged.
