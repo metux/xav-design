@@ -409,3 +409,14 @@ W0-149 requests the production selection path and test, complete ABI-v1 reconcil
 - Latest trigger: [W0-151](implementation-notes/xaverius-progress-trigger-2026-11-16-w0-151.md).
 - Current verified Xserver tip: `7337c7944d1e5b133d3026b789c643fd988d12b6`; latest source-bearing commit: `58fe14b09758830b035aeb3ab46af555b349c2a7`. Later commits currently change only the acceptance matrix.
 - Exact-head Xserver Actions run [43658358816](https://github.com/X11Libre/xserver/actions/runs/43658358816) is successful. Production preference-based binding selection and ABI-v1 reconciliation remain unimplemented; the two-argument `query_physical_snapshot` signature is normative and must remain unchanged.
+
+## Latest owner follow-up — W0-152 (2026-11-17)
+
+- Continue the existing PhysicalDevice registry assignment and W0-149/W0-150/W0-151; no new implementation task is created.
+- Latest trigger: [W0-152](implementation-notes/xaverius-progress-trigger-2026-11-17-w0-152.md), published at commit b69d3b3dfb2fcbd420f15960d2ee640dcb5d7771.
+- Current verified Xserver tip: 2177a0779b582820624b80947f4e63231df29578. Source-bearing commits f92d9a01 and e9e7fce0 contain observation replay and re-registration fixes; the latest 2177a077 commit only updates the acceptance matrix.
+- Exact-head Xserver run [43901444033](https://github.com/X11Libre/xserver/actions/runs/43901444033) fails six platform builds (MinGW32, DragonFly BSD, NetBSD, Solaris, RHEL 9 and RHEL 10) on registry.c:720: dev may be used uninitialized. FreeBSD passes in this run. The immediate source correction and re-registration failure rollback tests are requested.
+- Production selection remains missing: xaverius_compare_ordering_key has only its definition in registry.c, no configured ddx_binding_preference_owner_keys path exists, and the current test only compares helper-generated strings. The full top-level XaveriusDeviceBackendOps ABI-v1 mismatch also remains.
+- The normative callback is the two-argument query_physical_snapshot in spec/device-registry-architecture.md lines 698–699. Preserve it.
+- Spec branch exact-head wire-layout run [43837214155](https://github.com/metux/xav-design/actions/runs/43837214155) remains failed on the provider-token retirement requirement (1 of 5011 checks); this is separate from the Xserver compile failure.
+- Do not infer agent liveness from Git publication or CI. Preserve all work and histories.
