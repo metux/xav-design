@@ -420,3 +420,15 @@ W0-149 requests the production selection path and test, complete ABI-v1 reconcil
 - The normative callback is the two-argument query_physical_snapshot in spec/device-registry-architecture.md lines 698–699. Preserve it.
 - Spec branch exact-head wire-layout run [43837214155](https://github.com/metux/xav-design/actions/runs/43837214155) remains failed on the provider-token retirement requirement (1 of 5011 checks); this is separate from the Xserver compile failure.
 - Do not infer agent liveness from Git publication or CI. Preserve all work and histories.
+
+
+## Latest owner follow-up — W0-153 (2026-11-18)
+
+- Continue the existing PhysicalDevice registry assignment and W0-149 through W0-152; no new implementation task is created.
+- Latest trigger: [W0-153](implementation-notes/xaverius-progress-trigger-2026-11-18-w0-153.md), published in commit 88147ed11508f83de61dbff6df4c73ff58648738.
+- Current verified Xserver tip: `2177a0779b582820624b80947f4e63231df29578`; parent `e9e7fce0b96f55bb508fa8548d325fd1b4009ac4`. Latest commit changes only the acceptance matrix; no newer source-bearing commit was found.
+- Exact-head Xserver run [43901444033](https://github.com/X11Libre/xserver/actions/runs/43901444033) fails six platform jobs (MinGW32, DragonFly BSD, NetBSD, Solaris, RHEL 9 and RHEL 10) at `registry.c:720` because `dev` may be used uninitialized. FreeBSD passes; this is not the old FreeBSD link failure or Meson `xorg_inc` regression.
+- The current re-registration path also mutates the existing device before the provisional snapshot is validated, then frees the new binding on failure without restoring the old record. This can leave a dangling binding and mutated generation/refcount/snapshot; W0-153 requires failure-atomic installation and focused tests.
+- Production selection remains missing: `xaverius_compare_ordering_key` has no production call site, the current test only compares synthetic helper-generated keys, and no configured `ddx_binding_preference_owner_keys` selection path exists.
+- The complete top-level `XaveriusDeviceBackendOps` header remains incompatible with ABI v1 (64-bit size/version fields, generic callbacks, mutable nested ops pointers). The normative two-argument `query_physical_snapshot` signature remains correct and must not change.
+- W0-153 asks for a current-session checkpoint, narrow compiler and rollback fixes, production preference selection/test, ABI-v1 reconciliation, then a fresh exact-head CI run. Do not infer agent liveness from publication or CI.
